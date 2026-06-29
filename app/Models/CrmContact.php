@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CrmContact extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasCompanyScope;
+use App\Models\Traits\HasCompanyScope;
 
     protected $fillable = [
         'company_id', 'user_id', 'client_id',

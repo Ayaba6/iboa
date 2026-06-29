@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\HasCompanyScope;
 
 class PayrollRun extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'fiscal_year_id', 'journal_entry_id',
         'period_month', 'period_year', 'status',

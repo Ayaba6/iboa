@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Traits\HasCompanyScope;
 
 class CrmActivity extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'user_id', 'crm_contact_id', 'crm_opportunity_id',
         'type', 'subject', 'description',

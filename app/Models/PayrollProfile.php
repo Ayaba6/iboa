@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\HasCompanyScope;
 
 /**
  * Profil de paie — définit un ensemble de rubriques actives avec surcharges éventuelles,
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class PayrollProfile extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'plan_id', 'code', 'libelle', 'description',
         'categorie', 'valid_from', 'valid_until',

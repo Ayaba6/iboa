@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Traits\HasCompanyScope;
 
 /**
  * [RH-PRO] Rubrique de paie paramétrable — inspiré Sage Paie.
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PayRubric extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'plan_id', 'code', 'libelle', 'description',
         'type', 'categorie', 'sens', 'calc_type',

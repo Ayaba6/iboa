@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasCompanyScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Cache;
  */
 class PayrollConstant extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'code', 'libelle', 'description',
         'value_type', 'value_raw', 'unit',

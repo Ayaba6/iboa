@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\HasCompanyScope;
 
 /**
  * Règle de numérotation des bulletins de paie.
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class PayrollNumbering extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'code', 'libelle',
         'prefix', 'separator', 'year_format', 'month_format', 'seq_length',

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Traits\HasCompanyScope;
 
 /**
  * Cotisation sociale paramétrable — CNSS, assurance, retraite, mutuelle.
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SocialContribution extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'code', 'libelle', 'organisme',
         'taux_salarie', 'taux_employeur',

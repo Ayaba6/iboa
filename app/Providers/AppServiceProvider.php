@@ -48,6 +48,7 @@ use App\Listeners\NotifyLowStock;
 use App\Listeners\NotifyCreditNoteValidated;
 use App\Listeners\NotifySupplierInvoiceValidated;
 use App\Listeners\ReserveStockOnOrderConfirmed;
+use App\Listeners\TriggerMtoProductionOnOrderConfirmed;
 use App\Listeners\SendInvoiceToClient;
 use App\Listeners\SyncClientBalanceOnInvoice;
 use App\Listeners\SyncSupplierBalanceOnInvoice;
@@ -109,6 +110,7 @@ class AppServiceProvider extends ServiceProvider
         // ── Event → Listener bindings ──────────────────────────────────────────
         // Commandes
         Event::listen(OrderConfirmed::class,            ReserveStockOnOrderConfirmed::class);
+        Event::listen(OrderConfirmed::class,            TriggerMtoProductionOnOrderConfirmed::class);
 
         // Ventes
         Event::listen(InvoiceValidated::class,          SendInvoiceToClient::class);

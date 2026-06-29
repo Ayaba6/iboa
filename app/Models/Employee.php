@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employee extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasCompanyScope;
+use App\Models\Traits\HasCompanyScope;
 
     protected $fillable = [
         'company_id', 'department_id', 'matricule', 'photo_path',
