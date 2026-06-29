@@ -101,6 +101,18 @@ request()->routeIs('achats.*')                                                  
                 <span x-show="!$store.sidebar.collapsed" class="truncate">Direction</span>
                 <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">Direction<div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div></div>
             </a>
+
+            {{-- Chaîne de Valeur Intégrée (§3 CDC) --}}
+            <a href="{{ route('chaine-valeur') }}"
+               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                      {{ request()->routeIs('chaine-valeur') ? 'bg-white/15 text-white shadow-sm' : 'text-indigo-200/80 hover:bg-white/8 hover:text-white' }}">
+                @if(request()->routeIs('chaine-valeur'))<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-indigo-300 rounded-r-full"></span>@endif
+                <svg class="w-[18px] h-[18px] flex-shrink-0 {{ request()->routeIs('chaine-valeur') ? 'text-white' : 'text-indigo-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                </svg>
+                <span x-show="!$store.sidebar.collapsed" class="truncate">Chaîne de Valeur</span>
+                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">Chaîne de Valeur<div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div></div>
+            </a>
             @endcan
 
             @php

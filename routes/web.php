@@ -1359,6 +1359,10 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
 Route::middleware(['auth', 'verified', 'permission:reports.view'])
     ->get('direction', [\App\Http\Controllers\DirectionDashboardController::class, 'index'])->name('direction.dashboard');
 
+// ═══ Chaîne de Valeur Intégrée (§3 CDC) ═══
+Route::middleware(['auth', 'verified', 'permission:reports.view'])
+    ->get('chaine-valeur', [\App\Http\Controllers\ValueChainController::class, 'index'])->name('chaine-valeur');
+
 // ═══ Qualité — contrôles, non-conformités & certificats (§10 CDC) ═══
 Route::middleware(['auth', 'verified', 'permission:quality.view'])->prefix('qualite')->name('qualite.')->group(function () {
     Route::resource('inspections', \App\Modules\Quality\Controllers\QualityInspectionController::class)->except('show');
