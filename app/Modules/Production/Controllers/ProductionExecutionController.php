@@ -10,6 +10,7 @@ use App\Modules\Production\Models\ProductionOutput;
 use App\Modules\Production\Models\ProductionWaste;
 use App\Modules\Production\Services\CoilConsumptionService;
 use App\Modules\Production\Services\ProductionStockService;
+use App\Services\AccountingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -22,6 +23,7 @@ class ProductionExecutionController extends Controller
     public function __construct(
         private CoilConsumptionService $consumption,
         private ProductionStockService $stock,
+        private AccountingService $accounting,
     ) {
         $this->middleware('permission:production.update');
     }
@@ -133,5 +135,51 @@ class ProductionExecutionController extends Controller
         $this->stock->reverseWaste($waste);
 
         return back()->with('success', 'Chute supprimée.');
+    }
+
+    /**
+     * [§13.9 CDC] Étape 1 — Chef Atelier valide l'analyse de cause du rebut.
+     */
+    public function validateChef(Request $request, ProductionWaste $waste): RedirectResponse
+    {
+        $data = $request->validate([
+            'cause'            => ['required', 'in:' . implode(',', array_keys(ProductionWaste::CAUSES))],
+            'corrective_action'=> ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($waste->validated_by_chef) {
+            return back()->with('error', 'Déjà validé par le chef atelier.');
+        }
+
+        $waste->update([
+            'cause'             => $data['cause'],
+            'corrective_action' => $data['corrective_action'] ?? null,
+            'validated_by_chef' => true,
+        ]);
+
+        return back()->with('success', 'Validation chef atelier enregistrée.');
+    }
+
+    /**
+     * [§13.9 CDC] Étape 2 — Responsable Qualité valide puis déclenche la valorisation comptable.
+     * Condition préalable : chef atelier doit avoir validé en premier.
+     */
+    public function validateQuality(ProductionWaste $waste): RedirectResponse
+    {
+        if (! $waste->validated_by_chef) {
+            return back()->with('error', 'Le chef atelier doit valider en premier (§13.9 CDC).');
+        }
+        if ($waste->validated_by_quality) {
+            return back()->with('error', 'Déjà validé par le responsable qualité.');
+        }
+
+        $waste->update(['validated_by_quality' => true]);
+
+        // Valorisation comptable : DR 6582 / CR 321 (idempotent)
+        if ($waste->value > 0) {
+            $this->accounting->postWaste($waste);
+        }
+
+        return back()->with('success', 'Rebut validé qualité — écriture comptable 6582/321 générée.');
     }
 }

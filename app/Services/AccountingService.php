@@ -77,6 +77,8 @@ class AccountingService
         'variation_stocks_matieres' => ['6032', 'Variation des stocks de matières premières', 'charge',  6],
         'stocks_produits_finis'     => ['361',  'Stocks de produits finis',                   'actif',   3],
         'production_stockee'        => ['736',  'Variation des stocks de produits finis',     'produit', 7],
+        // [§13.9 CDC] Rebuts de fabrication (valorisation comptable)
+        'pertes_rebuts'             => ['6582', 'Pertes sur rebuts et déchets',               'charge',  6],
     ];
 
     // =========================================================================
@@ -975,6 +977,40 @@ class AccountingService
         ], [
             $this->line($this->account($company, 'stocks_produits_finis'), 'Entrée PF ' . $order->number, $amount, 0),
             $this->line($this->account($company, 'production_stockee'), 'Entrée PF ' . $order->number, 0, $amount),
+        ]);
+    }
+
+    /**
+     * [§13.9 CDC] Valorisation comptable d'un rebut de fabrication (après double validation).
+     *   DR 6582 Pertes sur rebuts et déchets = valeur du rebut
+     *   CR 321  Stocks de matières premières = valeur du rebut
+     *
+     * La valeur est fournie par ProductionWaste::value (en FCFA entier).
+     * Idempotent sur la référence WASTE-{id}.
+     */
+    public function postWaste(\App\Modules\Production\Models\ProductionWaste $waste): ?JournalEntry
+    {
+        $company = $this->company($waste->company_id);
+        if (! $company || $waste->value <= 0) {
+            return null;
+        }
+
+        $reference = 'WASTE-' . $waste->id;
+        if ($this->entryExists($company, $reference)) {
+            return null;
+        }
+
+        $order = $waste->productionOrder;
+        $label = 'Rebut OF ' . ($order?->number ?? '#' . $waste->production_order_id)
+               . ' — ' . $waste->causeLabel();
+
+        return $this->post($company, 'operations_diverses', [
+            'entry_date'  => $waste->updated_at ?? today(),
+            'reference'   => $reference,
+            'description' => $label,
+        ], [
+            $this->line($this->account($company, 'pertes_rebuts'), $label, $waste->value, 0),
+            $this->line($this->account($company, 'stocks_matieres'), $label, 0, $waste->value),
         ]);
     }
 
