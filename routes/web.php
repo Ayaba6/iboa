@@ -1371,6 +1371,14 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     // Tableau de bord & rapports
     Route::get('dashboard', [\App\Modules\Production\Controllers\ProductionDashboardController::class, 'index'])->name('dashboard');
     Route::get('reports', [\App\Modules\Production\Controllers\ProductionReportController::class, 'index'])->name('reports');
+
+    // [Parité SAGE X3] Suivi de fabrication — saisie unique opérations / production / matière
+    Route::get('suivis', [\App\Modules\Production\Controllers\ProductionTrackingController::class, 'index'])->name('trackings.index');
+    Route::middleware('permission:production.update')->group(function () {
+        Route::get('suivis/create', [\App\Modules\Production\Controllers\ProductionTrackingController::class, 'create'])->name('trackings.create');
+        Route::post('suivis', [\App\Modules\Production\Controllers\ProductionTrackingController::class, 'store'])->name('trackings.store');
+    });
+
     // [BUG-002] Articles fabriqués sans nomenclature
     Route::get('articles-sans-nomenclature', [\App\Modules\Production\Controllers\MissingBomController::class, 'index'])->name('articles-sans-nomenclature');
 

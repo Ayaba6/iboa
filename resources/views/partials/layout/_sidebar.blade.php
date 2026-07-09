@@ -419,6 +419,7 @@ request()->routeIs('achats.*')                                                  
                             /* Suivi OF : tous les porteurs de production.view (dont commercial §13.10) */
                             [route('production.dashboard'),      'Tableau de bord',       'production.dashboard'],
                             [route('production.orders.index'),   'Ordres de fabrication', 'production.orders*'],
+                            [route('production.trackings.index'), 'Suivi de fabrication', 'production.trackings*'],
                             /* Matière : gestionnaires production + magasin */
                             $puser->canAny(['production.create', 'stocks.adjust']) ? [route('production.coils.index'), 'Bobines (matière)', 'production.coils*'] : null,
                             /* Référentiels (coûts standards inclus) : gestionnaires production seulement */
