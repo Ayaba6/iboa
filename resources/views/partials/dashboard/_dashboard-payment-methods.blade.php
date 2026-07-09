@@ -5,7 +5,7 @@
      MODES DE PAIEMENT
 ══════════════════════════════════════════════════════════════ --}}
 @if($paymentsByMethod->isNotEmpty())
-<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 fade-up" style="animation-delay:.4s">
+<div class="bg-white rounded-[4px] border border-gray-300 p-5 fade-up" style="animation-delay:.4s">
     @php
         $totalP = $paymentsByMethod->sum('total');
         $mpC    = ['#4f46e5','#10b981','#f59e0b','#6366f1','#ef4444','#3b82f6','#ec4899'];
@@ -19,7 +19,7 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-{{ min($paymentsByMethod->count(), 5) }} gap-3">
         @foreach($paymentsByMethod as $i => $pm)
         @php $pct = $totalP > 0 ? round(($pm->total/$totalP)*100) : 0; $c = $mpC[$i % count($mpC)]; @endphp
-        <div class="rounded-xl border border-gray-100 p-4 hover:border-gray-200 transition-colors">
+        <div class="rounded-[4px] border border-gray-100 p-4 hover:border-gray-200 transition-colors">
             <div class="flex items-center gap-2 mb-3">
                 <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{{ $c }}"></div>
                 <p class="text-xs text-gray-600 font-semibold truncate">{{ optional($pm->paymentMethod)->name ?? 'Autre' }}</p>

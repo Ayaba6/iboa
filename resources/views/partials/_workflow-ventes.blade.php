@@ -32,7 +32,7 @@
     ];
 @endphp
 
-<div class="bg-white rounded-xl border border-gray-200 px-5 py-4 overflow-x-auto">
+<div class="bg-white rounded-[4px] border border-gray-300 px-5 py-4 overflow-x-auto">
     <div class="flex items-center min-w-max gap-0">
         @foreach($steps as $key => $step)
             @php
@@ -55,7 +55,7 @@
 
                         <div @class([
                             'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-colors',
-                            'bg-indigo-600 border-indigo-600 text-white shadow-md ring-2 ring-indigo-200' => $isCurrent,
+                            'bg-emerald-600 border-emerald-600 text-white shadow-md ring-2 ring-emerald-200' => $isCurrent,
                             'bg-emerald-500 border-emerald-500 text-white'                                => $isPast && ($data['done'] ?? false),
                             'bg-white border-gray-300 text-gray-400'                                      => $isFuture || ($isPast && !($data['done'] ?? false)),
                         ])>
@@ -73,7 +73,7 @@
                         <div class="mt-1.5 text-center">
                             <p @class([
                                 'text-xs font-semibold',
-                                'text-indigo-700' => $isCurrent,
+                                'text-emerald-800' => $isCurrent,
                                 'text-emerald-600'=> $isPast && ($data['done'] ?? false),
                                 'text-gray-400'   => $isFuture,
                                 'text-gray-500'   => $isPast && !($data['done'] ?? false),

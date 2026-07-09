@@ -24,7 +24,7 @@
 ])
 @php
     $colors = [
-        'indigo'  => ['icon_bg' => 'bg-indigo-600 shadow-indigo-200',  'icon_text' => 'text-white', 'ring' => 'hover:ring-indigo-100'],
+        'indigo'  => ['icon_bg' => 'bg-emerald-700 shadow-indigo-200',  'icon_text' => 'text-white', 'ring' => 'hover:ring-indigo-100'],
         'emerald' => ['icon_bg' => 'bg-emerald-500 shadow-emerald-200','icon_text' => 'text-white', 'ring' => 'hover:ring-emerald-100'],
         'violet'  => ['icon_bg' => 'bg-violet-600 shadow-violet-200',  'icon_text' => 'text-white', 'ring' => 'hover:ring-violet-100'],
         'sky'     => ['icon_bg' => 'bg-sky-500 shadow-sky-200',        'icon_text' => 'text-white', 'ring' => 'hover:ring-sky-100'],
@@ -39,7 +39,7 @@
     x-data="kpiCounter({{ (int)$value }})"
     x-init="init()"
     @endif
-    class="kpi-card group relative bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
+    class="kpi-card group relative bg-white rounded-[4px] border border-gray-300 overflow-hidden
            ring-2 ring-transparent transition-all duration-200 {{ $c['ring'] }}
            @if($href) cursor-pointer @endif">
 

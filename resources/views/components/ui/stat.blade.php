@@ -21,13 +21,13 @@
 
 @php
 $colors = [
-    'indigo'  => ['bg' => 'bg-indigo-100',  'text' => 'text-indigo-600',  'ring' => 'ring-indigo-200'],
+    'indigo'  => ['bg' => 'bg-emerald-100',  'text' => 'text-emerald-700',  'ring' => 'ring-emerald-200'],
     'emerald' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-600', 'ring' => 'ring-emerald-200'],
     'amber'   => ['bg' => 'bg-amber-100',   'text' => 'text-amber-600',   'ring' => 'ring-amber-200'],
     'red'     => ['bg' => 'bg-red-100',     'text' => 'text-red-600',     'ring' => 'ring-red-200'],
     'blue'    => ['bg' => 'bg-blue-100',    'text' => 'text-blue-600',    'ring' => 'ring-blue-200'],
     'violet'  => ['bg' => 'bg-violet-100',  'text' => 'text-violet-600',  'ring' => 'ring-violet-200'],
-    'teal'    => ['bg' => 'bg-teal-100',    'text' => 'text-teal-600',    'ring' => 'ring-teal-200'],
+    'teal'    => ['bg' => 'bg-emerald-100',    'text' => 'text-emerald-700',    'ring' => 'ring-teal-200'],
     'cyan'    => ['bg' => 'bg-cyan-100',    'text' => 'text-cyan-600',    'ring' => 'ring-cyan-200'],
     'sky'     => ['bg' => 'bg-sky-100',     'text' => 'text-sky-600',     'ring' => 'ring-sky-200'],
     'gray'    => ['bg' => 'bg-gray-100',    'text' => 'text-gray-500',    'ring' => 'ring-gray-200'],

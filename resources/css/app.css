@@ -243,22 +243,26 @@
         border-spacing: 0;
         color: var(--text-primary);
     }
+    /* [SAGE X3] En-têtes de tables denses : bandeau #eef5f0 + libellés emerald */
     .tbl thead {
-        background: var(--surface-muted);
+        background: #eef5f0;
     }
     .tbl thead th {
-        @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider;
-        color: var(--text-secondary);
-        border-bottom: 1px solid var(--border);
+        @apply px-3 py-1.5 text-left text-[11px] font-bold uppercase tracking-wide;
+        color: #064e3b;
+        border-bottom: 1px solid #d1d5db;
     }
     .tbl tbody tr {
         transition: background-color var(--t-fast);
     }
+    .tbl tbody tr:nth-child(even) {
+        background: rgba(249, 250, 251, .4);
+    }
     .tbl tbody tr:hover {
-        background: var(--surface-muted);
+        background: rgba(236, 253, 245, .55);
     }
     .tbl tbody td {
-        @apply px-4 py-3 text-sm;
+        @apply px-3 py-2 text-[12.5px];
         border-bottom: 1px solid var(--border-soft);
     }
     .tbl tbody tr:last-child td {
@@ -511,3 +515,12 @@ html.dark .erp-content textarea {
 html.dark .erp-content .shadow-sm,
 html.dark .erp-content .shadow,
 html.dark .erp-content .shadow-md { box-shadow: 0 1px 3px rgba(0,0,0,.35) !important; }
+
+/* ═══════════ [SAGE X3] Topbar sombre #11181F — lisibilité du breadcrumb ═══════════
+   Les pages injectent des classes claires (text-gray-900, hover:text-gray-700)
+   dans @yield('breadcrumb') ; on les inverse quand le header est sombre. */
+.topbar-sage nav a { color: #9ca3af !important; }
+.topbar-sage nav a:hover { color: #ffffff !important; }
+.topbar-sage nav span { color: #6b7280; }
+.topbar-sage nav .text-gray-900 { color: #ffffff !important; }
+.topbar-sage nav .font-medium { color: #ffffff !important; }

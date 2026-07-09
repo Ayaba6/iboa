@@ -7,7 +7,7 @@
 @endphp
 
 @if($links->isNotEmpty())
-<div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+<div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
     <div class="px-5 py-3 border-b border-gray-100">
         <h2 class="text-sm font-semibold text-gray-700">🔗 {{ $title }}</h2>
     </div>

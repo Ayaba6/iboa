@@ -37,11 +37,19 @@
 <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234f46e5%22/&gt;&lt;text x=%2250%22 y=%2270%22 font-size=%2270%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22 text-anchor=%22middle%22&gt;A&lt;/text&gt;&lt;/svg&gt;">
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet"/>
-@vite(['resources/css/app.css', 'resources/js/app.js'])
+@vite(['resources/css/app.css', 'resources/css/erp-theme.css', 'resources/js/app.js'])
 
 {{-- DataTables --}}
 <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.tailwindcss.min.css">
 {{-- buttons.tailwindcss.min.css n'existe pas sur le CDN v3.0.2 — le style est géré en bas de ce fichier --}}
+
+{{-- [FIX BUG-009] Masque les flèches spinner des champs number : dans les tableaux
+     de lignes serrés (devis/commande/facture) elles masquaient les chiffres. --}}
+<style>
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+</style>
 
 @stack('styles')
 

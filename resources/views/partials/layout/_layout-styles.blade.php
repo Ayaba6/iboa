@@ -8,7 +8,7 @@
 --}}
 <style>
 /* ── Sidebar nav : scrollbar fine et stylée ──────────────────────── */
-.sidebar-nav { scrollbar-width: thin; scrollbar-color: rgba(99,102,241,.45) transparent; }
+.sidebar-nav { scrollbar-width: thin; scrollbar-color: rgba(5,150,105,.35) transparent; }
 .sidebar-nav::-webkit-scrollbar { width: 4px; }
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
 .sidebar-nav::-webkit-scrollbar-thumb {

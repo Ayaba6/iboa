@@ -8,13 +8,13 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 fade-up" style="animation-delay:.36s">
 
     {{-- Top clients --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-5">
             <div>
                 <h3 class="text-base font-bold text-gray-900">Top clients</h3>
                 <p class="text-xs text-gray-400 mt-0.5">CA ce mois · <span class="font-semibold text-gray-600">{{ $nbClients }}</span> clients actifs</p>
             </div>
-            <a href="{{ route('clients.index') }}" class="text-xs font-semibold text-indigo-500 hover:text-indigo-700">Voir tous →</a>
+            <a href="{{ route('clients.index') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-800">Voir tous →</a>
         </div>
 
         @if($topClients->isEmpty())
@@ -26,7 +26,7 @@
         @php
             $maxC = $topClients->max('total');
             $pal  = [
-                ['bg'=>'bg-indigo-600','light'=>'bg-indigo-100','text'=>'text-indigo-700','bar'=>'#4f46e5'],
+                ['bg'=>'bg-emerald-700','light'=>'bg-emerald-100','text'=>'text-emerald-800','bar'=>'#4f46e5'],
                 ['bg'=>'bg-violet-600','light'=>'bg-violet-100','text'=>'text-violet-700','bar'=>'#7c3aed'],
                 ['bg'=>'bg-blue-600',  'light'=>'bg-blue-100',  'text'=>'text-blue-700',  'bar'=>'#2563eb'],
                 ['bg'=>'bg-sky-600',   'light'=>'bg-sky-100',   'text'=>'text-sky-700',   'bar'=>'#0284c7'],
@@ -44,7 +44,7 @@
                     <div class="flex-1 min-w-0 flex items-center justify-between gap-2">
                         @if($tc->client)
                         <a href="{{ route('clients.show', $tc->client) }}"
-                           class="text-xs font-semibold text-gray-700 hover:text-indigo-600 truncate transition-colors">{{ $tc->client->name }}</a>
+                           class="text-xs font-semibold text-gray-700 hover:text-emerald-700 truncate transition-colors">{{ $tc->client->name }}</a>
                         @else
                         <span class="text-xs font-semibold text-gray-700 truncate">Client #{{ $tc->client_id }}</span>
                         @endif
@@ -61,13 +61,13 @@
     </div>
 
     {{-- Top produits --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-5">
             <div>
                 <h3 class="text-base font-bold text-gray-900">Top produits</h3>
                 <p class="text-xs text-gray-400 mt-0.5">CA et marge ce mois</p>
             </div>
-            <a href="{{ route('reports.margins') }}" class="text-xs font-semibold text-indigo-500 hover:text-indigo-700">Marges →</a>
+            <a href="{{ route('reports.margins') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-800">Marges →</a>
         </div>
 
         @if($topProduits->isEmpty())

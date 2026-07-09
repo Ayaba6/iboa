@@ -69,7 +69,7 @@
          @click="doCancel()"></div>
 
     {{-- Dialog --}}
-    <div class="relative z-10 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 dark:border-gray-700"
+    <div class="relative z-10 bg-white dark:bg-gray-800 rounded-[4px] shadow-2xl w-full max-w-md border border-gray-100 dark:border-gray-700"
          x-show="open"
          x-transition:enter="ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95 translate-y-2"
@@ -110,7 +110,7 @@
         <div class="flex gap-3 px-6 pb-6">
             <button type="button"
                     @click="doCancel()"
-                    class="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    class="flex-1 px-4 py-2.5 rounded-[4px] border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300">
                 Annuler
             </button>
             <button type="button"
@@ -131,7 +131,7 @@
      class="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm"
      style="display:none">
     <div class="flex flex-col items-center gap-4 animate-pulse-slow">
-        <div class="w-12 h-12 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin"></div>
+        <div class="w-12 h-12 rounded-full border-4 border-emerald-200 border-t-indigo-600 animate-spin"></div>
         <p id="erp-loading-text"
            class="text-sm font-medium text-gray-700 dark:text-gray-300 tracking-wide">
             Génération en cours…

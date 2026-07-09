@@ -20,7 +20,7 @@
 
     $docTypeColors = [
         'FACTURE'           => ['bg' => '#4f46e5', 'light' => '#eef2ff'],
-        'DEVIS'             => ['bg' => '#0284c7', 'light' => '#e0f2fe'],
+        'DEVIS'             => ['bg' => '#047857', 'light' => '#ecfdf5'],
         'BON DE LIVRAISON'  => ['bg' => '#0f766e', 'light' => '#f0fdfa'],
         'AVOIR'             => ['bg' => '#7c3aed', 'light' => '#f5f3ff'],
         'COMMANDE'          => ['bg' => '#b45309', 'light' => '#fffbeb'],
@@ -31,7 +31,7 @@
     $docStatus = $docStatus ?? null;
 @endphp
 
-<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-5">
+<div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden mb-5">
 
     {{-- Bande couleur en haut --}}
     <div style="height:4px;background:{{ $colors['bg'] }}"></div>
