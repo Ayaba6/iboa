@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InventorySession extends Model
 {
-    use HasFactory, HasCreator, HasCompanyScope;
+    use HasFactory, HasCreator, HasCompanyScope, HasAttachments;
 
     protected $table = 'inventory_sessions';
 
@@ -27,12 +28,19 @@ class InventorySession extends Model
         'validated_at',
         'validated_by',
         'created_by',
+        // [PARITÉ SAGE X3]
+        'site', 'responsible', 'counting_type', 'counting_method', 'valuation_method',
+        'valuation_currency', 'currency_code', 'freeze_stock', 'include_lots',
+        'include_locations', 'location_scope', 'article_scope', 'comment',
     ];
 
     protected $casts = [
-        'started_at'   => 'datetime',
-        'closed_at'    => 'datetime',
-        'validated_at' => 'datetime',
+        'freeze_stock'      => 'boolean',
+        'include_lots'      => 'boolean',
+        'include_locations' => 'boolean',
+        'started_at'        => 'datetime',
+        'closed_at'         => 'datetime',
+        'validated_at'      => 'datetime',
     ];
 
     // -------------------------------------------------------------------------

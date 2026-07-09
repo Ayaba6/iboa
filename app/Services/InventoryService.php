@@ -42,15 +42,19 @@ class InventoryService
             $session = $this->repository->create($data);
 
             // Auto-populate items with the current theoretical stock
+            // [Cohérence lignes] whereHas('product') : les lignes product_stocks
+            // orphelines (produit supprimé/soft-deleted) sont exclues — sinon la
+            // session affiche des lignes « — » impossibles à compter.
             $stockQuery = ProductStock::with('product')
-                ->where('warehouse_id', $session->warehouse_id);
+                ->where('warehouse_id', $session->warehouse_id)
+                ->whereHas('product');
 
             // For 'tournant', we still load all products — user filters manually
             $stocks = $stockQuery->get();
 
             foreach ($stocks as $stock) {
                 // Skip orphaned stock rows with no product
-                if (empty($stock->product_id)) {
+                if (empty($stock->product_id) || ! $stock->product) {
                     continue;
                 }
 
@@ -82,7 +86,16 @@ class InventoryService
                     continue;
                 }
 
-                $counted       = (float) ($itemData['counted_quantity'] ?? 0);
+                // [FIX inventaire] Un article NON saisi (champ vide) reste « non compté »
+                // (counted_quantity = null) — il ne doit PAS être écrasé à 0, sinon la
+                // validation ramènerait tout le stock non recompté à zéro. NB : (float) ''
+                // vaut 0, donc « ?? 0 » ne protégeait pas la chaîne vide — on la teste.
+                $raw = $itemData['counted_quantity'] ?? null;
+                if ($raw === null || $raw === '') {
+                    continue; // laisse counted_quantity inchangé (null si jamais compté)
+                }
+
+                $counted       = (float) $raw;
                 $variance      = $counted - (float) $item->theoretical_quantity;
                 $varianceValue = round(abs($variance) * (float) $item->unit_cost, 2);
 

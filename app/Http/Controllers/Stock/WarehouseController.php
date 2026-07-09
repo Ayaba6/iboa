@@ -52,10 +52,16 @@ class WarehouseController extends Controller
     public function store(StoreWarehouseRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        unset($data['documents']);
 
-        $data['company_id'] = currentCompany()->id;
-        $data['is_default'] = $request->boolean('is_default');
-        $data['is_active']  = $request->boolean('is_active', true);
+        $data['company_id']           = currentCompany()->id;
+        $data['is_default']           = $request->boolean('is_default');
+        $data['is_active']            = $request->boolean('is_active', true);
+        $data['can_production']       = $request->boolean('can_production');
+        $data['can_sale']             = $request->boolean('can_sale');
+        $data['can_purchase']         = $request->boolean('can_purchase');
+        $data['can_stock']            = $request->boolean('can_stock');
+        $data['allow_negative_stock'] = $request->boolean('allow_negative_stock');
 
         $warehouse = DB::transaction(function () use ($data) {
             if ($data['is_default']) {
@@ -64,9 +70,27 @@ class WarehouseController extends Controller
             return Warehouse::create($data);
         });
 
+        $this->uploadDocuments($warehouse, $request);
+
         return redirect()
             ->route('stocks.warehouses.index')
             ->with('success', "Entrepôt « {$warehouse->name} » créé avec succès.");
+    }
+
+    /** Enregistre les pièces jointes du dépôt. */
+    private function uploadDocuments(Warehouse $warehouse, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/warehouse/'.$warehouse->id, 'local');
+            $warehouse->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     // ── Show ─────────────────────────────────────────────────────────────────
@@ -92,6 +116,7 @@ class WarehouseController extends Controller
     // ── Edit ─────────────────────────────────────────────────────────────────
     public function edit(Warehouse $warehouse): View
     {
+        $warehouse->load('attachments');
         return view('warehouses.edit', compact('warehouse'));
     }
 
@@ -99,9 +124,15 @@ class WarehouseController extends Controller
     public function update(UpdateWarehouseRequest $request, Warehouse $warehouse): RedirectResponse
     {
         $data = $request->validated();
+        unset($data['documents']);
 
-        $data['is_default'] = $request->boolean('is_default');
-        $data['is_active']  = $request->boolean('is_active');
+        $data['is_default']           = $request->boolean('is_default');
+        $data['is_active']            = $request->boolean('is_active');
+        $data['can_production']       = $request->boolean('can_production');
+        $data['can_sale']             = $request->boolean('can_sale');
+        $data['can_purchase']         = $request->boolean('can_purchase');
+        $data['can_stock']            = $request->boolean('can_stock');
+        $data['allow_negative_stock'] = $request->boolean('allow_negative_stock');
 
         DB::transaction(function () use ($warehouse, $data) {
             if ($data['is_default'] && !$warehouse->is_default) {
@@ -109,6 +140,8 @@ class WarehouseController extends Controller
             }
             $warehouse->update($data);
         });
+
+        $this->uploadDocuments($warehouse, $request);
 
         return redirect()
             ->route('stocks.warehouses.index')

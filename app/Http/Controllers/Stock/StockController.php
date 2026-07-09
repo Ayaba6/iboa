@@ -95,6 +95,181 @@ class StockController extends Controller
         return $pdf->download('etat_stock_' . now()->format('Ymd_His') . '.pdf');
     }
 
+    /** [Maquette X3] Formulaire de mouvement manuel de stock. */
+    public function createManualMovement(): View
+    {
+        $this->authorize('create', StockMovement::class);
+
+        $company    = currentCompany();
+        $warehouses = Warehouse::active()->orderBy('name')->get(['id', 'code', 'name']);
+        $products   = Product::where('is_active', true)->where('is_stockable', true)
+            ->orderBy('name')->get(['id', 'reference', 'name', 'weighted_avg_cost']);
+
+        // [Finition X3] Stock disponible par article/dépôt (dispo = quantité − réservé),
+        // affiché en direct sur chaque ligne pour prévenir la saisie d'une sortie
+        // supérieure au stock (le mouvement est bloqué côté service sinon).
+        $stockMap = \App\Models\ProductStock::query()
+            ->selectRaw('product_id, warehouse_id, SUM(quantity - reserved_quantity) AS available')
+            ->whereIn('product_id', $products->pluck('id'))
+            ->groupBy('product_id', 'warehouse_id')
+            ->get()
+            ->groupBy('product_id')
+            ->map(fn ($rows) => $rows->mapWithKeys(fn ($r) => [(int) $r->warehouse_id => (float) $r->available]));
+
+        $svc  = app(\App\Services\DocumentSequenceService::class);
+        $seq  = \App\Models\DocumentSequence::firstOrCreate(
+            ['company_id' => $company->id, 'fiscal_year_id' => $company->current_fiscal_year_id, 'document_type' => 'mouvement_stock'],
+            $svc->defaultConfig('mouvement_stock')
+        );
+        $nextNumber = $svc->format($seq, $seq->last_number + 1);
+
+        return view('stock.manual-movement', compact('warehouses', 'products', 'nextNumber', 'stockMap'));
+    }
+
+    /** [Maquette X3] Enregistre le mouvement manuel : entête + lignes stock signées. */
+    public function storeManualMovement(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorize('create', StockMovement::class);
+
+        $data = $request->validate([
+            'occurred_at'       => ['required', 'date'],
+            'occurred_time'     => ['nullable', 'date_format:H:i'],
+            'warehouse_from_id' => ['nullable', 'exists:warehouses,id'],
+            'warehouse_to_id'   => ['required', 'exists:warehouses,id'],
+            'location_from'     => ['nullable', 'string', 'max:50'],
+            'location_to'       => ['nullable', 'string', 'max:50'],
+            'reason'            => ['required', 'in:ajustement,correction,don,perte,casse,autre'],
+            'comment'           => ['nullable', 'string', 'max:500'],
+            'project_reference' => ['nullable', 'string', 'max:60'],
+            'analytic_section'  => ['nullable', 'string', 'max:60'],
+            'accounting_date'   => ['nullable', 'date'],
+            'is_blocked'        => ['boolean'],
+            'items'                 => ['required', 'array', 'min:1'],
+            'items.*.product_id'    => ['required', 'exists:products,id'],
+            'items.*.quantity'      => ['required', 'numeric', 'not_in:0'],
+            'items.*.unit_cost'     => ['nullable', 'numeric', 'min:0'],
+            'items.*.lot_number'    => ['nullable', 'string', 'max:100'],
+        ], [
+            'items.required'          => "Ajoutez au moins une ligne d'article.",
+            'items.*.quantity.not_in' => "La quantité d'une ligne ne peut pas être nulle (positif = entrée, négatif = sortie).",
+        ]);
+
+        $company = currentCompany();
+
+        try {
+            $header = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $request, $company) {
+                $header = \App\Models\ManualStockMovement::create([
+                    'company_id'        => $company->id,
+                    'number'            => app(\App\Services\DocumentSequenceService::class)->nextNumber($company, 'mouvement_stock'),
+                    'movement_type'     => 'manuel',
+                    'occurred_at'       => $data['occurred_at'],
+                    'occurred_time'     => $data['occurred_time'] ?? null,
+                    'status'            => $request->boolean('is_blocked') ? 'bloque' : 'saisi',
+                    'currency_code'     => 'XOF',
+                    'warehouse_from_id' => $data['warehouse_from_id'] ?? null,
+                    'warehouse_to_id'   => $data['warehouse_to_id'],
+                    'location_from'     => $data['location_from'] ?? null,
+                    'location_to'       => $data['location_to'] ?? null,
+                    'reason'            => $data['reason'],
+                    'comment'           => $data['comment'] ?? null,
+                    'project_reference' => $data['project_reference'] ?? null,
+                    'analytic_section'  => $data['analytic_section'] ?? null,
+                    'accounting_date'   => $data['accounting_date'] ?? null,
+                    'is_blocked'        => $request->boolean('is_blocked'),
+                    'lines'             => $data['items'],
+                    'created_by'        => \Illuminate\Support\Facades\Auth::id(),
+                ]);
+
+                // [FIX mouvement bloqué] Un mouvement BLOQUÉ est enregistré mais PAS
+                // appliqué au stock — ses lignes attendent le déblocage explicite.
+                if (!$header->is_blocked) {
+                    $this->applyManualMovementLines($header);
+                }
+
+                return $header;
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('stocks.movements')
+            ->with('success', $header->is_blocked
+                ? 'Mouvement manuel ' . $header->number . ' enregistré BLOQUÉ — le stock ne sera impacté qu\'au déblocage.'
+                : 'Mouvement manuel ' . $header->number . ' enregistré — ' . count($data['items']) . ' ligne(s).');
+    }
+
+    /**
+     * [FIX mouvement bloqué] Débloque un mouvement manuel : applique ses lignes
+     * au stock (jusque-là conservées sans effet) puis passe le statut à « saisi ».
+     */
+    public function unblockManualMovement(\App\Models\ManualStockMovement $movement): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorize('create', StockMovement::class);
+
+        if (!$movement->is_blocked) {
+            return back()->with('error', "Le mouvement {$movement->number} n'est pas bloqué.");
+        }
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($movement) {
+                $this->applyManualMovementLines($movement);
+                $movement->update([
+                    'is_blocked'   => false,
+                    'status'       => 'saisi',
+                    'unblocked_at' => now(),
+                    'unblocked_by' => \Illuminate\Support\Facades\Auth::id(),
+                ]);
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Mouvement {$movement->number} débloqué — stock mis à jour.");
+    }
+
+    /**
+     * Applique les lignes (JSON) d'un mouvement manuel au stock.
+     * [Sync ERP] journalisé + idempotent — qté signée : positif = entrée (dépôt
+     * destination), négatif = sortie (dépôt origine sinon destination).
+     */
+    private function applyManualMovementLines(\App\Models\ManualStockMovement $header): void
+    {
+        app(\App\Services\Sync\SyncOrchestrator::class)->run(
+            sourceModule: 'stock',
+            targetModule: 'stock',
+            eventName: 'manual_movement.created',
+            action: 'create_stock_adjustments',
+            source: $header,
+            callback: function () use ($header) {
+                $total = 0;
+                foreach ($header->lines ?? [] as $line) {
+                    $qty = (float) $line['quantity'];
+                    $warehouseId = $qty >= 0
+                        ? $header->warehouse_to_id
+                        : ($header->warehouse_from_id ?? $header->warehouse_to_id);
+                    $unitCost = (float) ($line['unit_cost'] ?? 0);
+
+                    // Type « ajustement » : StockService attend une quantite SIGNEE.
+                    $this->stockService->recordMovement([
+                        'product_id'     => $line['product_id'],
+                        'warehouse_id'   => $warehouseId,
+                        'type'           => 'ajustement',
+                        'quantity'       => $qty,
+                        'unit_cost'      => $unitCost,
+                        'occurred_at'    => $header->occurred_at->toDateString(),
+                        'reference_type' => 'mouvement_manuel',
+                        'reference_id'   => $header->id,
+                        'lot_number'     => $line['lot_number'] ?? null,
+                        'notes'          => 'Mouvement manuel ' . $header->number . ' — ' . $header->reason,
+                    ]);
+                    $total += $qty * $unitCost;
+                }
+                $header->update(['total_value' => $total]);
+            },
+            payload: ['lines' => count($header->lines ?? [])],
+        );
+    }
+
     public function movementsPdf(Request $request): mixed
     {
         $company = currentCompany();
@@ -135,7 +310,7 @@ class StockController extends Controller
      */
     public function movements(Request $request): View|\Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        $filters = $request->only(['search', 'product_id', 'warehouse_id', 'type', 'date_from', 'date_to']);
+        $filters = $request->only(['search', 'product_id', 'warehouse_id', 'type', 'date_from', 'date_to', 'lot', 'user_id', 'ref']);
 
         if ($request->boolean('export')) {
             return Excel::download(
@@ -147,8 +322,58 @@ class StockController extends Controller
         $movements  = $this->stockService->getMovements($filters);
         $warehouses = Warehouse::active()->orderBy('name')->get();
         $products   = Product::active()->orderBy('name')->get(['id', 'name', 'reference']);
+        $users      = \App\Models\User::orderBy('name')->get(['id', 'name']);
 
-        return view('stocks.movements', compact('movements', 'warehouses', 'products', 'filters'));
+        $kpiQuery = StockMovement::query()
+            ->when(!empty($filters['warehouse_id']), fn($q) => $q->where('warehouse_id', $filters['warehouse_id']))
+            ->when(!empty($filters['date_from']),    fn($q) => $q->whereDate('occurred_at', '>=', $filters['date_from']))
+            ->when(!empty($filters['date_to']),      fn($q) => $q->whereDate('occurred_at', '<=', $filters['date_to']));
+
+        $kpiByType = (clone $kpiQuery)->selectRaw('type, COUNT(*) as nb')->groupBy('type')->pluck('nb', 'type');
+        $kpis = [
+            'entrees'     => ($kpiByType['entree'] ?? 0) + ($kpiByType['retour_client'] ?? 0),
+            'sorties'     => ($kpiByType['sortie'] ?? 0) + ($kpiByType['retour_fournisseur'] ?? 0),
+            'transferts'  => $kpiByType['transfert'] ?? 0,
+            'ajustements' => ($kpiByType['ajustement'] ?? 0) + ($kpiByType['inventaire'] ?? 0),
+            'aujourdhui'  => StockMovement::whereDate('occurred_at', today())->count(),
+        ];
+
+        $mouvementsCritiques = StockMovement::with(['product', 'warehouse'])
+            ->whereIn('type', ['ajustement', 'inventaire', 'retour_client', 'retour_fournisseur'])
+            ->orderByDesc('occurred_at')->limit(5)->get();
+
+        $tracabilite = StockMovement::with(['product', 'warehouse', 'createdBy'])
+            ->whereNotNull('reference_type')->whereNotNull('reference_id')
+            ->orderByDesc('occurred_at')->limit(6)->get();
+
+        // Stock avant / après par ligne (cumul signé des mouvements du produit+dépôt)
+        $signExpr = "CASE WHEN type IN ('entree','retour_client') THEN quantity"
+                  . " WHEN type IN ('ajustement','inventaire') THEN quantity"
+                  . " ELSE -ABS(quantity) END";
+        $stockApres = [];
+        $stockAvant = [];
+        foreach ($movements as $m) {
+            $after = (float) StockMovement::where('product_id', $m->product_id)
+                ->where('warehouse_id', $m->warehouse_id)
+                ->where(function ($q) use ($m) {
+                    $q->where('occurred_at', '<', $m->occurred_at)
+                      ->orWhere(fn ($w) => $w->where('occurred_at', $m->occurred_at)->where('id', '<=', $m->id));
+                })
+                ->selectRaw("COALESCE(SUM($signExpr), 0) as s")->value('s');
+            $signed = in_array($m->type, ['entree', 'retour_client']) ? (float) $m->quantity
+                : (in_array($m->type, ['ajustement', 'inventaire']) ? (float) $m->quantity : -abs((float) $m->quantity));
+            $stockApres[$m->id] = $after;
+            $stockAvant[$m->id] = $after - $signed;
+        }
+
+        // [FIX mouvement bloqué] mouvements manuels en attente de déblocage
+        $blockedManuals = \App\Models\ManualStockMovement::with('warehouseTo', 'creator')
+            ->where('is_blocked', true)->orderByDesc('id')->get();
+
+        return view('stocks.movements', compact(
+            'movements', 'warehouses', 'products', 'users', 'filters',
+            'kpis', 'mouvementsCritiques', 'tracabilite', 'stockAvant', 'stockApres', 'blockedManuals'
+        ));
     }
 
     /**
@@ -231,8 +456,10 @@ class StockController extends Controller
         // 2. OF ayant consommé des bobines avec ce lot (si c'est une matière première bobine)
         $productionOrders = collect();
         $coilLotNumbers   = collect();
+        $coilsFromLot     = collect();
         if (class_exists(\App\Modules\Production\Models\Coil::class)) {
-            $coilsFromLot = \App\Modules\Production\Models\Coil::where('lot_number', $lot->lot_number)
+            $coilsFromLot = \App\Modules\Production\Models\Coil::with('supplier:id,name')
+                ->where('lot_number', $lot->lot_number)
                 ->orWhere('reference', 'like', '%' . $lot->lot_number . '%')
                 ->get();
             if ($coilsFromLot->isNotEmpty()) {
@@ -243,6 +470,14 @@ class StockController extends Controller
                 )->with(['client', 'order', 'product'])->get();
             }
         }
+
+        // [CDC §9.2] Fournisseur (via la bobine si trouvée) + certificat qualité du lot —
+        // requis dans la fiche de traçabilité matière (fournisseur, poids, contrôle qualité).
+        $supplier = $coilsFromLot->first()?->supplier;
+        $certificates = \App\Models\QualityCertificate::where('lot_number', $lot->lot_number)
+            ->with(['controleur:id,name', 'validateur:id,name'])
+            ->orderByDesc('date_certificat')
+            ->get();
 
         // 3. Clients impactés via les OF trouvés
         $impactedClients = collect();
@@ -262,7 +497,8 @@ class StockController extends Controller
 
         return view('stocks.lot-traceability', compact(
             'lot', 'movements', 'productionOrders',
-            'impactedClients', 'impactedInvoices', 'deliveryMovements', 'coilLotNumbers'
+            'impactedClients', 'impactedInvoices', 'deliveryMovements', 'coilLotNumbers',
+            'supplier', 'certificates', 'coilsFromLot'
         ));
     }
 

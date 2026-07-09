@@ -51,7 +51,27 @@ class InventoryController extends Controller
     {
         $this->authorize('create', InventorySession::class);
         try {
-            $session = $this->inventoryService->create($request->validated());
+            $data = $request->validated();
+            // [PARITÉ SAGE X3] Cases à cocher explicites (0/1)
+            foreach (['freeze_stock','include_lots','include_locations'] as $b) {
+                $data[$b] = $request->boolean($b);
+            }
+            unset($data['documents']);
+            $session = $this->inventoryService->create($data);
+
+            foreach ((array) $request->file('documents', []) as $file) {
+                $path = $file->store('attachments/inventory/'.$session->id, 'local');
+                $session->attachments()->create([
+                    'disk' => 'local', 'path' => $path, 'filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(), 'size' => $file->getSize(),
+                    'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+                ]);
+            }
+
+            if ($request->boolean('save_and_new')) {
+                return redirect()->route('stocks.inventaires.create')
+                    ->with('success', "Inventaire {$session->number} créé. Nouvelle saisie.");
+            }
 
             return redirect()
                 ->route('stocks.inventaires.show', $session)

@@ -46,7 +46,9 @@ class InventoryItem extends Model
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        // withTrashed : les sessions historiques doivent afficher le nom du
+        // produit même si l'article a été supprimé depuis (sinon lignes « — »).
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 
     public function warehouse(): BelongsTo

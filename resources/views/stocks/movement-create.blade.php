@@ -12,11 +12,11 @@
 @endsection
 
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6"
+<div class="max-w-4xl mx-auto space-y-3"
      x-data="{
          movType: '{{ old('movement_type', request()->query('type', '')) }}',
          hasLot: false, hasSerial: false, hasExpiry: false, isKit: false,
-         products: {!! $products->mapWithKeys(fn($p) => [$p->id => ['lot' => $p->has_lot_number, 'serial' => $p->has_serial_number, 'expiry' => $p->has_expiry_date, 'kit' => $p->type === 'compose']])->toJson() !!},
+         products: {!! $products->mapWithKeys(fn($p) => [$p->id => ['lot' => $p->has_lot_number, 'serial' => $p->has_serial_number, 'expiry' => $p->has_expiry_date, 'kit' => $p->type === 'compose']])->toJson(JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!},
          onProductChange(id) {
              const p = this.products[id];
              if (p) { this.hasLot = p.lot; this.hasSerial = p.serial; this.hasExpiry = p.expiry; this.isKit = p.kit; }
@@ -28,7 +28,7 @@
     {{-- Header --}}
     <div>
         <div class="flex items-center gap-3 mb-1">
-            <h1 class="text-2xl font-bold text-gray-900"
+            <h1 class="text-[16px] font-bold text-gray-900"
                 x-text="{
                     'entree':      'Entrée en stock',
                     'sortie':      'Sortie de stock',
@@ -46,7 +46,7 @@
             @foreach([
                 ['entree',     'Entrée',      'bg-emerald-100 text-emerald-700 border-emerald-300', 'bg-emerald-600 text-white border-emerald-600'],
                 ['sortie',     'Sortie',      'bg-red-100 text-red-700 border-red-300',             'bg-red-600 text-white border-red-600'],
-                ['transfert',  'Transfert',   'bg-blue-100 text-blue-700 border-blue-300',          'bg-blue-600 text-white border-blue-600'],
+                ['transfert',  'Transfert',   'bg-blue-100 text-blue-700 border-blue-300',          'bg-emerald-700 text-white border-blue-600'],
                 ['ajustement', 'Ajustement',  'bg-orange-100 text-orange-700 border-orange-300',    'bg-orange-500 text-white border-orange-500'],
             ] as [$val, $lbl, $inactive, $active])
             <button type="button"
@@ -61,8 +61,19 @@
 
     {{-- Form --}}
     <form action="{{ route('stocks.movement.store') }}" method="POST"
-          class="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+          class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         @csrf
+
+        {{-- Bandeau SAGE --}}
+        <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+            <h2 class="text-[15px] font-bold text-gray-900">Mouvement de stock : Création</h2>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer</button>
+                <a href="{{ route('stocks.movements') }}" class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-3">
 
         {{-- Product --}}
         <div>
@@ -71,7 +82,7 @@
             </label>
             <select id="product_id" name="product_id" required
                     @change="onProductChange($event.target.value)"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('product_id') border-red-500 @enderror">
+                    class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('product_id') border-red-500 @enderror">
                 <option value="">— Sélectionner un article —</option>
                 @foreach($products as $product)
                     <option value="{{ $product->id }}"
@@ -95,7 +106,7 @@
                 <span class="text-red-500">*</span>
             </label>
             <select id="warehouse_id" name="warehouse_id" required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('warehouse_id') border-red-500 @enderror">
+                    class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('warehouse_id') border-red-500 @enderror">
                 <option value="">— Sélectionner un entrepôt —</option>
                 @foreach($warehouses as $wh)
                     <option value="{{ $wh->id }}" {{ old('warehouse_id') == $wh->id ? 'selected' : '' }}>
@@ -113,7 +124,7 @@
             </label>
             <select id="movement_type" name="movement_type" required
                     x-model="movType"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('movement_type') border-red-500 @enderror">
+                    class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('movement_type') border-red-500 @enderror">
                 <option value="">— Sélectionner —</option>
                 @foreach($movementTypes as $value => $label)
                     <option value="{{ $value }}" {{ old('movement_type') === $value ? 'selected' : '' }}>
@@ -131,7 +142,7 @@
             </label>
             <select id="dest_warehouse_id" name="dest_warehouse_id"
                     :required="movType === 'transfert'"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('dest_warehouse_id') border-red-500 @enderror">
+                    class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('dest_warehouse_id') border-red-500 @enderror">
                 <option value="">— Entrepôt destination —</option>
                 @foreach($warehouses as $wh)
                     <option value="{{ $wh->id }}" {{ old('dest_warehouse_id') == $wh->id ? 'selected' : '' }}>
@@ -152,7 +163,7 @@
                        value="{{ old('quantity') }}"
                        :min="movType === 'ajustement' ? null : '1'"
                        step="1" inputmode="numeric" required
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('quantity') border-red-500 @enderror"
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('quantity') border-red-500 @enderror"
                        placeholder="0">
                 <p class="mt-1 text-xs text-gray-500" x-show="movType === 'ajustement'">
                     Positive pour ajouter, négative pour retirer.
@@ -167,7 +178,7 @@
                 <input type="number" id="unit_cost" name="unit_cost"
                        value="{{ old('unit_cost') }}"
                        min="0" step="1"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('unit_cost') border-red-500 @enderror"
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('unit_cost') border-red-500 @enderror"
                        placeholder="0">
                 <p class="mt-1 text-xs text-gray-400">Laissez vide pour conserver le CMP.</p>
                 @error('unit_cost')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
@@ -175,39 +186,39 @@
         </div>
 
         {{-- Lot / Série / Péremption --}}
-        <div class="border border-gray-200 rounded-lg p-4 space-y-4 bg-gray-50">
-            <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Traçabilité (optionnel)</p>
+        <div class="border border-gray-200 rounded-[4px] p-4 space-y-4 bg-[#f7faf8]">
+            <p class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Traçabilité (optionnel)</p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <label for="lot_number" class="block text-sm font-medium text-gray-700 mb-1">
                         N° de lot
-                        <span x-show="hasLot" class="text-teal-600 text-xs">(recommandé)</span>
+                        <span x-show="hasLot" class="text-emerald-600 text-xs">(recommandé)</span>
                     </label>
                     <input type="text" id="lot_number" name="lot_number"
                            value="{{ old('lot_number') }}" maxlength="50"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 @error('lot_number') border-red-500 @enderror"
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 @error('lot_number') border-red-500 @enderror"
                            placeholder="LOT-001">
                     @error('lot_number')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label for="serial_number" class="block text-sm font-medium text-gray-700 mb-1">
                         N° de série
-                        <span x-show="hasSerial" class="text-teal-600 text-xs">(recommandé)</span>
+                        <span x-show="hasSerial" class="text-emerald-600 text-xs">(recommandé)</span>
                     </label>
                     <input type="text" id="serial_number" name="serial_number"
                            value="{{ old('serial_number') }}" maxlength="50"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 @error('serial_number') border-red-500 @enderror"
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 @error('serial_number') border-red-500 @enderror"
                            placeholder="SN-XXXXX">
                     @error('serial_number')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label for="expiry_date" class="block text-sm font-medium text-gray-700 mb-1">
                         Date de péremption
-                        <span x-show="hasExpiry" class="text-teal-600 text-xs">(recommandé)</span>
+                        <span x-show="hasExpiry" class="text-emerald-600 text-xs">(recommandé)</span>
                     </label>
                     <input type="date" id="expiry_date" name="expiry_date"
                            value="{{ old('expiry_date') }}"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 @error('expiry_date') border-red-500 @enderror">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 @error('expiry_date') border-red-500 @enderror">
                     @error('expiry_date')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -222,7 +233,7 @@
                 <input type="date" id="movement_date" name="movement_date"
                        value="{{ old('movement_date', now()->format('Y-m-d')) }}"
                        required
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('movement_date') border-red-500 @enderror">
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('movement_date') border-red-500 @enderror">
                 @error('movement_date')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
             </div>
 
@@ -233,7 +244,7 @@
                 <input type="text" id="reference" name="reference"
                        value="{{ old('reference') }}"
                        maxlength="100"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('reference') border-red-500 @enderror"
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('reference') border-red-500 @enderror"
                        placeholder="BL-001, BC-123...">
                 @error('reference')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
             </div>
@@ -264,7 +275,7 @@
         <div>
             <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <textarea id="notes" name="notes" rows="2" x-ref="notesField"
-                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 @error('notes') border-red-500 @enderror"
+                      class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 @error('notes') border-red-500 @enderror"
                       placeholder="Motif, informations complémentaires...">{{ old('notes') }}</textarea>
             @error('notes')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
         </div>
@@ -276,9 +287,10 @@
                 Annuler
             </a>
             <button type="submit"
-                    class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors">
+                    class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-6 py-2.5 rounded-[4px] transition-colors">
                 Enregistrer le mouvement
             </button>
+        </div>
         </div>
     </form>
 

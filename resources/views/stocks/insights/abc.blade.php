@@ -27,17 +27,17 @@
     ];
 @endphp
 
-<div class="space-y-6">
+<div class="space-y-3">
 
     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Analyse ABC — Pareto 80/15/5</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Analyse ABC — Pareto 80/15/5</h1>
             <p class="text-sm text-gray-500">Critère : <strong>{{ $criteriaLabel }}</strong> · {{ $analysis['count'] }} article(s) · total {{ $fmt($analysis['total']) }} {{ $unit }}</p>
         </div>
         <form method="GET" class="flex flex-wrap items-end gap-2">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Critère</label>
-                <select name="criterion" onchange="this.form.submit()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <select name="criterion" onchange="this.form.submit()" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     <option value="valuation" {{ $criterion==='valuation'?'selected':'' }}>Valorisation</option>
                     <option value="rotation"  {{ $criterion==='rotation'?'selected':'' }}>Rotation</option>
                     <option value="ca"        {{ $criterion==='ca'?'selected':'' }}>Chiffre d'affaires</option>
@@ -46,7 +46,7 @@
             @if(in_array($criterion, ['rotation', 'ca']))
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Fenêtre (mois)</label>
-                <select name="months" onchange="this.form.submit()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <select name="months" onchange="this.form.submit()" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     @foreach([3, 6, 12, 24] as $m)
                     <option value="{{ $m }}" {{ $months==$m?'selected':'' }}>{{ $m }}</option>
                     @endforeach
@@ -60,9 +60,9 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         @foreach(['A', 'B', 'C'] as $cls)
             @php $c = $classColors[$cls]; $data = $analysis['by_class'][$cls]; @endphp
-            <div class="bg-white rounded-xl border-2 {{ $c['border'] }} p-5">
+            <div class="bg-white rounded-[4px] border-2 {{ $c['border'] }} p-5">
                 <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-full {{ $c['bg'] }} {{ $c['text'] }} flex items-center justify-center text-xl font-bold">{{ $cls }}</div>
+                    <div class="w-12 h-12 rounded-full {{ $c['bg'] }} {{ $c['text'] }} flex items-center justify-center text-[17px] font-bold">{{ $cls }}</div>
                     <div>
                         <p class="text-xs font-medium text-gray-500 uppercase">
                             Classe {{ $cls }}
@@ -73,7 +73,7 @@
                                 @endif
                             </span>
                         </p>
-                        <p class="text-2xl font-bold tabular-nums {{ $c['text'] }}">{{ $data['count'] }}</p>
+                        <p class="text-[16px] font-bold tabular-nums {{ $c['text'] }}">{{ $data['count'] }}</p>
                         <p class="text-xs text-gray-500">articles · {{ $analysis['count'] > 0 ? round($data['count'] / $analysis['count'] * 100, 1) : 0 }} % du catalogue</p>
                     </div>
                 </div>
@@ -86,7 +86,7 @@
     </div>
 
     {{-- Interprétation --}}
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+    <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4 text-sm text-blue-800">
         <p class="font-medium mb-1">💡 Lecture Pareto</p>
         <ul class="list-disc list-inside space-y-0.5 text-blue-700 text-xs">
             <li><strong>Classe A</strong> (≈ 20 % des articles, 80 % de la valeur) → <strong>focus stratégique</strong> : suivi quotidien, négo fournisseurs, stock optimal, jamais en rupture.</li>
@@ -96,7 +96,7 @@
     </div>
 
     {{-- Tableau détaillé --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100">
             <h2 class="text-sm font-semibold text-gray-700">Classement détaillé</h2>
         </div>
@@ -104,30 +104,30 @@
             <div class="p-8 text-center text-gray-400 text-sm">Aucune donnée pour ce critère / cette fenêtre.</div>
         @else
         <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+            <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                 <tr>
-                    <th class="px-4 py-2 text-left w-12">#</th>
-                    <th class="px-4 py-2 text-left">Article</th>
-                    <th class="px-4 py-2 text-right">Quantité</th>
-                    <th class="px-4 py-2 text-right">Valeur</th>
-                    <th class="px-4 py-2 text-right">%</th>
-                    <th class="px-4 py-2 text-right">Cumulé %</th>
-                    <th class="px-4 py-2 text-center">Classe</th>
+                    <th class="px-3 py-1.5 text-left w-12">#</th>
+                    <th class="px-3 py-1.5 text-left">Article</th>
+                    <th class="px-3 py-1.5 text-right">Quantité</th>
+                    <th class="px-3 py-1.5 text-right">Valeur</th>
+                    <th class="px-3 py-1.5 text-right">%</th>
+                    <th class="px-3 py-1.5 text-right">Cumulé %</th>
+                    <th class="px-3 py-1.5 text-center">Classe</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @foreach($analysis['rows'] as $row)
                     @php $c = $classColors[$row['class']]; @endphp
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-2 text-gray-400 tabular-nums">{{ $row['rank'] }}</td>
-                        <td class="px-4 py-2">
+                        <td class="px-3 py-1.5 text-gray-400 tabular-nums">{{ $row['rank'] }}</td>
+                        <td class="px-3 py-1.5">
                             <a href="{{ route('stocks.show', $row['id']) }}" class="font-mono text-xs text-blue-700 hover:underline">{{ $row['reference'] }}</a>
                             <p class="text-sm text-gray-900">{{ $row['name'] }}</p>
                         </td>
-                        <td class="px-4 py-2 text-right tabular-nums text-gray-700">{{ number_format($row['quantity'] ?? 0, 2, ',', ' ') }}</td>
-                        <td class="px-4 py-2 text-right tabular-nums font-semibold">{{ $fmt($row['value']) }}</td>
-                        <td class="px-4 py-2 text-right tabular-nums text-gray-600">{{ number_format($row['percent'], 2, ',', ' ') }} %</td>
-                        <td class="px-4 py-2 text-right tabular-nums text-gray-600">
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-700">{{ number_format($row['quantity'] ?? 0, 2, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums font-semibold">{{ $fmt($row['value']) }}</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ number_format($row['percent'], 2, ',', ' ') }} %</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">
                             <div class="flex items-center justify-end gap-2">
                                 <div class="w-16 bg-gray-200 rounded-full h-1.5 hidden sm:block">
                                     <div class="h-1.5 rounded-full {{ $row['class'] === 'A' ? 'bg-emerald-500' : ($row['class'] === 'B' ? 'bg-amber-500' : 'bg-gray-400') }}" style="width: {{ min(100, $row['cumul_percent']) }}%"></div>
@@ -135,7 +135,7 @@
                                 <span>{{ number_format($row['cumul_percent'], 2, ',', ' ') }} %</span>
                             </div>
                         </td>
-                        <td class="px-4 py-2 text-center">
+                        <td class="px-3 py-1.5 text-center">
                             <span class="inline-flex items-center justify-center w-7 h-7 rounded-full {{ $c['bg'] }} {{ $c['text'] }} text-xs font-bold">{{ $row['class'] }}</span>
                         </td>
                     </tr>

@@ -15,7 +15,7 @@ class StoreMovementRequest extends FormRequest
     {
         return [
             'product_id'    => 'required|exists:products,id',
-            'warehouse_id'  => 'required|exists:warehouses,id',
+            'warehouse_id'  => ['required', 'exists:warehouses,id', new \App\Rules\WarehouseAllows('can_stock')],
             'movement_type'     => 'required|in:entree,sortie,transfert,ajustement,retour_client,retour_fournisseur',
             'quantity'          => [
                 'required', 'numeric',

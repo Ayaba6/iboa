@@ -18,7 +18,8 @@ class WarehouseLocationController extends Controller
             ->orderBy('zone')
             ->orderBy('aisle')
             ->orderBy('code')
-            ->get();
+            ->paginate(30)
+            ->withQueryString();
 
         return view('warehouses.locations.index', compact('warehouse', 'locations'));
     }

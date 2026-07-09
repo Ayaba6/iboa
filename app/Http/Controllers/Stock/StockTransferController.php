@@ -22,9 +22,13 @@ class StockTransferController extends Controller
     public function index(Request $request): View
     {
         $query = StockTransfer::with(['fromWarehouse', 'toWarehouse', 'createdBy'])
+            ->withCount('items')
             ->whereNull('deleted_at')
             ->latest();
 
+        if ($search = $request->input('search')) {
+            $query->where('number', 'like', "%{$search}%");
+        }
         if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
@@ -38,14 +42,23 @@ class StockTransferController extends Controller
         $transfers  = $query->paginate(20)->withQueryString();
         $warehouses = Warehouse::orderBy('name')->get();
 
-        return view('stocks.transfers.index', compact('transfers', 'warehouses'));
+        $summary = [
+            'total'      => StockTransfer::count(),
+            'brouillon'  => StockTransfer::where('status', 'brouillon')->count(),
+            'en_transit' => StockTransfer::where('status', 'en_transit')->count(),
+            'recu'       => StockTransfer::where('status', 'recu')->count(),
+        ];
+
+        return view('stocks.transfers.index', compact('transfers', 'warehouses', 'summary'));
     }
 
     public function create(): View
     {
         $warehouses = Warehouse::where('is_active', 1)->orderBy('name')->get();
-        $products   = Product::where('is_active', 1)->orderBy('reference')->get(['id', 'reference', 'name']);
-        return view('stocks.transfers.create', compact('warehouses', 'products'));
+        $products   = Product::where('is_active', 1)->orderBy('reference')->get(['id', 'reference', 'name', 'weight']);
+        $users      = \App\Models\User::orderBy('name')->get(['id', 'name']);
+        $nextNumber = 'TRF-' . now()->format('Y') . '-…';
+        return view('stocks.transfers.create', compact('warehouses', 'products', 'users', 'nextNumber'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -145,14 +158,36 @@ class StockTransferController extends Controller
     private function validateTransferPayload(Request $request): array
     {
         return $request->validate([
-            'from_warehouse_id' => ['required', 'integer', 'exists:warehouses,id', 'different:to_warehouse_id'],
-            'to_warehouse_id'   => ['required', 'integer', 'exists:warehouses,id'],
+            'from_warehouse_id' => ['required', 'integer', 'exists:warehouses,id', 'different:to_warehouse_id', new \App\Rules\WarehouseAllows('can_stock')],
+            'to_warehouse_id'   => ['required', 'integer', 'exists:warehouses,id', new \App\Rules\WarehouseAllows('can_stock')],
             'transfer_date'     => ['required', 'date'],
             'reason'            => ['nullable', 'string', 'max:255'],
             'notes'             => ['nullable', 'string'],
+            // [Maquette X3] entête enrichie
+            'transfer_time'        => ['nullable', 'date_format:H:i'],
+            'type'                 => ['nullable', 'in:standard,urgent,retour,regularisation'],
+            'priority'             => ['nullable', 'in:basse,normale,haute,urgente'],
+            'currency_code'        => ['nullable', 'string', 'max:10'],
+            'reference'            => ['nullable', 'string', 'max:80'],
+            'source_document_date' => ['nullable', 'date'],
+            'responsible_id'       => ['nullable', 'exists:users,id'],
+            'carrier'              => ['nullable', 'string', 'max:60'],
+            'transport_mode'       => ['nullable', 'in:interne,externe,messagerie'],
+            'vehicle'              => ['nullable', 'string', 'max:40'],
+            'driver'               => ['nullable', 'string', 'max:60'],
+            'planned_date'         => ['nullable', 'date'],
+            'planned_time'         => ['nullable', 'date_format:H:i'],
+            'transport_cost'       => ['nullable', 'numeric', 'min:0'],
+            'grouping'             => ['nullable', 'boolean'],
+            'packages_count'       => ['nullable', 'integer', 'min:0'],
+            'total_weight'         => ['nullable', 'numeric', 'min:0'],
+            'total_volume'         => ['nullable', 'numeric', 'min:0'],
             'items'             => ['required', 'array', 'min:1'],
             'items.*.product_id'    => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity'      => ['required', 'numeric', 'gt:0'],
+            'items.*.requested_quantity' => ['nullable', 'numeric', 'min:0'],
+            'items.*.weight'        => ['nullable', 'numeric', 'min:0'],
+            'items.*.volume'        => ['nullable', 'numeric', 'min:0'],
             'items.*.unit_cost'     => ['nullable', 'numeric', 'min:0'],
             'items.*.lot_number'    => ['nullable', 'string', 'max:100'],
             'items.*.serial_number' => ['nullable', 'string', 'max:100'],
