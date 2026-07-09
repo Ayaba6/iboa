@@ -30,6 +30,13 @@ class ProductionOrder extends Model
         'site_planification','site_production','numero_optimisation','prepa_fabrication','reference_of',
         'designation','mode_lancement','priorite','date_fabrication_prevue','date_lancement','heure_lancement','observation',
         'rendement_standard','taux_perte','depot_produit_fini_id','depot_rebut_id','controle_qualite_obligatoire',
+        // [Audit création OF] entête étendue + caractéristiques tôle bac
+        'of_type','origin','atelier','bom_version','routing_version',
+        'depot_matiere_id','depot_qualite_id','responsable_atelier_id','operateur_prevu_id',
+        'date_debut_prevue','date_fin_prevue','heure_debut_prevue','heure_fin_prevue',
+        'temps_reglage','equipe_prevue','nb_operateurs','autoriser_cloture_partielle','autoriser_depassement_qte',
+        'profil','largeur_totale','longueur_standard','unite_production','poids_par_metre','poids_theorique',
+        'couleur_ral','revetement','tolerance_longueur','tolerance_epaisseur',
         // §13.2 CDC — Validation financière avant lancement OF
         'financial_authorization','financial_authorized_at','financial_authorized_by','financial_notes','payment_mode','payment_rate',
         // §13.10 CDC — Modification OF exceptionnelle, workflow 4 étapes
@@ -50,6 +57,11 @@ class ProductionOrder extends Model
         'date_fabrication_prevue'=>'date','date_lancement'=>'date',
         'rendement_standard'=>'decimal:4','taux_perte'=>'decimal:4',
         'controle_qualite_obligatoire'=>'boolean',
+        'date_debut_prevue'=>'date','date_fin_prevue'=>'date',
+        'autoriser_cloture_partielle'=>'boolean','autoriser_depassement_qte'=>'boolean',
+        'largeur_totale'=>'decimal:1','longueur_standard'=>'decimal:2',
+        'poids_par_metre'=>'decimal:3','poids_theorique'=>'decimal:2',
+        'tolerance_longueur'=>'decimal:2','tolerance_epaisseur'=>'decimal:3','temps_reglage'=>'decimal:2',
     ];
 
     public function depotProduitFini(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_produit_fini_id'); }

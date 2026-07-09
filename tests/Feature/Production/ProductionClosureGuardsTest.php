@@ -94,8 +94,11 @@ it('bloque la clôture si contrôle qualité obligatoire non réalisé, passe un
 
 it('bloque la clôture avec nomenclature sans aucune consommation — dérogation possible', function () {
     $this->actingAs(guardAdmin());
-    $pf  = Product::factory()->create();
-    $bom = BillOfMaterial::create(['company_id' => Company::first()->id, 'product_id' => $pf->id, 'name' => 'BOM C', 'is_active' => true]);
+    $pf   = Product::factory()->create();
+    $comp = Product::factory()->create();
+    $bom  = BillOfMaterial::create(['company_id' => Company::first()->id, 'product_id' => $pf->id, 'name' => 'BOM C', 'is_active' => true]);
+    // La garde ne s'applique qu'aux nomenclatures AVEC composants.
+    \App\Modules\Production\Models\BomLine::create(['bill_of_material_id' => $bom->id, 'product_id' => $comp->id, 'quantity_per_meter' => 1, 'sort_order' => 1]);
 
     $of = guardOf([
         'product_id' => $pf->id, 'bill_of_material_id' => $bom->id,

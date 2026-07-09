@@ -88,6 +88,15 @@ class ProductionOrderController extends Controller
         $order = $this->service->create($data, $lines);
         $this->uploadDocuments($order, $request);
 
+        // [Audit création OF] « Enregistrer + soumettre » : envoie directement
+        // l'OF dans le circuit de validation (brouillon → attente Chef Atelier).
+        if ($request->boolean('save_and_submit')) {
+            $this->service->submitForValidation($order->fresh());
+
+            return redirect()->route('production.orders.show', $order)
+                ->with('success', 'OF ' . $order->number . ' créé et soumis à la validation du Chef Atelier.');
+        }
+
         return redirect()->route('production.orders.show', $order)->with('success', 'Ordre de fabrication créé : ' . $order->number);
     }
 
@@ -415,7 +424,47 @@ class ProductionOrderController extends Controller
             'salesOrders' => Order::orderByDesc('id')->limit(200)->get(['id', 'number']),
             'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'machines'  => \App\Modules\Production\Models\ProductionMachine::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+            'bomData'   => $this->bomData(),
         ];
+    }
+
+    /**
+     * [Audit création OF] Payload JSON des nomenclatures actives : composants
+     * (coef, unité, stock disponible, CMP) + gamme (opérations, temps standard).
+     * Alimente les onglets Composants/Opérations et le prévisionnel LIVE du
+     * formulaire — lecture seule, les flux réels restent au lancement/déclaration.
+     */
+    private function bomData(): array
+    {
+        $boms = BillOfMaterial::with(['lines.product.unit', 'routing.operations.workCenter'])
+            ->where('is_active', true)->get();
+
+        $productIds = $boms->flatMap(fn ($b) => $b->lines->pluck('product_id'))->filter()->unique();
+        $stocks = \App\Models\ProductStock::whereIn('product_id', $productIds)
+            ->selectRaw('product_id, SUM(quantity - reserved_quantity) as dispo, MAX(avg_cost) as cost')
+            ->groupBy('product_id')->get()->keyBy('product_id');
+
+        return $boms->mapWithKeys(fn ($b) => [$b->id => [
+            'machine_time'   => (float) ($b->machine_time_per_unit ?? 0),
+            'labor_per_unit' => (float) ($b->labor_per_unit ?? 0),
+            'components'     => $b->lines->map(fn ($l) => [
+                'name'  => $l->product?->name ?? 'Composant #' . $l->product_id,
+                'unit'  => $l->product?->unit?->abbreviation ?? $l->product?->unit?->name ?? 'u',
+                'coef'  => (float) $l->quantity_per_meter,
+                'stock' => (float) ($stocks[$l->product_id]->dispo ?? 0),
+                'cost'  => (float) ($stocks[$l->product_id]->cost ?? 0),
+            ])->values()->all(),
+            'routing' => $b->routing ? [
+                'name' => $b->routing->name,
+                'ops'  => $b->routing->operations->map(fn ($op) => [
+                    'seq'    => $op->sequence,
+                    'name'   => $op->name,
+                    'center' => $op->workCenter?->name ?? '—',
+                    'setup'  => (float) ($op->setup_minutes ?? 0),
+                    'run'    => (float) ($op->run_minutes_per_unit ?? 0),
+                ])->values()->all(),
+            ] : null,
+        ]])->all();
     }
 
     /** @return array{0: array, 1: array} */
@@ -460,7 +509,55 @@ class ProductionOrderController extends Controller
             'lines.*.label'      => ['nullable', 'string', 'max:120'],
             'documents'          => ['nullable', 'array'],
             'documents.*'        => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
+            // [Audit création OF] entête étendue
+            'of_type'            => ['nullable', 'in:standard,reprise,retouche,speciale_client'],
+            'origin'             => ['nullable', 'in:manuel,commande_client,stock_minimum,mrp'],
+            'atelier'            => ['nullable', 'string', 'max:60'],
+            'bom_version'        => ['nullable', 'string', 'max:20'],
+            'routing_version'    => ['nullable', 'string', 'max:20'],
+            'depot_matiere_id'   => ['nullable', 'integer', 'exists:warehouses,id'],
+            'depot_qualite_id'   => ['nullable', 'integer', 'exists:warehouses,id'],
+            'responsable_atelier_id' => ['nullable', 'integer', 'exists:users,id'],
+            'operateur_prevu_id' => ['nullable', 'integer', 'exists:users,id'],
+            'date_debut_prevue'  => ['nullable', 'date'],
+            'date_fin_prevue'    => ['nullable', 'date', 'after_or_equal:date_debut_prevue'],
+            'heure_debut_prevue' => ['nullable', 'string', 'max:8'],
+            'heure_fin_prevue'   => ['nullable', 'string', 'max:8'],
+            'temps_reglage'      => ['nullable', 'numeric', 'min:0'],
+            'equipe_prevue'      => ['nullable', 'string', 'max:60'],
+            'nb_operateurs'      => ['nullable', 'integer', 'min:0', 'max:500'],
+            'autoriser_cloture_partielle' => ['nullable', 'boolean'],
+            'autoriser_depassement_qte'   => ['nullable', 'boolean'],
+            // Caractéristiques tôle bac étendues
+            'profil'             => ['nullable', 'string', 'max:40'],
+            'largeur_totale'     => ['nullable', 'numeric', 'min:0'],
+            'longueur_standard'  => ['nullable', 'numeric', 'min:0'],
+            'unite_production'   => ['nullable', 'in:ML,M2,PIECE'],
+            'poids_par_metre'    => ['nullable', 'numeric', 'min:0'],
+            'poids_theorique'    => ['nullable', 'numeric', 'min:0'],
+            'couleur_ral'        => ['nullable', 'string', 'max:20'],
+            'revetement'         => ['nullable', 'string', 'max:60'],
+            'tolerance_longueur' => ['nullable', 'numeric', 'min:0'],
+            'tolerance_epaisseur'=> ['nullable', 'numeric', 'min:0'],
+        ], [
+            'product_id.required' => 'Aucun article à lancer — sélectionnez le produit fini à fabriquer.',
         ]);
+
+        // [Audit création OF — contrôles bloquants]
+        // 1. Un OF sans article à lancer est inutilisable (aucune entrée stock PF possible).
+        if (empty($validated['product_id'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'product_id' => 'Aucun article à lancer — sélectionnez le produit fini à fabriquer.',
+            ]);
+        }
+        // 2. Quantité totale à produire > 0 (champ direct OU somme des coupes).
+        $totalQty = (float) ($validated['quantity_requested'] ?? 0)
+            + collect($validated['lines'] ?? [])->sum(fn ($l) => (float) ($l['quantity'] ?? 0));
+        if ($totalQty <= 0) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'quantity_requested' => 'Quantité demandée égale à 0 — saisissez une quantité ou des lignes de coupe.',
+            ]);
+        }
 
         // [FIX null-vs-défaut] quantity_requested vide = 0 (colonne NOT NULL) — un null
         // explicite provoquait « Column cannot be null » (500). recomputeQuantities()

@@ -2,6 +2,7 @@
 
 use App\Models\Company;
 use App\Models\FiscalYear;
+use App\Models\Product;
 use App\Modules\Production\Models\ProductionOrder;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
@@ -30,7 +31,15 @@ function poAdmin(): User
 
 function makeOrder(array $overrides = []): ProductionOrder
 {
+    // [Audit création OF] article à lancer obligatoire (flux Fabriqué) ; un
+    // article fabricable exige une nomenclature au lancement → BOM liée.
+    $pf  = Product::factory()->create(['is_manufacturable' => true]);
+    $bom = \App\Modules\Production\Models\BillOfMaterial::create([
+        'company_id' => Company::first()->id, 'product_id' => $pf->id, 'name' => 'BOM ' . $pf->id, 'is_active' => true,
+    ]);
+
     test()->post(route('production.orders.store'), array_merge([
+        'product_id' => $pf->id, 'bill_of_material_id' => $bom->id,
         'sheet_type' => 'bac', 'thickness' => 0.40, 'color' => 'Rouge',
         'lines' => [
             ['label' => 'Bac 6m', 'length' => 6, 'quantity' => 10],

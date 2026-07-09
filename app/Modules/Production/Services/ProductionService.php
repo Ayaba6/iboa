@@ -374,7 +374,10 @@ class ProductionService
         // clôturé « terminé » sans AUCUNE matière consommée : ni bobine (consumptions),
         // ni composant BOM sorti du stock (mouvements liés aux déclarations). Sinon le
         // stock matière et le coût de revient sont faux. Dérogation valideur ($force).
-        if (! $force && $order->bill_of_material_id && $order->consumptions()->doesntExist()) {
+        // (une BOM sans ligne n'a rien à consommer — garde inapplicable)
+        if (! $force && $order->bill_of_material_id
+            && \App\Modules\Production\Models\BomLine::where('bill_of_material_id', $order->bill_of_material_id)->exists()
+            && $order->consumptions()->doesntExist()) {
             $outputIds = $order->outputs()->pluck('id');
             $hasComponentMoves = $outputIds->isNotEmpty()
                 && \App\Models\StockMovement::where('type', 'sortie')
