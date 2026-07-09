@@ -23,7 +23,7 @@
             </a>
             @can('integrations.manage')
             <a href="{{ route('integrations.create') }}"
-               class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
+               class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Nouvelle intégration
             </a>
@@ -40,7 +40,7 @@
             ['label' => "Appels aujourd'hui", 'value' => $summary['logs_today'], 'color' => 'blue'],
         ]; @endphp
         @foreach($kpis as $k)
-        <div class="bg-white rounded-xl border border-{{ $k['color'] === 'gray' ? 'gray-200' : $k['color'].'-200' }} p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-{{ $k['color'] === 'gray' ? 'gray-200' : $k['color'].'-200' }} p-4 text-center">
             <p class="text-xs font-medium text-{{ $k['color'] === 'gray' ? 'gray-500' : $k['color'].'-600' }} uppercase">{{ $k['label'] }}</p>
             <p class="text-2xl font-bold text-{{ $k['color'] === 'gray' ? 'gray-900' : $k['color'].'-700' }} mt-1">{{ $k['value'] }}</p>
         </div>
@@ -50,8 +50,8 @@
 
     {{-- Grid grouped by type --}}
     @if($integrations->isEmpty())
-    <div class="bg-white rounded-xl border border-gray-200 p-16 text-center">
-        <div class="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-16 text-center">
+        <div class="w-16 h-16 rounded-[4px] bg-blue-50 flex items-center justify-center mx-auto mb-4">
             <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
             </svg>
@@ -59,7 +59,7 @@
         <h3 class="text-lg font-semibold text-gray-900">Aucune intégration configurée</h3>
         <p class="text-sm text-gray-500 mt-1">Connectez votre ERP aux services de paiement, SMS et plus.</p>
         @can('integrations.manage')
-        <a href="{{ route('integrations.create') }}" class="inline-flex items-center gap-2 mt-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+        <a href="{{ route('integrations.create') }}" class="inline-flex items-center gap-2 mt-4 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-4 py-2 rounded-lg">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Créer la première intégration
         </a>
@@ -76,7 +76,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             @foreach($group as $intg)
             @php $sc = $intg->statusColor(); @endphp
-            <div class="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors overflow-hidden">
+            <div class="bg-white rounded-[4px] border border-gray-300 hover:border-gray-300 transition-colors overflow-hidden">
 
                 {{-- Header --}}
                 <div class="p-4 flex items-start gap-3">

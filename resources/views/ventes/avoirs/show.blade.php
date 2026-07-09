@@ -10,13 +10,13 @@
 @endsection
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-3">
 
     {{-- Header --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $creditNote->number }}</h1>
+                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $creditNote->number }}</h1>
                 @php
                     $badges = [
                         'brouillon' => 'bg-gray-100 text-gray-700',
@@ -26,7 +26,7 @@
                     ];
                     $labels = ['brouillon' => 'Brouillon', 'valide' => 'Validé', 'applique' => 'Appliqué', 'annule' => 'Annulé'];
                 @endphp
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $badges[$creditNote->status] ?? 'bg-gray-100 text-gray-700' }}">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-semibold {{ $badges[$creditNote->status] ?? 'bg-gray-100 text-gray-700' }}">
                     {{ $labels[$creditNote->status] ?? $creditNote->status }}
                 </span>
                 <span class="text-gray-500 text-sm">{{ $creditNote->client?->name }}</span>
@@ -35,7 +35,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 {{-- PDF --}}
                 <a href="{{ route('ventes.avoirs.pdf', $creditNote) }}"
-                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors"
                    title="Télécharger le PDF"
                    data-loading data-loading-text="Génération de l'avoir…">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,7 +44,7 @@
                     Télécharger PDF
                 </a>
                 <a href="{{ route('ventes.avoirs.pdf', $creditNote) }}?preview=1" target="_blank"
-                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors"
                    title="Aperçu PDF">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -54,10 +54,10 @@
                 </a>
 
                 @php
-                    $avBtnO  = 'inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors';
-                    $avBtnP  = 'inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors';
-                    $avBtnWO = 'inline-flex items-center gap-2 px-3 py-2 border border-orange-200 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors';
-                    $avBtnDO = 'inline-flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors';
+                    $avBtnO  = 'inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors';
+                    $avBtnP  = 'inline-flex items-center gap-2 px-3 py-1.5 text-white rounded-[4px] text-sm font-semibold shadow-sm transition-colors';
+                    $avBtnWO = 'inline-flex items-center gap-2 px-3 py-2 border border-orange-200 text-orange-600 rounded-[4px] text-sm font-medium hover:bg-orange-50 transition-colors';
+                    $avBtnDO = 'inline-flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-[4px] text-sm font-medium hover:bg-red-50 transition-colors';
                 @endphp
 
                 {{-- ── BROUILLON : Soumettre à validation + Supprimer ───────────────────── --}}
@@ -66,7 +66,7 @@
                     <form action="{{ route('ventes.avoirs.submit', $creditNote) }}" method="POST"
                           onsubmit="return confirm('Soumettre cet avoir à la validation interne ?')">
                         @csrf
-                        <button type="submit" class="{{ $avBtnP }} bg-blue-600 hover:bg-blue-700">
+                        <button type="submit" class="{{ $avBtnP }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3 3L22 4"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
@@ -89,7 +89,7 @@
 
                 {{-- ── EN ATTENTE DE VALIDATION ────────────────────────────────────────── --}}
                 @if($creditNote->status === 'en_attente_validation')
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
                         <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -99,7 +99,7 @@
                     <form action="{{ route('ventes.avoirs.validate-internal', $creditNote) }}" method="POST"
                           onsubmit="return confirm('Valider cet avoir ? Cette action génère une écriture comptable.')">
                         @csrf
-                        <button type="submit" class="{{ $avBtnP }} bg-purple-600 hover:bg-purple-700">
+                        <button type="submit" class="{{ $avBtnP }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
@@ -113,12 +113,12 @@
                         <input type="hidden" name="motif" x-model="motif">
                         <button type="button" @click="open = true" class="{{ $avBtnWO }}">Refuser</button>
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-                            <div class="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md mx-4">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif de refus</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $avBtnO }}">Annuler</button>
-                                    <button type="submit" class="{{ $avBtnP }} bg-orange-600 hover:bg-orange-700">Confirmer le refus</button>
+                                    <button type="submit" class="{{ $avBtnP }} bg-emerald-700 hover:bg-emerald-800">Confirmer le refus</button>
                                 </div>
                             </div>
                         </div>
@@ -132,9 +132,9 @@
                         <input type="hidden" name="motif" x-model="motif">
                         <button type="button" @click="open = true" class="{{ $avBtnDO }}">Annuler</button>
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-                            <div class="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md mx-4">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif d'annulation</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $avBtnO }}">Fermer</button>
                                     <button type="submit" class="{{ $avBtnP }} bg-red-600 hover:bg-red-700">Confirmer l'annulation</button>
@@ -151,7 +151,7 @@
                       onsubmit="return confirm('Appliquer cet avoir sur la facture liée ?')">
                     @csrf
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                            class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-[4px] text-sm font-medium hover:bg-green-700 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -161,7 +161,7 @@
                 @endif
 
                 <a href="{{ route('ventes.avoirs.index') }}"
-                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
@@ -194,7 +194,7 @@
 
     {{-- Info + Totaux --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
             <h2 class="text-base font-semibold text-gray-900">Informations</h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
@@ -214,7 +214,7 @@
                 <div>
                     <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Facture liée</dt>
                     <dd class="mt-0.5">
-                        <a href="{{ route('ventes.factures.show', $creditNote->invoice) }}" class="font-mono font-semibold text-indigo-600 hover:text-indigo-800">
+                        <a href="{{ route('ventes.factures.show', $creditNote->invoice) }}" class="font-mono font-semibold text-emerald-700 hover:text-emerald-900">
                             {{ $creditNote->invoice->number }}
                         </a>
                     </dd>
@@ -242,7 +242,7 @@
         </div>
 
         {{-- Totaux --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3 h-fit">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-3 h-fit">
             <h2 class="text-base font-semibold text-gray-900">Récapitulatif</h2>
             <div class="flex justify-between text-sm text-gray-600">
                 <span>Sous-total HT</span>
@@ -272,33 +272,33 @@
     </div>
 
     {{-- Lignes --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200">
             <h2 class="text-base font-semibold text-gray-900">Lignes de l'avoir</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Qté</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Prix Unit.</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">TVA%</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total HT</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total TTC</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">#</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Description</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Qté</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Prix Unit.</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">TVA%</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total HT</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total TTC</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($creditNote->items as $item)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-gray-400 text-xs">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-3 text-gray-900">{{ $item->description }}</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-purple-700 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-gray-400 text-xs">{{ $loop->iteration }}</td>
+                        <td class="px-3 py-1.5 text-gray-900">{{ $item->description }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-purple-700 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
                     </tr>
                     @empty
                     <tr>
@@ -311,7 +311,7 @@
     </div>
 
     {{-- ── Workflow validation interne ─────────────────────────────────────── --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg class="size-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
@@ -320,16 +320,11 @@
             <x-workflow.status-badge :status="$creditNote->status" :label="$creditNote->status_label" />
         </div>
         @if($creditNote->rejection_reason)
-            <div class="mb-4 rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
+            <div class="mb-4 rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
                 <strong>Motif de refus :</strong> {{ $creditNote->rejection_reason }}
             </div>
         @endif
-        <x-workflow.action-buttons :document="$creditNote"
-            submitRoute="ventes.avoirs.submit"
-            validateRoute="ventes.avoirs.validate-internal"
-            rejectRoute="ventes.avoirs.reject-internal"
-            cancelRoute="ventes.avoirs.cancel-internal"
-            :routeParam="$creditNote->id" />
+        {{-- Les actions de workflow sont dans la barre du header — ici : historique seul. --}}
         <x-workflow.history :document="$creditNote" />
     </div>
 

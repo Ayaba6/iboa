@@ -6,12 +6,12 @@
 @endphp
 
 @if($errors->any())
-<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+<div class="bg-red-50 border border-red-200 text-red-700 rounded-[4px] px-3 py-1.5 text-sm">
     <ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
 </div>
 @endif
 
-<form action="{{ $action }}" method="POST" class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+<form action="{{ $action }}" method="POST" class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
     @csrf
     @if($isEdit) @method('PUT') @endif
 
@@ -24,7 +24,7 @@
             <input type="text" name="code" required maxlength="10"
                    value="{{ old('code', $journalType->code ?? '') }}"
                    placeholder="Ex. : OD2"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono uppercase focus:ring-2 focus:ring-violet-500"
+                   class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono uppercase focus:ring-1 focus:ring-violet-500"
                    style="text-transform: uppercase">
         </div>
 
@@ -33,12 +33,12 @@
             <input type="text" name="name" required maxlength="100"
                    value="{{ old('name', $journalType->name ?? '') }}"
                    placeholder="Ex. : Journal des opérations diverses 2"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                   class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
         </div>
 
         <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Type <span class="text-red-500">*</span></label>
-            <select name="type" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+            <select name="type" required class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                 <option value="">— Sélectionner —</option>
                 @foreach($types as $k => $label)
                 <option value="{{ $k }}" {{ old('type', $journalType->type ?? '') === $k ? 'selected' : '' }}>{{ $label }}</option>
@@ -58,8 +58,8 @@
     </div>
 
     <div class="flex justify-end gap-3 pt-2">
-        <a href="{{ route('comptabilite.journal-types.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2 rounded-lg">Annuler</a>
-        <button type="submit" class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-6 py-2 rounded-lg">
+        <a href="{{ route('comptabilite.journal-types.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px]">Annuler</a>
+        <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-6 py-1.5 rounded-[4px]">
             {{ $isEdit ? 'Enregistrer les modifications' : 'Créer le code journal' }}
         </button>
     </div>

@@ -8,7 +8,9 @@ use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductStock;
+use App\Models\StockReservation;
 use App\Models\Warehouse;
+use App\Modules\Production\Services\ReservationService;
 use App\Repositories\DeliveryNoteRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -46,7 +48,10 @@ class DeliveryNoteService
                 'number'           => $this->sequenceService->nextNumber($company, 'bon_livraison'),
                 'issued_at'        => now()->toDateString(),
                 'status'           => 'brouillon',
-                'warehouse_id'     => $order->delivery_warehouse_id,
+                // Dépôt de livraison explicite si défini, sinon le dépôt qui détient
+                // réellement le stock du premier produit livrable (produit fini de l'OF).
+                'warehouse_id'     => $order->delivery_warehouse_id
+                                       ?? $this->resolveOrderStockWarehouse($order),
                 'delivery_address' => $order->delivery_address,
                 'currency_code'    => $order->currency_code,
                 'created_by'       => Auth::id(),
@@ -94,6 +99,9 @@ class DeliveryNoteService
 
             $this->applyStockOut($dn);
 
+            // [Sync ERP] event domaine apres commit — point d'extension decouple
+            DB::afterCommit(fn () => event(new \App\Events\DeliveryNoteValidated($dn)));
+
             return $dn->fresh();
         });
     }
@@ -102,26 +110,73 @@ class DeliveryNoteService
      * Applique les mouvements de sortie de stock pour un BL validé.
      * Méthode publique appelée à la fois par validate() et par CommercialWorkflowService::validateDeliveryNote()
      * pour le circuit interne (brouillon → en_attente_validation → valide).
+     *
+     * [Sync ERP] journalisée + idempotente + relançable via sync_logs.
      */
     public function applyStockOut(DeliveryNote $dn): void
     {
+        app(\App\Services\Sync\SyncOrchestrator::class)->run(
+            sourceModule: 'ventes',
+            targetModule: 'stock',
+            eventName: 'delivery_note.validated',
+            action: 'create_stock_exits',
+            source: $dn,
+            callback: fn () => $this->applyStockOutInner($dn),
+            handlerClass: \App\Services\Sync\Handlers\ReplayDeliveryStockSync::class,
+        );
+    }
+
+    /** Logique brute des sorties stock — appelée par le flux nominal ET la relance. */
+    public function applyStockOutInner(DeliveryNote $dn): void
+    {
         $dn->load('items.product', 'order.items');
 
-        $warehouseId = $dn->warehouse_id
+        $defaultWarehouseId = $dn->warehouse_id
             ?? Warehouse::where('is_default', true)->value('id')
             ?? Warehouse::value('id');
+
+        // [Sync ERP] Idempotence par comptage : nb de sorties déjà créées pour ce BL
+        // et ce produit vs nb de lignes — gère les relances ET les doubles appels
+        // internes (validate + workflow) sans jamais doubler une sortie.
+        $existingByProduct = \App\Models\StockMovement::where('reference_type', 'delivery_note')
+            ->where('reference_id', $dn->id)
+            ->selectRaw('product_id, COUNT(*) as nb')
+            ->groupBy('product_id')
+            ->pluck('nb', 'product_id');
+        $seenByProduct = [];
 
         foreach ($dn->items as $item) {
             if (!$item->product_id || !($item->product?->is_stockable ?? true)) {
                 continue;
             }
 
+            $seenByProduct[$item->product_id] = ($seenByProduct[$item->product_id] ?? 0) + 1;
+            if (($existingByProduct[$item->product_id] ?? 0) >= $seenByProduct[$item->product_id]) {
+                continue; // sortie déjà enregistrée pour cette ligne
+            }
+
+            $deliveredQty = abs((float) $item->quantity);
+
+            // [FIX livraison dépôt] Le dépôt du BL peut être vide (BL créé depuis une
+            // commande sans dépôt de livraison) : on cible alors le dépôt qui détient
+            // réellement le stock du produit fini — là où l'OF l'a entré — plutôt que
+            // le dépôt par défaut, qui n'aurait aucune ligne (« 0 disponible »).
+            $warehouseId = $dn->warehouse_id
+                ?? $this->resolveStockWarehouse($item->product_id)
+                ?? $defaultWarehouseId;
+
+            // [FIX réservation] Consommer la réservation de la commande AVANT la sortie.
+            // Sinon la propre réservation de la commande (reserved = qté commandée)
+            // ramène le disponible à 0 (qté − réservé) et bloque sa propre livraison.
+            // On FERME la ligne stock_reservations (status=released) en plus de
+            // décrémenter product_stocks.reserved_quantity : les deux couches doivent
+            // rester synchrones, sinon un recompute rederive une réservation fantôme.
+            $this->consumeReservations($dn, (int) $item->product_id, (int) $warehouseId, $deliveredQty);
+
             // Use the current average cost for valuation, not the sale price
             $avgCost = ProductStock::where('product_id', $item->product_id)
                 ->where('warehouse_id', $warehouseId)
                 ->value('avg_cost') ?? 0;
-
-            $deliveredQty = abs((float) $item->quantity);
 
             $this->stockService->recordMovement([
                 'product_id'     => $item->product_id,
@@ -135,21 +190,6 @@ class DeliveryNoteService
                 'notes'          => 'BL ' . $dn->number,
             ]);
 
-            // [FIX-VENTES-06] The reservation placed at order confirmation is now consumed.
-            // Iterate all matching rows (there may be multiple when the original reservation
-            // was placed without a warehouse filter) so no phantom reserved_quantity remains.
-            $remaining = $deliveredQty;
-            ProductStock::where('product_id', $item->product_id)
-                ->where('warehouse_id', $warehouseId)
-                ->where('reserved_quantity', '>', 0)
-                ->orderBy('id')
-                ->each(function ($stockRow) use (&$remaining) {
-                    if ($remaining <= 0) return false; // stop iteration
-                    $release = min($remaining, (float) $stockRow->reserved_quantity);
-                    $stockRow->decrement('reserved_quantity', $release);
-                    $remaining -= $release;
-                });
-
             // Update delivered_quantity on the linked order item
             if ($item->order_item_id) {
                 $orderItem = OrderItem::find($item->order_item_id);
@@ -161,6 +201,84 @@ class DeliveryNoteService
 
         // Advance order status based on delivery progress
         $this->syncOrderDeliveryStatus($dn->order);
+    }
+
+    /**
+     * Consomme la/les réservation(s) de la commande pour un produit livré.
+     *
+     * Ferme les lignes stock_reservations (status=released) via ReservationService,
+     * ce qui décrémente aussi product_stocks.reserved_quantity — garde les deux
+     * couches cohérentes. Sans cette fermeture, un recompute de reserved_quantity
+     * depuis les lignes encore « reserved » ressuscite une réservation fantôme qui
+     * masque le stock fraîchement produit pour les commandes suivantes.
+     *
+     * Repli : si aucune ligne stock_reservations n'existe pour la commande (BL
+     * historiques), on décrémente directement reserved_quantity au dépôt livré.
+     */
+    private function consumeReservations(DeliveryNote $dn, int $productId, int $warehouseId, float $qty): void
+    {
+        $rows = StockReservation::where('order_id', $dn->order_id)
+            ->where('product_id', $productId)
+            ->where('status', 'reserved')
+            ->orderBy('id')
+            ->get();
+
+        if ($rows->isNotEmpty()) {
+            $reservationService = app(ReservationService::class);
+            $remaining = $qty;
+            foreach ($rows as $r) {
+                if ($remaining <= 0) {
+                    break;
+                }
+                $reservationService->release($r);   // ferme la ligne + décrémente reserved_quantity
+                $remaining -= (float) $r->quantity;
+            }
+
+            return;
+        }
+
+        // Repli : réservation non tracée en ligne — décrément direct au dépôt livré.
+        $remaining = $qty;
+        ProductStock::where('product_id', $productId)
+            ->where('warehouse_id', $warehouseId)
+            ->where('reserved_quantity', '>', 0)
+            ->orderBy('id')
+            ->each(function ($stockRow) use (&$remaining) {
+                if ($remaining <= 0) {
+                    return false;
+                }
+                $release = min($remaining, (float) $stockRow->reserved_quantity);
+                $stockRow->decrement('reserved_quantity', $release);
+                $remaining -= $release;
+            });
+    }
+
+    /**
+     * Dépôt détenant le stock d'un produit (quantité ou réservation la plus élevée).
+     * Sert de repli quand le BL n'a pas de dépôt explicite : on livre depuis là où
+     * le stock existe réellement plutôt que depuis le dépôt par défaut.
+     */
+    private function resolveStockWarehouse(int $productId): ?int
+    {
+        return ProductStock::where('product_id', $productId)
+            ->whereRaw('(quantity + reserved_quantity) > 0')
+            ->orderByRaw('(quantity + reserved_quantity) DESC')
+            ->value('warehouse_id');
+    }
+
+    /** Dépôt de repli pour un BL : premier produit de la commande ayant du stock. */
+    private function resolveOrderStockWarehouse(Order $order): ?int
+    {
+        foreach ($order->items as $item) {
+            if (!$item->product_id) {
+                continue;
+            }
+            if ($wid = $this->resolveStockWarehouse($item->product_id)) {
+                return $wid;
+            }
+        }
+
+        return null;
     }
 
     /**

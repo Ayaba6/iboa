@@ -8,16 +8,16 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- ── Header ─────────────────────────────────────────────────────────────── --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Variables mensuelles</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Variables mensuelles</h1>
             <p class="text-sm text-gray-500 mt-0.5">Primes, heures sup., absences et retenues saisies par bulletin</p>
         </div>
         <a href="{{ route('rh.paie.create') }}"
-           class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+           class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -27,14 +27,14 @@
 
     @if($runs->isEmpty())
     {{-- ── État vide ─────────────────────────────────────────────────────────── --}}
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-16 text-center">
+    <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm p-16 text-center">
         <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
         </svg>
         <p class="text-gray-500 font-medium">Aucun bulletin de paie disponible.</p>
         <a href="{{ route('rh.paie.create') }}"
-           class="mt-4 inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+           class="mt-4 inline-flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 text-sm font-medium">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -66,7 +66,7 @@
             $varUrl = route('rh.paie.variables', $run);
         @endphp
 
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+        <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm overflow-hidden"
              x-data="{
                  open: false,
                  loading: false,
@@ -98,7 +98,7 @@
                 <div class="flex items-center gap-3 min-w-0">
                     <div>
                         <span class="font-semibold text-gray-900">{{ $periodLabel }}</span>
-                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
+                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $statusClass }}">
                             {{ $statusLabel }}
                         </span>
                         <span class="ml-2 text-sm text-gray-400">{{ $run->items_count ?? 0 }} employé(s)</span>
@@ -107,7 +107,7 @@
 
                 <div class="flex items-center gap-2">
                     <a href="{{ route('rh.paie.show', $run) }}"
-                       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-indigo-600 hover:text-indigo-800 font-medium rounded-lg hover:bg-indigo-50 transition-colors">
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-emerald-700 hover:text-emerald-900 font-medium rounded-[4px] hover:bg-emerald-50 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -116,9 +116,9 @@
                     </a>
 
                     <button @click="toggle()"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors"
-                            :class="open ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'">
-                        <svg x-show="loading" class="w-4 h-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-[4px] border transition-colors"
+                            :class="open ? 'bg-[#eef5f0] border-emerald-200 text-emerald-800' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'">
+                        <svg x-show="loading" class="w-4 h-4 animate-spin text-emerald-600" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
@@ -152,7 +152,7 @@
                     <p class="text-sm text-gray-400 italic">Aucune variable saisie pour ce bulletin.</p>
                     @if($run->isEditable())
                     <a href="{{ route('rh.paie.show', $run) }}"
-                       class="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                       class="mt-2 text-xs text-emerald-700 hover:text-emerald-900 font-medium">
                         + Ajouter des variables sur le bulletin
                     </a>
                     @endif
@@ -160,7 +160,7 @@
 
                 {{-- Spinner chargement --}}
                 <div x-show="loading" class="flex justify-center py-8">
-                    <svg class="w-6 h-6 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 animate-spin text-emerald-500" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                     </svg>

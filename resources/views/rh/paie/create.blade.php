@@ -29,14 +29,14 @@
     {{-- En-tête --}}
     <div class="mb-6">
         <div class="flex items-center gap-3 mb-1">
-            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-100">
-                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center justify-center w-10 h-10 rounded-[4px] bg-emerald-100">
+                <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
             </div>
             <div>
-                <h1 class="text-xl font-bold text-gray-900">Nouveau bulletin de paie</h1>
+                <h1 class="text-[17px] font-bold text-gray-900">Nouveau bulletin de paie</h1>
                 <p class="text-sm text-gray-500">Sélectionnez la période pour lancer le traitement</p>
             </div>
         </div>
@@ -49,7 +49,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
     {{-- Colonne gauche : période + notes --}}
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 shadow-sm overflow-hidden">
 
         {{-- Section période --}}
         <div class="px-6 pt-6 pb-4">
@@ -60,7 +60,7 @@
                         Mois <span class="text-red-500">*</span>
                     </label>
                     <select name="period_month" x-model.number="month"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors">
+                            class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm focus:ring-1 focus:ring-emerald-300 focus:border-emerald-500 transition-colors">
                         @foreach($months as $m => $l)
                             <option value="{{ $m }}" @selected($m == old('period_month', $suggestMonth))>{{ $l }}</option>
                         @endforeach
@@ -72,31 +72,31 @@
                     </label>
                     <input type="number" name="period_year" x-model.number="year"
                            value="{{ old('period_year', $suggestYear) }}" min="2020" max="2100" required
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-center focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm font-mono text-center focus:ring-1 focus:ring-emerald-300 focus:border-emerald-500 transition-colors">
                 </div>
             </div>
         </div>
 
         {{-- Preview dynamique --}}
-        <div class="mx-6 mb-4 rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 flex items-center justify-between gap-3">
+        <div class="mx-6 mb-4 rounded-[4px] bg-[#eef5f0] border border-emerald-100 px-3 py-1.5 flex items-center justify-between gap-3">
             <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                <div class="w-8 h-8 rounded-[4px] bg-emerald-700 flex items-center justify-center flex-shrink-0">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-xs text-indigo-500 font-medium">Bulletin pour</p>
-                    <p class="text-sm font-bold text-indigo-800" x-text="label"></p>
+                    <p class="text-xs text-emerald-600 font-medium">Bulletin pour</p>
+                    <p class="text-sm font-bold text-emerald-900" x-text="label"></p>
                 </div>
             </div>
-            <div class="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg px-3 py-1.5">
-                <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center gap-1.5 bg-white border border-emerald-200 rounded-[4px] px-3 py-1.5">
+                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                <span class="text-xs font-semibold text-indigo-700">{{ $activeCount }} employé(s)</span>
+                <span class="text-xs font-semibold text-emerald-800">{{ $activeCount }} employé(s)</span>
             </div>
         </div>
 
@@ -107,30 +107,30 @@
             </label>
             <textarea name="notes" rows="3"
                       placeholder="Ex : Intégration des primes de fin d'année…"
-                      class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors placeholder-gray-400">{{ old('notes') }}</textarea>
+                      class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm resize-none focus:ring-1 focus:ring-emerald-300 focus:border-emerald-500 transition-colors placeholder-gray-400">{{ old('notes') }}</textarea>
         </div>
     </div>{{-- /colonne gauche --}}
 
     {{-- Colonne droite : étapes --}}
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm px-6 py-5">
         <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Ce qui va se passer</p>
         <ol class="space-y-2">
                 <li class="flex items-start gap-2.5">
-                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold flex items-center justify-center mt-0.5">1</span>
+                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold flex items-center justify-center mt-0.5">1</span>
                     <div>
                         <p class="text-sm font-medium text-gray-700">Création du bulletin en brouillon</p>
                         <p class="text-xs text-gray-400">Le bulletin est créé avec statut <em>Brouillon</em>, aucun calcul automatique</p>
                     </div>
                 </li>
                 <li class="flex items-start gap-2.5">
-                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold flex items-center justify-center mt-0.5">2</span>
+                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold flex items-center justify-center mt-0.5">2</span>
                     <div>
                         <p class="text-sm font-medium text-gray-700">Saisie des variables mensuelles</p>
                         <p class="text-xs text-gray-400">Primes, heures sup., absences et retenues saisies par employé</p>
                     </div>
                 </li>
                 <li class="flex items-start gap-2.5">
-                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold flex items-center justify-center mt-0.5">3</span>
+                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold flex items-center justify-center mt-0.5">3</span>
                     <div>
                         <p class="text-sm font-medium text-gray-700">Calcul, validation et paiement</p>
                         <p class="text-xs text-gray-400">Calcul des rubriques, validation RH, puis marquage comme payé</p>
@@ -143,14 +143,14 @@
     {{-- Actions --}}
     <div class="flex items-center justify-between mt-5">
         <a href="{{ route('rh.paie.index') }}"
-           class="flex items-center gap-1.5 px-4 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+           class="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 text-gray-600 rounded-[4px] text-sm hover:bg-gray-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>
             Annuler
         </a>
         <button type="submit"
-                class="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-sm">
+                class="flex items-center gap-2 px-6 py-2.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 active:scale-95 transition-all shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>

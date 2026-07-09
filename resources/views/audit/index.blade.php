@@ -8,24 +8,24 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Journal d'activité</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Journal d'activité</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ number_format($logs->total()) }} entrée(s) enregistrée(s)</p>
         </div>
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <input type="text" name="search" value="{{ request('search') }}"
                    placeholder="Utilisateur, modèle, URL..."
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
 
-            <select name="action" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="action" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Toutes les actions</option>
                 @foreach($actions as $action)
                     @php
@@ -46,7 +46,7 @@
                 @endforeach
             </select>
 
-            <select name="user_id" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="user_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les utilisateurs</option>
                 @foreach($users as $user)
                     <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
@@ -56,21 +56,21 @@
             </select>
 
             <input type="date" name="date_from" value="{{ request('date_from') }}"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                    placeholder="Du">
 
             <input type="date" name="date_to" value="{{ request('date_to') }}"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                    placeholder="Au">
         </div>
         <div class="flex gap-2 mt-3">
             <button type="submit"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                    class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 Filtrer
             </button>
             @if(request()->hasAny(['search','action','user_id','date_from','date_to']))
             <a href="{{ route('audit.index') }}"
-               class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors">
+               class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
                 Réinitialiser
             </a>
             @endif
@@ -78,17 +78,17 @@
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date & heure</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Utilisateur</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Objet</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Modifications</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">IP</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Date & heure</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Utilisateur</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Action</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Objet</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Modifications</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden xl:table-cell">IP</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -98,7 +98,7 @@
                             'created'   => 'bg-green-100 text-green-700',
                             'updated'   => 'bg-blue-100 text-blue-700',
                             'deleted'   => 'bg-red-100 text-red-700',
-                            'login'     => 'bg-indigo-100 text-indigo-700',
+                            'login'     => 'bg-emerald-100 text-emerald-800',
                             'logout'    => 'bg-gray-100 text-gray-600',
                             'validated' => 'bg-purple-100 text-purple-700',
                             'sent'      => 'bg-sky-100 text-sky-700',
@@ -108,15 +108,15 @@
                     @endphp
                     <tr class="hover:bg-gray-50 transition-colors">
                         {{-- Date --}}
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <td class="px-3 py-1.5 whitespace-nowrap">
                             <span class="text-gray-900 font-medium">{{ $log->created_at->format('d/m/Y') }}</span>
                             <span class="text-gray-400 ml-1">{{ $log->created_at->format('H:i:s') }}</span>
                         </td>
 
                         {{-- Utilisateur --}}
-                        <td class="px-4 py-3 whitespace-nowrap">
+                        <td class="px-3 py-1.5 whitespace-nowrap">
                             <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold flex-shrink-0">
                                     {{ strtoupper(substr($log->user_name ?? '?', 0, 1)) }}
                                 </div>
                                 <span class="text-gray-700">{{ $log->user_name ?? '—' }}</span>
@@ -124,14 +124,14 @@
                         </td>
 
                         {{-- Action --}}
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $badgeClass }}">
+                        <td class="px-3 py-1.5 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $badgeClass }}">
                                 {{ $log->actionLabel() }}
                             </span>
                         </td>
 
                         {{-- Objet --}}
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             @if($log->model_type)
                             <span class="text-gray-700 font-medium">{{ $log->modelLabel() }}</span>
                             @if($log->model_id)
@@ -143,11 +143,11 @@
                         </td>
 
                         {{-- Modifications --}}
-                        <td class="px-4 py-3 hidden lg:table-cell max-w-xs">
+                        <td class="px-3 py-1.5 hidden lg:table-cell max-w-xs">
                             @if($log->old_values || $log->new_values)
                             <div x-data="{ open: false }">
                                 <button @click="open = !open"
-                                        class="text-xs text-indigo-600 hover:text-indigo-800 underline underline-offset-2">
+                                        class="text-xs text-emerald-700 hover:text-emerald-900 underline underline-offset-2">
                                     Voir les détails
                                 </button>
                                 <div x-show="open" x-cloak class="mt-2 space-y-1 text-xs">
@@ -181,7 +181,7 @@
                         </td>
 
                         {{-- IP --}}
-                        <td class="px-4 py-3 text-gray-400 text-xs hidden xl:table-cell whitespace-nowrap">
+                        <td class="px-3 py-1.5 text-gray-400 text-xs hidden xl:table-cell whitespace-nowrap">
                             {{ $log->ip_address ?? '—' }}
                         </td>
                     </tr>
@@ -196,7 +196,7 @@
             </table>
         </div>
         @if($logs->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
+        <div class="px-3 py-1.5 border-t border-gray-100">
             {{ $logs->links() }}
         </div>
         @endif

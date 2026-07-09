@@ -10,19 +10,19 @@
 @endsection
 
 @section('content')
-<div x-data="simulateur()" x-init="init()" class="max-w-6xl mx-auto space-y-5">
+<div x-data="simulateur()" x-init="init()" class="max-w-6xl mx-auto space-y-3">
 
     {{-- En-tete --}}
     <div class="flex items-start justify-between flex-wrap gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 class="text-[16px] font-bold text-gray-900 flex items-center gap-2">
                 <span>🧮</span> Simulateur de salaire inverse
             </h1>
             <p class="text-sm text-gray-500 mt-1">
                 Saisissez le net souhaite &mdash; le simulateur calcule brut, cotisations et cout employeur.
             </p>
         </div>
-        <div class="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex-shrink-0">
+        <div class="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-[4px] px-3 py-2 flex-shrink-0">
             <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
@@ -35,13 +35,13 @@
     </div>
 
     {{-- ═══ GRILLE SALARIALE ════════════════════════════════════════════════ --}}
-    <div x-data="{ grilleOpen: false }" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div x-data="{ grilleOpen: false }" class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <button @click="grilleOpen = !grilleOpen"
                 class="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-gray-50 transition-colors">
             <span class="flex items-center gap-2.5 font-semibold text-gray-800 text-sm">
                 <span class="text-base">📊</span>
                 Grille salariale indicative &mdash; Burkina Faso
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-blue-100 text-blue-700">
                     9 categories
                 </span>
             </span>
@@ -62,10 +62,10 @@
                             'gray'    => 'border-gray-200 hover:border-gray-400 hover:bg-gray-50',
                             'slate'   => 'border-slate-200 hover:border-slate-400 hover:bg-slate-50',
                             'blue'    => 'border-blue-200 hover:border-blue-400 hover:bg-blue-50',
-                            'indigo'  => 'border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50',
+                            'indigo'  => 'border-emerald-200 hover:border-indigo-400 hover:bg-emerald-50',
                             'violet'  => 'border-violet-200 hover:border-violet-400 hover:bg-violet-50',
                             'emerald' => 'border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50',
-                            'teal'    => 'border-teal-200 hover:border-teal-400 hover:bg-teal-50',
+                            'teal'    => 'border-emerald-200 hover:border-teal-400 hover:bg-emerald-50',
                             'orange'  => 'border-orange-200 hover:border-orange-400 hover:bg-orange-50',
                             'red'     => 'border-red-200 hover:border-red-400 hover:bg-red-50',
                         ];
@@ -73,10 +73,10 @@
                             'gray'    => 'bg-gray-100 text-gray-600',
                             'slate'   => 'bg-slate-100 text-slate-600',
                             'blue'    => 'bg-blue-100 text-blue-700',
-                            'indigo'  => 'bg-indigo-100 text-indigo-700',
+                            'indigo'  => 'bg-emerald-100 text-emerald-800',
                             'violet'  => 'bg-violet-100 text-violet-700',
                             'emerald' => 'bg-emerald-100 text-emerald-700',
-                            'teal'    => 'bg-teal-100 text-teal-700',
+                            'teal'    => 'bg-emerald-100 text-emerald-800',
                             'orange'  => 'bg-orange-100 text-orange-700',
                             'red'     => 'bg-red-100 text-red-700',
                         ];
@@ -85,7 +85,7 @@
                     @endphp
                     <button
                         @click="selectCategorie({{ json_encode($cat) }}); grilleOpen = false"
-                        class="text-left border-2 rounded-xl p-3.5 transition-all duration-150 cursor-pointer {{ $cls }}"
+                        class="text-left border-2 rounded-[4px] p-3.5 transition-all duration-150 cursor-pointer {{ $cls }}"
                         :class="selectedCat === '{{ $cat['code'] }}' ? 'ring-2 ring-offset-1 ring-blue-400' : ''"
                     >
                         <div class="flex items-start justify-between mb-1.5">
@@ -119,7 +119,7 @@
 
             {{-- Categorie selectionnee --}}
             <div x-show="selectedCat" x-cloak
-                 class="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-sm text-blue-700">
+                 class="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-[4px] px-3 py-2.5 text-sm text-blue-700">
                 <span class="text-base" x-text="selectedIcon"></span>
                 <span class="font-semibold" x-text="selectedLabel"></span>
                 <button @click="selectedCat=''; selectedLabel=''; selectedIcon=''"
@@ -131,7 +131,7 @@
             </div>
 
             {{-- 1. Net souhaite --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <h2 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                     <span class="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold">1</span>
                     Net a payer souhaite
@@ -140,8 +140,8 @@
                     <input type="number" x-model.number="form.net_souhaite"
                            @input.debounce.600ms="simulate()"
                            min="1" step="1000" placeholder="300 000"
-                           class="w-full pl-4 pr-16 py-3 text-xl font-bold text-gray-900 border-2 border-emerald-400 rounded-xl
-                                  focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-500
+                           class="w-full pl-4 pr-16 py-3 text-[17px] font-bold text-gray-900 border-2 border-emerald-400 rounded-[4px]
+                                  focus:outline-none focus:ring-1 focus:ring-emerald-300 focus:border-emerald-500
                                   bg-emerald-50 placeholder-gray-300">
                     <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">FCFA</span>
                 </div>
@@ -150,7 +150,7 @@
                     @foreach([150000,300000,500000,750000,1000000,1500000] as $quick)
                     <button @click="form.net_souhaite={{ $quick }}; simulate()"
                             type="button"
-                            class="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                            class="px-2 py-1 text-xs rounded-[4px] border border-gray-200 text-gray-500 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                             :class="form.net_souhaite === {{ $quick }} ? 'border-emerald-400 bg-emerald-50 text-emerald-700 font-semibold' : ''">
                         {{ number_format($quick/1000, 0, ',', ' ') }}k
                     </button>
@@ -159,7 +159,7 @@
             </div>
 
             {{-- 2. Situation familiale --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <h2 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                     <span class="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold">2</span>
                     Situation familiale
@@ -168,7 +168,7 @@
                     @foreach(['celibataire'=>'Celibataire','marie'=>'Marie(e)','veuf'=>'Veuf/Veuve'] as $val=>$label)
                     <label class="cursor-pointer">
                         <input type="radio" x-model="form.family_status" value="{{ $val }}" @change="simulate()" class="sr-only peer">
-                        <div class="text-center px-1 py-2.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600
+                        <div class="text-center px-1 py-1.5 rounded-[4px] border border-gray-200 text-xs font-medium text-gray-600
                                     peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700
                                     hover:border-blue-300 transition-colors">
                             {{ $label }}
@@ -180,19 +180,19 @@
                     <label class="block text-xs text-gray-500 mb-2">Nombre de charges (enfants)</label>
                     <div class="flex items-center gap-3">
                         <button @click="form.nb_children=Math.max(0,form.nb_children-1);simulate()" type="button"
-                                class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold">&minus;</button>
-                        <span class="text-xl font-bold text-gray-900 w-8 text-center" x-text="form.nb_children"></span>
+                                class="w-8 h-8 rounded-[4px] bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold">&minus;</button>
+                        <span class="text-[17px] font-bold text-gray-900 w-8 text-center" x-text="form.nb_children"></span>
                         <button @click="form.nb_children=Math.min(15,form.nb_children+1);simulate()" type="button"
-                                class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold">+</button>
+                                class="w-8 h-8 rounded-[4px] bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold">+</button>
                         <span class="text-xs text-gray-400 ml-1" x-text="'= ' + nbPartsLabel + ' part(s)'"></span>
                     </div>
                 </div>
             </div>
 
             {{-- 3. Primes & retenues --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <h2 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <span class="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                    <span class="w-6 h-6 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-xs font-bold">3</span>
                     Primes &amp; retenues
                 </h2>
                 <div class="space-y-3">
@@ -207,7 +207,7 @@
                             <input type="number" x-model.number="form.{{ $field }}"
                                    @input.debounce.500ms="simulate()"
                                    min="0" step="1000" placeholder="0"
-                                   class="w-full pl-3 pr-14 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+                                   class="w-full pl-3 pr-14 py-2 border border-gray-200 rounded-[4px] text-sm focus:outline-none focus:ring-1 focus:ring-emerald-300 focus:border-emerald-500">
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">FCFA</span>
                         </div>
                         @if($hint)<p class="text-xs text-gray-400 mt-0.5">{{ $hint }}</p>@endif
@@ -221,7 +221,7 @@
                             <input type="number" x-model.number="form.anciennete_pct"
                                    @input.debounce.500ms="simulate()"
                                    min="0" max="25" step="0.5" placeholder="0"
-                                   class="w-full pl-3 pr-10 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+                                   class="w-full pl-3 pr-10 py-2 border border-gray-200 rounded-[4px] text-sm focus:outline-none focus:ring-1 focus:ring-emerald-300 focus:border-emerald-500">
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                         </div>
                         <p class="text-xs text-gray-400 mt-0.5">BF : 2 %/an, plafond 25 %. Décompose base / prime d'ancienneté.</p>
@@ -230,7 +230,7 @@
             </div>
 
             <button @click="simulate()" :disabled="loading || !form.net_souhaite"
-                    class="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">
+                    class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-sm font-semibold rounded-[4px] transition-colors flex items-center justify-center gap-2">
                 <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -244,14 +244,14 @@
 
             {{-- Vide --}}
             <div x-show="!result && !loading" x-cloak
-                 class="bg-white rounded-xl border border-dashed border-gray-200 p-16 text-center flex flex-col items-center gap-3">
+                 class="bg-white rounded-[4px] border border-dashed border-gray-200 p-16 text-center flex flex-col items-center gap-3">
                 <span class="text-5xl">🧮</span>
                 <p class="text-gray-400 text-sm">Saisissez un net souhaite ou choisissez une categorie</p>
             </div>
 
             {{-- Chargement --}}
             <div x-show="loading" x-cloak
-                 class="bg-white rounded-xl border border-gray-200 p-16 flex items-center justify-center gap-3 text-gray-400">
+                 class="bg-white rounded-[4px] border border-gray-300 p-16 flex items-center justify-center gap-3 text-gray-400">
                 <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -264,7 +264,7 @@
 
                     {{-- Alerte : PNI couvre deja le net (brut = 0) --}}
                     <div x-show="result.salaire_brut === 0"
-                         class="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                         class="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-[4px] px-3 py-1.5 text-sm text-blue-800">
                         <svg class="w-5 h-5 flex-shrink-0 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -274,7 +274,7 @@
 
                     {{-- Alerte ecart --}}
                     <div x-show="!result.exact && result.salaire_brut > 0"
-                         class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                         class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-1.5 text-sm text-amber-800">
                         <svg class="w-5 h-5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
@@ -284,40 +284,40 @@
 
                     {{-- KPIs --}}
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4">
                             <p class="text-xs text-blue-500 font-medium uppercase tracking-wide mb-1">Salaire brut</p>
-                            <p class="text-2xl font-bold text-blue-700 tabular-nums" x-text="fmt(result.salaire_brut)+' F'"></p>
+                            <p class="text-[16px] font-bold text-blue-700 tabular-nums" x-text="fmt(result.salaire_brut)+' F'"></p>
                             <p class="text-xs text-blue-400 mt-1">Base : <span x-text="fmt(result.salaire_base)+' F'"></span></p>
                         </div>
-                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] p-4">
                             <p class="text-xs text-emerald-500 font-medium uppercase tracking-wide mb-1">Net a payer</p>
-                            <p class="text-2xl font-bold text-emerald-700 tabular-nums" x-text="fmt(result.net_calcule)+' F'"></p>
+                            <p class="text-[16px] font-bold text-emerald-700 tabular-nums" x-text="fmt(result.net_calcule)+' F'"></p>
                             <p class="text-xs text-emerald-400 mt-1">Cible : <span x-text="fmt(result.net_souhaite)+' F'"></span></p>
                         </div>
-                        <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div class="bg-red-50 border border-red-200 rounded-[4px] p-4">
                             <p class="text-xs text-red-500 font-medium uppercase tracking-wide mb-1">CNSS salarie</p>
-                            <p class="text-xl font-bold text-red-700 tabular-nums" x-text="fmt(result.cnss_employee)+' F'"></p>
+                            <p class="text-[17px] font-bold text-red-700 tabular-nums" x-text="fmt(result.cnss_employee)+' F'"></p>
                             <p class="text-xs text-red-400 mt-1" x-text="result.cnss_employee_rate+'% du brut plafonne'"></p>
                         </div>
-                        <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                        <div class="bg-purple-50 border border-purple-200 rounded-[4px] p-4">
                             <p class="text-xs text-purple-500 font-medium uppercase tracking-wide mb-1">IUTS</p>
-                            <p class="text-xl font-bold text-purple-700 tabular-nums" x-text="fmt(result.iuts)+' F'"></p>
+                            <p class="text-[17px] font-bold text-purple-700 tabular-nums" x-text="fmt(result.iuts)+' F'"></p>
                             <p class="text-xs text-purple-400 mt-1" x-text="result.nb_parts+' part(s) fiscale(s)'"></p>
                         </div>
-                        <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
-                            <p class="text-xs text-teal-600 font-medium uppercase tracking-wide mb-1">Salaire net imposable</p>
-                            <p class="text-xl font-bold text-teal-700 tabular-nums" x-text="fmt(result.salaire_net_imposable)+' F'"></p>
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] p-4">
+                            <p class="text-xs text-emerald-700 font-medium uppercase tracking-wide mb-1">Salaire net imposable</p>
+                            <p class="text-[17px] font-bold text-emerald-800 tabular-nums" x-text="fmt(result.salaire_net_imposable)+' F'"></p>
                             <p class="text-xs text-teal-400 mt-1">Brut &minus; CNSS</p>
                         </div>
-                        <div class="bg-violet-50 border border-violet-200 rounded-xl p-4">
+                        <div class="bg-violet-50 border border-violet-200 rounded-[4px] p-4">
                             <p class="text-xs text-violet-600 font-medium uppercase tracking-wide mb-1">Base imposable IUTS</p>
-                            <p class="text-xl font-bold text-violet-700 tabular-nums" x-text="fmt(result.base_iuts)+' F'"></p>
+                            <p class="text-[17px] font-bold text-violet-700 tabular-nums" x-text="fmt(result.base_iuts)+' F'"></p>
                             <p class="text-xs text-violet-400 mt-1" x-text="'Apres abattement '+result.abattement_rate+'%'"></p>
                         </div>
-                        <div class="col-span-2 bg-gray-900 rounded-xl p-4 flex items-center justify-between">
+                        <div class="col-span-2 bg-gray-900 rounded-[4px] p-4 flex items-center justify-between">
                             <div>
                                 <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Cout total employeur</p>
-                                <p class="text-2xl font-bold text-white tabular-nums" x-text="fmt(result.cout_employeur)+' F'"></p>
+                                <p class="text-[16px] font-bold text-white tabular-nums" x-text="fmt(result.cout_employeur)+' F'"></p>
                                 <p class="text-xs text-gray-400 mt-1">
                                     Brut + CNSS patronal (<span x-text="fmt(result.cnss_employer)+' F'"></span>)
                                 </p>
@@ -327,7 +327,7 @@
                                 {{-- Bouton Export PDF --}}
                                 <button @click="exportPdf()"
                                         :disabled="pdfLoading"
-                                        class="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50">
+                                        class="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-[4px] transition-colors disabled:opacity-50">
                                     <svg x-show="pdfLoading" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -342,8 +342,8 @@
                     </div>
 
                     {{-- Detail ligne par ligne --}}
-                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                        <div class="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+                        <div class="px-3 py-1.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
                             <h3 class="text-sm font-semibold text-gray-700">Detail du calcul</h3>
                             <span class="text-xs text-gray-400">Norme BF (CNSS + IUTS)</span>
                         </div>
@@ -354,7 +354,7 @@
                                          class="px-4 py-1.5 bg-gray-800 text-xs text-gray-300 uppercase tracking-wide font-semibold">
                                         Charge patronale
                                     </div>
-                                    <div class="flex items-center justify-between px-4 py-2.5"
+                                    <div class="flex items-center justify-between px-3 py-2.5"
                                          :class="row.bold ? 'bg-gray-50' : 'bg-white'">
                                         <div class="flex items-center gap-2">
                                             <span class="w-5 text-center font-mono text-sm font-bold"
@@ -373,10 +373,10 @@
                                                   'text-purple-600': row.color==='purple',
                                                   'text-amber-600':  row.color==='amber',
                                                   'text-emerald-600':row.color==='emerald',
-                                                  'text-indigo-600': row.color==='indigo',
+                                                  'text-emerald-700': row.color==='indigo',
                                                   'text-orange-600': row.color==='orange',
                                                   'text-gray-700':   row.color==='gray',
-                                                  'font-bold text-teal-700':   row.color==='teal',
+                                                  'font-bold text-emerald-800':   row.color==='teal',
                                                   'text-violet-600': row.color==='violet',
                                                   'text-slate-500':  row.color==='slate',
                                               }"
@@ -388,8 +388,8 @@
                     </div>
 
                     {{-- Taux effectifs --}}
-                    <div class="bg-white rounded-xl border border-gray-200 p-4">
-                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Taux effectifs</h3>
+                    <div class="bg-white rounded-[4px] border border-gray-300 p-4">
+                        <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide mb-3">Taux effectifs</h3>
                         <div class="space-y-2.5">
                             <template x-for="item in tauxEffectifs" :key="item.label">
                                 <div class="flex items-center gap-3">

@@ -60,6 +60,7 @@ class DeliveryNoteController extends Controller
         }
 
         $deliveryNote = $this->service->repository->findWithDetails($bonsLivraison->id);
+        $deliveryNote->load('attachments');
 
         return view('ventes.bons-livraison.edit', compact('deliveryNote'));
     }
@@ -76,9 +77,22 @@ class DeliveryNoteController extends Controller
         }
 
         $request->validate([
-            'items'            => ['required', 'array'],
-            'items.*.id'       => ['required', 'integer', 'exists:delivery_note_items,id'],
-            'items.*.quantity' => ['required', 'numeric', 'min:0'],
+            'items'                => ['required', 'array'],
+            'items.*.id'           => ['required', 'integer', 'exists:delivery_note_items,id'],
+            'items.*.quantity'     => ['required', 'numeric', 'min:0'],
+            // [SAGE parité] transport
+            'delivery_address'     => ['nullable', 'string', 'max:500'],
+            'delivery_contact'     => ['nullable', 'string', 'max:120'],
+            'carrier'              => ['nullable', 'string', 'max:120'],
+            'shipping_mode'        => ['nullable', 'string', 'max:40'],
+            'incoterm'             => ['nullable', 'string', 'max:10'],
+            'tracking_number'      => ['nullable', 'string', 'max:120'],
+            'weight_kg'            => ['nullable', 'numeric', 'min:0'],
+            'packages_count'       => ['nullable', 'integer', 'min:0'],
+            'expected_delivery_at' => ['nullable', 'date'],
+            'notes'                => ['nullable', 'string', 'max:2000'],
+            'documents'            => ['nullable', 'array'],
+            'documents.*'          => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
         ], [
             'items.required'            => 'Aucune ligne à mettre à jour.',
             'items.*.id.required'       => 'Identifiant de ligne manquant.',
@@ -99,12 +113,42 @@ class DeliveryNoteController extends Controller
                 $item->update(['quantity' => $qty]);
                 $totalQty += $qty;
             }
-            $bonsLivraison->update(['total_quantity' => $totalQty]);
+            $bonsLivraison->update([
+                'total_quantity'       => $totalQty,
+                'delivery_address'     => $request->input('delivery_address'),
+                'delivery_contact'     => $request->input('delivery_contact'),
+                'carrier'              => $request->input('carrier'),
+                'shipping_mode'        => $request->input('shipping_mode'),
+                'incoterm'             => $request->input('incoterm'),
+                'tracking_number'      => $request->input('tracking_number'),
+                'weight_kg'            => $request->input('weight_kg'),
+                'packages_count'       => $request->input('packages_count'),
+                'expected_delivery_at' => $request->input('expected_delivery_at'),
+                'notes'                => $request->input('notes'),
+            ]);
         });
+
+        $this->uploadDocuments($bonsLivraison, $request);
 
         return redirect()
             ->route('ventes.bons-livraison.show', $bonsLivraison)
             ->with('success', 'Bon de livraison mis à jour.');
+    }
+
+    /** Enregistre les pièces jointes du bon de livraison. */
+    private function uploadDocuments(DeliveryNote $deliveryNote, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/delivery_note/'.$deliveryNote->id, 'local');
+            $deliveryNote->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     /**
@@ -188,8 +232,15 @@ class DeliveryNoteController extends Controller
         try {
             $this->workflow->validateDeliveryNote($bonsLivraison, $request->motif);
             return back()->with('success', "BL {$bonsLivraison->number} validé.");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Ex. « Stock insuffisant » remonté par StockService lors de la sortie.
+            // Sans ce catch, la ValidationException échappe au catch RuntimeException
+            // → rollback silencieux (statut inchangé) sans message clair à l'écran.
+            return back()->withErrors($e->errors());
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            // Ex. garde-fou production (« quantité produite insuffisante »). Affiché
+            // AUSSI dans la bannière d'erreurs (visible) en plus du toast.
+            return back()->withErrors(['livraison' => $e->getMessage()])->with('error', $e->getMessage());
         }
     }
 

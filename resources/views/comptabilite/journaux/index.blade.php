@@ -8,16 +8,16 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Journal comptable</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Journal comptable</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $entries->total() }} écriture(s)</p>
         </div>
         <div class="flex items-center gap-2 self-start">
             <a href="{{ route('comptabilite.journaux.export-pdf', request()->query()) }}"
-               class="inline-flex items-center gap-1.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+               class="inline-flex items-center gap-1.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
@@ -25,7 +25,7 @@
                 Exporter PDF
             </a>
             <a href="{{ route('comptabilite.journaux.export', request()->query()) }}"
-               class="inline-flex items-center gap-1.5 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+               class="inline-flex items-center gap-1.5 border border-green-600 text-green-700 hover:bg-green-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
@@ -34,7 +34,7 @@
             </a>
             @can('accounting.write')
             <a href="{{ route('comptabilite.journaux.create') }}"
-               class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+               class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -45,12 +45,12 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, libellé..."
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
 
-            <select name="journal_type_id" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+            <select name="journal_type_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                 <option value="">Tous les journaux</option>
                 @foreach($journalTypes as $jt)
                 <option value="{{ $jt->id }}" {{ ($filters['journal_type_id'] ?? '') == $jt->id ? 'selected' : '' }}>
@@ -59,7 +59,7 @@
                 @endforeach
             </select>
 
-            <select name="status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon" {{ ($filters['status'] ?? '') === 'brouillon' ? 'selected' : '' }}>Brouillon</option>
                 <option value="valide"    {{ ($filters['status'] ?? '') === 'valide'    ? 'selected' : '' }}>Validé</option>
@@ -67,12 +67,12 @@
             </select>
 
             <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
 
             <div class="flex gap-2">
                 <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}"
-                       class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
-                <button type="submit" class="bg-violet-600 hover:bg-violet-700 text-white text-sm px-3 py-2 rounded-lg">
+                       class="flex-1 border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
+                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm px-2.5 py-1.5 rounded-[4px]">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
@@ -82,7 +82,7 @@
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="tbl-scroll">
             <table class="tbl tbl-sticky w-full">
                 <thead>
@@ -128,7 +128,7 @@
                         </td>
                         <td class="text-center">
                             @php $color = $entry->statusColor(); @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{ $color }}-100 text-{{ $color }}-700">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $color }}-100 text-{{ $color }}-700">
                                 {{ $entry->statusLabel() }}
                             </span>
                         </td>
@@ -179,7 +179,7 @@
             </table>
         </div>
         @if($entries->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
+        <div class="px-3 py-1.5 border-t border-gray-100">
             {{ $entries->appends($filters)->links() }}
         </div>
         @endif

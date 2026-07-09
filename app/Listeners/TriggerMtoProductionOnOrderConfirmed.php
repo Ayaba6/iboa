@@ -45,10 +45,18 @@ class TriggerMtoProductionOnOrderConfirmed
                 continue;
             }
 
-            // Quantité manquante = commandé − disponible (quantité − réservé).
-            $available = (float) ProductStock::where('product_id', $product->id)
+            // Quantité manquante = commandé − disponible RÉEL pour cette commande.
+            // [FIX BUG-003] La réservation propre à la commande (posée par OrderConfirmed
+            // AVANT ce listener) est rajoutée : sinon elle réduit `available` à ~0 et
+            // l'OF réclame la quantité totale commandée au lieu du seul manquant.
+            $physicalAvailable = (float) ProductStock::where('product_id', $product->id)
                 ->get(['quantity', 'reserved_quantity'])
                 ->sum(fn ($s) => (float) $s->quantity - (float) $s->reserved_quantity);
+            $ownReservation = (float) \App\Models\StockReservation::where('order_id', $order->id)
+                ->where('product_id', $product->id)
+                ->where('status', 'reserved')
+                ->sum('quantity');
+            $available = $physicalAvailable + $ownReservation;
             $shortfall = (float) $item->quantity - max(0, $available);
             if ($shortfall <= 0) {
                 continue;

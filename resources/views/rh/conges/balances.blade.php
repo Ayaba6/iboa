@@ -9,22 +9,22 @@
 
 @section('content')
 <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Soldes de congés — {{ $year }}</h1>
+    <h1 class="text-[16px] font-bold text-gray-900">Soldes de congés — {{ $year }}</h1>
     <form method="GET" class="flex gap-2">
-        <select name="year" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        <select name="year" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
             @foreach(range(now()->year, now()->year-3) as $y)
             <option value="{{ $y }}" @selected($year==$y)>{{ $y }}</option>
             @endforeach
         </select>
-        <button type="submit" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm">Afficher</button>
+        <button type="submit" class="px-3 py-1.5 bg-gray-700 text-white rounded-[4px] text-sm">Afficher</button>
     </form>
 </div>
 
-<div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+<div class="bg-white rounded-[4px] border border-gray-300 overflow-x-auto">
     <table class="w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+        <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] text-emerald-900 font-bold uppercase tracking-wide">
             <tr>
-                <th class="px-4 py-3 text-left">Employé</th>
+                <th class="px-3 py-1.5 text-left">Employé</th>
                 @foreach($types as $t)
                 <th class="px-3 py-3 text-center" colspan="3">
                     <span class="inline-block w-2 h-2 rounded-full bg-{{ $t->color }}-500 mr-1"></span>{{ $t->name }}
@@ -32,7 +32,7 @@
                 @endforeach
             </tr>
             <tr>
-                <th class="px-4 py-2"></th>
+                <th class="px-3 py-1.5"></th>
                 @foreach($types as $t)
                 <th class="px-2 py-1 text-center text-gray-400">Droit</th>
                 <th class="px-2 py-1 text-center text-gray-400">Pris</th>
@@ -43,7 +43,7 @@
         <tbody class="divide-y divide-gray-100">
         @forelse($employees as $emp)
         <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 font-medium">
+            <td class="px-3 py-1.5 font-medium">
                 {{ $emp->full_name }}<br>
                 <span class="text-xs text-gray-400">{{ $emp->matricule }}</span>
             </td>

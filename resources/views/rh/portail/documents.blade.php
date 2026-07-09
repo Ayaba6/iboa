@@ -6,7 +6,7 @@
 @endsection
 
 @section('content')
-<h1 class="text-2xl font-bold text-gray-900 mb-6">Mes documents</h1>
+<h1 class="text-[16px] font-bold text-gray-900 mb-6">Mes documents</h1>
 
 @if($documents->isNotEmpty())
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -17,7 +17,7 @@
         $isExpired = $doc->expires_at && $doc->expires_at->isPast();
         $expiringSoon = $doc->expires_at && !$isExpired && $doc->expires_at->diffInDays(now()) <= 30;
     @endphp
-    <div class="bg-white rounded-xl border {{ $isExpired ? 'border-red-200' : ($expiringSoon ? 'border-amber-200' : 'border-gray-200') }} p-5">
+    <div class="bg-white rounded-[4px] border {{ $isExpired ? 'border-red-200' : ($expiringSoon ? 'border-amber-200' : 'border-gray-200') }} p-5">
         <div class="flex items-center gap-3 mb-3">
             <span class="text-2xl">{{ $docIcons[$doc->document_type] ?? '📎' }}</span>
             <div class="min-w-0">
@@ -37,7 +37,7 @@
         </div>
         @endif
         <a href="{{ route('rh.employes.documents.download', [$employee, $doc]) }}"
-           class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium hover:bg-indigo-100">
+           class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#eef5f0] text-emerald-800 rounded-[4px] text-xs font-medium hover:bg-emerald-100">
             Télécharger
         </a>
     </div>

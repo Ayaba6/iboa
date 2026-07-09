@@ -52,18 +52,63 @@ class PurchaseOrderController extends Controller
         $this->authorize('create', PurchaseOrder::class);
         $suppliers = Supplier::active()->orderBy('name')->get(['id', 'name']);
         $products  = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
+        $warehouses = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_purchase']);
+        $currencies = ['XOF', 'XAF', 'EUR', 'USD'];
 
-        return view('achats.commandes.create', compact('suppliers', 'products'));
+        return view('achats.commandes.create', compact('suppliers', 'products', 'warehouses', 'currencies') + $this->maquetteFormData());
+    }
+
+    /** [Maquette Commande fournisseur] Données complémentaires du formulaire. */
+    private function maquetteFormData(): array
+    {
+        return [
+            'supplierContacts' => \App\Models\SupplierContact::orderBy('last_name')->get(['id', 'supplier_id', 'civility', 'first_name', 'last_name']),
+            'buyers'           => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'purchaseRequests' => \App\Models\PurchaseRequest::where('status', 'approuvee')->orderByDesc('id')->limit(100)->get(['id', 'number']),
+        ];
+    }
+
+    /** [Maquette Commande fournisseur] Lignes d'une DA approuvée (JSON) pour « Ajouter depuis DA ». */
+    public function prItems(\Illuminate\Http\Request $request)
+    {
+        $pr = \App\Models\PurchaseRequest::with('items.product')->findOrFail($request->integer('purchase_request_id'));
+
+        return response()->json($pr->items->map(fn ($it) => [
+            'product_id'  => $it->product_id,
+            'description' => $it->description ?: $it->product?->name,
+            'quantity'    => (float) $it->quantity,
+            'unit_price'  => (float) ($it->estimated_price ?? $it->product?->purchase_price ?? 0),
+        ])->values());
     }
 
     public function store(StorePurchaseOrderRequest $request)
     {
         $this->authorize('create', PurchaseOrder::class);
-        $po = $this->service->create($request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+
+        $po = $this->service->create($data);
+        $this->uploadDocuments($po, $request);
 
         return redirect()
             ->route('achats.commandes.show', $po)
             ->with('success', 'Commande achat ' . $po->number . ' créée avec succès.');
+    }
+
+    /** Enregistre les pièces jointes (documents) du bon de commande. */
+    private function uploadDocuments(PurchaseOrder $po, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/purchaseorder/'.$po->id, 'local');
+            $po->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(PurchaseOrder $commande)
@@ -83,18 +128,24 @@ class PurchaseOrderController extends Controller
         if ($lock instanceof \Illuminate\Http\RedirectResponse) return $lock;
 
         $purchaseOrder = $this->service->repository->findWithDetails($commande->id);
+        $purchaseOrder->load('attachments');
         $suppliers     = Supplier::active()->orderBy('name')->get(['id', 'name']);
         $products      = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
+        $warehouses    = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_purchase']);
+        $currencies    = ['XOF', 'XAF', 'EUR', 'USD'];
         $editLock      = $lock;
 
-        return view('achats.commandes.edit', compact('purchaseOrder', 'suppliers', 'products', 'editLock'));
+        return view('achats.commandes.edit', compact('purchaseOrder', 'suppliers', 'products', 'editLock', 'warehouses', 'currencies') + $this->maquetteFormData());
     }
 
     public function update(UpdatePurchaseOrderRequest $request, PurchaseOrder $commande)
     {
         $this->authorize('update', $commande);
         try {
-            $this->service->update($commande, $request->validated());
+            $data = $request->validated();
+            unset($data['documents']);
+            $this->service->update($commande, $data);
+            $this->uploadDocuments($commande, $request);
             $this->releaseLock($commande); // [CONCURRENCE] Libère le verrou
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());

@@ -10,14 +10,10 @@
 @endsection
 
 @section('content')
-<div class="space-y-4">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Nouvel article</h1>
-            <p class="text-sm text-gray-500 mt-0.5">Création d'une fiche article — toutes les sections sont éditables, les champs facultatifs hériteront des valeurs par défaut.</p>
-        </div>
+<div class="flex items-start gap-4">
+    @include('products._selector')
+    <div class="flex-1 min-w-0 max-w-6xl">
+        @include('products._form')
     </div>
-
-    @include('products._form')
 </div>
 @endsection

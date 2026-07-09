@@ -15,17 +15,17 @@
     $vnc = $totalCost - $totalDepr;
 @endphp
 
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Immobilisations</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Immobilisations</h1>
             <p class="text-sm text-gray-500 mt-0.5">Registre des actifs fixes et suivi des amortissements SYSCOHADA</p>
         </div>
         @can('accounting.write')
         <a href="{{ route('comptabilite.immobilisations.create') }}"
-           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+           class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -37,17 +37,17 @@
 
     {{-- KPIs --}}
     <div class="grid grid-cols-3 gap-4">
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Valeur brute</p>
-            <p class="text-2xl font-bold text-gray-900 mt-1">{{ $fmt($totalCost) }} <span class="text-sm font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[16px] font-bold text-gray-900 mt-1">{{ $fmt($totalCost) }} <span class="text-sm font-normal text-gray-500">FCFA</span></p>
         </div>
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Amortissements cumulés</p>
-            <p class="text-2xl font-bold text-orange-600 mt-1">{{ $fmt($totalDepr) }} <span class="text-sm font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[16px] font-bold text-orange-600 mt-1">{{ $fmt($totalDepr) }} <span class="text-sm font-normal text-gray-500">FCFA</span></p>
         </div>
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Valeur nette comptable</p>
-            <p class="text-2xl font-bold text-blue-600 mt-1">{{ $fmt($vnc) }} <span class="text-sm font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[16px] font-bold text-blue-600 mt-1">{{ $fmt($vnc) }} <span class="text-sm font-normal text-gray-500">FCFA</span></p>
         </div>
     </div>
 
@@ -56,7 +56,7 @@
         <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Statut</label>
             <select name="status" onchange="this.form.submit()"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                    class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 <option value="">Tous les statuts</option>
                 @foreach($statusLabels as $val => $label)
                     <option value="{{ $val }}" {{ ($filters['status'] ?? '') === $val ? 'selected' : '' }}>{{ $label }}</option>
@@ -66,7 +66,7 @@
         <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Catégorie</label>
             <select name="category" onchange="this.form.submit()"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                    class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 <option value="">Toutes catégories</option>
                 @foreach($categoryLabels as $val => $label)
                     <option value="{{ $val }}" {{ ($filters['category'] ?? '') === $val ? 'selected' : '' }}>{{ $label }}</option>
@@ -76,16 +76,16 @@
         <div class="flex-1 min-w-[200px]">
             <label class="block text-xs font-medium text-gray-700 mb-1">Recherche</label>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Nom, code…"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                   class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
         </div>
-        <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Filtrer</button>
+        <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px]">Filtrer</button>
         @if(array_filter($filters))
             <a href="{{ route('comptabilite.immobilisations.index') }}" class="text-sm text-gray-500 hover:text-gray-700 py-2">✕ Réinitialiser</a>
         @endif
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="tbl-scroll">
         <table class="tbl tbl-sticky w-full">
             <thead>
@@ -138,7 +138,7 @@
                         @endif
                     </td>
                     <td class=" text-center">
-                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$asset->status] ?? 'bg-gray-100 text-gray-500' }}">
+                        <span class="inline-flex px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $statusColors[$asset->status] ?? 'bg-gray-100 text-gray-500' }}">
                             {{ $statusLabels[$asset->status] ?? $asset->status }}
                         </span>
                     </td>
@@ -162,7 +162,7 @@
         </div>
 
         @if($assets->hasPages())
-            <div class="px-4 py-3 border-t border-gray-100">{{ $assets->links() }}</div>
+            <div class="px-3 py-1.5 border-t border-gray-100">{{ $assets->links() }}</div>
         @endif
     </div>
 

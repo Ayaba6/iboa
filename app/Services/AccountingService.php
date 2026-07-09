@@ -55,6 +55,7 @@ class AccountingService
         'retours_ventes'      => ['7085', 'Remises accordées et retours',    'produit', 7],
         'banque'              => ['521',  'Banques, chèques postaux',        'actif',   5],
         'caisse'              => ['571',  'Caisse',                          'actif',   5],
+        'mobile_money'        => ['523',  'Établissements financiers — Mobile Money', 'actif', 5],
         'stocks'              => ['3111', 'Stocks de marchandises',          'actif',   3],
         'variation_stocks'    => ['6031', 'Variations de stocks de marchandises', 'charge', 6],
         'produits_inventaire' => ['7097', 'Produits sur inventaire',         'produit', 7],
@@ -1169,6 +1170,16 @@ class AccountingService
 
     private function account(Company $company, string $key): Account
     {
+        // [Paramètres comptables] Compte surchargé par la configuration comptable
+        // de la société s'il est explicitement défini ; sinon fallback plan SYSCOHADA.
+        $overrideId = $this->overriddenAccountId($company, $key);
+        if ($overrideId) {
+            $override = Account::find($overrideId);
+            if ($override && (int) $override->company_id === (int) $company->id) {
+                return $override;
+            }
+        }
+
         [$code, $name, $type, $classNumber] = self::CHART[$key];
 
         return Account::firstOrCreate(
@@ -1186,6 +1197,31 @@ class AccountingService
     }
 
     /**
+     * [Paramètres comptables] Résout l'ID du compte surchargé pour une clé métier
+     * depuis accounting_settings (mémorisé par société). Retourne null si non
+     * paramétré → le moteur retombe sur le plan SYSCOHADA standard (zéro régression).
+     */
+    private array $accountingSettingsCache = [];
+
+    private function overriddenAccountId(Company $company, string $key): ?int
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('accounting_settings')) {
+            return null;
+        }
+
+        if (!array_key_exists($company->id, $this->accountingSettingsCache)) {
+            $this->accountingSettingsCache[$company->id] = \App\Models\AccountingSetting::query()
+                ->withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->first();
+        }
+
+        $setting = $this->accountingSettingsCache[$company->id];
+
+        return $setting?->accountIdFor($key);
+    }
+
+    /**
      * Resolve the treasury GL account (521 Banque or 571 Caisse) from the
      * CashAccount that was used for the payment.
      */
@@ -1194,7 +1230,13 @@ class AccountingService
         if ($cashAccountId) {
             $cashAccount = CashAccount::find($cashAccountId);
             if ($cashAccount) {
-                $key = ($cashAccount->type === 'caisse') ? 'caisse' : 'banque';
+                // [RELATION MÉTIER] Chaque type de compte de trésorerie a son
+                // compte SYSCOHADA : caisse → 571, mobile money → 523, banque → 521.
+                $key = match ($cashAccount->type) {
+                    'caisse'       => 'caisse',
+                    'mobile_money' => 'mobile_money',
+                    default        => 'banque',
+                };
                 return $this->account($company, $key);
             }
         }

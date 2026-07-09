@@ -5,8 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProductFamily\StoreProductFamilyRequest;
 use App\Http\Requests\ProductFamily\UpdateProductFamilyRequest;
 use App\Models\Account;
+use App\Models\Attachment;
+use App\Models\CostCenter;
 use App\Models\ProductFamily;
+use App\Models\TaxRate;
+use App\Models\Unit;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProductFamilyController extends Controller
 {
@@ -21,38 +27,115 @@ class ProductFamilyController extends Controller
             ->withCount('products')
             ->whereNull('parent_id')
             ->orderBy('name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('product-families.index', compact('families'));
     }
 
     public function create()
     {
-        $parents  = ProductFamily::where('depth', 0)->orderBy('name')->get();
-        $accounts = $this->loadAccountsByType();
-        return view('product-families.create', compact('parents', 'accounts'));
+        return view('product-families.create', $this->formData());
     }
 
     public function store(StoreProductFamilyRequest $request)
     {
-        $data = $request->validated();
-        $data['is_active'] = $request->boolean('is_active', true);
-        $data['depth']     = $data['parent_id'] ? 1 : 0;
+        $family = ProductFamily::create($this->normalize($request));
+        $this->syncDepots($family, $request);
+        $this->uploadDocuments($family, $request);
 
-        ProductFamily::create($data);
-        return redirect()->route('product-families.index')->with('success', 'Famille créée avec succès.');
+        return redirect()->route('product-families.index')->with('success', 'Catégorie créée avec succès.');
     }
 
     public function edit(ProductFamily $family)
     {
-        $parents = ProductFamily::where('depth', 0)
-            ->where('id', '!=', $family->id)
-            ->orderBy('name')
-            ->get();
+        $family->load(['warehouses', 'attachments']);
 
-        $accounts = $this->loadAccountsByType();
+        return view('product-families.edit', array_merge(
+            ['family' => $family],
+            $this->formData($family->id)
+        ));
+    }
 
-        return view('product-families.edit', compact('family', 'parents', 'accounts'));
+    /** Variables de référence partagées par les formulaires create/edit. */
+    private function formData(?int $excludeId = null): array
+    {
+        return [
+            'parents'         => ProductFamily::where('depth', 0)
+                                    ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+                                    ->orderBy('name')->get(),
+            'accounts'        => $this->loadAccountsByType(),
+            'units'           => Unit::where('is_active', true)->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'warehouses'      => Warehouse::orderBy('name')->get(['id', 'name', 'code', 'can_production', 'can_sale', 'can_purchase', 'can_stock']),
+            'typeFluxOptions' => ProductFamily::typeFluxOptions(),
+            'costCenters'     => CostCenter::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name', 'type']),
+            'taxRates'        => TaxRate::where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']),
+            'familles'        => ProductFamily::orderBy('name')->get(['id', 'code', 'name']),
+            'typeCategorieOptions' => [
+                'matiere_premiere' => 'Matière première',
+                'produit_fini'     => 'Produit fini',
+                'marchandise'      => 'Article de négoce',
+                'consommable'      => 'Consommable',
+                'service'          => 'Service',
+            ],
+            // [SAGE parité] Panneau gauche « sélection » : dernières catégories.
+            'selectorFamilies' => ProductFamily::orderByDesc('id')->limit(20)
+                                    ->get(['id', 'code', 'name', 'type_categorie']),
+        ];
+    }
+
+    /** Normalise les cases à cocher et champs dérivés (partagé create/update). */
+    private function normalize(\Illuminate\Http\Request $request): array
+    {
+        $data = $request->validated();
+        foreach ([
+            'gestion_stock', 'stock_negatif', 'gestion_lot', 'lot_obligatoire',
+            'suivi_bobine', 'utilisable_production', 'actif_tous_sites',
+            'gestion_numero_serie', 'controle_qualite', 'cq_entree', 'cq_sortie',
+            'numerotation_auto', 'prix_plancher_obligatoire', 'autoriser_surcharge',
+        ] as $flag) {
+            $data[$flag] = $request->boolean($flag);
+        }
+        $data['is_active'] = $request->boolean('is_active', true);
+        $data['depth']     = ($data['parent_id'] ?? null) ? 1 : 0;
+        $data['type_flux'] = $data['type_flux'] ?? [];
+
+        // Clés hors colonnes (traitées séparément)
+        unset($data['depots'], $data['documents']);
+
+        return $data;
+    }
+
+    /** Synchronise le pivot des dépôts autorisés (4 capacités par dépôt). */
+    private function syncDepots(ProductFamily $family, \Illuminate\Http\Request $request): void
+    {
+        $depots = $request->input('depots', []);
+        $sync = [];
+        foreach ($depots as $warehouseId => $caps) {
+            $sync[(int) $warehouseId] = [
+                'can_production' => ! empty($caps['can_production']),
+                'can_sale'       => ! empty($caps['can_sale']),
+                'can_purchase'   => ! empty($caps['can_purchase']),
+                'can_stock'      => ! empty($caps['can_stock']),
+            ];
+        }
+        $family->warehouses()->sync($sync);
+    }
+
+    /** Enregistre les pièces jointes (documents) de la catégorie. */
+    private function uploadDocuments(ProductFamily $family, \Illuminate\Http\Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/productfamily/'.$family->id, 'local');
+            $family->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
     }
 
     /**
@@ -75,12 +158,11 @@ class ProductFamilyController extends Controller
 
     public function update(UpdateProductFamilyRequest $request, ProductFamily $family)
     {
-        $data = $request->validated();
-        $data['is_active'] = $request->boolean('is_active', true);
-        $data['depth']     = $data['parent_id'] ? 1 : 0;
+        $family->update($this->normalize($request));
+        $this->syncDepots($family, $request);
+        $this->uploadDocuments($family, $request);
 
-        $family->update($data);
-        return redirect()->route('product-families.index')->with('success', 'Famille mise à jour.');
+        return redirect()->route('product-families.index')->with('success', 'Catégorie mise à jour.');
     }
 
     public function destroy(ProductFamily $family)

@@ -100,6 +100,18 @@ class ClientRelanceController extends Controller
             ];
         })->sortByDesc('max_days_overdue');
 
+        // Pagination manuelle : la catégorisation d'urgence et le groupement
+        // par client se font en PHP — on pagine la collection finale (20 clients/page).
+        $page      = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+        $perPage   = 20;
+        $byClient  = new \Illuminate\Pagination\LengthAwarePaginator(
+            $byClient->forPage($page, $perPage), // clés client_id préservées (utilisées par la vue)
+            $byClient->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()],
+        );
+
         $clients = Client::active()->orderBy('name')->get(['id', 'name', 'trade_name']);
 
         return view('relances.index', compact('byClient', 'stats', 'urgency', 'clients', 'clientId'));

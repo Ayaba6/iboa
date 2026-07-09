@@ -8,178 +8,314 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+@php
+    $lbl  = 'block text-[11px] font-bold text-gray-700 mb-1';
+    $inp  = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $secH = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
+    $th   = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $sw   = "relative w-8 h-[18px] flex-shrink-0 bg-gray-200 peer-checked:bg-emerald-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-[14px] after:h-[14px] after:bg-white after:rounded-full after:shadow after:transition-transform peer-checked:after:translate-x-[14px]";
 
-    {{-- Header --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    // Données aperçu Alpine : segments par type pour reconstruire un numéro
+    $previewJs = collect($sequences)->map(function ($seq, $type) use ($labels) {
+        return [
+            'label'   => $labels[$type] ?? $type,
+            'prefix'  => $seq->prefix ?? '',
+            'suffix'  => $seq->suffix ?? '',
+            'sep'     => $seq->year_separator ?: '-',
+            'year'    => (bool) $seq->include_year,
+            'yearFmt' => ($seq->year_format ?? '4') === '2' ? 'YY' : 'YYYY',
+            'month'   => (bool) ($seq->include_month ?? false),
+            'next'    => str_pad((string) ($seq->last_number + 1), max(1, (int) $seq->padding), '0', STR_PAD_LEFT),
+            'mask'    => str_repeat('#', max(1, (int) $seq->padding)),
+        ];
+    });
+@endphp
+<div class="space-y-4"
+     x-data="{
+        seqs: @js($previewJs->all()),
+        pType: @js($previewJs->keys()->first()),
+        pYear: '{{ now()->format('Y') }}',
+        pMonth: '{{ now()->format('m') }}',
+        resetType: '',
+        build(type, mask) {
+            const s = this.seqs[type]; if (!s) return '—';
+            let year = s.year ? (s.yearFmt === 'YY' ? String(this.pYear).slice(-2) : this.pYear) + s.sep : '';
+            let month = s.month ? this.pMonth + s.sep : '';
+            return s.prefix + year + month + (mask ? s.mask : s.next) + s.suffix;
+        }
+     }">
+
+    {{-- Bandeau SAGE --}}
+    <div class="bg-gradient-to-b from-[#eef5f0] to-white border border-gray-300 rounded-[4px] px-3 py-2.5 flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Numérotation des documents</h1>
-            <p class="text-sm text-gray-500 mt-0.5">
-                Format des numéros générés pour chaque type de document
-                @if($fiscalYear)
-                    — Exercice : <strong>{{ $fiscalYear->label ?? $fiscalYear->name }}</strong>
-                @endif
-            </p>
+            <h1 class="text-[17px] font-bold text-emerald-900">Numérotation des documents</h1>
+            <p class="text-[11.5px] text-gray-500">Configuration — exercice : {{ $fiscalYear->label ?? '—' }}</p>
         </div>
-        <div class="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-            Format type : <code class="font-mono font-semibold text-blue-700">PRÉFIXE-ANNÉE-NNN</code>
+        <div class="flex items-center gap-2">
+            <button type="submit" form="form-numset" class="text-[13px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer</button>
+            <button type="button" @click="document.getElementById('sec-apercu')?.scrollIntoView({ behavior: 'smooth' })"
+                    class="text-[13px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-full transition-colors">Aperçu des numéros</button>
         </div>
-    </div>
-
-    {{-- Info banner --}}
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-        <strong>Important :</strong> les références déjà émises ne sont jamais modifiées.
-        Toute opération sur le compteur est tracée dans l'historique d'audit.
-        Les séquences sont automatiquement créées au début de chaque nouvel exercice.
     </div>
 
     {{-- Flash --}}
     @if(session('success'))
-    <div class="bg-green-50 border border-green-200 text-green-800 rounded-xl px-4 py-3 text-sm">
-        ✓ {{ session('success') }}
-    </div>
+    <div class="bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-[4px] px-3 py-2.5 text-[13px]">✓ {{ session('success') }}</div>
     @endif
     @if($errors->any())
-    <div class="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 text-sm">
-        <strong>Action refusée :</strong>
-        <ul class="mt-1 list-disc list-inside">
-            @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-        </ul>
+    <div class="bg-red-50 border border-red-300 text-red-700 rounded-[4px] px-3 py-2.5 text-[13px]">
+        <ul class="list-disc list-inside space-y-0.5">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
     </div>
     @endif
 
-    {{-- ── Tableaux par catégorie ─────────────────────────────────────────── --}}
-    @php
-        $categoryColors = [
-            'Ventes'=>'blue','Achats'=>'amber','Trésorerie'=>'emerald',
-            'Stock'=>'purple','Comptabilité'=>'indigo',
-        ];
-    @endphp
+    {{-- ═══════════ Paramètres généraux [Maquette] ═══════════ --}}
+    <form id="form-numset" method="POST" action="{{ route('settings.sequences.settings') }}"
+          class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        @csrf @method('PUT')
+        <div class="{{ $secH }}">Paramètres généraux</div>
+        <div class="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-3">
+            <div>
+                <label class="{{ $lbl }}">Exercice fiscal par défaut <span class="text-red-500">*</span></label>
+                <select name="default_fiscal_year_id" class="{{ $inp }}">
+                    @foreach($fiscalYears as $fyOpt)
+                    <option value="{{ $fyOpt->id }}" {{ (string) old('default_fiscal_year_id', $settings->default_fiscal_year_id ?? '') === (string) $fyOpt->id ? 'selected' : '' }}>
+                        {{ $fyOpt->label }} ({{ $fyOpt->starts_at->format('d/m/Y') }} - {{ $fyOpt->ends_at->format('d/m/Y') }})
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Séparateur <span class="text-red-500">*</span></label>
+                <input type="text" name="separator" required maxlength="5" value="{{ old('separator', $settings->separator) }}" class="{{ $inp }} font-mono">
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Nombre de chiffres <span class="text-red-500">*</span></label>
+                <select name="digits" class="{{ $inp }}">
+                    @for($d = 3; $d <= 8; $d++)
+                    <option value="{{ $d }}" {{ (int) old('digits', $settings->digits) === $d ? 'selected' : '' }}>{{ $d }}</option>
+                    @endfor
+                </select>
+            </div>
+            <div class="pt-0.5">
+                <label class="{{ $lbl }}">Remise à zéro à la clôture de l'exercice</label>
+                <label class="flex items-start gap-2.5 cursor-pointer mt-1.5">
+                    <input type="hidden" name="reset_on_close" value="0">
+                    <input type="checkbox" name="reset_on_close" value="1" {{ old('reset_on_close', $settings->reset_on_close) ? 'checked' : '' }} class="sr-only peer">
+                    <span class="{{ $sw }} mt-0.5"></span>
+                    <span class="text-[11.5px] text-gray-500 leading-snug">Redémarrer la numérotation au nouvel exercice.</span>
+                </label>
+            </div>
 
-    @foreach($grouped as $category => $types)
-    @php $color = $categoryColors[$category] ?? 'gray'; @endphp
+            <div>
+                <label class="{{ $lbl }}">Préfixe société</label>
+                <input type="text" name="company_prefix" maxlength="10" value="{{ old('company_prefix', $settings->company_prefix) }}" placeholder="OA" class="{{ $inp }} font-mono uppercase">
+            </div>
+            <div class="pt-0.5">
+                <label class="{{ $lbl }}">Inclure l'année dans le numéro</label>
+                <label class="flex items-start gap-2.5 cursor-pointer mt-1.5">
+                    <input type="hidden" name="include_year" value="0">
+                    <input type="checkbox" name="include_year" value="1" {{ old('include_year', $settings->include_year) ? 'checked' : '' }} class="sr-only peer">
+                    <span class="{{ $sw }} mt-0.5"></span>
+                    <span class="text-[11.5px] text-gray-500">Ex : 2026{{ $settings->separator }}0001</span>
+                </label>
+            </div>
+            <div class="pt-0.5">
+                <label class="{{ $lbl }}">Inclure le mois dans le numéro</label>
+                <label class="flex items-start gap-2.5 cursor-pointer mt-1.5">
+                    <input type="hidden" name="include_month" value="0">
+                    <input type="checkbox" name="include_month" value="1" {{ old('include_month', $settings->include_month) ? 'checked' : '' }} class="sr-only peer">
+                    <span class="{{ $sw }} mt-0.5"></span>
+                    <span class="text-[11.5px] text-gray-500">Ex : 2026{{ $settings->separator }}07{{ $settings->separator }}0001</span>
+                </label>
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Affichage de l'aperçu</label>
+                <select name="preview_format" class="{{ $inp }}">
+                    @foreach(['annee_mois_numero' => 'Année/Mois/Numéro (ex: 2026/07/0001)', 'annee_numero' => 'Année/Numéro (ex: 2026/0001)', 'numero' => 'Numéro seul (ex: 0001)'] as $val => $label)
+                    <option value="{{ $val }}" {{ old('preview_format', $settings->preview_format) === $val ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-{{ $color }}-100 text-{{ $color }}-700">
-                {{ $category }}
-            </span>
+            <div>
+                <label class="{{ $lbl }}">Gestion des trous de numérotation</label>
+                <select name="gap_policy" class="{{ $inp }}">
+                    <option value="interdite" {{ old('gap_policy', $settings->gap_policy) === 'interdite' ? 'selected' : '' }}>Interdite (aucun trou autorisé)</option>
+                    <option value="toleree" {{ old('gap_policy', $settings->gap_policy) === 'toleree' ? 'selected' : '' }}>Tolérée (trous acceptés)</option>
+                </select>
+            </div>
+            <div class="pt-0.5">
+                <label class="{{ $lbl }}">Utiliser par établissement</label>
+                <label class="flex items-start gap-2.5 cursor-pointer mt-1.5">
+                    <input type="hidden" name="per_site" value="0">
+                    <input type="checkbox" name="per_site" value="1" {{ old('per_site', $settings->per_site) ? 'checked' : '' }} class="sr-only peer">
+                    <span class="{{ $sw }} mt-0.5"></span>
+                    <span class="text-[11.5px] text-gray-500 leading-snug">Numérotation indépendante par site/dépôt.</span>
+                </label>
+            </div>
+            <div class="pt-0.5">
+                <label class="{{ $lbl }}">Utiliser par journal</label>
+                <label class="flex items-start gap-2.5 cursor-pointer mt-1.5">
+                    <input type="hidden" name="per_journal" value="0">
+                    <input type="checkbox" name="per_journal" value="1" {{ old('per_journal', $settings->per_journal) ? 'checked' : '' }} class="sr-only peer">
+                    <span class="{{ $sw }} mt-0.5"></span>
+                    <span class="text-[11.5px] text-gray-500 leading-snug">Numérotation distincte par journal.</span>
+                </label>
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Format de date</label>
+                <select name="date_format" class="{{ $inp }}">
+                    @foreach(['JJ/MM/AAAA', 'AAAA-MM-JJ', 'MM/JJ/AAAA'] as $df)
+                    <option value="{{ $df }}" {{ old('date_format', $settings->date_format) === $df ? 'selected' : '' }}>{{ $df }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="xl:col-span-3">
+                <label class="{{ $lbl }}">Commentaires</label>
+                <textarea name="comments" rows="2" maxlength="500" placeholder="Paramètres globaux appliqués à tous les types de documents."
+                          class="w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400">{{ old('comments', $settings->comments) }}</textarea>
+            </div>
+            <div class="pt-0.5">
+                <label class="{{ $lbl }}">Appliquer aux types existants</label>
+                <label class="flex items-start gap-2.5 cursor-pointer mt-1.5">
+                    <input type="hidden" name="apply_to_all" value="0">
+                    <input type="checkbox" name="apply_to_all" value="1" class="sr-only peer">
+                    <span class="{{ $sw }} mt-0.5"></span>
+                    <span class="text-[11.5px] text-gray-500 leading-snug">Applique séparateur, chiffres, année et mois aux séquences non verrouillées (audité).</span>
+                </label>
+            </div>
         </div>
+    </form>
 
-        <div class="tbl-rx">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50/50 border-b border-gray-100">
-                <tr>
-                    <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Document</th>
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Format actuel</th>
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Prochain n°</th>
-                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Compteur</th>
-                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider" title="Numéro le plus élevé déjà émis en base">N° max émis</th>
-                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Mode</th>
-                    <th class="px-3 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">État</th>
-                    <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+    {{-- ═══════════ Types de documents [Maquette] ═══════════ --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="{{ $secH }}">Types de documents</div>
+        <table class="w-full text-[12.5px]">
+            <thead><tr class="bg-[#eef5f0] border-b border-gray-300">
+                <th class="{{ $th }} text-center w-9">#</th>
+                <th class="{{ $th }} text-left">Type de document</th>
+                <th class="{{ $th }} text-left">Code</th>
+                <th class="{{ $th }} text-left">Préfixe</th>
+                <th class="{{ $th }} text-left">Format du numéro</th>
+                <th class="{{ $th }} text-left">Dernier numéro utilisé</th>
+                <th class="{{ $th }} text-left">Prochain numéro</th>
+                <th class="{{ $th }} text-center w-24">Statut</th>
+                <th class="{{ $th }} text-right w-40">Actions</th>
+            </tr></thead>
+            <tbody>
+                @php $i = 0; @endphp
+                @foreach($grouped as $category => $types)
+                <tr class="bg-gray-50 border-b border-gray-200">
+                    <td colspan="9" class="px-3 py-1 text-[11px] font-bold text-gray-600 uppercase tracking-wider">{{ $category }}</td>
                 </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
                 @foreach($types as $type)
                     @php
                         $seq = $sequences[$type] ?? null;
                         if (!$seq) continue;
-
+                        $i++;
                         $mu = $maxUsed[$type] ?? 0;
-
-                        // Aperçu du prochain n°
-                        $yearPart = '';
-                        if ($seq->include_year) {
-                            $yr       = $seq->year_format === '2' ? now()->format('y') : now()->format('Y');
-                            $yearPart = $yr . ($seq->year_separator ?? '-');
-                        }
-                        $preview = ($seq->prefix ?? '')
-                                 . $yearPart
-                                 . str_pad((string)($seq->last_number + 1), $seq->padding, '0', STR_PAD_LEFT)
-                                 . ($seq->suffix ?? '');
-
-                        // Format affiché
-                        $formatStr = trim(($seq->prefix ?? '')
-                            . ($seq->include_year ? ($seq->year_format === '2' ? 'YY' : 'YYYY') . ($seq->year_separator ?? '-') : '')
-                            . str_repeat('N', $seq->padding)
-                            . ($seq->suffix ?? ''));
                     @endphp
-                    <tr class="hover:bg-gray-50/50">
-                        <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
-                            {{ $labels[$type] ?? $type }}
+                    <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50">
+                        <td class="px-3 py-1.5 text-center text-gray-400 tabular-nums">{{ $i }}</td>
+                        <td class="px-3 py-1.5 font-semibold text-gray-700 whitespace-nowrap">{{ $labels[$type] ?? $type }}</td>
+                        <td class="px-3 py-1.5 font-mono text-[11px] text-gray-500">{{ $type }}</td>
+                        <td class="px-3 py-1.5 font-mono text-emerald-800">{{ $seq->prefix }}</td>
+                        <td class="px-3 py-1.5 font-mono text-[11.5px] text-gray-500">{{ $previewData[$type]['format'] ?? '' }}</td>
+                        <td class="px-3 py-1.5 font-mono text-[11.5px] tabular-nums {{ $mu > $seq->last_number ? 'text-red-600 font-bold' : 'text-gray-600' }}">
+                            {{ $mu > 0 ? app(\App\Services\DocumentSequenceService::class)->format($seq, $mu) : '—' }}@if($mu > $seq->last_number) ⚠@endif
                         </td>
-                        <td class="px-3 py-3">
-                            <code class="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">{{ $formatStr }}</code>
+                        <td class="px-3 py-1.5 font-mono text-[11.5px] tabular-nums font-semibold text-emerald-800">{{ $previewData[$type]['next'] ?? '' }}</td>
+                        <td class="px-3 py-1.5 text-center">
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $seq->is_locked ? 'bg-gray-100 text-gray-500' : 'bg-emerald-100 text-emerald-800' }}">{{ $seq->is_locked ? 'Verrouillé' : 'Actif' }}</span>
                         </td>
-                        <td class="px-3 py-3">
-                            <code class="font-mono text-sm font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded">{{ $preview }}</code>
-                        </td>
-                        <td class="px-3 py-3 text-center text-sm tabular-nums font-semibold text-gray-700">
-                            {{ number_format($seq->last_number) }}
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                            @if($mu > 0)
-                                <span class="text-xs tabular-nums {{ $mu > $seq->last_number ? 'text-red-600 font-bold' : 'text-gray-500' }}">
-                                    {{ number_format($mu) }}@if($mu > $seq->last_number) ⚠@endif
-                                </span>
-                            @else
-                                <span class="text-xs text-gray-300">—</span>
-                            @endif
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                            @if($seq->numbering_mode === 'manual')
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">Manuel</span>
-                            @else
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Auto</span>
-                            @endif
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                            @if($seq->is_locked)
-                                <span class="text-red-500" title="Format verrouillé">🔒</span>
-                            @else
-                                <span class="text-gray-400" title="Libre">🔓</span>
-                            @endif
-                        </td>
-                        <td class="px-3 py-3 text-right whitespace-nowrap">
-                            <a href="{{ route('settings.sequences.edit', $seq) }}"
-                               class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2 py-1 rounded">
-                                ✏ Modifier
-                            </a>
-                            <a href="{{ route('settings.sequences.audit', $seq) }}"
-                               class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded">
-                                🕒 Historique
-                            </a>
+                        <td class="px-3 py-1.5 text-right whitespace-nowrap">
+                            <a href="{{ route('settings.sequences.edit', $seq) }}" class="text-[12px] font-semibold text-emerald-700 hover:underline">Modifier</a>
+                            <span class="text-gray-300 mx-1">|</span>
+                            <a href="{{ route('settings.sequences.audit', $seq) }}" class="text-[12px] font-medium text-gray-500 hover:text-emerald-700 hover:underline">Historique</a>
                         </td>
                     </tr>
                 @endforeach
+                @endforeach
             </tbody>
         </table>
-        </div>
     </div>
-    @endforeach
 
-    {{-- Legend --}}
-    <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
-        <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Exemples de format</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs text-gray-600">
-            <div class="flex items-center gap-2">
-                <code class="font-mono font-semibold text-indigo-700 bg-white border border-indigo-200 px-2 py-1 rounded">FA-2026-001</code>
-                <span>Préfixe + YYYY + 3 chiffres</span>
+    {{-- ═══════════ Aperçu d'un numéro | Réinitialisation / Clôture [Maquette] ═══════════ --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+
+        <div id="sec-apercu" class="bg-white rounded-[4px] border border-gray-300 overflow-hidden scroll-mt-24">
+            <div class="{{ $secH }}">Aperçu d'un numéro</div>
+            <div class="p-4 flex flex-col sm:flex-row gap-4">
+                <div class="space-y-3 sm:w-56 flex-shrink-0">
+                    <div>
+                        <label class="{{ $lbl }}">Type de document <span class="text-red-500">*</span></label>
+                        <select x-model="pType" class="{{ $inp }}">
+                            @foreach($previewData as $type => $pd)
+                            <option value="{{ $type }}">{{ $pd['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="{{ $lbl }}">Exercice <span class="text-red-500">*</span></label>
+                        <select x-model="pYear" class="{{ $inp }}">
+                            @foreach($fiscalYears as $fyOpt)
+                            <option value="{{ $fyOpt->starts_at->format('Y') }}">{{ $fyOpt->starts_at->format('Y') }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="{{ $lbl }}">Mois <span class="text-red-500">*</span></label>
+                        <select x-model="pMonth" class="{{ $inp }}">
+                            @foreach(range(1, 12) as $m)
+                            @php $mm = str_pad((string) $m, 2, '0', STR_PAD_LEFT); @endphp
+                            <option value="{{ $mm }}">{{ ucfirst(\Carbon\Carbon::create(null, $m, 1)->translatedFormat('F')) }} ({{ $mm }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="flex-1 bg-[#f7faf8] border border-gray-200 rounded-[4px] p-4 flex flex-col items-center justify-center text-center">
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Aperçu</p>
+                    <p class="text-[22px] font-bold font-mono text-emerald-800 tabular-nums" x-text="build(pType, false)"></p>
+                    <p class="text-[11.5px] text-gray-500 mt-2 font-mono">Format : <span x-text="build(pType, true)"></span></p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Prochain numéro qui sera utilisé.</p>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <code class="font-mono font-semibold text-indigo-700 bg-white border border-indigo-200 px-2 py-1 rounded">DEV-26-0001</code>
-                <span>Préfixe + YY + 4 chiffres</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <code class="font-mono font-semibold text-indigo-700 bg-white border border-indigo-200 px-2 py-1 rounded">BL-00001</code>
-                <span>Sans année + 5 chiffres</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <code class="font-mono font-semibold text-indigo-700 bg-white border border-indigo-200 px-2 py-1 rounded">CMD-2026-00042-A</code>
-                <span>Préfixe + YYYY + 5 chiffres + suffixe</span>
+        </div>
+
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+            <div class="{{ $secH }}">Réinitialisation / Clôture</div>
+            <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="border border-gray-200 rounded-[4px] p-3">
+                    <p class="text-[13px] font-bold text-emerald-800 mb-1">Réinitialiser un compteur</p>
+                    <p class="text-[11.5px] text-gray-500 mb-2">Remet le compteur à zéro pour un type de document (refusé si des numéros sont déjà émis, sauf audit).</p>
+                    <select x-model="resetType" class="{{ $inp }} mb-2">
+                        <option value="">— Type de document —</option>
+                        @foreach($sequences as $type => $seq)
+                        <option value="{{ $seq->id }}">{{ $labels[$type] ?? $type }}</option>
+                        @endforeach
+                    </select>
+                    <form method="POST" :action="'{{ url('parametres/numerotation') }}/' + resetType + '/reset'"
+                          onsubmit="return confirm('Remettre ce compteur à zéro ? Opération auditée.')">
+                        @csrf
+                        <button type="submit" :disabled="!resetType"
+                                class="w-full text-[12.5px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 rounded-full transition-colors">⟳ Réinitialiser un compteur</button>
+                    </form>
+                </div>
+                <div class="border border-gray-200 rounded-[4px] p-3">
+                    <p class="text-[13px] font-bold text-emerald-800 mb-1">Clôturer un exercice</p>
+                    <p class="text-[11.5px] text-gray-500 mb-2">Clôturer l'exercice sélectionné pour empêcher toute modification. Géré depuis la page des exercices fiscaux.</p>
+                    <a href="{{ route('settings.fiscal-years.index') }}"
+                       class="inline-block w-full text-center text-[12.5px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-3 py-1.5 rounded-full transition-colors">🔒 Clôturer l'exercice</a>
+                </div>
             </div>
         </div>
     </div>
+
+    <p class="text-[11.5px] text-gray-500 flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-[4px] px-3 py-2">
+        <svg class="w-3.5 h-3.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        La modification de la numérotation peut impacter les documents existants — les références déjà émises ne sont jamais modifiées et toute opération est tracée dans l'historique d'audit.
+    </p>
+
 </div>
 @endsection

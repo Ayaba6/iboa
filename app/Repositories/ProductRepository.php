@@ -14,7 +14,7 @@ class ProductRepository extends BaseRepository
 
     public function search(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
-        $query = Product::with(['family', 'brand', 'unit', 'taxRate'])
+        $query = Product::with(['family', 'brand', 'unit', 'taxRate', 'createdBy:id,name', 'productStocks'])
             ->when(isset($filters['search']), fn($q) => $q->where(function($q2) use ($filters) {
                 $q2->where('name', 'like', "%{$filters['search']}%")
                    ->orWhere('reference', 'like', "%{$filters['search']}%")

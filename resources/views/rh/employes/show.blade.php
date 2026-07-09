@@ -10,22 +10,22 @@
 @section('content')
 <div class="flex items-start justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ $employe->full_name }}</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">{{ $employe->full_name }}</h1>
         <p class="text-sm text-gray-500 mt-1">Matricule <span class="font-mono">{{ $employe->matricule }}</span> · {{ $employe->category_label }}</p>
     </div>
     <div class="flex items-center gap-2">
         @if($employe->user_id)
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-[3px] text-[11px] font-medium">
             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
             Portail actif
         </span>
         @else
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-400 rounded-full text-xs font-medium">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-400 rounded-[3px] text-[11px] font-medium">
             Sans portail
         </span>
         @endif
         <a href="{{ route('rh.employes.edit', $employe) }}"
-           class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+           class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800">
             Modifier
         </a>
     </div>
@@ -34,10 +34,10 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
 {{-- Colonne gauche : infos --}}
-<div class="lg:col-span-2 space-y-5">
+<div class="lg:col-span-2 space-y-3">
 
     {{-- Identité --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">Identité</h2>
         <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div><dt class="text-gray-400">Sexe</dt><dd>{{ $employe->gender === 'M' ? 'Masculin' : 'Féminin' }}</dd></div>
@@ -52,7 +52,7 @@
     </div>
 
     {{-- Poste --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">Poste & Emploi</h2>
         <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div><dt class="text-gray-400">Département</dt><dd>{{ $employe->department?->name ?? '—' }}</dd></div>
@@ -71,7 +71,7 @@
     </div>
 
     {{-- Contrats --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Contrats</h2>
             <button onclick="document.getElementById('modal-contract').classList.remove('hidden')"
@@ -79,7 +79,7 @@
         </div>
         <div class="space-y-3">
             @forelse($employe->contracts as $contract)
-            <div class="flex items-center justify-between p-3 rounded-lg border {{ $contract->status === 'actif' ? 'border-green-200 bg-green-50' : 'border-gray-100 bg-gray-50' }}">
+            <div class="flex items-center justify-between p-3 rounded-[4px] border {{ $contract->status === 'actif' ? 'border-green-200 bg-green-50' : 'border-gray-100 bg-gray-50' }}">
                 <div>
                     <span class="font-medium text-sm">{{ $contract->type }}</span>
                     <span class="text-xs text-gray-500 ml-2">Du {{ $contract->start_date->format('d/m/Y') }}{{ $contract->end_date ? ' au ' . $contract->end_date->format('d/m/Y') : '' }}</span>
@@ -96,7 +96,7 @@
     </div>
 
     {{-- Primes / Indemnités --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Primes & Indemnités</h2>
             <button onclick="document.getElementById('modal-allowance').classList.remove('hidden')"
@@ -133,7 +133,7 @@
     </div>
 
     {{-- Documents --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Documents</h2>
             <button onclick="document.getElementById('modal-document').classList.remove('hidden')"
@@ -141,7 +141,7 @@
         </div>
 
         @if(session('success'))
-            <div class="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-xs">
+            <div class="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-[4px] text-emerald-700 text-xs">
                 {{ session('success') }}
             </div>
         @endif
@@ -163,7 +163,7 @@
                 $isExpired = $doc->expires_at && $doc->expires_at->isPast();
                 $expiringSoon = $doc->expires_at && !$isExpired && $doc->expires_at->diffInDays(now()) <= 30;
             @endphp
-            <div class="flex items-center justify-between p-3 rounded-lg border
+            <div class="flex items-center justify-between p-3 rounded-[4px] border
                 {{ $isExpired ? 'border-red-200 bg-red-50' : ($expiringSoon ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50') }}">
                 <div class="flex items-center gap-2 min-w-0">
                     <span class="text-lg flex-shrink-0">{{ $docIcons[$doc->document_type] ?? '📎' }}</span>
@@ -183,7 +183,7 @@
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                     <a href="{{ route('rh.employes.documents.download', [$employe, $doc]) }}"
-                       class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                       class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">
                         Télécharger
                     </a>
                     <form method="POST" action="{{ route('rh.employes.documents.destroy', [$employe, $doc]) }}"
@@ -203,18 +203,18 @@
 </div>
 
 {{-- Colonne droite : photo + statut + simulation --}}
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Photo de profil --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5 text-center">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5 text-center">
         <div class="flex flex-col items-center gap-3">
             @if($employe->photo_path)
                 <img src="{{ route('rh.employes.photo', $employe) }}"
                      alt="Photo {{ $employe->full_name }}"
                      class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 shadow-sm">
             @else
-                <div class="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-gray-200">
-                    <span class="text-3xl font-bold text-indigo-400">
+                <div class="w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center border-2 border-gray-200">
+                    <span class="text-[19px] font-bold text-emerald-500">
                         {{ strtoupper(substr($employe->last_name, 0, 1)) }}
                     </span>
                 </div>
@@ -222,7 +222,7 @@
             <form method="POST" action="{{ route('rh.employes.photo.update', $employe) }}"
                   enctype="multipart/form-data" class="w-full">
                 @csrf
-                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
+                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-[4px] text-xs text-gray-600 hover:bg-gray-50">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     Changer la photo
                     <input type="file" name="photo" accept="image/*" class="hidden" onchange="this.form.submit()">
@@ -231,7 +231,7 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Statut</h2>
         @php $color = $employe->status_color @endphp
         <span class="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-{{ $color }}-100 text-{{ $color }}-700">
@@ -264,7 +264,7 @@
     </div>
 
     <a href="{{ route('rh.paie.index') }}"
-       class="block text-center px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
+       class="block text-center px-3 py-1.5 bg-emerald-600 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-700">
         Voir les bulletins de paie
     </a>
 </div>
@@ -273,7 +273,7 @@
 
 {{-- Modal : Nouveau contrat --}}
 <div id="modal-contract" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+    <div class="bg-white rounded-[4px] shadow-xl w-full max-w-lg p-6">
         <h3 class="text-base font-semibold text-gray-900 mb-4">Nouveau contrat</h3>
         <form method="POST" action="{{ route('rh.employes.contracts.store', $employe) }}">
             @csrf
@@ -281,7 +281,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                        <select name="type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <select name="type" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                             @foreach(['CDI'=>'CDI','CDD'=>'CDD','stage'=>'Stage','consultant'=>'Consultant'] as $v=>$l)
                                 <option value="{{ $v }}">{{ $l }}</option>
                             @endforeach
@@ -290,22 +290,22 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Salaire (FCFA)</label>
                         <input type="number" name="base_salary" min="0" step="1000" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono text-right">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono text-right">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date début</label>
                         <input type="date" name="start_date" value="{{ now()->toDateString() }}" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date fin (CDD)</label>
-                        <input type="date" name="end_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <input type="date" name="end_date" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('modal-contract').classList.add('hidden')"
-                            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm">Annuler</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Enregistrer</button>
+                            class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm">Annuler</button>
+                    <button type="submit" class="px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800">Enregistrer</button>
                 </div>
             </div>
         </form>
@@ -314,7 +314,7 @@
 
 {{-- Modal : Ajouter document --}}
 <div id="modal-document" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+    <div class="bg-white rounded-[4px] shadow-xl w-full max-w-lg p-6">
         <h3 class="text-base font-semibold text-gray-900 mb-4">Ajouter un document</h3>
         <form method="POST" action="{{ route('rh.employes.documents.store', $employe) }}" enctype="multipart/form-data">
             @csrf
@@ -322,7 +322,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Type de document</label>
-                        <select name="document_type" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <select name="document_type" required class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                             @foreach(['cnib'=>'CNIB','passeport'=>'Passeport','contrat'=>'Contrat','avenant'=>'Avenant','diplome'=>'Diplôme','attestation'=>'Attestation','medical'=>'Médical','cnss'=>'CNSS','photo'=>'Photo','autre'=>'Autre'] as $v=>$l)
                                 <option value="{{ $v }}">{{ $l }}</option>
                             @endforeach
@@ -332,33 +332,33 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Libellé</label>
                         <input type="text" name="label" required maxlength="200"
                                placeholder="ex: CNIB 2024"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date du document</label>
                         <input type="date" name="document_date"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date d'expiration</label>
                         <input type="date" name="expires_at"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Fichier <span class="text-xs text-gray-400">(PDF, image, Word, Excel — max 10 Mo)</span></label>
                     <input type="file" name="document_file" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Notes (optionnel)</label>
                     <input type="text" name="notes" maxlength="500"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('modal-document').classList.add('hidden')"
-                            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm">Annuler</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Enregistrer</button>
+                            class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm">Annuler</button>
+                    <button type="submit" class="px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800">Enregistrer</button>
                 </div>
             </div>
         </form>
@@ -367,14 +367,14 @@
 
 {{-- Modal : Ajouter prime --}}
 <div id="modal-allowance" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+    <div class="bg-white rounded-[4px] shadow-xl w-full max-w-lg p-6">
         <h3 class="text-base font-semibold text-gray-900 mb-4">Ajouter une prime / indemnité</h3>
         <form method="POST" action="{{ route('rh.employes.allowances.store', $employe) }}">
             @csrf
             <div class="space-y-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Type de prime</label>
-                    <select name="payroll_allowance_type_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <select name="payroll_allowance_type_id" required class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                         @foreach($allowanceTypes as $t)
                             <option value="{{ $t->id }}">{{ $t->name }} ({{ $t->is_taxable ? 'imposable' : 'exonérée' }})</option>
                         @endforeach
@@ -384,22 +384,22 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Montant (FCFA)</label>
                         <input type="number" name="amount" min="0" step="100" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono text-right">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono text-right">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Dès le</label>
                         <input type="date" name="start_date" value="{{ now()->toDateString() }}" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Jusqu'au</label>
-                        <input type="date" name="end_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <input type="date" name="end_date" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('modal-allowance').classList.add('hidden')"
-                            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm">Annuler</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Ajouter</button>
+                            class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm">Annuler</button>
+                    <button type="submit" class="px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800">Ajouter</button>
                 </div>
             </div>
         </form>

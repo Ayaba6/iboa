@@ -19,6 +19,11 @@ class PaymentTerm extends Model
         'days',
         'end_of_month',
         'additional_days',
+        'deposit_required',
+        'deposit_rate',
+        'installments_count',
+        'block_on_overdue',
+        'requires_validation',
         'is_active',
     ];
 

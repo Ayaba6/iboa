@@ -8,16 +8,16 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Promotions</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Promotions</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $promotions->total() }} promotion(s)</p>
         </div>
         <a href="{{ route('promotions.create') }}"
-           class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+           class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -28,7 +28,7 @@
     {{-- Filters --}}
     <form method="GET" class="flex flex-wrap gap-3">
         {{-- Status tabs --}}
-        <div class="flex bg-gray-100 rounded-lg p-1 gap-1">
+        <div class="flex bg-gray-100 rounded-[4px] p-1 gap-1">
             @foreach(['all' => 'Toutes', 'active' => 'Actives', 'upcoming' => 'À venir', 'expired' => 'Expirées'] as $val => $label)
             <a href="{{ request()->fullUrlWithQuery(['status' => $val]) }}"
                class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors
@@ -40,7 +40,7 @@
 
         {{-- Type filter --}}
         <select name="type" onchange="this.form.submit()"
-                class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                class="px-3 py-2 border border-gray-300 rounded-[4px] text-sm bg-white focus:outline-none focus:ring-1 focus:ring-purple-400">
             <option value="">Tous les types</option>
             <option value="pourcentage" {{ request('type') === 'pourcentage' ? 'selected' : '' }}>Pourcentage</option>
             <option value="montant_fixe" {{ request('type') === 'montant_fixe' ? 'selected' : '' }}>Montant fixe</option>
@@ -49,7 +49,7 @@
 
         {{-- Product filter --}}
         <select name="product_id" onchange="this.form.submit()"
-                class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                class="px-3 py-2 border border-gray-300 rounded-[4px] text-sm bg-white focus:outline-none focus:ring-1 focus:ring-purple-400">
             <option value="">Tous les articles</option>
             @foreach($products as $product)
             <option value="{{ $product->id }}" {{ request('product_id') == $product->id ? 'selected' : '' }}>
@@ -60,14 +60,14 @@
 
         @if(request('type') || request('product_id'))
         <a href="{{ route('promotions.index', ['status' => $status]) }}"
-           class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+           class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-[4px] hover:bg-gray-100 transition-colors">
             Réinitialiser
         </a>
         @endif
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         @if($promotions->isEmpty())
         <div class="text-center py-16 text-gray-400">
             <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,15 +78,15 @@
         @else
         <div class="overflow-x-auto">
         <table class="w-full divide-y divide-gray-100 text-sm">
-            <thead class="bg-gray-50">
+            <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nom</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                    <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Valeur</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Période</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Article / Famille</th>
-                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
-                    <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Nom</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Type</th>
+                    <th class="px-5 py-3 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Valeur</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Période</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Article / Famille</th>
+                    <th class="px-5 py-3 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                    <th class="px-5 py-3 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">

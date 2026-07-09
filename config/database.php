@@ -62,6 +62,14 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            // [CDC §14] spatie/laravel-backup appelle mysqldump en CLI — sur un
+            // poste Laragon Windows, mysqldump n'est pas sur le PATH système par
+            // défaut (contrairement à une VPS de prod où c'est généralement le
+            // cas). DB_DUMP_BINARY_PATH permet de pointer dessus en local sans
+            // rien changer pour la prod.
+            'dump' => array_filter([
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH'),
+            ]),
         ],
 
         'mariadb' => [

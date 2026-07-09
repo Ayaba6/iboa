@@ -84,7 +84,35 @@ class PurchaseRequestService
             'submitted_at' => now(),
         ]);
 
-        return $request->fresh();
+        $fresh = $request->fresh();
+        $this->notifyApproverByThreshold($fresh);
+
+        return $fresh;
+    }
+
+    /**
+     * [CDC §13.4/§16.4] Notifie l'approbateur exact selon le seuil du montant —
+     * jamais une diffusion large : <500k Chef Service, <5M Directeur, ≥5M DG.
+     */
+    private function notifyApproverByThreshold(PurchaseRequest $request): void
+    {
+        $amount = (float) $request->total_estimated;
+        $roles  = match (true) {
+            $amount >= 5_000_000 => ['directeur'],        // DG
+            $amount >= 500_000   => ['daf'],               // Directeur
+            default              => ['directeur_usine'],   // Chef Service
+        };
+
+        \App\Notifications\ValidationStepNotification::sendToRoles(
+            $roles,
+            title: 'Demande d\'achat à valider',
+            message: "DA {$request->number} soumise — montant estimé "
+                . number_format($amount, 0, ',', ' ') . ' FCFA, validation requise.',
+            url: route('achats.demandes-achat.show', $request),
+            modelType: 'PurchaseRequest',
+            modelId: $request->id,
+            type: 'purchase_request_submitted',
+        );
     }
 
     /**
@@ -94,6 +122,29 @@ class PurchaseRequestService
     {
         if (! $request->canBeApproved()) {
             throw new \RuntimeException('Seules les demandes soumises peuvent être approuvées.');
+        }
+
+        // [CDC §13.4] Enforcement du seuil : l'approbateur doit détenir le
+        // niveau correspondant au montant — <500k Chef Service (l1),
+        // <5M Directeur (l2), ≥5M DG (l3). La notification ciblait déjà le
+        // bon rôle ; sans ce contrôle, tout porteur de « approve » pouvait
+        // valider n'importe quel montant.
+        $amount   = (float) $request->total_estimated;
+        $required = match (true) {
+            $amount >= 5_000_000 => 'purchase_requests.validate_l3',
+            $amount >= 500_000   => 'purchase_requests.validate_l2',
+            default              => 'purchase_requests.validate_l1',
+        };
+        $user = Auth::user();
+        if ($user && ! $user->can($required)) {
+            $label = match ($required) {
+                'purchase_requests.validate_l3' => 'la Direction Générale (≥ 5 000 000 FCFA)',
+                'purchase_requests.validate_l2' => 'la Direction (≥ 500 000 FCFA)',
+                default                          => 'le Chef de Service',
+            };
+            throw new \RuntimeException(
+                'Montant de ' . number_format($amount, 0, ',', ' ') . ' FCFA : cette demande doit être approuvée par ' . $label . '.'
+            );
         }
 
         $request->update([

@@ -10,24 +10,24 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Rapport Chiffre d'affaires</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Rapport Chiffre d'affaires</h1>
             <p class="text-sm text-gray-500 mt-0.5">Analyse par période — FCFA</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ request()->fullUrlWithQuery(['export' => 'excel']) }}"
-               class="inline-flex items-center gap-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+               class="inline-flex items-center gap-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
                 </svg>
                 Export Excel
             </a>
             <a href="{{ route('reports.ca-pdf', request()->query()) }}"
-               class="inline-flex items-center gap-2 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+               class="inline-flex items-center gap-2 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
@@ -37,21 +37,21 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
                 <input type="date" name="from" value="{{ $from }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
                 <input type="date" name="to" value="{{ $to }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Client</label>
-                <select name="client_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 bg-white">
+                <select name="client_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="">— Tous —</option>
                     @foreach($clients as $c)
                         <option value="{{ $c->id }}" {{ $clientId == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
@@ -60,7 +60,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Regrouper par</label>
-                <select name="group_by" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 bg-white">
+                <select name="group_by" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="month" {{ $groupBy === 'month' ? 'selected' : '' }}>Mois</option>
                     <option value="week"  {{ $groupBy === 'week'  ? 'selected' : '' }}>Semaine</option>
                     <option value="day"   {{ $groupBy === 'day'   ? 'selected' : '' }}>Jour</option>
@@ -68,10 +68,10 @@
             </div>
         </div>
         <div class="mt-3 flex gap-2">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 Appliquer
             </button>
-            <a href="{{ route('reports.ca') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors">
+            <a href="{{ route('reports.ca') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
                 Réinitialiser
             </a>
         </div>
@@ -89,7 +89,7 @@
                 ['label' => 'Reste dû', 'value' => number_format($totals->total_reste ?? 0, 0, ',', ' '),  'unit' => 'FCFA', 'color' => 'rose'],
             ];
             $colorMap = [
-                'indigo'  => 'bg-indigo-50 text-indigo-700 border-indigo-100',
+                'indigo'  => 'bg-[#eef5f0] text-emerald-800 border-emerald-100',
                 'blue'    => 'bg-blue-50 text-blue-700 border-blue-100',
                 'sky'     => 'bg-sky-50 text-sky-700 border-sky-100',
                 'violet'  => 'bg-violet-50 text-violet-700 border-violet-100',
@@ -98,9 +98,9 @@
             ];
         @endphp
         @foreach($kpis as $kpi)
-        <div class="rounded-xl border p-4 {{ $colorMap[$kpi['color']] }}">
+        <div class="rounded-[4px] border p-4 {{ $colorMap[$kpi['color']] }}">
             <p class="text-xs font-semibold uppercase tracking-widest opacity-70">{{ $kpi['label'] }}</p>
-            <p class="text-xl font-bold mt-1 leading-none">{{ $kpi['value'] }}</p>
+            <p class="text-[17px] font-bold mt-1 leading-none">{{ $kpi['value'] }}</p>
             <p class="text-xs opacity-60 mt-0.5">{{ $kpi['unit'] }}</p>
         </div>
         @endforeach
@@ -110,7 +110,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {{-- Chart CA TTC --}}
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 shadow-sm">
             <h2 class="text-sm font-bold text-gray-800 mb-4">Évolution du CA TTC</h2>
             @if($serie->isEmpty())
                 <div class="flex items-center justify-center h-52 text-gray-400 text-sm">Aucune donnée sur cette période</div>
@@ -120,7 +120,7 @@
         </div>
 
         {{-- Top 10 clients --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5 shadow-sm">
             <h2 class="text-sm font-bold text-gray-800 mb-4">Top clients</h2>
             @if($topClients->isEmpty())
                 <div class="flex items-center justify-center h-52 text-gray-400 text-sm">Aucune donnée</div>
@@ -137,7 +137,7 @@
                                 <span class="font-bold text-gray-900 ml-1">{{ number_format($tc->ca, 0, ',', ' ') }} F</span>
                             </div>
                             <div class="w-full bg-gray-100 rounded-full h-1.5">
-                                <div class="bg-indigo-500 h-1.5 rounded-full" style="width:{{ $pct }}%"></div>
+                                <div class="bg-emerald-600 h-1.5 rounded-full" style="width:{{ $pct }}%"></div>
                             </div>
                         </div>
                     </div>
@@ -149,7 +149,7 @@
     </div>
 
     {{-- Tableau détaillé --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100">
             <h2 class="text-sm font-bold text-gray-800">Détail par période</h2>
         </div>
@@ -178,7 +178,7 @@
                         <td class="text-right font-mono font-bold text-gray-900">{{ number_format($row->ttc, 0, ',', ' ') }}</td>
                         <td class="text-right font-mono text-emerald-700">{{ number_format($row->encaisse, 0, ',', ' ') }}</td>
                         <td class="text-right">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-semibold
                                 {{ $tauxEnc >= 80 ? 'bg-emerald-100 text-emerald-700' : ($tauxEnc >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
                                 {{ $tauxEnc }}%
                             </span>
@@ -186,16 +186,16 @@
                     </tr>
                     @endforeach
                 </tbody>
-                <tfoot class="bg-indigo-50 font-bold">
+                <tfoot class="bg-[#eef5f0] font-bold">
                     <tr>
-                        <td class="text-indigo-800 font-bold">Total</td>
-                        <td class="text-right text-indigo-800">{{ $serie->sum('nb') }}</td>
-                        <td class="text-right font-mono text-indigo-800">{{ number_format($serie->sum('ht'), 0, ',', ' ') }}</td>
-                        <td class="text-right font-mono text-indigo-900 font-extrabold">{{ number_format($serie->sum('ttc'), 0, ',', ' ') }}</td>
+                        <td class="text-emerald-900 font-bold">Total</td>
+                        <td class="text-right text-emerald-900">{{ $serie->sum('nb') }}</td>
+                        <td class="text-right font-mono text-emerald-900">{{ number_format($serie->sum('ht'), 0, ',', ' ') }}</td>
+                        <td class="text-right font-mono text-emerald-900 font-extrabold">{{ number_format($serie->sum('ttc'), 0, ',', ' ') }}</td>
                         <td class="text-right font-mono text-emerald-800">{{ number_format($serie->sum('encaisse'), 0, ',', ' ') }}</td>
                         <td class="text-right">
                             @php $ttot = $serie->sum('ttc'); $etot = $serie->sum('encaisse'); @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                                 {{ $ttot > 0 ? round(($etot / $ttot) * 100) : 0 }}%
                             </span>
                         </td>

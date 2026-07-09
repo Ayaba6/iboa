@@ -10,12 +10,12 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-6"
+<div class="max-w-5xl mx-auto space-y-3"
      x-data="journalEntryForm()"
      x-init="init()">
 
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Nouvelle écriture comptable</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Nouvelle écriture comptable</h1>
         <a href="{{ route('comptabilite.journaux.index') }}"
            class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,7 +26,7 @@
     </div>
 
     @if($errors->any())
-    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-[4px] px-3 py-1.5 text-sm">
         <ul class="list-disc list-inside space-y-1">
             @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
         </ul>
@@ -35,16 +35,16 @@
 
     <form action="{{ route('comptabilite.journaux.store') }}" method="POST">
         @csrf
-        <div class="space-y-5">
+        <div class="space-y-3">
 
             {{-- Header --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <h2 class="text-base font-semibold text-gray-800 mb-4">En-tête de l'écriture</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Journal <span class="text-red-500">*</span></label>
                         <select name="journal_type_id" required
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                                class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                             <option value="">— Sélectionner —</option>
                             @foreach($journalTypes as $jt)
                             <option value="{{ $jt->id }}" {{ old('journal_type_id') == $jt->id ? 'selected' : '' }}>
@@ -56,25 +56,25 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date <span class="text-red-500">*</span></label>
                         <input type="date" name="entry_date" value="{{ old('entry_date', date('Y-m-d')) }}" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Référence document</label>
                         <input type="text" name="reference" value="{{ old('reference') }}"
                                placeholder="FA-00001..."
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                     </div>
                     <div class="md:col-span-1 lg:col-span-1">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Libellé général <span class="text-red-500">*</span></label>
                         <input type="text" name="description" value="{{ old('description') }}" required
                                x-model="description"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                     </div>
                 </div>
             </div>
 
             {{-- Lines --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-semibold text-gray-800">Lignes d'imputation</h2>
                     <button type="button" @click="addLine()"
@@ -152,7 +152,7 @@
                             <tr>
                                 <td colspan="5" class="pt-2">
                                     <div x-show="totalDebit > 0 && totalDebit !== totalCredit"
-                                         class="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                                         class="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-[4px] px-3 py-2">
                                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                         </svg>
@@ -160,7 +160,7 @@
                                         différence de <span class="font-semibold" x-text="formatAmount(Math.abs(totalDebit - totalCredit))"></span>
                                     </div>
                                     <div x-show="totalDebit > 0 && totalDebit === totalCredit"
-                                         class="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg px-3 py-2">
+                                         class="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-[4px] px-3 py-2">
                                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                         </svg>
@@ -176,11 +176,11 @@
             {{-- Actions --}}
             <div class="flex justify-end gap-3">
                 <a href="{{ route('comptabilite.journaux.index') }}"
-                   class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                   class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
                     Annuler
                 </a>
                 <button type="submit"
-                        class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors">
+                        class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-6 py-1.5 rounded-[4px] transition-colors">
                     Enregistrer en brouillon
                 </button>
             </div>

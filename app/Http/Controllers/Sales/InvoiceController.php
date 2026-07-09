@@ -97,18 +97,79 @@ class InvoiceController extends Controller
         // Taux TVA de type 'tva' pour le sélecteur (exclut les retenues)
         $taxRatesVente = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
 
-        return view('ventes.factures.create', compact('clients', 'products', 'selectedClient', 'clientWithholding', 'clientExemptions', 'taxRatesVente'));
+        return view('ventes.factures.create', compact('clients', 'products', 'selectedClient', 'clientWithholding', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
     }
 
     public function store(StoreInvoiceRequest $request)
     {
         $this->authorize('create', Invoice::class);
 
-        $invoice = $this->service->create($request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+        $invoice = $this->service->create($data);
+        $this->uploadDocuments($invoice, $request);
 
         return redirect()
             ->route('ventes.factures.show', $invoice)
             ->with('success', 'Facture ' . $invoice->number . ' créée avec succès.');
+    }
+
+    /** [Maquette Facture] Lignes d'une commande (JSON) pour « Ajouter depuis commande ». */
+    public function orderItems(Request $request)
+    {
+        $order = \App\Models\Order::with('items.product.taxRate')->findOrFail($request->integer('order_id'));
+
+        return response()->json($order->items->map(fn ($it) => [
+            'product_id'       => $it->product_id,
+            'description'      => $it->description ?: $it->product?->name,
+            'quantity'         => (float) $it->quantity,
+            'unit_price'       => (float) $it->unit_price,
+            'discount_percent' => (float) ($it->discount_percent ?? 0),
+            'tax_rate_value'   => (float) ($it->tax_rate_value ?? $it->product?->taxRate?->rate ?? 0),
+        ])->values());
+    }
+
+    /** [Maquette Facture] Lignes d'un bon de livraison (JSON) pour « Ajouter depuis BL ». */
+    public function deliveryNoteItems(Request $request)
+    {
+        $dn = \App\Models\DeliveryNote::with('items.product.taxRate')->findOrFail($request->integer('delivery_note_id'));
+
+        return response()->json($dn->items->map(fn ($it) => [
+            'product_id'       => $it->product_id,
+            'description'      => $it->description ?: $it->product?->name,
+            'quantity'         => (float) $it->quantity,
+            'unit_price'       => (float) ($it->unit_price ?? $it->product?->sale_price ?? 0),
+            'discount_percent' => 0,
+            'tax_rate_value'   => (float) ($it->product?->taxRate?->rate ?? 0),
+        ])->values());
+    }
+
+    /** [Maquette Facture de vente] Données complémentaires du formulaire. */
+    private function maquetteFormData(): array
+    {
+        return [
+            'contacts'      => \App\Models\ClientContact::orderBy('last_name')->get(['id', 'client_id', 'civility', 'first_name', 'last_name']),
+            'warehouses'    => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+            'salesReps'     => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'orders'        => \App\Models\Order::orderByDesc('id')->limit(100)->get(['id', 'reference', 'number', 'issued_at']),
+            'deliveryNotes' => \App\Models\DeliveryNote::orderByDesc('id')->limit(100)->get(['id', 'number']),
+        ];
+    }
+
+    /** Enregistre les pièces jointes (documents) de la facture. */
+    private function uploadDocuments(Invoice $invoice, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/invoice/'.$invoice->id, 'local');
+            $invoice->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(Invoice $facture)
@@ -140,6 +201,7 @@ class InvoiceController extends Controller
         if ($lock instanceof \Illuminate\Http\RedirectResponse) return $lock;
 
         $invoice  = $this->service->repository->findWithDetails($facture->id);
+        $invoice->load('attachments');
         $clients  = Client::active()
             ->with(['taxRates' => fn($q) => $q->where('type', 'retenue')])
             ->orderBy('name')
@@ -157,7 +219,7 @@ class InvoiceController extends Controller
         $taxRatesVente     = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
 
         $editLock = $lock; // déjà le verrou actif pour ce user
-        return view('ventes.factures.edit', compact('invoice', 'clients', 'products', 'clientWithholding', 'clientExemptions', 'taxRatesVente', 'editLock'));
+        return view('ventes.factures.edit', compact('invoice', 'clients', 'products', 'clientWithholding', 'clientExemptions', 'taxRatesVente', 'editLock') + $this->maquetteFormData());
     }
 
     public function update(UpdateInvoiceRequest $request, Invoice $facture)
@@ -165,7 +227,10 @@ class InvoiceController extends Controller
         $this->authorize('update', $facture);
 
         try {
-            $this->service->update($facture, $request->validated());
+            $data = $request->validated();
+            unset($data['documents']);
+            $this->service->update($facture, $data);
+            $this->uploadDocuments($facture, $request);
             $this->releaseLock($facture); // [CONCURRENCE] Libère le verrou après sauvegarde
             return redirect()
                 ->route('ventes.factures.show', $facture)
@@ -352,8 +417,10 @@ class InvoiceController extends Controller
         try {
             $this->workflow->validateInvoice($facture, $request->motif);
             return back()->with('success', "Facture {$facture->number} validée.");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->withErrors(['facture' => $e->getMessage()])->with('error', $e->getMessage());
         }
     }
 

@@ -77,6 +77,11 @@ class Invoice extends Model
         'rejected_by',
         'rejected_at',
         'rejection_reason',
+        // [Maquette Facture de vente]
+        'contact_id', 'warehouse_id', 'price_mode', 'net_prices', 'project_reference',
+        'price_list', 'fiscal_representative', 'payment_method', 'fiscal_regime',
+        'default_tax_label', 'beneficiary_bank', 'due_type', 'sales_rep_id',
+        'delivery_date', 'carrier', 'vehicle_number', 'delivery_location', 'total_weight_kg',
     ];
 
     protected $casts = [
@@ -100,6 +105,10 @@ class Invoice extends Model
         'sent_at'                 => 'datetime',
         'submitted_at'            => 'datetime',
         'rejected_at'             => 'datetime',
+        // [Maquette Facture de vente]
+        'net_prices'              => 'boolean',
+        'delivery_date'           => 'date',
+        'total_weight_kg'         => 'decimal:2',
     ];
 
     // -------------------------------------------------------------------------
@@ -110,6 +119,11 @@ class Invoice extends Model
     {
         return $this->belongsTo(Client::class);
     }
+
+    // [Maquette Facture de vente]
+    public function contact(): BelongsTo { return $this->belongsTo(ClientContact::class, 'contact_id'); }
+    public function warehouse(): BelongsTo { return $this->belongsTo(Warehouse::class); }
+    public function salesRep(): BelongsTo { return $this->belongsTo(User::class, 'sales_rep_id'); }
 
     public function company(): BelongsTo
     {

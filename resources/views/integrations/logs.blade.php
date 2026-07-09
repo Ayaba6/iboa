@@ -38,19 +38,19 @@
         $avgMs = $logs->getCollection()->avg('duration_ms');
     @endphp
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
             <p class="text-xs font-medium text-gray-500 uppercase">Affichés</p>
             <p class="text-2xl font-bold text-gray-900 mt-1">{{ $logs->total() }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-emerald-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-emerald-200 p-4 text-center">
             <p class="text-xs font-medium text-emerald-600 uppercase">Succès (page)</p>
             <p class="text-2xl font-bold text-emerald-700 mt-1">{{ $successCount }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-red-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-red-200 p-4 text-center">
             <p class="text-xs font-medium text-red-600 uppercase">Erreurs (page)</p>
             <p class="text-2xl font-bold text-red-700 mt-1">{{ $failCount }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-blue-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-blue-200 p-4 text-center">
             <p class="text-xs font-medium text-blue-600 uppercase">Latence moy.</p>
             <p class="text-2xl font-bold text-blue-700 mt-1">
                 @if($avgMs)
@@ -68,13 +68,13 @@
 
     {{-- Filters --}}
     <form method="GET" action="{{ route('integrations.logs') }}"
-          class="bg-white rounded-xl border border-gray-200 p-4">
+          class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
 
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Intégration</label>
                 <select name="integration_id"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                     <option value="">Toutes</option>
                     @foreach($integrations as $intg)
                         <option value="{{ $intg->id }}" {{ request('integration_id') == $intg->id ? 'selected' : '' }}>
@@ -87,7 +87,7 @@
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Résultat</label>
                 <select name="success"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                     <option value="">Tous</option>
                     <option value="1" {{ request('success') === '1' ? 'selected' : '' }}>Succès</option>
                     <option value="0" {{ request('success') === '0' ? 'selected' : '' }}>Erreur</option>
@@ -97,7 +97,7 @@
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Direction</label>
                 <select name="direction"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                     <option value="">Toutes</option>
                     <option value="outbound" {{ request('direction') === 'outbound' ? 'selected' : '' }}>Sortant</option>
                     <option value="inbound"  {{ request('direction') === 'inbound'  ? 'selected' : '' }}>Entrant</option>
@@ -107,18 +107,18 @@
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Date début</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Date fin</label>
                 <input type="date" name="date_to" value="{{ request('date_to') }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                     Filtrer
                 </button>
                 <a href="{{ route('integrations.logs') }}"
@@ -130,11 +130,11 @@
     </form>
 
     {{-- Logs table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
 
         @if($logs->isEmpty())
         <div class="p-16 text-center">
-            <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <div class="w-14 h-14 rounded-[4px] bg-gray-100 flex items-center justify-center mx-auto mb-4">
                 <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
@@ -147,13 +147,13 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200">
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Méthode / Endpoint</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Intégration</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Statut HTTP</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Durée</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Direction</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Résultat</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Méthode / Endpoint</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Intégration</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Statut HTTP</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Durée</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide hidden lg:table-cell">Direction</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Date</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Résultat</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100" x-data="{ expanded: null }">
@@ -340,7 +340,7 @@
 
                 @foreach($logs->getUrlRange(max(1, $logs->currentPage()-2), min($logs->lastPage(), $logs->currentPage()+2)) as $page => $url)
                     @if($page == $logs->currentPage())
-                        <span class="px-3 py-1.5 text-xs bg-blue-600 text-white border border-blue-600 rounded-lg">{{ $page }}</span>
+                        <span class="px-3 py-1.5 text-xs bg-emerald-700 text-white border border-blue-600 rounded-lg">{{ $page }}</span>
                     @else
                         <a href="{{ $url }}" class="px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">{{ $page }}</a>
                     @endif

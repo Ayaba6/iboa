@@ -8,161 +8,127 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+@php
+    $kpi = 'bg-white rounded-[4px] border border-gray-300 px-3 py-1.5';
+    $kpL = 'text-[10px] font-bold text-gray-400 uppercase tracking-wide';
+    $kpV = 'text-[15px] font-bold tabular-nums';
+    $inp = 'h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500';
+    $btn = 'inline-flex items-center gap-1.5 px-3 py-1 text-[12px] font-semibold rounded-[4px] transition-colors';
+@endphp
+<div class="space-y-3">
 
-    {{-- KPI summary bar --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-            <p class="text-xs text-gray-500">Total clients</p>
-            <p class="text-lg font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-            <p class="text-xs text-gray-500">Actifs</p>
-            <p class="text-lg font-bold text-emerald-600 tabular-nums">{{ $summary['active'] }}</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-            <p class="text-xs text-gray-500">Entreprises</p>
-            <p class="text-lg font-bold text-indigo-600 tabular-nums">{{ $summary['entreprise'] }}</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-            <p class="text-xs text-gray-500">Particuliers</p>
-            <p class="text-lg font-bold text-blue-600 tabular-nums">{{ $summary['particulier'] }}</p>
-        </div>
+    {{-- KPI summary bar (dense SAGE) --}}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div class="{{ $kpi }}"><p class="{{ $kpL }}">Total clients</p><p class="{{ $kpV }} text-gray-900">{{ $summary['total'] }}</p></div>
+        <div class="{{ $kpi }}"><p class="{{ $kpL }}">Actifs</p><p class="{{ $kpV }} text-emerald-600">{{ $summary['active'] }}</p></div>
+        <div class="{{ $kpi }}"><p class="{{ $kpL }}">Entreprises</p><p class="{{ $kpV }} text-emerald-700">{{ $summary['entreprise'] }}</p></div>
+        <div class="{{ $kpi }}"><p class="{{ $kpL }}">Particuliers</p><p class="{{ $kpV }} text-blue-600">{{ $summary['particulier'] }}</p></div>
     </div>
 
     {{-- Header --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Clients</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $clients->total() }} client(s)</p>
+            <h1 class="text-[16px] font-bold text-gray-900">Clients</h1>
+            <p class="text-[11.5px] text-gray-400">{{ $clients->total() }} client(s)</p>
         </div>
-        <div class="flex items-center gap-2 self-start flex-wrap">
-            <a href="{{ route('exports.clients', request()->query()) }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium rounded-lg transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
-                </svg>
-                Exporter Excel
+        <div class="flex items-center gap-1.5 self-start flex-wrap">
+            <a href="{{ route('exports.clients', request()->query()) }}" class="{{ $btn }} border border-emerald-600 text-emerald-700 hover:bg-emerald-50">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                Excel
             </a>
-            <a href="{{ route('exports.clients-pdf', request()->query()) }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium rounded-lg transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-                Exporter PDF
+            <a href="{{ route('exports.clients-pdf', request()->query()) }}" class="{{ $btn }} border border-red-600 text-red-700 hover:bg-red-50">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                PDF
             </a>
-            <a href="{{ route('import.index', ['type' => 'clients']) }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 0l4-4m0 0l4 4m-4-4V4"/>
-                </svg>
+            <a href="{{ route('import.index', ['type' => 'clients']) }}" class="{{ $btn }} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50">
+                <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 0l4-4m0 0l4 4m-4-4V4"/></svg>
                 Importer
             </a>
-            <a href="{{ route('clients.create') }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
+            <a href="{{ route('clients.create') }}" class="{{ $btn }} bg-emerald-700 text-white hover:bg-emerald-800">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Nouveau client
             </a>
         </div>
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
-                   placeholder="Nom, code, téléphone, email..."
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-
-            <select name="type" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-2.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Nom, code, téléphone, email..." class="{{ $inp }}">
+            <select name="type" class="{{ $inp }}">
                 <option value="">Tous les types</option>
                 <option value="particulier" {{ ($filters['type'] ?? '') === 'particulier' ? 'selected' : '' }}>Particulier</option>
                 <option value="entreprise"  {{ ($filters['type'] ?? '') === 'entreprise'  ? 'selected' : '' }}>Entreprise</option>
             </select>
-
-            <select name="is_active" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="is_active" class="{{ $inp }}">
                 <option value="">Tous les statuts</option>
                 <option value="1" {{ ($filters['is_active'] ?? '') === '1' ? 'selected' : '' }}>Actif</option>
                 <option value="0" {{ ($filters['is_active'] ?? '') === '0' ? 'selected' : '' }}>Inactif</option>
             </select>
-
             <div class="flex gap-2">
-                <button type="submit"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                    Filtrer
-                </button>
+                <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[12.5px] font-semibold px-4 h-8 rounded-[4px] transition-colors">Filtrer</button>
                 @if(array_filter($filters ?? []))
-                <a href="{{ route('clients.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors">
-                    ✕
-                </a>
+                <a href="{{ route('clients.index') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[12.5px] px-3 h-8 inline-flex items-center rounded-[4px] transition-colors">✕</a>
                 @endif
             </div>
         </div>
     </form>
 
-    {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    {{-- Liste style SAGE X3 : grille dense, codes mono --}}
+    <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="overflow-x-auto">
-            <table data-dt="simple" class="w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th data-sortable class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                        <th data-sortable class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                        <th data-sortable class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Type</th>
-                        <th data-sortable class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Email</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Téléphone</th>
-                        <th data-sortable class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Solde dû</th>
-                        <th data-sortable class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                        <th class="px-4 py-3"></th>
+            <table data-dt="simple" class="w-full text-[12.5px] border-collapse">
+                <thead>
+                    <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
+                        <th data-sortable class="text-left font-bold px-3 py-1 uppercase tracking-wide w-28">Code client</th>
+                        <th data-sortable class="text-left font-bold px-3 py-1 uppercase tracking-wide">Raison sociale</th>
+                        <th data-sortable class="text-left font-bold px-3 py-1 uppercase tracking-wide hidden sm:table-cell w-28">Type</th>
+                        <th data-sortable class="text-left font-bold px-3 py-1 uppercase tracking-wide hidden md:table-cell">Email</th>
+                        <th class="text-left font-bold px-3 py-1 uppercase tracking-wide hidden lg:table-cell w-36">Téléphone</th>
+                        <th data-sortable class="text-right font-bold px-3 py-1 uppercase tracking-wide hidden lg:table-cell w-32">Solde dû</th>
+                        <th data-sortable class="text-center font-bold px-3 py-1 uppercase tracking-wide w-24">Statut</th>
+                        <th class="px-3 py-2 w-24"></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody>
                     @forelse($clients as $client)
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ $client->code }}</td>
-                        <td class="px-4 py-3">
-                            <a href="{{ route('clients.show', $client) }}"
-                               class="font-medium text-gray-900 hover:text-indigo-600 transition-colors">
-                                {{ $client->displayName() }}
-                            </a>
+                    <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                        <td class="px-3 py-1 font-mono text-emerald-800 whitespace-nowrap">
+                            <a href="{{ route('clients.show', $client) }}" class="hover:underline">{{ $client->code }}</a>
+                        </td>
+                        <td class="px-3 py-1">
+                            <a href="{{ route('clients.show', $client) }}" class="font-medium text-gray-900 hover:text-emerald-700 transition-colors">{{ $client->displayName() }}</a>
                             @if($client->trade_name && $client->trade_name !== $client->name)
-                                <p class="text-xs text-gray-400">{{ $client->name }}</p>
+                                <p class="text-[11px] text-gray-400">{{ $client->name }}</p>
                             @endif
                         </td>
-                        <td class="px-4 py-3 hidden sm:table-cell">
+                        <td class="px-3 py-1 hidden sm:table-cell">
                             @if($client->type === 'entreprise')
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Entreprise</span>
+                                <span class="inline-flex px-1.5 py-0.5 rounded-[3px] text-[10.5px] font-bold bg-purple-100 text-purple-700">Entreprise</span>
                             @else
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Particulier</span>
+                                <span class="inline-flex px-1.5 py-0.5 rounded-[3px] text-[10.5px] font-bold bg-blue-100 text-blue-700">Particulier</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
-                            {{ $client->email ?: '—' }}
+                        <td class="px-3 py-1 text-gray-600 hidden md:table-cell">{{ $client->email ?: '—' }}</td>
+                        <td class="px-3 py-1 text-gray-600 hidden lg:table-cell whitespace-nowrap">{{ $client->phone ?: ($client->mobile ?: '—') }}</td>
+                        <td class="px-3 py-1 text-right tabular-nums hidden lg:table-cell whitespace-nowrap {{ $client->balance > 0 ? 'text-red-600 font-semibold' : 'text-gray-300' }}">
+                            {{ $client->balance > 0 ? number_format($client->balance, 0, ',', ' ') : '—' }}
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
-                            {{ $client->phone ?: ($client->mobile ?: '—') }}
-                        </td>
-                        <td class="px-4 py-3 text-right text-sm font-medium tabular-nums hidden lg:table-cell
-                            {{ $client->balance > 0 ? 'text-red-600' : 'text-gray-700' }}">
-                            {{ $client->balance > 0 ? number_format($client->balance, 0, ',', ' ').' FCFA' : '—' }}
-                        </td>
-                        <td class="px-4 py-3 text-center">
+                        <td class="px-3 py-1 text-center">
                             @if($client->is_active)
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-100">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-50 text-green-700 border border-green-200">
                                     <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Actif
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-500 border border-gray-200">
                                     <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Inactif
                                 </span>
                             @endif
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="flex items-center justify-end gap-1">
+                        <td class="px-3 py-1">
+                            <div class="flex items-center justify-end gap-0.5">
                                 <a href="{{ route('clients.show', $client) }}"
-                                   class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                   class="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                                    title="Voir">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -170,7 +136,7 @@
                                     </svg>
                                 </a>
                                 <a href="{{ route('clients.edit', $client) }}"
-                                   class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                   class="p-1 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
                                    title="Modifier">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -181,7 +147,7 @@
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
-                                            class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                            class="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                             title="Archiver">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
@@ -200,9 +166,9 @@
                                 </svg>
                                 <p class="text-sm font-medium">Aucun client trouvé</p>
                                 @if(array_filter($filters ?? []))
-                                    <a href="{{ route('clients.index') }}" class="text-indigo-600 hover:text-indigo-700 text-sm">Effacer les filtres</a>
+                                    <a href="{{ route('clients.index') }}" class="text-emerald-600 hover:text-emerald-700 text-sm">Effacer les filtres</a>
                                 @else
-                                    <a href="{{ route('clients.create') }}" class="text-indigo-600 hover:text-indigo-700 text-sm">Créer le premier client</a>
+                                    <a href="{{ route('clients.create') }}" class="text-emerald-600 hover:text-emerald-700 text-sm">Créer le premier client</a>
                                 @endif
                             </div>
                         </td>
@@ -212,11 +178,10 @@
             </table>
         </div>
 
-        @if($clients->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
-            {{ $clients->withQueryString()->links() }}
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+            <span>{{ $clients->total() }} client(s)</span>
+            @if($clients->hasPages())<div>{{ $clients->withQueryString()->links() }}</div>@endif
         </div>
-        @endif
     </div>
 
 </div>

@@ -132,8 +132,10 @@ class CreditNoteController extends Controller
         try {
             $this->workflow->validateCreditNote($avoir, $request->motif);
             return back()->with('success', "Avoir {$avoir->number} validé.");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->withErrors(['avoir' => $e->getMessage()])->with('error', $e->getMessage());
         }
     }
 

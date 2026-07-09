@@ -175,9 +175,23 @@ class PurchaseOrderService
     /**
      * Create a Reception from all PO items.
      */
+    /** Statuts PO à partir desquels une réception/facture peut être créée (CDC §7.2). */
+    private const RECEIVABLE_STATUSES = ['confirme', 'envoye', 'partiellement_recu'];
+    private const INVOICEABLE_STATUSES = ['confirme', 'envoye', 'partiellement_recu', 'recu'];
+
     public function createReception(PurchaseOrder $po): Reception
     {
         return DB::transaction(function () use ($po) {
+            // [CDC §7.4] Une réception ne peut être créée que pour un PO confirmé
+            // (validation + approbation seuils déjà passées) — garde-fou serveur,
+            // jusqu'ici porté uniquement par l'affichage conditionnel de la vue.
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($po->id);
+            if (! in_array($po->status, self::RECEIVABLE_STATUSES, true)) {
+                throw new \RuntimeException(
+                    "Cette commande doit être confirmée avant de créer une réception (statut actuel : {$po->status})."
+                );
+            }
+
             $company = currentCompany();
 
             // [FIX-MAJEUR] Use DocumentSequenceService for collision-free numbering
@@ -228,6 +242,15 @@ class PurchaseOrderService
             // [SYNC-FIX-02] Lock the PO row + check duplicate INSIDE the transaction
             // to eliminate the TOCTOU race that allowed concurrent double-billing.
             $po = PurchaseOrder::lockForUpdate()->findOrFail($po->id);
+
+            // [CDC §7.4] Pas de facture fournisseur tant que la commande n'est pas
+            // confirmée — même garde-fou serveur que createReception().
+            if (! in_array($po->status, self::INVOICEABLE_STATUSES, true)) {
+                throw new \RuntimeException(
+                    "Cette commande doit être confirmée avant de créer une facture (statut actuel : {$po->status})."
+                );
+            }
+
             if (SupplierInvoice::where('purchase_order_id', $po->id)
                 ->whereNotIn('status', ['annulee'])
                 ->whereNull('deleted_at')

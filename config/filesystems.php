@@ -33,7 +33,7 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            'serve' => env('FILESYSTEM_SERVE', false), // false en production — sinon PUT /storage/{path} est public
             'throw' => false,
             'report' => false,
         ],
@@ -43,6 +43,16 @@ return [
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        // [CDC §14] Destination dédiée des sauvegardes — volontairement HORS de
+        // storage/app/private (qui est lui-même une source de fichiers à
+        // sauvegarder). Évite tout chevauchement source/destination.
+        'backups' => [
+            'driver' => 'local',
+            'root' => storage_path('app/backups'),
             'throw' => false,
             'report' => false,
         ],

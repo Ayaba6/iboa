@@ -24,9 +24,9 @@ $catLabels = [
 {{-- En-tête --}}
 <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
-            {{ $color === 'indigo' ? 'bg-indigo-100' : ($color === 'blue' ? 'bg-blue-100' : ($color === 'violet' ? 'bg-violet-100' : ($color === 'amber' ? 'bg-amber-100' : ($color === 'emerald' ? 'bg-emerald-100' : 'bg-gray-100')))) }}">
-            <svg class="w-6 h-6 {{ $color === 'indigo' ? 'text-indigo-600' : ($color === 'blue' ? 'text-blue-600' : ($color === 'violet' ? 'text-violet-600' : ($color === 'amber' ? 'text-amber-600' : ($color === 'emerald' ? 'text-emerald-600' : 'text-gray-500')))) }}"
+        <div class="w-12 h-12 rounded-[4px] flex items-center justify-center flex-shrink-0
+            {{ $color === 'indigo' ? 'bg-emerald-100' : ($color === 'blue' ? 'bg-blue-100' : ($color === 'violet' ? 'bg-violet-100' : ($color === 'amber' ? 'bg-amber-100' : ($color === 'emerald' ? 'bg-emerald-100' : 'bg-gray-100')))) }}">
+            <svg class="w-6 h-6 {{ $color === 'indigo' ? 'text-emerald-700' : ($color === 'blue' ? 'text-blue-600' : ($color === 'violet' ? 'text-violet-600' : ($color === 'amber' ? 'text-amber-600' : ($color === 'emerald' ? 'text-emerald-600' : 'text-gray-500')))) }}"
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
@@ -34,14 +34,14 @@ $catLabels = [
         </div>
         <div>
             <div class="flex items-center gap-2 flex-wrap">
-                <h1 class="text-2xl font-bold text-gray-900">{{ $profil->libelle }}</h1>
+                <h1 class="text-[16px] font-bold text-gray-900">{{ $profil->libelle }}</h1>
                 <code class="text-sm font-mono bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{{ $profil->code }}</code>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
-                    {{ $color === 'indigo' ? 'bg-indigo-100 text-indigo-700' : ($color === 'blue' ? 'bg-blue-100 text-blue-700' : ($color === 'violet' ? 'bg-violet-100 text-violet-700' : ($color === 'amber' ? 'bg-amber-100 text-amber-700' : ($color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600')))) }}">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium
+                    {{ $color === 'indigo' ? 'bg-emerald-100 text-emerald-800' : ($color === 'blue' ? 'bg-blue-100 text-blue-700' : ($color === 'violet' ? 'bg-violet-100 text-violet-700' : ($color === 'amber' ? 'bg-amber-100 text-amber-700' : ($color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600')))) }}">
                     {{ $profil->categorie_label }}
                 </span>
                 @if($profil->is_default)
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Par défaut</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-emerald-100 text-emerald-800">Par défaut</span>
                 @endif
             </div>
             <p class="text-sm text-gray-500 mt-0.5">
@@ -57,7 +57,7 @@ $catLabels = [
         <form method="POST" action="{{ route('rh.profils.sync-plan', $profil) }}">
             @csrf
             <button type="submit"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-[4px] text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -67,17 +67,17 @@ $catLabels = [
         </form>
         @endif
         <a href="{{ route('rh.profils.edit', $profil) }}"
-           class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+           class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
             Modifier le profil
         </a>
     </div>
 </div>
 
 @if(session('success'))
-<div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm">{{ session('success') }}</div>
+<div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-[4px] px-3 py-1.5 text-sm">{{ session('success') }}</div>
 @endif
 @if(session('error'))
-<div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{{ session('error') }}</div>
+<div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-[4px] px-3 py-1.5 text-sm">{{ session('error') }}</div>
 @endif
 
 <div class="grid grid-cols-3 gap-6">
@@ -86,7 +86,7 @@ $catLabels = [
     <div class="col-span-2 space-y-4">
 
         @if($rubricsByCategorie->isEmpty())
-        <div class="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-12 text-center">
             <p class="text-gray-400">Aucune rubrique dans ce profil.</p>
             @if($profil->plan_id)
             <p class="text-xs text-gray-400 mt-1">Cliquez sur <strong>Sync depuis le plan</strong> pour hériter les rubriques du plan associé.</p>
@@ -98,26 +98,26 @@ $catLabels = [
 
         {{-- Stats --}}
         <div class="grid grid-cols-4 gap-3">
-            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                <p class="text-2xl font-bold text-gray-900">{{ $profil->rubrics_count }}</p>
+            <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+                <p class="text-[16px] font-bold text-gray-900">{{ $profil->rubrics_count }}</p>
                 <p class="text-xs text-gray-500 mt-0.5">Rubriques</p>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                <p class="text-2xl font-bold text-green-600">{{ $profil->rubrics->where('pivot.is_active', true)->where('sens', 'addition')->count() }}</p>
+            <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+                <p class="text-[16px] font-bold text-green-600">{{ $profil->rubrics->where('pivot.is_active', true)->where('sens', 'addition')->count() }}</p>
                 <p class="text-xs text-gray-500 mt-0.5">Gains actifs</p>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                <p class="text-2xl font-bold text-red-500">{{ $profil->rubrics->where('pivot.is_active', true)->where('sens', 'deduction')->count() }}</p>
+            <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+                <p class="text-[16px] font-bold text-red-500">{{ $profil->rubrics->where('pivot.is_active', true)->where('sens', 'deduction')->count() }}</p>
                 <p class="text-xs text-gray-500 mt-0.5">Déductions actives</p>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                <p class="text-2xl font-bold text-orange-500">{{ $profil->rubrics->where('pivot.is_active', false)->count() }}</p>
+            <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+                <p class="text-[16px] font-bold text-orange-500">{{ $profil->rubrics->where('pivot.is_active', false)->count() }}</p>
                 <p class="text-xs text-gray-500 mt-0.5">Désactivées</p>
             </div>
         </div>
 
         @foreach($rubricsByCategorie as $cat => $rubrics)
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm overflow-hidden">
             <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
                 <h2 class="text-sm font-semibold text-gray-700">{{ $catLabels[$cat] ?? ucfirst($cat) }}</h2>
                 <span class="text-xs text-gray-400">{{ $rubrics->count() }} rubrique(s)</span>
@@ -170,7 +170,7 @@ $catLabels = [
 
                         <div class="flex items-center gap-2 flex-shrink-0">
                             <button @click="editing = true"
-                                    class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Surcharger</button>
+                                    class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">Surcharger</button>
                             <form method="POST" action="{{ route('rh.profils.rubrics.remove', [$profil, $rubric]) }}"
                                   onsubmit="return confirm('Retirer cette rubrique du profil ?')">
                                 @csrf @method('DELETE')
@@ -182,14 +182,14 @@ $catLabels = [
                     {{-- Formulaire de surcharge --}}
                     <div x-show="editing" x-cloak>
                         <form method="POST" action="{{ route('rh.profils.rubrics.update', [$profil, $rubric]) }}"
-                              class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mt-1">
+                              class="bg-[#eef5f0] border border-emerald-100 rounded-[4px] p-4 mt-1">
                             @csrf @method('PUT')
-                            <p class="text-xs font-semibold text-indigo-700 mb-3">Surcharge pour <code>{{ $rubric->code }}</code></p>
+                            <p class="text-xs font-semibold text-emerald-800 mb-3">Surcharge pour <code>{{ $rubric->code }}</code></p>
                             <div class="grid grid-cols-3 gap-3 mb-3">
                                 <div>
                                     <label class="text-xs text-gray-500 block mb-1">Type calcul (surcharge)</label>
                                     <select name="override_calc_type"
-                                            class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-300">
+                                            class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-xs focus:ring-1 focus:ring-emerald-300">
                                         <option value="">— Hérité ({{ $rubric->calc_type }}) —</option>
                                         <option value="fixe" @selected($rubric->pivot->override_calc_type === 'fixe')>Montant fixe</option>
                                         <option value="taux" @selected($rubric->pivot->override_calc_type === 'taux')>Taux %</option>
@@ -202,14 +202,14 @@ $catLabels = [
                                     <input type="number" name="override_fixed_amount"
                                            value="{{ $rubric->pivot->override_fixed_amount }}" min="0"
                                            placeholder="Ex : 25000"
-                                           class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-mono focus:ring-2 focus:ring-indigo-300">
+                                           class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-xs font-mono focus:ring-1 focus:ring-emerald-300">
                                 </div>
                                 <div>
                                     <label class="text-xs text-gray-500 block mb-1">Taux (%)</label>
                                     <input type="number" name="override_rate"
                                            value="{{ $rubric->pivot->override_rate }}" min="0" max="100" step="0.01"
                                            placeholder="Ex : 15.00"
-                                           class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-mono focus:ring-2 focus:ring-indigo-300">
+                                           class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-xs font-mono focus:ring-1 focus:ring-emerald-300">
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -217,23 +217,23 @@ $catLabels = [
                                 <input type="text" name="override_formula"
                                        value="{{ $rubric->pivot->override_formula }}"
                                        placeholder="Ex : salaire_base * 0.15 + 5000"
-                                       class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs font-mono focus:ring-2 focus:ring-indigo-300">
+                                       class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-xs font-mono focus:ring-1 focus:ring-emerald-300">
                             </div>
                             <div class="flex items-center justify-between">
                                 <label class="flex items-center gap-2 text-xs text-gray-600">
                                     <input type="hidden" name="is_active" value="0">
                                     <input type="checkbox" name="is_active" value="1"
                                            {{ $rubric->pivot->is_active ? 'checked' : '' }}
-                                           class="w-3.5 h-3.5 text-indigo-600 border-gray-300 rounded">
+                                           class="w-3.5 h-3.5 text-emerald-700 border-gray-300 rounded">
                                     Rubrique active dans ce profil
                                 </label>
                                 <div class="flex gap-2">
                                     <button type="submit"
-                                            class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700">
+                                            class="px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-xs font-medium hover:bg-emerald-800">
                                         Enregistrer
                                     </button>
                                     <button type="button" @click="editing = false"
-                                            class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-medium">
+                                            class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-[4px] text-xs font-medium">
                                         Annuler
                                     </button>
                                 </div>
@@ -252,7 +252,7 @@ $catLabels = [
     <div class="col-span-1 space-y-4">
 
         {{-- Contrats utilisant ce profil --}}
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm p-5">
             <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Contrats liés</p>
             @if($profil->contracts_count === 0)
                 <p class="text-sm text-gray-400 italic">Aucun contrat n'utilise ce profil.</p>
@@ -278,14 +278,14 @@ $catLabels = [
 
         {{-- Ajouter des rubriques --}}
         @if($availableRubrics->isNotEmpty())
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm overflow-hidden">
             <div class="px-5 py-3 bg-gray-50 border-b border-gray-200">
                 <h3 class="text-sm font-semibold text-gray-700">Ajouter une rubrique</h3>
                 <p class="text-xs text-gray-400 mt-0.5">Rubriques du plan non encore incluses</p>
             </div>
             <div class="divide-y divide-gray-50 max-h-80 overflow-y-auto">
                 @foreach($availableRubrics as $rubric)
-                <div class="flex items-center justify-between px-4 py-2.5">
+                <div class="flex items-center justify-between px-3 py-2.5">
                     <div>
                         <code class="text-xs font-mono text-gray-600">{{ $rubric->code }}</code>
                         <p class="text-xs text-gray-500 mt-0.5 truncate max-w-[160px]">{{ $rubric->libelle }}</p>
@@ -294,7 +294,7 @@ $catLabels = [
                         @csrf
                         <input type="hidden" name="rubric_id" value="{{ $rubric->id }}">
                         <button type="submit"
-                                class="inline-flex items-center justify-center w-6 h-6 bg-indigo-100 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-200 transition-colors">
+                                class="inline-flex items-center justify-center w-6 h-6 bg-emerald-100 text-emerald-700 rounded-[4px] text-sm font-bold hover:bg-emerald-200 transition-colors">
                             +
                         </button>
                     </form>
@@ -305,7 +305,7 @@ $catLabels = [
         @endif
 
         @if($profil->plan_id && $availableRubrics->isEmpty() && $profil->rubrics_count > 0)
-        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 text-xs text-emerald-700">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] px-3 py-1.5 text-xs text-emerald-700">
             <p class="font-semibold mb-0.5">✓ Toutes les rubriques du plan sont incluses</p>
             <p>Ce profil hérite de toutes les rubriques actives du plan {{ $profil->plan?->code }}.</p>
         </div>

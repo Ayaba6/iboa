@@ -12,16 +12,14 @@
 @endsection
 
 @section('content')
-<div class="space-y-1 mb-5">
-    <h1 class="text-2xl font-bold text-gray-900">Modifier la commande <span class="font-mono">{{ $order->number }}</span></h1>
+<div class="max-w-6xl">
+    <x-validation-errors />
+
+    <form method="POST" action="{{ route('ventes.commandes.update', $order) }}" enctype="multipart/form-data">
+        @csrf
+        @method('PUT')
+        <x-form-guard :model="$order" />
+        @include('ventes.commandes._form')
+    </form>
 </div>
-
-<x-validation-errors />
-
-<form method="POST" action="{{ route('ventes.commandes.update', $order) }}">
-    @csrf
-    @method('PUT')
-    <x-form-guard :model="$order" />
-    @include('ventes.commandes._form')
-</form>
 @endsection

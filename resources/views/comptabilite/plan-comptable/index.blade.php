@@ -8,18 +8,18 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Plan comptable SYSCOHADA</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Plan comptable SYSCOHADA</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $accounts->total() }} compte(s)</p>
         </div>
         <div class="flex flex-wrap items-center gap-2 self-start">
             {{-- Export --}}
             <a href="{{ route('comptabilite.plan-comptable.export-pdf', array_filter(['class_id' => $classId ?? null, 'search' => $search ?? null])) }}"
-               class="border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors">
+               class="border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px] flex items-center gap-1.5 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
@@ -27,7 +27,7 @@
                 PDF
             </a>
             <a href="{{ route('comptabilite.plan-comptable.export', array_filter(['class_id' => $classId ?? null])) }}"
-               class="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors">
+               class="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium px-2.5 py-1.5 rounded-[4px] flex items-center gap-1.5 transition-colors">
                 <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
                 </svg>
@@ -38,7 +38,7 @@
             {{-- Import trigger — dispatche un event natif capté par la modal dans @push('modals') --}}
             <button type="button"
                     onclick="window.dispatchEvent(new CustomEvent('open-import-modal'))"
-                    class="border border-violet-300 bg-violet-50 hover:bg-violet-100 text-violet-700 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors">
+                    class="border border-violet-300 bg-violet-50 hover:bg-violet-100 text-violet-700 text-sm font-medium px-2.5 py-1.5 rounded-[4px] flex items-center gap-1.5 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 6l5-5 5 5M12 1v12"/>
                 </svg>
@@ -46,7 +46,7 @@
             </button>
 
             <a href="{{ route('comptabilite.plan-comptable.create') }}"
-               class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+               class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -57,12 +57,12 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Code ou libellé..."
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500">
 
-            <select name="class_id" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+            <select name="class_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500">
                 <option value="">Toutes les classes</option>
                 @foreach($classes as $class)
                 <option value="{{ $class->id }}" {{ ($classId ?? '') == $class->id ? 'selected' : '' }}>
@@ -72,19 +72,19 @@
             </select>
 
             <div class="flex gap-2">
-                <button type="submit" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if($search || $classId)
                 <a href="{{ route('comptabilite.plan-comptable.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors">✕</a>
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">✕</a>
                 @endif
             </div>
         </div>
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="tbl-scroll">
             <table class="tbl tbl-sticky w-full">
                 <thead>
@@ -121,7 +121,7 @@
                             $typeColors = ['actif'=>'blue','passif'=>'indigo','charge'=>'red','produit'=>'green','bilan'=>'gray','resultat'=>'amber'];
                             $tc = $typeColors[$account->type] ?? 'gray';
                             @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{ $tc }}-100 text-{{ $tc }}-700">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $tc }}-100 text-{{ $tc }}-700">
                                 {{ ucfirst($account->type) }}
                             </span>
                         </td>
@@ -133,9 +133,9 @@
                         </td>
                         <td class="text-center hidden md:table-cell">
                             @if($account->is_detail)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Oui</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-green-100 text-green-700">Oui</span>
                             @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Regroupement</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-gray-100 text-gray-500">Regroupement</span>
                             @endif
                         </td>
                         <td class="text-right">
@@ -163,7 +163,7 @@
             </table>
         </div>
         @if($accounts->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
+        <div class="px-3 py-1.5 border-t border-gray-100">
             {{ $accounts->appends(compact('search','classId'))->links() }}
         </div>
         @endif
@@ -186,14 +186,14 @@
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="open = false; fileName = ''"></div>
 
     {{-- Panel --}}
-    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10" @click.stop>
+    <div class="relative bg-white rounded-[4px] shadow-2xl w-full max-w-md p-6 z-10" @click.stop>
         <div class="flex items-start justify-between mb-5">
             <div>
-                <h2 class="text-lg font-bold text-gray-900">Importer le plan comptable</h2>
+                <h2 class="text-[16px] font-bold text-gray-900">Importer le plan comptable</h2>
                 <p class="text-sm text-gray-500 mt-0.5">Fichier Excel (.xlsx, .xls) ou CSV</p>
             </div>
             <button type="button" @click="open = false; fileName = ''"
-                    class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                    class="text-gray-400 hover:text-gray-600 p-1 rounded-[4px] hover:bg-gray-100 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -201,7 +201,7 @@
         </div>
 
         {{-- Template download --}}
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center gap-3">
+        <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-3 mb-4 flex items-center gap-3">
             <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
             </svg>
@@ -217,7 +217,7 @@
         <form action="{{ route('comptabilite.plan-comptable.import') }}" method="POST" enctype="multipart/form-data" data-turbo="false">
             @csrf
             {{-- Zone de dépôt --}}
-            <label class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition-colors relative"
+            <label class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-[4px] cursor-pointer transition-colors relative"
                    :class="fileName ? 'border-violet-400 bg-violet-50' : 'border-gray-300 hover:border-violet-400 hover:bg-violet-50'">
                 <input type="file" name="file"
                        class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -247,12 +247,12 @@
 
             <div class="flex gap-3 mt-5">
                 <button type="button" @click="open = false; fileName = ''"
-                        class="flex-1 border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                        class="flex-1 border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px] hover:bg-gray-50 transition-colors">
                     Annuler
                 </button>
                 <button type="submit" :disabled="!fileName"
-                        :class="fileName ? 'bg-violet-600 hover:bg-violet-700 cursor-pointer' : 'bg-violet-300 cursor-not-allowed'"
-                        class="flex-1 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                        :class="fileName ? 'bg-emerald-700 hover:bg-emerald-800 cursor-pointer' : 'bg-violet-300 cursor-not-allowed'"
+                        class="flex-1 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Importer
                 </button>
             </div>

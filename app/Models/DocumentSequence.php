@@ -22,6 +22,7 @@ class DocumentSequence extends Model
         'suffix',
         'padding',
         'include_year',
+        'include_month',
         'year_format',
         'year_separator',
         'last_number',
@@ -32,7 +33,8 @@ class DocumentSequence extends Model
     ];
 
     protected $casts = [
-        'include_year' => 'boolean',
+        'include_year'  => 'boolean',
+        'include_month' => 'boolean',
         'is_locked'    => 'boolean',
         'padding'      => 'integer',
         'last_number'  => 'integer',
@@ -45,7 +47,7 @@ class DocumentSequence extends Model
      */
     public const FORMAT_FIELDS = [
         'prefix', 'suffix', 'padding',
-        'include_year', 'year_format', 'year_separator',
+        'include_year', 'include_month', 'year_format', 'year_separator',
     ];
 
     /**

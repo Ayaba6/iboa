@@ -14,6 +14,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $permissions = [
             // Société
             'company.view', 'company.edit',
+            // Direction — tableau de bord exécutif + chaîne de valeur (§3/§15 CDC)
+            'direction.view',
             // Articles
             'products.view', 'products.create', 'products.edit', 'products.delete',
             // Clients
@@ -24,7 +26,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'suppliers.view', 'suppliers.create', 'suppliers.edit', 'suppliers.delete',
             // Ventes
             'quotes.view', 'quotes.create', 'quotes.edit', 'quotes.delete', 'quotes.validate',
-            'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.validate',
+            'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.validate', 'orders.reopen',
+            'orders.edit_validated', // [CDC §13.1] modifier une commande déjà validée (prix verrouillés pour les autres)
+            'bon_preparations.view', 'bon_preparations.update',
             'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete', 'invoices.validate', 'invoices.send',
             'deliveries.view', 'deliveries.create', 'deliveries.edit', 'deliveries.validate',
             'credit_notes.view', 'credit_notes.create', 'credit_notes.edit',
@@ -41,6 +45,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'purchase_requests.view', 'purchase_requests.create', 'purchase_requests.submit', 'purchase_requests.approve',
             'purchase_requests.validate_l1', // validation chef service (<500k FCFA)
             'purchase_requests.validate_l2', // validation direction (<5M FCFA)
+            'purchase_requests.validate_l3', // validation DG (≥5M FCFA) — §13.4
             'purchase_orders.view', 'purchase_orders.create', 'purchase_orders.edit', 'purchase_orders.validate',
             'receptions.view', 'receptions.create', 'receptions.validate',
             'supplier_invoices.view', 'supplier_invoices.create', 'supplier_invoices.edit',
@@ -53,8 +58,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'production.view', 'production.create', 'production.update', 'production.delete',
             'production.launch', 'production.validate', 'production.cancel',
             'production.declare',           // déclaration production/rebuts (opérateurs §15 CDC)
-            'production.approve_financial', // validation financière avant lancement OF (§13.2 CDC)
-            'production.modify_launched',   // demande modification OF lancé (§13.10 CDC)
+            'production.validate_declaration', // visa chef d'équipe sur les déclarations de production (§13.3 CDC)
+            'production.approve_financial',    // validation financière avant lancement OF (§13.2 CDC)
+            'production.modify_launched',      // demande modification OF lancé (§13.10 CDC)
+            // Modification OF exceptionnelle — workflow 4 étapes (§13.10 CDC)
+            'production.modification.avis_chef',       // 1. avis Chef Production
+            'production.modification.avis_commercial', // 2. avis Commercial
+            'production.modification.avis_finance',    // 3. avis Finance (DAF)
+            'production.modification.avis_dg',          // 4. validation finale DG
+            'production.submit_validation',    // soumission OF pour validation 2-niveaux (§13.3 CDC)
+            'production.validate_chef',        // validation Chef Atelier (§13.3 CDC)
+            'production.validate_responsable', // validation Responsable Production (§13.3 CDC)
             'production.cost.view', 'production.report.view',
             // Qualité — module autonome (§10 CDC)
             'quality.view',   // consulter inspections et non-conformités
@@ -78,6 +92,19 @@ class RolesAndPermissionsSeeder extends Seeder
             'integrations.view', 'integrations.manage', 'integrations.declare',
             // Admin
             'users.manage', 'roles.manage', 'settings.manage', 'audit.view',
+            // RH — module Ressources Humaines (paie, congés, prêts, employés)
+            'rh.view',              // accès module RH
+            'rh.employees.view',    // consulter fiches employés
+            'rh.employees.manage',  // créer/modifier/archiver employés
+            'rh.leaves.view',       // consulter congés
+            'rh.leaves.manage',     // valider/refuser congés
+            'rh.loans.view',        // consulter prêts salarié
+            'rh.loans.manage',      // valider/gérer prêts
+            'rh.payroll.view',      // consulter bulletins et runs de paie
+            'rh.payroll.manage',    // créer et calculer runs de paie
+            'rh.payroll.validate',  // valider (marquer payé) un run de paie
+            'rh.portail',           // accès portail employé self-service
+            'rh.settings',          // paramétrage RH (barèmes, cotisations, profils)
         ];
 
         foreach ($permissions as $perm) {
@@ -92,20 +119,30 @@ class RolesAndPermissionsSeeder extends Seeder
         $directeur = Role::firstOrCreate(['name' => 'directeur', 'guard_name' => 'web']);
         $directeur->syncPermissions(Permission::whereNotIn('name', ['users.manage', 'roles.manage'])->get());
 
-        // Commercial — ventes + clients + workflow (create + submit + transform + validate orders)
+        // Commercial — ventes + clients + workflow (create + submit + transform)
+        // [CDC §13.1] Le commercial crée/modifie devis et crée commandes ; il ne
+        // valide PAS financièrement (rôle Finance) et ne génère pas d'OF (Chef Production).
         $commercial = Role::firstOrCreate(['name' => 'commercial', 'guard_name' => 'web']);
         $commercial->syncPermissions([
             'products.view', 'clients.view', 'clients.create', 'clients.edit',
             'crm.view', 'crm.manage',   // prospection CRM
             'quotes.view', 'quotes.create', 'quotes.edit',
-            'orders.view', 'orders.create', 'orders.edit', 'orders.validate',
+            'orders.view', 'orders.create', 'orders.edit',
+            'bon_preparations.view', // [CDC §BP] suivi pour créer BL après chargement
             'invoices.view', 'invoices.create', 'invoices.send',
             'deliveries.view', 'deliveries.create',
             'credit_notes.view', 'credit_notes.create',
             'payments.view', 'reports.view',
             'stocks.view',    // lecture stock pour info dispo sur devis/commandes
-            // Workflow : un commercial crée, soumet, transforme et valide les commandes
-            'sales.create', 'sales.submit', 'sales.transform', 'sales.validate',
+            // [CDC §13.1] Workflow : le commercial crée, soumet et transforme —
+            // la validation financière des commandes appartient à Finance (comptable/daf).
+            'sales.create', 'sales.submit', 'sales.transform',
+            // [FIX-BUG] production.view manquait — sans elle le groupe de routes
+            // production/* (gate de groupe) était inaccessible, rendant
+            // production.modify_launched et avis_commercial inopérants.
+            'production.view',
+            'production.modify_launched', // demander modif OF lié à sa commande (§13.10 CDC)
+            'production.modification.avis_commercial', // §13.10 — étape 2/4
         ]);
 
         // Comptable — factures + trésorerie + rapports + workflow validation factures/avoirs
@@ -125,17 +162,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'integrations.view', 'integrations.declare',
             // Workflow : le comptable valide les factures et avoirs, peut annuler
             'sales.validate', 'sales.reject', 'sales.cancel', 'sales.view_all',
+            'production.modification.avis_finance', // §13.10 — étape 3/4
         ]);
 
-        // Magasinier — stocks + réceptions + lecture commandes/factures pour préparer livraisons
+        // Magasinier — stocks + réceptions + préparation + validation livraisons physiques
         $magasinier = Role::firstOrCreate(['name' => 'magasinier', 'guard_name' => 'web']);
         $magasinier->syncPermissions([
             'products.view', 'stocks.view', 'stocks.adjust', 'stocks.transfer',
+            'stocks.lot.trace',  // traçabilité lots bobines (réception : largeur, épaisseur, couleur, lot, fournisseur)
             'inventory.view', 'inventory.create', 'inventory.validate',
             'receptions.view', 'receptions.create', 'receptions.validate',
             'supplier_returns.view', 'supplier_returns.create', 'supplier_returns.validate',
-            'purchase_orders.view', 'deliveries.view',
+            'purchase_orders.view',
+            'deliveries.view', 'deliveries.create', 'deliveries.validate', // préparation + contrôle chargement
             'orders.view',    // voir les commandes à préparer
+            'bon_preparations.view', 'bon_preparations.update', // [CDC §BP] procéder au chargement
             'invoices.view',  // vérifier si facturé avant expédition
             'production.view', // suivi production / stock produits finis
         ]);
@@ -147,7 +188,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'stocks.view', 'stocks.adjust',
             'production.view', 'production.create', 'production.update', 'production.delete',
             'production.launch', 'production.validate', 'production.cancel',
+            'production.validate_declaration', // §13.3 — visa déclarations (proxy chef d'équipe)
             'production.modify_launched',
+            'production.submit_validation',    // §13.3 — soumettre OF pour validation
+            'production.validate_responsable', // §13.3 — valider en tant que Responsable Production
+            'production.modification.avis_chef', // §13.10 — étape 1/4
             'production.cost.view', 'production.report.view',
             'quality.view',        // suivi qualité production
             'maintenance.view',    // suivi maintenance équipements
@@ -181,6 +226,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales.validate', 'sales.reject', 'sales.cancel', 'sales.view_all',
             // Validation financière OF (§13.2 CDC) — DAF débloque fabrication
             'production.view', 'production.approve_financial',
+            'production.modification.avis_finance', // §13.10 — étape 3/4
+            // Direction — synthèse exécutive + chaîne de valeur
+            'direction.view',
             // Analytique
             'analytic.view', 'analytic.manage',
             // Référentiels lecture
@@ -194,8 +242,15 @@ class RolesAndPermissionsSeeder extends Seeder
             // Production complète
             'production.view', 'production.create', 'production.update', 'production.delete',
             'production.launch', 'production.validate', 'production.cancel',
+            'production.validate_declaration', // §13.3 — visa déclarations
             'production.modify_launched',
+            'production.submit_validation',    // §13.3
+            'production.validate_chef',        // §13.3
+            'production.validate_responsable', // §13.3
+            'production.modification.avis_chef', // §13.10 — étape 1/4 (pilotage usine, proxy chef si absent)
             'production.cost.view', 'production.report.view',
+            // Direction — synthèse exécutive + chaîne de valeur
+            'direction.view',
             // Qualité + maintenance
             'quality.view', 'quality.manage', 'quality.nc.manage',
             'maintenance.view', 'maintenance.manage',
@@ -261,12 +316,26 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.view',
         ]);
 
+        // Chef Atelier — supervision opérateurs, validation déclarations, validation OF §13.3
+        $chefAtelier = Role::firstOrCreate(['name' => 'chef_atelier', 'guard_name' => 'web']);
+        $chefAtelier->syncPermissions([
+            'production.view',
+            'production.validate_chef',  // §13.3 — 1ère étape validation OF avant lancement
+            'production.declare',        // valider les déclarations opérateurs (rebuts, temps)
+            'production.validate_declaration', // §13.3 — visa chef d'équipe sur déclarations de production
+            'quality.view',
+            'maintenance.view',
+            'stocks.view',
+            'reports.view',
+        ]);
+
         // Opérateur de production — déclaration production, temps, rebuts (§15 CDC)
         $operateurProduction = Role::firstOrCreate(['name' => 'operateur_production', 'guard_name' => 'web']);
         $operateurProduction->syncPermissions([
             'production.view',    // consulter les OF assignés
             'production.declare', // déclarer production, temps, consommation, rebuts
             'stocks.view',        // consulter niveaux stock pour approvisionnement poste
+            'maintenance.view',   // consulter OT maintenance (arrêts planifiés machines)
         ]);
 
         // ── Rôles complémentaires ─────────────────────────────────────────────
@@ -277,7 +346,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'products.view', 'clients.view', 'clients.create', 'clients.edit', 'clients.delete',
             'crm.view', 'crm.manage',
             'quotes.view', 'quotes.create', 'quotes.edit', 'quotes.delete',
-            'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.validate',
+            'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.validate', 'orders.reopen',
+            'orders.edit_validated', // [CDC §13.1] seul un responsable peut retoucher une commande validée
+            'bon_preparations.view', // [CDC §BP] suivi des bons de préparation
             'invoices.view', 'invoices.create', 'invoices.send',
             'deliveries.view', 'deliveries.create',
             'credit_notes.view', 'credit_notes.create',
@@ -302,8 +373,10 @@ class RolesAndPermissionsSeeder extends Seeder
         $caissier = Role::firstOrCreate(['name' => 'caissier', 'guard_name' => 'web']);
         $caissier->syncPermissions([
             'clients.view',
+            'orders.view',     // [CDC §cash] voir les commandes au comptant
             'invoices.view',
             'payments.view', 'payments.create', 'payments.edit',
+            'bon_preparations.view', // [CDC §cash] consulter les BP créés après paiement
             'cash_accounts.view', 'cash_accounts.manage',
             'treasury.write',
             'reports.view',
@@ -324,6 +397,48 @@ class RolesAndPermissionsSeeder extends Seeder
             'analytic.view',
         ]);
 
-        $this->command->info('Roles & Permissions créés avec succès (16 rôles complets).');
+        // ── Rôles RH ─────────────────────────────────────────────────────────────
+
+        // DRH — Directeur des Ressources Humaines (accès RH complet + settings)
+        $drh = Role::firstOrCreate(['name' => 'drh', 'guard_name' => 'web']);
+        $drh->syncPermissions([
+            'rh.view', 'rh.employees.view', 'rh.employees.manage',
+            'rh.leaves.view', 'rh.leaves.manage',
+            'rh.loans.view', 'rh.loans.manage',
+            'rh.payroll.view', 'rh.payroll.manage', 'rh.payroll.validate',
+            'rh.portail', 'rh.settings',
+            'reports.view', 'reports.export',
+            'analytic.view',
+        ]);
+
+        // Responsable RH / RH Manager — paie + congés + prêts, sans paramétrage
+        $rhManager = Role::firstOrCreate(['name' => 'rh_manager', 'guard_name' => 'web']);
+        $rhManager->syncPermissions([
+            'rh.view', 'rh.employees.view', 'rh.employees.manage',
+            'rh.leaves.view', 'rh.leaves.manage',
+            'rh.loans.view', 'rh.loans.manage',
+            'rh.payroll.view', 'rh.payroll.manage', 'rh.payroll.validate',
+            'rh.portail',
+            'reports.view',
+        ]);
+
+        // Agent RH — saisie et consultation, sans validation paie ni paramétrage
+        $rhAgent = Role::firstOrCreate(['name' => 'rh_agent', 'guard_name' => 'web']);
+        $rhAgent->syncPermissions([
+            'rh.view', 'rh.employees.view', 'rh.employees.manage',
+            'rh.leaves.view',
+            'rh.loans.view',
+            'rh.payroll.view', 'rh.payroll.manage',
+            'rh.portail',
+            'reports.view',
+        ]);
+
+        // Employé — portail self-service uniquement
+        $employe = Role::firstOrCreate(['name' => 'employe', 'guard_name' => 'web']);
+        $employe->syncPermissions([
+            'rh.portail',
+        ]);
+
+        $this->command->info('Roles & Permissions créés avec succès (21 rôles complets).');
     }
 }

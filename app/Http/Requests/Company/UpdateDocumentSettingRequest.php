@@ -23,8 +23,12 @@ class UpdateDocumentSettingRequest extends FormRequest
             'terms_conditions'  => 'nullable|string',
             'signature_name'    => 'nullable|string|max:100',
             'signature_title'   => 'nullable|string|max:100',
-            'signature_image'   => 'nullable|image|max:1024',
-            'stamp_image'       => 'nullable|image|max:1024',
+            // [SEC] mimes: explicite — exclut SVG (peut embarquer <script>, servi en disque public).
+            'signature_image'   => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:1024',
+            'stamp_image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:1024',
+            // [Maquette Paramétrage société] en-tête / pied de page PDF (SVG exclu — XSS)
+            'pdf_header_file'   => 'nullable|file|mimes:pdf,jpeg,png,jpg|max:2048',
+            'pdf_footer_file'   => 'nullable|file|mimes:pdf,jpeg,png,jpg|max:2048',
         ];
     }
 }

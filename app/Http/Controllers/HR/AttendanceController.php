@@ -43,9 +43,11 @@ class AttendanceController extends Controller
             });
         }
 
-        $employees = $employeesQuery->get();
+        // Pagination : la grille mensuelle (1 ligne/employé × 28-31 colonnes)
+        // devient illisible et lourde au-delà de ~30 employés par page.
+        $employees = $employeesQuery->paginate(30)->withQueryString();
 
-        // Présences du mois
+        // Présences du mois — uniquement pour les employés de la page courante
         $attendances = Attendance::where('company_id', $companyId)
             ->forMonth($year, $month)
             ->whereIn('employee_id', $employees->pluck('id'))

@@ -16,12 +16,12 @@
     $pct          = $totalLines > 0 ? round($matchedLines / $totalLines * 100) : 0;
 @endphp
 
-<div x-data="matchingPanel()" class="space-y-5">
+<div x-data="matchingPanel()" class="space-y-3">
 
     {{-- ── Header ─────────────────────────────────────────────────────────── --}}
     <div class="flex items-start justify-between flex-wrap gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ $rapprochement->number }}</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">{{ $rapprochement->number }}</h1>
             <p class="text-sm text-gray-500 mt-0.5">
                 {{ $rapprochement->cashAccount?->name }} —
                 {{ $rapprochement->period_start?->format('d/m/Y') }} au {{ $rapprochement->period_end?->format('d/m/Y') }}
@@ -40,7 +40,7 @@
                 <form method="POST" action="{{ route('comptabilite.rapprochement.auto-match', $rapprochement) }}">
                     @csrf
                     <button type="submit"
-                            class="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+                            class="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         Auto-match
                     </button>
@@ -50,7 +50,7 @@
                 {{-- Import CSV --}}
                 @can('accounting.write')
                 <button type="button" @click="showCsvModal = true"
-                        class="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+                        class="inline-flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Importer relevé
                 </button>
@@ -62,7 +62,7 @@
                       onsubmit="return confirm('Valider ce rapprochement ? Cette action est irréversible.')">
                     @csrf
                     <button type="submit"
-                            class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">
+                            class="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-1.5 rounded-[4px] transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         Valider
                     </button>
@@ -74,39 +74,39 @@
 
     {{-- Session messages --}}
     @if(session('success'))
-    <div class="bg-green-50 border border-green-200 text-green-800 text-sm rounded-xl px-4 py-3">
+    <div class="bg-green-50 border border-green-200 text-green-800 text-sm rounded-[4px] px-3 py-1.5">
         {{ session('success') }}
     </div>
     @endif
     @if(session('error'))
-    <div class="bg-red-50 border border-red-200 text-red-800 text-sm rounded-xl px-4 py-3">
+    <div class="bg-red-50 border border-red-200 text-red-800 text-sm rounded-[4px] px-3 py-1.5">
         {{ session('error') }}
     </div>
     @endif
 
     {{-- ── KPIs ─────────────────────────────────────────────────────────────── --}}
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500">Solde ouverture</p>
-            <p class="text-lg font-bold tabular-nums text-gray-800">{{ number_format($rapprochement->opening_balance, 0, ',', ' ') }}</p>
+            <p class="text-[16px] font-bold tabular-nums text-gray-800">{{ number_format($rapprochement->opening_balance, 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500">Solde clôture (relevé)</p>
-            <p class="text-lg font-bold tabular-nums text-gray-800">{{ number_format($rapprochement->closing_balance, 0, ',', ' ') }}</p>
+            <p class="text-[16px] font-bold tabular-nums text-gray-800">{{ number_format($rapprochement->closing_balance, 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500">Solde comptable</p>
-            <p class="text-lg font-bold tabular-nums text-gray-800">{{ number_format($rapprochement->book_balance, 0, ',', ' ') }}</p>
+            <p class="text-[16px] font-bold tabular-nums text-gray-800">{{ number_format($rapprochement->book_balance, 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500">Écart</p>
-            <p class="text-lg font-bold tabular-nums {{ $rapprochement->difference == 0 ? 'text-green-600' : 'text-red-600' }}">
+            <p class="text-[16px] font-bold tabular-nums {{ $rapprochement->difference == 0 ? 'text-green-600' : 'text-red-600' }}">
                 {{ $rapprochement->difference == 0 ? '✓ 0' : number_format($rapprochement->difference, 0, ',', ' ') }}
             </p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500">Progression</p>
-            <p class="text-lg font-bold text-gray-800">{{ $matchedLines }}/{{ $totalLines }} <span class="text-sm font-normal text-gray-400">({{ $pct }}%)</span></p>
+            <p class="text-[16px] font-bold text-gray-800">{{ $matchedLines }}/{{ $totalLines }} <span class="text-sm font-normal text-gray-400">({{ $pct }}%)</span></p>
             <div class="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div class="h-full rounded-full {{ $pct == 100 ? 'bg-green-500' : 'bg-violet-500' }}" style="width: {{ $pct }}%"></div>
             </div>
@@ -119,12 +119,12 @@
     <div x-show="showCsvModal" x-cloak
          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
          @keydown.escape.window="showCsvModal = false">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" @click.stop>
+        <div class="bg-white rounded-[4px] shadow-2xl w-full max-w-md p-6 space-y-4" @click.stop>
             <div class="flex items-center justify-between">
                 <h3 class="font-semibold text-gray-900">Importer un relevé (CSV / Excel)</h3>
                 <button @click="showCsvModal = false" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800 space-y-1">
+            <div class="bg-blue-50 border border-blue-200 rounded-[4px] px-3 py-2 text-xs text-blue-800 space-y-1">
                 <p class="font-semibold">Format attendu (séparateur ; ou ,) :</p>
                 <p class="font-mono">date;libelle;reference;debit;credit</p>
                 <p>Ex: 2026-05-01;Virement client;VIR-001;0;500000</p>
@@ -137,13 +137,13 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Fichier (CSV ou Excel)</label>
                     <input type="file" name="csv_file" accept=".csv,.txt,.xlsx,.xls" required
-                           class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-violet-500 focus:border-violet-500">
+                           class="w-full text-sm border border-gray-300 rounded-[4px] px-3 py-2 focus:ring-violet-500 focus:border-violet-500">
                 </div>
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="showCsvModal = false"
-                            class="border border-gray-300 text-gray-700 text-sm px-4 py-2 rounded-lg">Annuler</button>
+                            class="border border-gray-300 text-gray-700 text-sm px-3 py-1.5 rounded-[4px]">Annuler</button>
                     <button type="submit"
-                            class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg">Importer</button>
+                            class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Importer</button>
                 </div>
             </form>
         </div>
@@ -155,14 +155,14 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {{-- Gauche : lignes relevé --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h2 class="font-semibold text-gray-800">Lignes du relevé bancaire</h2>
                 <span class="text-xs text-gray-400">{{ $matchedLines }}/{{ $totalLines }} rapprochées</span>
             </div>
             <div class="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
                 @forelse($rapprochement->lines as $line)
-                <div class="px-4 py-3 flex items-start justify-between gap-2 transition-colors"
+                <div class="px-3 py-1.5 flex items-start justify-between gap-2 transition-colors"
                      :class="selectedBankLine == {{ $line->id }}
                          ? 'bg-violet-50 ring-1 ring-violet-300 ring-inset'
                          : '{{ $line->is_matched ? 'bg-green-50/30' : 'hover:bg-gray-50' }}'">
@@ -226,7 +226,7 @@
 
         {{-- Droite : écritures non rapprochées --}}
         @if($rapprochement->isEditable())
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100">
                 <h2 class="font-semibold text-gray-800">Écritures comptables non rapprochées</h2>
                 <p class="text-xs text-gray-500 mt-0.5">
@@ -236,7 +236,7 @@
             </div>
             <div class="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
                 @forelse($unmatchedJournalLines as $jl)
-                <div class="px-4 py-3 flex items-start justify-between gap-2 transition-colors"
+                <div class="px-3 py-1.5 flex items-start justify-between gap-2 transition-colors"
                      :class="selectedBankLine ? 'cursor-pointer hover:bg-violet-50' : 'opacity-60 cursor-not-allowed'"
                      @click="matchLine({{ $jl->id }})">
                     <div class="flex-1 min-w-0">
@@ -264,7 +264,7 @@
         </div>
         @else
         {{-- Vue read-only : affiche les associations --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100">
                 <h2 class="font-semibold text-gray-800">Associations rapprochées</h2>
                 @if($rapprochement->validatedBy)
@@ -275,7 +275,7 @@
             </div>
             <div class="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
                 @forelse($rapprochement->lines->where('is_matched', true) as $line)
-                <div class="px-4 py-3 flex items-start justify-between gap-2">
+                <div class="px-3 py-1.5 flex items-start justify-between gap-2">
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-800">{{ $line->label }}</p>
                         <p class="text-xs text-gray-400">
@@ -304,7 +304,7 @@
 
     {{-- Notes --}}
     @if($rapprochement->notes)
-    <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+    <div class="bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-1.5 text-sm text-amber-800">
         <span class="font-semibold">Notes :</span> {{ $rapprochement->notes }}
     </div>
     @endif

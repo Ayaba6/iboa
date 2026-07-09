@@ -31,6 +31,11 @@ class QuoteService
 
     public function create(array $data): Quote
     {
+        // [Parametrage Vente] client bloque = aucun document commercial
+        \App\Services\ClientService::assertSellable(
+            !empty($data['client_id']) ? \App\Models\Client::find($data['client_id']) : null
+        );
+
         return DB::transaction(function () use ($data) {
             $items = $data['items'] ?? [];
             unset($data['items']);
@@ -42,6 +47,13 @@ class QuoteService
             $data['number']       = $this->sequenceService->nextNumber($company, 'devis');
             $data['created_by']   = Auth::id();
             $data['status']       = $data['status'] ?? 'brouillon';
+
+            // Validité par défaut : 30 jours après émission si non renseignée —
+            // évite les devis sans expiration (badge « Expire dans Nj » inopérant).
+            if (empty($data['expires_at'])) {
+                $issued = ! empty($data['issued_at']) ? \Illuminate\Support\Carbon::parse($data['issued_at']) : now();
+                $data['expires_at'] = $issued->copy()->addDays(30)->toDateString();
+            }
 
             // [TVA-EXEMPT] Défense serveur : forcer TVA=0 si client exonéré
             $client = isset($data['client_id'])
@@ -255,6 +267,9 @@ class QuoteService
             $orderNumber = $this->sequenceService->nextNumber($company, 'commande');
 
             // [FIX-MAJEUR] Propagate all financial and contractual fields from quote
+            // [CDC §16.1] La commande issue d'un devis démarre en brouillon : elle doit
+            // passer par le même circuit Validation commerciale → Validation financière
+            // que toute commande créée directement, avant préparation/livraison.
             $order = Order::create([
                 'company_id'             => $company->id,
                 'client_id'              => $quote->client_id,
@@ -262,7 +277,7 @@ class QuoteService
                 'quote_id'               => $quote->id,
                 'number'                 => $orderNumber,
                 'issued_at'              => now()->toDateString(),
-                'status'                 => 'confirme',
+                'status'                 => 'brouillon',
                 'subtotal_ht'            => $quote->subtotal_ht,
                 'total_discount'         => $quote->total_discount,
                 'total_tax'              => $quote->total_tax,
@@ -295,10 +310,10 @@ class QuoteService
                 ]);
             }
 
-            // Reserve stock for all stockable items, exactly as OrderService::confirm() does.
-            // This is necessary because the order is created directly with status='confirme',
-            // bypassing the normal brouillon→confirme transition that would call reserveStock().
-            $this->orderService->reserveStock($order);
+            // [CDC §16.1] Pas de réservation stock ici : la commande est en brouillon.
+            // La réservation se fait via OrderConfirmed, déclenché par
+            // CommercialWorkflowService::validateOrder() une fois les deux validations
+            // (commerciale puis financière) effectuées.
 
             // [FIX-MAJEUR] Mark quote as 'converti' (distinct from simply 'accepte')
             $quote->update([

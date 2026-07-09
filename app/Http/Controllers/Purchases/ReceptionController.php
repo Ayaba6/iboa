@@ -66,6 +66,7 @@ class ReceptionController extends Controller
             'items.unit',
             'createdBy',
             'validatedBy',
+            'attachments',
         ]);
 
         $warehouses = Warehouse::active()->orderBy('name')->get(['id', 'name']);
@@ -79,11 +80,13 @@ class ReceptionController extends Controller
     public function validateReception(Request $request, Reception $reception): RedirectResponse
     {
         $request->validate([
-            'warehouse_id'                  => ['required', 'exists:warehouses,id'],
+            'warehouse_id'                  => ['required', 'exists:warehouses,id', new \App\Rules\WarehouseAllows('can_purchase')],
             'items'                         => ['required', 'array'],
             'items.*.received_quantity'     => ['required', 'numeric', 'min:0'],
             'items.*.lot_number'            => ['nullable', 'string', 'max:100'],
             'items.*.expiry_date'           => ['nullable', 'date'],
+            'documents'                     => ['nullable', 'array'],
+            'documents.*'                   => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
         ], [
             'warehouse_id.required' => 'Veuillez sélectionner un entrepôt de destination.',
             'warehouse_id.exists'   => 'L\'entrepôt sélectionné est invalide.',
@@ -106,7 +109,7 @@ class ReceptionController extends Controller
 
                 $warehouseId = $request->warehouse_id;
 
-                // Update each reception item then create stock movement
+                // Passe 1 — persister les quantités reçues + synchroniser les lignes BC.
                 foreach ($request->items as $itemId => $itemData) {
                     $item = $reception->items()->find($itemId);
                     if (!$item) {
@@ -121,28 +124,6 @@ class ReceptionController extends Controller
                         'expiry_date'       => $itemData['expiry_date']  ?? null,
                     ]);
 
-                    // Only create stock movement for positive quantities and stockable products
-                    if ($receivedQty > 0 && !empty($item->product_id)) {
-                        $this->stockService->recordMovement([
-                            'product_id'     => $item->product_id,
-                            'warehouse_id'   => $warehouseId,
-                            'type'           => 'entree',
-                            'quantity'       => $receivedQty,
-                            'unit_cost'      => (float) $item->unit_cost,
-                            'occurred_at'    => $reception->received_at->toDateString(),
-                            'reference_type' => 'reception',
-                            'reference_id'   => $reception->id,
-                            'lot_number'     => $itemData['lot_number']  ?? null,
-                            'expiry_date'    => $itemData['expiry_date'] ?? null,
-                            'notes'          => 'Réception ' . $reception->number,
-                        ]);
-                        $movementsCreated++;
-                    } elseif ($receivedQty > 0) {
-                        // Ligne avec quantité reçue mais SANS product_id → pas de mouvement stock.
-                        // Typiquement une ligne libre (description seulement). À tracer pour transparence.
-                        $linesSkipped++;
-                    }
-
                     // Update received_quantity on the linked PO item
                     if ($item->purchase_order_item_id) {
                         $poItem = $item->purchaseOrderItem;
@@ -153,10 +134,26 @@ class ReceptionController extends Controller
                     }
                 }
 
+                // Passe 2 — [Sync ERP] entrées stock depuis les quantités PERSISTÉES,
+                // journalisées + idempotentes + relançables (sync_logs).
+                $reception->update(['warehouse_id' => $warehouseId]);
+                app(\App\Services\Sync\SyncOrchestrator::class)->run(
+                    sourceModule: 'achats',
+                    targetModule: 'stock',
+                    eventName: 'reception.validated',
+                    action: 'create_stock_entries',
+                    source: $reception,
+                    callback: function () use ($reception, &$movementsCreated, &$linesSkipped) {
+                        [$movementsCreated, $linesSkipped] =
+                            app(\App\Services\Sync\Handlers\ReplayReceptionStockSync::class)($reception->fresh('items'));
+                    },
+                    payload: ['warehouse_id' => $warehouseId],
+                    handlerClass: \App\Services\Sync\Handlers\ReplayReceptionStockSync::class,
+                );
+
                 // Mark reception as validated
                 $reception->update([
                     'status'       => 'valide',
-                    'warehouse_id' => $warehouseId,
                     'validated_by' => Auth::id(),
                     'validated_at' => now(),
                 ]);
@@ -170,9 +167,41 @@ class ReceptionController extends Controller
                     );
                     $po->update(['status' => $allReceived ? 'recu' : 'partiellement_recu']);
                 }
+
+                // [Sync ERP] event domaine apres commit — point d'extension decouple
+                DB::afterCommit(fn () => event(new \App\Events\ReceptionValidated($reception)));
             });
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
+        }
+
+        // [SAGE parité] Pièces jointes (BL fournisseur signé, photos, certificats)
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/reception/'.$reception->id, 'local');
+            $reception->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
+
+        // [CDC §13.4] Réception validée par le magasin → contrôle qualité requis
+        // avant entrée stock définitive (pesée, dimensions, conformité matière).
+        if ($movementsCreated > 0) {
+            \App\Notifications\ValidationStepNotification::sendToRoles(
+                ['responsable_qualite'],
+                title: 'Contrôle qualité requis',
+                message: "Réception {$reception->number} validée — contrôle qualité de la matière requis.",
+                url: route('achats.receptions.show', $reception),
+                modelType: 'Reception',
+                modelId: $reception->id,
+                type: 'reception_validated',
+                icon: 'magnifying-glass',
+                color: 'blue',
+            );
         }
 
         // Message transparent : nombre de mouvements créés + warning si des lignes ont été ignorées

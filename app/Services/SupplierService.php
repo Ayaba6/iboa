@@ -16,6 +16,30 @@ class SupplierService
         return $this->repository->search($filters, $perPage);
     }
 
+    /**
+     * Génère le prochain code fournisseur libre au format FOUR-#####.
+     *
+     * Basé sur le plus grand numéro existant (pas le dernier créé), puis
+     * incrémente jusqu'à trouver un code réellement libre — robuste face aux
+     * trous de séquence, codes manuels et enregistrements soft-deleted.
+     * Portable (calcul en PHP, pas de SQL spécifique).
+     */
+    public function generateCode(): string
+    {
+        $maxNum = (int) Supplier::withTrashed()
+            ->where('code', 'like', 'FOUR-%')
+            ->pluck('code')
+            ->map(fn ($code) => (int) substr($code, 5))
+            ->max();
+
+        do {
+            $maxNum++;
+            $code = 'FOUR-' . str_pad((string) $maxNum, 5, '0', STR_PAD_LEFT);
+        } while (Supplier::withTrashed()->where('code', $code)->exists());
+
+        return $code;
+    }
+
     public function create(array $data): Supplier
     {
         return DB::transaction(function () use ($data) {
@@ -23,11 +47,9 @@ class SupplierService
             $addresses = $data['addresses'] ?? [];
             unset($data['contacts'], $data['addresses']);
 
-            // Auto-generate supplier code if not provided (NOT NULL column)
+            // Auto-génère le code fournisseur si absent (colonne NOT NULL + UNIQUE)
             if (empty($data['code'])) {
-                $last = Supplier::withTrashed()->orderByDesc('id')->value('code');
-                $num  = $last ? ((int) preg_replace('/\D/', '', $last)) + 1 : 1;
-                $data['code'] = 'FOUR-' . str_pad($num, 5, '0', STR_PAD_LEFT);
+                $data['code'] = $this->generateCode();
             }
 
             /** @var Supplier $supplier */

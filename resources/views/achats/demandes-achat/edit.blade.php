@@ -12,13 +12,13 @@
 @endsection
 
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6"
+<div class="max-w-4xl mx-auto space-y-3"
      x-data="purchaseRequestEditForm()"
      x-init="init()">
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Modifier la demande</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Modifier la demande</h1>
             <p class="text-sm text-gray-500 mt-0.5 font-mono">{{ $pr->number }}</p>
         </div>
         <a href="{{ route('achats.demandes-achat.show', $pr) }}"
@@ -31,7 +31,7 @@
     </div>
 
     @if($errors->any())
-    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-[4px] px-3 py-1.5 text-sm">
         <ul class="list-disc list-inside space-y-1">
             @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
         </ul>
@@ -41,10 +41,10 @@
     <form action="{{ route('achats.demandes-achat.update', $pr) }}" method="POST">
         @csrf
         @method('PUT')
-        <div class="space-y-5">
+        <div class="space-y-3">
 
             {{-- General info --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <h2 class="text-base font-semibold text-gray-800 mb-4">Informations générales</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -52,33 +52,57 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Département / Service</label>
                         <input type="text" name="department" value="{{ old('department', $pr->department) }}"
                                placeholder="Ex: Informatique, Comptabilité..."
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date souhaitée</label>
                         <input type="date" name="needed_at" value="{{ old('needed_at', $pr->needed_at?->format('Y-m-d')) }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                    </div>
+
+                    {{-- [Maquette Demande d'achat] --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Priorité</label>
+                        @php $prio = old('priority', $pr->priority ?? 'normale'); @endphp
+                        <select name="priority" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                            <option value="normale" @selected($prio==='normale')>Normale</option>
+                            <option value="haute" @selected($prio==='haute')>Haute</option>
+                            <option value="basse" @selected($prio==='basse')>Basse</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Dépôt de destination</label>
+                        <select name="warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                            <option value="">—</option>
+                            @foreach($warehouses ?? [] as $w)<option value="{{ $w->id }}" @selected(old('warehouse_id', $pr->warehouse_id)==$w->id)>{{ $w->code }} – {{ $w->name }}</option>@endforeach
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Projet</label>
+                        <input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $pr->project_reference) }}"
+                               placeholder="PROJ-2026-0008"
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                     </div>
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Justification / Objet</label>
                         <input type="text" name="justification" value="{{ old('justification', $pr->justification) }}"
                                placeholder="Raison de la demande..."
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                     </div>
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                         <textarea name="notes" rows="2"
-                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                  class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                                   placeholder="Informations complémentaires...">{{ old('notes', $pr->notes) }}</textarea>
                     </div>
                 </div>
             </div>
 
             {{-- Items --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-semibold text-gray-800">Articles demandés</h2>
                     <button type="button" @click="addLine()"
@@ -172,11 +196,11 @@
             {{-- Actions --}}
             <div class="flex justify-end gap-3">
                 <a href="{{ route('achats.demandes-achat.show', $pr) }}"
-                   class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                   class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
                     Annuler
                 </a>
                 <button type="submit"
-                        class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors">
+                        class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-6 py-1.5 rounded-[4px] transition-colors">
                     Enregistrer les modifications
                 </button>
             </div>

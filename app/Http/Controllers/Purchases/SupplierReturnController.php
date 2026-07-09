@@ -33,7 +33,31 @@ class SupplierReturnController extends Controller
         $suppliers = Supplier::active()->orderBy('name')->get(['id', 'name']);
         $products  = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
 
-        return view('achats.retours-fournisseurs.create', compact('suppliers', 'products'));
+        return view('achats.retours-fournisseurs.create', compact('suppliers', 'products') + $this->maquetteFormData());
+    }
+
+    /** [Maquette Retour fournisseur] Données complémentaires du formulaire. */
+    private function maquetteFormData(): array
+    {
+        return [
+            'purchaseOrders'   => \App\Models\PurchaseOrder::orderByDesc('id')->limit(100)->get(['id', 'number']),
+            'receptions'       => \App\Models\Reception::orderByDesc('id')->limit(100)->get(['id', 'number']),
+            'supplierInvoices' => \App\Models\SupplierInvoice::orderByDesc('id')->limit(100)->get(['id', 'number']),
+            'warehouses'       => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+        ];
+    }
+
+    /** [Maquette Retour fournisseur] Lignes d'une réception (JSON) pour « Ajouter depuis réception ». */
+    public function receptionItems(Request $request)
+    {
+        $reception = \App\Models\Reception::with('items.product')->findOrFail($request->integer('reception_id'));
+
+        return response()->json($reception->items->map(fn ($it) => [
+            'product_id'  => $it->product_id,
+            'description' => $it->description ?: $it->product?->name,
+            'quantity'    => (float) ($it->received_quantity ?: $it->expected_quantity),
+            'unit_price'  => (float) ($it->unit_cost ?? $it->product?->purchase_price ?? 0),
+        ])->values());
     }
 
     public function store(StoreSupplierReturnRequest $request): RedirectResponse
@@ -62,7 +86,7 @@ class SupplierReturnController extends Controller
         $suppliers = Supplier::active()->orderBy('name')->get(['id', 'name']);
         $products  = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
 
-        return view('achats.retours-fournisseurs.edit', compact('return', 'suppliers', 'products'));
+        return view('achats.retours-fournisseurs.edit', compact('return', 'suppliers', 'products') + $this->maquetteFormData());
     }
 
     public function update(UpdateSupplierReturnRequest $request, SupplierReturn $retoursFournisseurs): RedirectResponse

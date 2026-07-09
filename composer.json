@@ -15,6 +15,7 @@
         "maatwebsite/excel": "^3.1",
         "predis/predis": "^3.5",
         "simplesoftwareio/simple-qrcode": "^4.2",
+        "spatie/laravel-backup": "^9.3",
         "spatie/laravel-permission": "^6.25"
     },
     "require-dev": {

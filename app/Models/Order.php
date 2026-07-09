@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use App\Traits\HasCommercialWorkflow;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasCommercialWorkflow;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasCommercialWorkflow, HasAttachments;
 
     const DOCUMENT_TYPE = 'order';
 
@@ -53,9 +54,16 @@ class Order extends Model
         'rejected_by',
         'rejected_at',
         'rejection_reason',
+        // [Maquette Commande client]
+        'contact_id', 'sales_rep_id', 'price_mode', 'net_prices', 'price_list',
+        'payment_terms', 'payment_method', 'fiscal_representative', 'fiscal_regime',
+        'default_tax_label', 'project_reference',
+        'carrier', 'vehicle_number', 'delivery_location', 'incoterm', 'priority', 'total_weight_kg',
     ];
 
     protected $casts = [
+        'net_prices'              => 'boolean',
+        'total_weight_kg'         => 'decimal:2',
         'issued_at'               => 'date',
         'expires_at'              => 'date',
         'delivery_date'           => 'date',
@@ -80,6 +88,10 @@ class Order extends Model
     {
         return $this->belongsTo(Client::class);
     }
+
+    // [Maquette Commande client]
+    public function contact(): BelongsTo { return $this->belongsTo(ClientContact::class, 'contact_id'); }
+    public function salesRep(): BelongsTo { return $this->belongsTo(User::class, 'sales_rep_id'); }
 
     public function company(): BelongsTo
     {
@@ -129,6 +141,54 @@ class Order extends Model
     public function productionOrders(): HasMany
     {
         return $this->hasMany(\App\Modules\Production\Models\ProductionOrder::class);
+    }
+
+    public function bonPreparations(): HasMany
+    {
+        return $this->hasMany(BonPreparation::class);
+    }
+
+    /** Retourne true si la commande a un bon de préparation actif (pas annulé). */
+    public function hasBonPreparation(): bool
+    {
+        return $this->bonPreparations()->whereIn('status', ['en_attente', 'en_cours', 'charge'])->exists();
+    }
+
+    /** Bon de préparation actif de la commande (en attente, en cours ou chargé). */
+    public function activeBonPreparation(): ?BonPreparation
+    {
+        return $this->bonPreparations()
+            ->whereIn('status', ['en_attente', 'en_cours', 'charge'])
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * [SYNC] Recalcule le montant facturé depuis les factures actives liées —
+     * appelé à la validation ET à l'annulation d'une facture.
+     */
+    public static function resyncInvoicedAmount(?int $orderId): void
+    {
+        if (! $orderId) {
+            return;
+        }
+        $total = Invoice::where('order_id', $orderId)
+            ->whereNotIn('status', ['brouillon', 'annulee'])
+            ->sum('total_ttc');
+        static::withoutGlobalScopes()->where('id', $orderId)
+            ->update(['invoiced_amount' => $total]);
+    }
+
+    /**
+     * [CDC §13.7] Le BL ne se crée qu'après préparation + contrôle chargement :
+     * si un bon de préparation existe, il doit être « chargé ». Sans BP
+     * (flux direct hors préparation), la livraison reste possible.
+     */
+    public function isReadyForDelivery(): bool
+    {
+        $bp = $this->activeBonPreparation();
+
+        return $bp === null || $bp->isCharge();
     }
 
     // ── Accessors workflow ────────────────────────────────────────────────────

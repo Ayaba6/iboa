@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use App\Traits\HasCommercialWorkflow;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quote extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasCommercialWorkflow;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasCommercialWorkflow, HasAttachments;
 
     const DOCUMENT_TYPE = 'quote';
 
@@ -56,6 +57,11 @@ class Quote extends Model
         'rejected_by',
         'rejected_at',
         'rejection_reason',
+        // [Maquette Nouveau devis]
+        'contact_id', 'warehouse_id', 'sales_rep_id', 'delivery_address', 'validity_duration',
+        'project_reference', 'price_list', 'price_mode', 'net_prices',
+        'payment_terms', 'payment_method', 'fiscal_representative', 'fiscal_regime', 'default_tax_label',
+        'source', 'origin', 'priority', 'desired_delivery_date', 'delivery_location', 'incoterm',
     ];
 
     protected $casts = [
@@ -71,6 +77,9 @@ class Quote extends Model
         'validated_at'            => 'datetime',
         'submitted_at'            => 'datetime',
         'rejected_at'             => 'datetime',
+        // [Maquette Nouveau devis]
+        'net_prices'              => 'boolean',
+        'desired_delivery_date'   => 'date',
     ];
 
     // -------------------------------------------------------------------------
@@ -81,6 +90,11 @@ class Quote extends Model
     {
         return $this->belongsTo(Client::class);
     }
+
+    // [Maquette Nouveau devis]
+    public function contact(): BelongsTo { return $this->belongsTo(ClientContact::class, 'contact_id'); }
+    public function warehouse(): BelongsTo { return $this->belongsTo(Warehouse::class); }
+    public function salesRep(): BelongsTo { return $this->belongsTo(User::class, 'sales_rep_id'); }
 
     public function company(): BelongsTo
     {

@@ -52,17 +52,62 @@ class SupplierInvoiceController extends Controller
         $suppliers = Supplier::active()->orderBy('name')->get(['id', 'name']);
         $products  = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
 
-        return view('achats.factures-fournisseurs.create', compact('suppliers', 'products'));
+        return view('achats.factures-fournisseurs.create', compact('suppliers', 'products') + $this->maquetteFormData());
+    }
+
+    /** [Maquette Facture fournisseur] Données complémentaires du formulaire. */
+    private function maquetteFormData(): array
+    {
+        return [
+            'supplierContacts' => \App\Models\SupplierContact::orderBy('last_name')->get(['id', 'supplier_id', 'civility', 'first_name', 'last_name']),
+            'buyers'           => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'purchaseOrders'   => \App\Models\PurchaseOrder::orderByDesc('id')->limit(100)->get(['id', 'number']),
+            'receptions'       => \App\Models\Reception::orderByDesc('id')->limit(100)->get(['id', 'number']),
+        ];
+    }
+
+    /** [Maquette Facture fournisseur] Lignes d'un BC (JSON) pour « Ajouter depuis BC ». */
+    public function poItems(\Illuminate\Http\Request $request)
+    {
+        $po = \App\Models\PurchaseOrder::with('items.product')->findOrFail($request->integer('purchase_order_id'));
+
+        return response()->json($po->items->map(fn ($it) => [
+            'product_id'       => $it->product_id,
+            'description'      => $it->description ?: $it->product?->name,
+            'quantity'         => (float) $it->quantity,
+            'unit_price'       => (float) $it->unit_price,
+            'discount_percent' => (float) ($it->discount_percent ?? 0),
+            'tax_rate_value'   => (float) ($it->tax_rate_value ?? 18),
+        ])->values());
     }
 
     public function store(StoreSupplierInvoiceRequest $request)
     {
         $this->authorize('create', SupplierInvoice::class);
-        $invoice = $this->service->create($request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+        $invoice = $this->service->create($data);
+        $this->uploadDocuments($invoice, $request);
 
         return redirect()
             ->route('achats.factures-fournisseurs.show', $invoice)
             ->with('success', 'Facture fournisseur ' . $invoice->number . ' créée avec succès.');
+    }
+
+    /** Enregistre les pièces jointes de la facture fournisseur. */
+    private function uploadDocuments(SupplierInvoice $invoice, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/supplier_invoice/'.$invoice->id, 'local');
+            $invoice->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(SupplierInvoice $facturesFournisseur)
@@ -79,16 +124,20 @@ class SupplierInvoiceController extends Controller
     {
         $this->authorize('update', $facturesFournisseur);
         $invoice   = $this->service->repository->findWithDetails($facturesFournisseur->id);
+        $invoice->load('attachments');
         $suppliers = Supplier::active()->orderBy('name')->get(['id', 'name']);
         $products  = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
 
-        return view('achats.factures-fournisseurs.edit', compact('invoice', 'suppliers', 'products'));
+        return view('achats.factures-fournisseurs.edit', compact('invoice', 'suppliers', 'products') + $this->maquetteFormData());
     }
 
     public function update(UpdateSupplierInvoiceRequest $request, SupplierInvoice $facturesFournisseur)
     {
         $this->authorize('update', $facturesFournisseur);
-        $this->service->update($facturesFournisseur, $request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+        $this->service->update($facturesFournisseur, $data);
+        $this->uploadDocuments($facturesFournisseur, $request);
 
         return redirect()
             ->route('achats.factures-fournisseurs.show', $facturesFournisseur)

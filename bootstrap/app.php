@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // [FIX-CRITIQUE] Laravel découvre automatiquement app/Listeners par défaut et
+    // enregistre CHAQUE listener une seconde fois en plus des Event::listen()
+    // explicites dans AppServiceProvider::boot() — doublant réservations stock,
+    // soldes client/fournisseur et emails envoyés. Tous les listeners de l'app
+    // sont déjà câblés explicitement : la découverte automatique est désactivée.
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\SetCurrentCompany::class,

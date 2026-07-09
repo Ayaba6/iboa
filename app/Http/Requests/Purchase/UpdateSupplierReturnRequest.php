@@ -24,6 +24,15 @@ class UpdateSupplierReturnRequest extends FormRequest
             'currency_code'       => ['nullable', 'string', 'size:3'],
             'exchange_rate'       => ['nullable', 'numeric', 'min:0.000001'],
 
+            // [Maquette Retour fournisseur]
+            'return_type'        => 'nullable|string|max:30',
+            'warehouse_id'       => 'nullable|exists:warehouses,id',
+            'priority'           => 'nullable|string|max:15',
+            'project_reference'  => 'nullable|string|max:60',
+            // (déjà présent) 'purchase_order_id'  => 'nullable|exists:purchase_orders,id',
+            // (déjà présent) 'reception_id'       => 'nullable|exists:receptions,id',
+            // (déjà présent) 'supplier_invoice_id'=> 'nullable|exists:supplier_invoices,id',
+
             'items'               => ['required', 'array', 'min:1'],
             'items.*.product_id'  => ['nullable', 'integer', 'exists:products,id'],
             'items.*.description' => ['required_without:items.*.product_id', 'nullable', 'string', 'max:255'],

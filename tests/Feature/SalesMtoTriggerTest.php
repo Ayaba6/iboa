@@ -58,6 +58,25 @@ it('auto-creates a draft OF when confirming an order with an MTO product short o
     expect((float) $of->quantity_requested)->toBe(20.0);
 });
 
+it('OF quantity = shortfall (commandé − stock), pas la quantité totale, malgré la réservation propre (BUG-003)', function () {
+    $this->actingAs(mtoAdmin());
+    $co = Company::first();
+    $wh = Warehouse::where('company_id', $co->id)->first();
+    $product = Product::factory()->create(['production_mode' => 'mto', 'is_stockable' => true]);
+    BillOfMaterial::create(['company_id' => $co->id, 'product_id' => $product->id, 'name' => 'BOM MTO2', 'is_active' => true]);
+
+    // 80 en stock, commande 100 → il ne manque que 20 à produire.
+    \App\Models\ProductStock::create(['product_id' => $product->id, 'warehouse_id' => $wh->id, 'quantity' => 80, 'reserved_quantity' => 0, 'avg_cost' => 500]);
+
+    $order = mtoOrder($product, 100);
+    app(OrderService::class)->confirm($order);
+
+    $of = ProductionOrder::where('order_id', $order->id)->where('product_id', $product->id)->first();
+    expect($of)->not->toBeNull();
+    // Avant le fix : la réservation propre (80) réduisait le dispo à 0 → OF réclamait 100.
+    expect((float) $of->quantity_requested)->toBe(20.0);
+});
+
 it('does not trigger an OF for an MTS product', function () {
     $this->actingAs(mtoAdmin());
     $co = Company::first();

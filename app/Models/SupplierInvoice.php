@@ -39,6 +39,10 @@ class SupplierInvoice extends Model
         'remaining_amount',
         'notes',
         'payment_term_id',
+        // [Maquette Facture fournisseur]
+        'supplier_contact_id', 'buyer_id', 'price_mode', 'net_prices',
+        'payment_terms', 'payment_method', 'due_type', 'beneficiary_bank',
+        'fiscal_regime', 'default_tax_label', 'project_reference', 'priority',
         'dispute_reason',
         'created_by',
         'validated_at',

@@ -8,18 +8,18 @@
 @endsection
 
 @section('content')
-<div class="space-y-5" x-data="{ modalOpen: false }">
+<div class="space-y-3" x-data="{ modalOpen: false }">
 
     {{-- ── Header ─────────────────────────────────────────────────────────────── --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Contrats de travail</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Contrats de travail</h1>
             <p class="text-sm text-gray-500 mt-0.5">Liste de tous les contrats de l'entreprise</p>
         </div>
         <div class="flex gap-2">
             {{-- Export CSV --}}
             <a href="{{ route('rh.contrats.export', request()->query()) }}"
-               class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+               class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 bg-white text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                 <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -28,7 +28,7 @@
             </a>
             {{-- Nouveau contrat --}}
             <button @click="modalOpen = true"
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+                    class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -45,15 +45,15 @@
             ['label' => 'Terminés', 'value' => $stats['termines'], 'color' => 'text-amber-600'],
             ['label' => 'Résiliés', 'value' => $stats['resilies'], 'color' => 'text-red-600'],
         ] as $s)
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <div class="text-xs text-gray-500 mb-1">{{ $s['label'] }}</div>
-            <div class="text-2xl font-bold {{ $s['color'] }}">{{ $s['value'] }}</div>
+            <div class="text-[16px] font-bold {{ $s['color'] }}">{{ $s['value'] }}</div>
         </div>
         @endforeach
     </div>
 
     {{-- ── Filtres ─────────────────────────────────────────────────────────────── --}}
-    <form method="GET" id="filter-form" class="flex flex-wrap gap-3 bg-white border border-gray-200 rounded-xl p-4">
+    <form method="GET" id="filter-form" class="flex flex-wrap gap-3 bg-white border border-gray-300 rounded-[4px] p-4">
         {{-- Recherche --}}
         <div class="relative flex-1 min-w-[200px]">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,12 +61,12 @@
             </svg>
             <input type="text" name="search" value="{{ request('search') }}"
                    placeholder="Nom, prénom ou matricule…"
-                   class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                   class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-[4px] text-sm focus:ring-emerald-500 focus:border-emerald-500">
         </div>
 
         {{-- Statut --}}
         <select name="status" onchange="document.getElementById('filter-form').submit()"
-                class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-emerald-500 focus:border-emerald-500">
             <option value="">Tous statuts</option>
             @foreach($statusOptions as $v => $l)
                 <option value="{{ $v }}" @selected(request('status') === $v)>{{ $l }}</option>
@@ -75,7 +75,7 @@
 
         {{-- Type --}}
         <select name="type" onchange="document.getElementById('filter-form').submit()"
-                class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-emerald-500 focus:border-emerald-500">
             <option value="">Tous types</option>
             @foreach($typeOptions as $v => $l)
                 <option value="{{ $v }}" @selected(request('type') === $v)>{{ $l }}</option>
@@ -83,13 +83,13 @@
         </select>
 
         <button type="submit"
-                class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
+                class="px-3 py-1.5 bg-gray-800 text-white rounded-[4px] text-sm font-medium hover:bg-gray-700 transition-colors">
             Filtrer
         </button>
 
         @if(request()->hasAny(['search','status','type']))
         <a href="{{ route('rh.contrats.index') }}"
-           class="px-4 py-2 text-gray-500 rounded-lg text-sm hover:bg-gray-100 flex items-center gap-1 transition-colors">
+           class="px-3 py-1.5 text-gray-500 rounded-[4px] text-sm hover:bg-gray-100 flex items-center gap-1 transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
@@ -99,7 +99,7 @@
     </form>
 
     {{-- ── Tableau ─────────────────────────────────────────────────────────────── --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="tbl-scroll">
             <table class="tbl tbl-sticky">
                 <thead>
@@ -136,7 +136,7 @@
                         </td>
                         <td>
                             <a href="{{ route('rh.employes.show', $contract->employee_id) }}"
-                               class="font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                               class="font-medium text-gray-900 hover:text-emerald-700 transition-colors">
                                 {{ $contract->employee?->full_name ?? '—' }}
                             </a>
                             @if($contract->employee?->department?->name)
@@ -167,7 +167,7 @@
                             {{ number_format($contract->base_salary, 0, ',', ' ') }} F
                         </td>
                         <td class="text-center">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $badgeClass }}">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $badgeClass }}">
                                 {{ $badgeLabel }}
                             </span>
                         </td>
@@ -175,7 +175,7 @@
                             <div class="flex items-center justify-center gap-1.5">
                                 {{-- Voir employé --}}
                                 <a href="{{ route('rh.employes.show', $contract->employee_id) }}"
-                                   class="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 transition-colors"
+                                   class="p-1.5 rounded-[4px] text-emerald-600 hover:bg-emerald-50 transition-colors"
                                    title="Voir l'employé">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -184,7 +184,7 @@
                                 </a>
                                 {{-- PDF contrat --}}
                                 <a href="{{ route('rh.contrats.pdf', $contract) }}"
-                                   class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                                   class="p-1.5 rounded-[4px] text-red-500 hover:bg-red-50 transition-colors"
                                    title="Télécharger PDF"
                                    data-loading data-loading-text="Génération PDF...">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +201,7 @@
                                       class="inline">
                                     @csrf @method('PATCH')
                                     <button type="submit"
-                                            class="p-1.5 rounded-lg text-amber-500 hover:bg-amber-50 transition-colors"
+                                            class="p-1.5 rounded-[4px] text-amber-500 hover:bg-amber-50 transition-colors"
                                             title="Terminer le contrat">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -216,7 +216,7 @@
                                       class="inline">
                                     @csrf @method('PATCH')
                                     <button type="submit"
-                                            class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                                            class="p-1.5 rounded-[4px] text-red-500 hover:bg-red-50 transition-colors"
                                             title="Résilier le contrat">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -231,7 +231,7 @@
                                       class="inline">
                                     @csrf @method('DELETE')
                                     <button type="submit"
-                                            class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                            class="p-1.5 rounded-[4px] text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                                             title="Supprimer ce contrat">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -261,7 +261,7 @@
         </div>
 
         @if($contracts->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
+        <div class="px-3 py-1.5 border-t border-gray-100">
             {{ $contracts->links() }}
         </div>
         @endif
@@ -278,13 +278,13 @@
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
          @click.self="modalOpen = false"
          style="display:none">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"
+        <div class="bg-white rounded-[4px] shadow-xl w-full max-w-lg"
              @click.stop
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100">
 
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900">Nouveau contrat</h2>
                 <button @click="modalOpen = false" class="text-gray-400 hover:text-gray-600 transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,7 +302,7 @@
                         Employé <span class="text-red-500">*</span>
                     </label>
                     <select name="employee_id" required
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500">
                         <option value="">— Sélectionner un employé —</option>
                         @foreach($employees as $emp)
                         <option value="{{ $emp->id }}">
@@ -319,7 +319,7 @@
                             Type <span class="text-red-500">*</span>
                         </label>
                         <select name="type" required
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500">
                             <option value="CDI">CDI</option>
                             <option value="CDD">CDD</option>
                             <option value="stage">Stage</option>
@@ -331,7 +331,7 @@
                             Salaire base (FCFA) <span class="text-red-500">*</span>
                         </label>
                         <input type="number" name="base_salary" min="0" required placeholder="Ex. 150 000"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500">
                     </div>
                 </div>
 
@@ -342,14 +342,14 @@
                             Date de début <span class="text-red-500">*</span>
                         </label>
                         <input type="date" name="start_date" required value="{{ date('Y-m-d') }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Date de fin <span class="text-gray-400 font-normal text-xs">(CDD uniquement)</span>
                         </label>
                         <input type="date" name="end_date"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500">
                     </div>
                 </div>
 
@@ -357,20 +357,20 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                     <textarea name="notes" rows="2" placeholder="Remarques, conditions particulières…"
-                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+                              class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500 resize-none"></textarea>
                 </div>
 
-                <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-2">
                     ⚠️ Si l'employé a déjà un contrat actif, il sera automatiquement clôturé (statut : Terminé).
                 </p>
 
                 <div class="flex justify-end gap-3 pt-1">
                     <button type="button" @click="modalOpen = false"
-                            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                            class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                         Annuler
                     </button>
                     <button type="submit"
-                            class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+                            class="px-5 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
                         Enregistrer
                     </button>
                 </div>

@@ -8,6 +8,7 @@ use App\Models\DeliveryNote;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\ProductStock;
+use App\Modules\Production\Services\ReservationService;
 use App\Repositories\OrderRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,11 @@ class OrderService
 
     public function create(array $data): Order
     {
+        // [Parametrage Vente] client bloque = aucun document commercial
+        \App\Services\ClientService::assertSellable(
+            !empty($data['client_id']) ? \App\Models\Client::find($data['client_id']) : null
+        );
+
         return DB::transaction(function () use ($data) {
             $items = $data['items'] ?? [];
             unset($data['items']);
@@ -75,6 +81,19 @@ class OrderService
 
     public function update(Order $order, array $data): Order
     {
+        // [CDC §13.1] Défense en profondeur : après validation financière,
+        // toute modification tarifaire (prix unitaires, remises) exige
+        // orders.edit_validated — même si l'appel contourne la policy HTTP.
+        $user = auth()->user();
+        if ($user
+            && ! in_array($order->status, ['brouillon', 'en_attente_validation'], true)
+            && ! $user->can('orders.edit_validated')
+            && $this->touchesPricing($order, $data)) {
+            throw new \RuntimeException(
+                'Commande validée : les prix sont verrouillés (§13.1). Seul un responsable commercial peut les modifier.'
+            );
+        }
+
         return DB::transaction(function () use ($order, $data) {
             $items = $data['items'] ?? null;
             unset($data['items']);
@@ -111,6 +130,51 @@ class OrderService
             throw new \RuntimeException('Seules les commandes en brouillon ou annulées peuvent être supprimées.');
         }
         return $order->delete();
+    }
+
+    /**
+     * [CDC §13.1] Détecte si la mise à jour change les prix : remise globale,
+     * prix unitaire ou remise de ligne différents des lignes existantes.
+     */
+    private function touchesPricing(Order $order, array $data): bool
+    {
+        if (array_key_exists('global_discount_amount', $data)
+            && (int) $data['global_discount_amount'] !== (int) $order->global_discount_amount) {
+            return true;
+        }
+        if (array_key_exists('global_discount_percent', $data)
+            && (float) $data['global_discount_percent'] !== (float) $order->global_discount_percent) {
+            return true;
+        }
+
+        $items = $data['items'] ?? null;
+        if ($items === null) {
+            return false;
+        }
+
+        // Comparaison par produit : prix unitaire ou remise modifiés, ligne
+        // ajoutée ou supprimée → considéré comme changement tarifaire.
+        $existing = $order->items()->get(['product_id', 'unit_price', 'discount_percent'])
+            ->keyBy('product_id');
+
+        if (count($items) !== $existing->count()) {
+            return true;
+        }
+
+        foreach ($items as $item) {
+            $current = $existing->get($item['product_id'] ?? null);
+            if (! $current) {
+                return true; // nouvelle ligne
+            }
+            if ((int) ($item['unit_price'] ?? 0) !== (int) $current->unit_price) {
+                return true;
+            }
+            if ((float) ($item['discount_percent'] ?? 0) !== (float) $current->discount_percent) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ── Workflow transitions ──────────────────────────────────────────────────
@@ -156,12 +220,10 @@ class OrderService
                 throw new \RuntimeException('Cette commande ne peut pas être annulée (statut : ' . $order->status . ').');
             }
 
-            // Release reservations that were placed when the order was confirmed.
-            if (in_array($order->status, ['confirme', 'en_preparation', 'partiellement_livre'])) {
-                $this->releaseStockReservations($order);
-            }
-            // [V4] Libère les réservations de produit fini (stock_reservations) liées à la production.
-            app(\App\Modules\Production\Services\ReservationService::class)->releaseForOrder($order);
+            // [Unification réservations] Une seule libération : ferme toutes les lignes
+            // stock_reservations actives de la commande (ventes + production) et remet le
+            // stock disponible. Idempotent — sans effet si rien n'est réservé.
+            app(ReservationService::class)->releaseForOrder($order);
             $order->update(['status' => 'annule']);
             return $order->fresh();
         });
@@ -347,82 +409,25 @@ class OrderService
      */
     public function reserveStock(Order $order): void
     {
-        $order->load('items.product');
-        $warehouseId = $order->delivery_warehouse_id;
-
-        foreach ($order->items as $item) {
-            if (!$item->product_id || !($item->product?->is_stockable ?? false)) {
-                continue;
-            }
-
-            // Only reserve what still needs to be delivered
-            $remaining = (float) $item->quantity - (float) $item->delivered_quantity;
-            if ($remaining <= 0) {
-                continue;
-            }
-
-            // [FIX-BUG-03] When delivery_warehouse_id is null, reserving via a
-            // bare where('product_id', ...) would increment reserved_quantity on
-            // EVERY warehouse row for the product (multiplying the reservation by
-            // the number of warehouses). Pick a single ProductStock row instead:
-            // prefer the warehouse with the highest available stock.
-            if ($warehouseId) {
-                // [ARCH-S2-03] Lock the specific row before incrementing to prevent
-                // concurrent over-reservation on the same product/warehouse.
-                $stockRow = ProductStock::where('product_id', $item->product_id)
-                    ->where('warehouse_id', $warehouseId)
-                    ->lockForUpdate()
-                    ->first();
-                if ($stockRow) {
-                    $stockRow->increment('reserved_quantity', $remaining);
-                }
-            } else {
-                $candidate = ProductStock::where('product_id', $item->product_id)
-                    ->orderByRaw('(quantity - reserved_quantity) DESC')
-                    ->lockForUpdate()
-                    ->first();
-                if ($candidate) {
-                    $candidate->increment('reserved_quantity', $remaining);
-                }
-            }
-        }
+        // [Unification réservations] Source unique = ReservationService, qui écrit
+        // des lignes stock_reservations EN PLUS de reserved_quantity. On supprime
+        // l'ancien incrément direct (sans ligne) qui provoquait :
+        //  - un double-comptage avec le bouton « Réserver » manuel (même ReservationService),
+        //  - des réservations fantômes non tracées, jamais libérées proprement.
+        // reserveStockForOrder est idempotent par commande (netNeeded = commandé − déjà réservé)
+        // et ne réserve que le stock RÉELLEMENT disponible (le reste part en production).
+        app(ReservationService::class)->reserveStockForOrder($order);
     }
 
     /**
-     * Decrement reserved_quantity for the undelivered portion of each stockable
-     * item. Called when a confirmed/in-preparation/partially-delivered order is
-     * cancelled so that the reserved stock becomes available again.
+     * Libère les réservations d'une commande (annulation / re-synchro des lignes).
+     * [Unification réservations] Délègue à ReservationService : ferme les lignes
+     * stock_reservations actives ET décrémente reserved_quantity de façon cohérente,
+     * plutôt qu'un décrément direct qui laissait les lignes ouvertes (fantômes).
      */
     private function releaseStockReservations(Order $order): void
     {
-        $order->load('items.product');
-        $warehouseId = $order->delivery_warehouse_id;
-
-        foreach ($order->items as $item) {
-            if (!$item->product_id || !($item->product?->is_stockable ?? false)) {
-                continue;
-            }
-
-            // Only release the still-undelivered portion; delivered qty has already
-            // been consumed by physical stock-out movements.
-            $undelivered = (float) $item->quantity - (float) $item->delivered_quantity;
-            if ($undelivered <= 0) {
-                continue;
-            }
-
-            $query = ProductStock::where('product_id', $item->product_id);
-            if ($warehouseId) {
-                $query->where('warehouse_id', $warehouseId);
-            }
-
-            // Never go below 0 — release only what is actually reserved.
-            foreach ($query->get() as $stock) {
-                $release = min($undelivered, (float) $stock->reserved_quantity);
-                if ($release > 0) {
-                    $stock->decrement('reserved_quantity', $release);
-                }
-            }
-        }
+        app(ReservationService::class)->releaseForOrder($order);
     }
 
     private function recalculate(Order $order): void

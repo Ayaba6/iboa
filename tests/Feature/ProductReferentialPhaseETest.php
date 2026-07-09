@@ -23,6 +23,26 @@ function refAdmin(): User
     return $u;
 }
 
+it('refuse un article vendable avec prix de vente inférieur au prix d’achat (vente à perte)', function () {
+    $this->actingAs(refAdmin());
+    $fam = ProductFamily::create(['name' => 'Négoce', 'code' => 'NEG']);
+
+    $payload = [
+        'name' => 'Article perte', 'reference' => 'REF-PERTE', 'type' => 'simple',
+        'is_sellable' => 1, 'is_purchasable' => 1, 'is_stockable' => 1,
+        'product_family_id' => $fam->id, 'purchase_price' => 3000, 'sale_price' => 2000,
+    ];
+
+    // Vente < achat → rejet avec message explicite, article non créé.
+    $this->post(route('products.store'), $payload)->assertSessionHasErrors('sale_price');
+    expect(Product::where('reference', 'REF-PERTE')->exists())->toBeFalse();
+
+    // Vente ≥ achat → accepté.
+    $this->post(route('products.store'), array_merge($payload, ['reference' => 'REF-OK', 'sale_price' => 5000]))
+        ->assertSessionHasNoErrors();
+    expect(Product::where('reference', 'REF-OK')->exists())->toBeTrue();
+});
+
 it('persists the enriched referential fields', function () {
     $this->actingAs(refAdmin());
     $f1 = ProductFamily::create(['name' => 'Niveau 1', 'code' => 'N1']);

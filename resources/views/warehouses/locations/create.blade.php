@@ -14,27 +14,27 @@
 @endsection
 
 @section('content')
-<div class="max-w-3xl space-y-5">
+<div class="max-w-3xl space-y-3">
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Nouvel emplacement</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Nouvel emplacement</h1>
         <a href="{{ route('stocks.warehouses.locations.index', $warehouse) }}" class="text-sm text-gray-500 hover:text-gray-700">← Retour</a>
     </div>
 
     @if($errors->any())
-    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+    <div class="bg-red-50 border border-red-200 rounded-[4px] p-4">
         <ul class="text-sm text-red-700 list-disc list-inside space-y-1">
             @foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach
         </ul>
     </div>
     @endif
 
-    <form method="POST" action="{{ route('stocks.warehouses.locations.store', $warehouse) }}" class="space-y-5">
+    <form method="POST" action="{{ route('stocks.warehouses.locations.store', $warehouse) }}" class="space-y-3">
         @csrf
         @include('warehouses.locations._form')
         <div class="flex justify-end gap-3">
             <a href="{{ route('stocks.warehouses.locations.index', $warehouse) }}"
-               class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg">Annuler</a>
-            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg">Créer</button>
+               class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px]">Annuler</a>
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-6 py-1.5 rounded-[4px]">Créer</button>
         </div>
     </form>
 </div>

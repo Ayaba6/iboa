@@ -6,7 +6,7 @@
 @endsection
 
 @section('content')
-<h1 class="text-2xl font-bold text-gray-900 mb-6">Mes bulletins de paie</h1>
+<h1 class="text-[16px] font-bold text-gray-900 mb-6">Mes bulletins de paie</h1>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     @forelse($bulletins as $item)
@@ -15,13 +15,13 @@
                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
         $mois = $months[($item->payrollRun?->period_month ?? 1) - 1] ?? $item->payrollRun?->period_month;
     @endphp
-    <div class="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5 hover:shadow-md transition-shadow">
         <div class="flex items-start justify-between mb-3">
             <div>
                 <p class="font-semibold text-gray-900">{{ $mois }} {{ $item->payrollRun?->period_year }}</p>
                 <p class="text-xs text-gray-400">{{ $item->worked_days ?? '—' }} / {{ $item->total_days ?? '—' }} jours</p>
             </div>
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium
+            <span class="inline-flex px-2 py-0.5 rounded-[3px] text-[11px] font-medium
                 {{ $item->payrollRun?->status === 'paye' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700' }}">
                 {{ $item->payrollRun?->status === 'paye' ? 'Payé' : 'Validé' }}
             </span>
@@ -45,7 +45,7 @@
             </div>
         </dl>
         <a href="{{ route('rh.portail.bulletin-pdf', $item) }}"
-           class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100">
+           class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#eef5f0] text-emerald-800 rounded-[4px] text-sm font-medium hover:bg-emerald-100">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Télécharger le bulletin
         </a>

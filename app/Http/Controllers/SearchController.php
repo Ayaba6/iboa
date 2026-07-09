@@ -28,6 +28,10 @@ class SearchController extends Controller
         $results = [];
         $user    = auth()->user();
 
+        // [Recherche pro] mots-clés métier : « facture » liste les dernières factures
+        // + un accès direct à la liste complète, idem devis/commandes/BL/avoirs…
+        array_push($results, ...$this->keywordResults($q, $user));
+
         // Clients
         if ($user?->can('clients.view')) {
             $items = Client::where('is_active', true)
@@ -154,5 +158,120 @@ class SearchController extends Controller
             'results' => $results,
             'total'   => count($results),
         ]);
+    }
+
+    /**
+     * [Recherche pro] « facture », « devis », « bl »… → derniers documents du type
+     * + lien direct vers la liste complète. Respecte les permissions.
+     */
+    private function keywordResults(string $q, $user): array
+    {
+        $needle = mb_strtolower(str_replace(['é', 'è', 'ê'], 'e', $q));
+
+        $types = [
+            'facture' => [
+                'aliases' => ['facture', 'factures', 'fac'],
+                'perm'    => 'invoices.view',
+                'type'    => 'Facture', 'color' => 'indigo',
+                'index'   => fn () => route('ventes.factures.index'),
+                'items'   => fn () => Invoice::with('client:id,name')->latest('id')->limit(5)
+                    ->get(['id', 'number', 'client_id', 'total_ttc'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => trim(($d->client?->name ?? '') . ' · ' . number_format((float) $d->total_ttc, 0, ',', ' ') . ' F', ' ·'), 'url' => route('ventes.factures.show', $d)]),
+            ],
+            'devis' => [
+                'aliases' => ['devis', 'dev'],
+                'perm'    => 'quotes.view',
+                'type'    => 'Devis', 'color' => 'violet',
+                'index'   => fn () => route('ventes.devis.index'),
+                'items'   => fn () => \App\Models\Quote::with('client:id,name')->latest('id')->limit(5)
+                    ->get(['id', 'number', 'client_id'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => $d->client?->name, 'url' => route('ventes.devis.show', $d)]),
+            ],
+            'commande' => [
+                'aliases' => ['commande', 'commandes', 'cmd'],
+                'perm'    => 'orders.view',
+                'type'    => 'Commande', 'color' => 'violet',
+                'index'   => fn () => route('ventes.commandes.index'),
+                'items'   => fn () => Order::with('client:id,name')->latest('id')->limit(5)
+                    ->get(['id', 'number', 'client_id'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => $d->client?->name, 'url' => route('ventes.commandes.show', $d)]),
+            ],
+            'bl' => [
+                'aliases' => ['bl', 'livraison', 'livraisons', 'bon de livraison'],
+                'perm'    => 'delivery_notes.view',
+                'type'    => 'Bon livraison', 'color' => 'emerald',
+                'index'   => fn () => route('ventes.bons-livraison.index'),
+                'items'   => fn () => \App\Models\DeliveryNote::with('client:id,name')->latest('id')->limit(5)
+                    ->get(['id', 'number', 'client_id'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => $d->client?->name, 'url' => route('ventes.bons-livraison.show', $d)]),
+            ],
+            'avoir' => [
+                'aliases' => ['avoir', 'avoirs'],
+                'perm'    => 'credit_notes.view',
+                'type'    => 'Avoir', 'color' => 'red',
+                'index'   => fn () => route('ventes.avoirs.index'),
+                'items'   => fn () => \App\Models\CreditNote::with('client:id,name')->latest('id')->limit(5)
+                    ->get(['id', 'number', 'client_id'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => $d->client?->name, 'url' => route('ventes.avoirs.show', $d)]),
+            ],
+            'facture_fournisseur' => [
+                'aliases' => ['facture fournisseur', 'factures fournisseurs', 'ff'],
+                'perm'    => 'supplier_invoices.view',
+                'type'    => 'Fact. fourn.', 'color' => 'red',
+                'index'   => fn () => route('achats.factures-fournisseurs.index'),
+                'items'   => fn () => SupplierInvoice::with('supplier:id,name')->latest('id')->limit(5)
+                    ->get(['id', 'number', 'supplier_id'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => $d->supplier?->name, 'url' => route('achats.factures-fournisseurs.show', $d)]),
+            ],
+            'bon_commande' => [
+                'aliases' => ['bon de commande', 'bc', 'commande achat', 'commandes achats'],
+                'perm'    => 'purchase_orders.view',
+                'type'    => 'BC fourn.', 'color' => 'amber',
+                'index'   => fn () => route('achats.commandes.index'),
+                'items'   => fn () => \App\Models\PurchaseOrder::with('supplier:id,name')->latest('id')->limit(5)
+                    ->get(['id', 'number', 'supplier_id'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => $d->supplier?->name, 'url' => route('achats.commandes.show', $d)]),
+            ],
+            'demande_achat' => [
+                'aliases' => ['demande achat', "demande d'achat", 'demandes achat', 'da'],
+                'perm'    => 'purchase_requests.view',
+                'type'    => 'Demande achat', 'color' => 'amber',
+                'index'   => fn () => route('achats.demandes-achat.index'),
+                'items'   => fn () => \App\Models\PurchaseRequest::latest('id')->limit(5)
+                    ->get(['id', 'number'])
+                    ->map(fn ($d) => ['label' => $d->number, 'sublabel' => null, 'url' => route('achats.demandes-achat.show', $d)]),
+            ],
+        ];
+
+        foreach ($types as $def) {
+            if (!in_array($needle, $def['aliases'], true)) {
+                continue;
+            }
+            if ($def['perm'] && !$user?->can($def['perm'])) {
+                return [];
+            }
+
+            $out = collect($def['items']())->map(fn ($d) => [
+                'type'     => $def['type'],
+                'icon'     => 'document-text',
+                'color'    => $def['color'],
+                'label'    => $d['label'],
+                'sublabel' => $d['sublabel'],
+                'url'      => $d['url'],
+            ])->all();
+
+            $out[] = [
+                'type'     => $def['type'],
+                'icon'     => 'list',
+                'color'    => 'gray',
+                'label'    => 'Voir tous les documents « ' . $def['type'] . ' » →',
+                'sublabel' => 'Liste complète avec filtres',
+                'url'      => $def['index'](),
+            ];
+
+            return $out;
+        }
+
+        return [];
     }
 }

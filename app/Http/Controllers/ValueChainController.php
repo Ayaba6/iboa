@@ -31,7 +31,8 @@ class ValueChainController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'verified', 'permission:reports.view']);
+        // [SEC §15] Chaîne de valeur = vue direction — aligné sur la route.
+        $this->middleware(['auth', 'verified', 'permission:direction.view']);
     }
 
     public function index()
@@ -104,7 +105,7 @@ class ValueChainController extends Controller
 
         // ── 10. COMPTABILITÉ ──────────────────────────────────────────────────
         $ecrituresBrouil = JournalEntry::where('status', 'brouillon')->count();
-        $ecrituresMois   = JournalEntry::whereBetween('date', [$today, $end])->count();
+        $ecrituresMois   = JournalEntry::whereBetween('entry_date', [$today, $end])->count();
 
         return [
             [
@@ -247,7 +248,7 @@ class ValueChainController extends Controller
         return [
             'ca_mois'       => (int) Invoice::whereBetween('issued_at', [$today, $end])->where('status', '!=', 'annulee')->sum('total_ttc'),
             'encaisse'      => (int) ClientPayment::where('status', 'confirme')->whereBetween('payment_date', [$today, $end])->sum('amount'),
-            'achats_mois'   => (int) \App\Models\SupplierInvoice::whereBetween('invoice_date', [$today, $end])->where('status', '!=', 'annulee')->sum('total_ttc'),
+            'achats_mois'   => (int) \App\Models\SupplierInvoice::whereBetween('received_at', [$today, $end])->where('status', '!=', 'annulee')->sum('total_ttc'),
             'solde'         => (int) CashAccount::sum('current_balance'),
             'bc_en_cours_val' => (int) \App\Models\PurchaseOrder::whereIn('status', ['confirme', 'en_cours'])->sum('total_ttc'),
             'cmd_non_fact'  => (int) Order::where('status', 'confirme')->sum('total_ttc'),

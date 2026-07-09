@@ -65,6 +65,36 @@ it('creates a fabrication batch with auto number', function () {
     expect((float) $b2->quantity)->toEqual(5.0);
 });
 
+it('never creates a zero-qty batch before production (falls back to requested)', function () {
+    $this->actingAs(sfAdmin());
+    $co = Company::first();
+    // OF lancé mais rien produit encore : quantity_produced casté "0.00" (truthy).
+    $of = ProductionOrder::create(['company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id, 'number' => 'OF-SF0', 'status' => 'en_cours', 'quantity_requested' => 100, 'quantity_produced' => 0]);
+
+    // Formulaire sans quantité (null) → doit retomber sur la demande (100), pas 0.
+    $b = app(BatchService::class)->createForOrder($of, null);
+    expect((float) $b->quantity)->toEqual(100.0);
+});
+
+it('reconciles a zero-qty batch to produced quantity on close', function () {
+    $this->actingAs(sfAdmin());
+    $co = Company::first();
+    $of = ProductionOrder::create(['company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id, 'number' => 'OF-SF0B', 'status' => 'en_cours', 'quantity_requested' => 100, 'quantity_produced' => 0]);
+
+    // Lot resté à 0 (donnée héritée avant correctif).
+    $batch = ProductionBatch::create([
+        'company_id' => $co->id, 'production_order_id' => $of->id, 'batch_number' => 'LOT-OLD-00',
+        'quantity' => 0, 'status' => 'en_cours', 'produced_at' => now(),
+    ]);
+
+    // Production déclarée entre-temps, puis clôture du lot → réconcilié à 25.
+    $of->update(['quantity_produced' => 25]);
+    app(BatchService::class)->close($batch);
+
+    expect($batch->fresh()->status)->toBe('cloture');
+    expect((float) $batch->fresh()->quantity)->toEqual(25.0);
+});
+
 it('creates batch via route and closes it', function () {
     $this->actingAs(sfAdmin());
     $co = Company::first();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasCompanyScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class CrmOpportunity extends Model
 {
     use SoftDeletes, HasCompanyScope;
-use App\Models\Traits\HasCompanyScope;
 
     protected $fillable = [
         'company_id', 'crm_contact_id', 'user_id',

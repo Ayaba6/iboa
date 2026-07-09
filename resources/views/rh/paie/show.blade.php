@@ -11,7 +11,7 @@
 <div x-data="payrollShow()" x-init="loadVariables()">
 
 {{-- ── Workflow progress ────────────────────────────────────────────────────── --}}
-<div class="bg-white rounded-xl border border-gray-200 px-5 py-4 mb-5">
+<div class="bg-white rounded-[4px] border border-gray-300 px-5 py-4 mb-5">
     <x-workflow.progress-steps
         :steps="[
             ['key' => 'brouillon', 'label' => 'Brouillon',  'icon' => '✏️'],
@@ -25,9 +25,9 @@
 {{-- ── En-tête ──────────────────────────────────────────────────────────────── --}}
 <div class="flex items-start justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">Bulletin — {{ $run->period_label }}</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Bulletin — {{ $run->period_label }}</h1>
         @php $c = $run->status_color @endphp
-        <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-{{ $c }}-100 text-{{ $c }}-700">
+        <span class="inline-flex mt-1 px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $c }}-100 text-{{ $c }}-700">
             {{ $run->status_label }}
         </span>
         @if($run->validatedBy)
@@ -44,14 +44,14 @@
         @if($run->isValidated())
         @if($run->journal_entry_id)
         <a href="{{ route('comptabilite.journaux.show', $run->journal_entry_id) }}"
-           class="inline-flex items-center gap-2 px-3 py-2 bg-violet-100 text-violet-700 rounded-lg text-sm font-medium hover:bg-violet-200">
+           class="inline-flex items-center gap-2 px-3 py-2 bg-violet-100 text-violet-700 rounded-[4px] text-sm font-medium hover:bg-violet-200">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Écriture #{{ $run->journal_entry_id }}
         </a>
         @else
         <form method="POST" action="{{ route('rh.paie.journalize', $run) }}">
             @csrf
-            <button class="inline-flex items-center gap-2 px-3 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700">
+            <button class="inline-flex items-center gap-2 px-3 py-2 bg-violet-600 text-white rounded-[4px] text-sm font-medium hover:bg-violet-700">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 Comptabiliser
             </button>
@@ -63,7 +63,7 @@
         @if($run->status !== 'brouillon')
         <div x-data="{open:false}" class="relative">
             <button @click="open=!open"
-                    class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200">
+                    class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-[4px] text-sm hover:bg-gray-200">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -74,56 +74,56 @@
                 </svg>
             </button>
             <div x-show="open" @click.away="open=false"
-                 class="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-20 py-1">
+                 class="absolute right-0 mt-1 w-64 bg-white border border-gray-300 rounded-[4px] shadow-xl z-20 py-1">
 
                 {{-- Titre section Salaires --}}
                 <div class="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Salaires</div>
                 <a href="{{ route('rh.paie.recap-pdf', $run) }}" target="_blank"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50">
                     <span class="text-blue-500">📄</span> Livre de paie (récap mensuel)
                 </a>
                 <a href="{{ route('rh.paie.livre-paie-xlsx', $run) }}"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-emerald-50">
                     <span class="text-emerald-600">📊</span> Livre de paie Excel
                 </a>
 
                 {{-- CNSS --}}
                 <div class="px-4 py-1.5 mt-1 text-xs font-semibold text-gray-400 uppercase tracking-wide border-t border-gray-100">CNSS</div>
                 <a href="{{ route('rh.paie.cnss-pdf', $run) }}" target="_blank"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50">
                     <span class="text-blue-500">📄</span> Bordereau CNSS PDF
                 </a>
                 <a href="{{ route('rh.paie.cnss-xlsx', $run) }}"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-emerald-50">
                     <span class="text-emerald-600">📊</span> CNSS Excel
                 </a>
 
                 {{-- IUTS --}}
                 <div class="px-4 py-1.5 mt-1 text-xs font-semibold text-gray-400 uppercase tracking-wide border-t border-gray-100">ITS / IUTS</div>
                 <a href="{{ route('rh.paie.iuts-pdf', $run) }}" target="_blank"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50">
                     <span class="text-blue-500">📄</span> État IUTS PDF
                 </a>
                 <a href="{{ route('rh.paie.iuts-xlsx', $run) }}"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-emerald-50">
                     <span class="text-emerald-600">📊</span> IUTS Excel
                 </a>
 
                 {{-- Avances & Prêts --}}
                 <div class="px-4 py-1.5 mt-1 text-xs font-semibold text-gray-400 uppercase tracking-wide border-t border-gray-100">Avances & Prêts</div>
                 <a href="{{ route('rh.paie.avances-pdf', $run) }}" target="_blank"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50">
                     <span class="text-blue-500">📄</span> État avances PDF
                 </a>
                 <a href="{{ route('rh.paie.prets-pdf', $run) }}" target="_blank"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50">
                     <span class="text-blue-500">📄</span> État prêts PDF
                 </a>
 
                 {{-- Virement --}}
                 <div class="px-4 py-1.5 mt-1 text-xs font-semibold text-gray-400 uppercase tracking-wide border-t border-gray-100">Banque</div>
                 <a href="{{ route('rh.paie.virement-csv', $run) }}"
-                   class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
                     <span>📋</span> Ordre de virement CSV
                 </a>
             </div>
@@ -176,10 +176,10 @@
     ];
 @endphp
 
-<div class="bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+<div class="bg-white rounded-[4px] border border-gray-300 shadow-sm mb-6 overflow-hidden">
     {{-- Barre de titre --}}
     <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
-        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Workflow de traitement</span>
+        <span class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Workflow de traitement</span>
         <span class="text-xs text-gray-400">{{ $run->period_label }}</span>
     </div>
 
@@ -217,11 +217,11 @@
                             {{ $wfStep >= 2 ? 'bg-blue-400' : 'bg-gray-200' }}"></div>
                 {{-- Connecteur droite --}}
                 <div class="absolute right-0 top-5 -translate-y-1/2 w-1/2 h-0.5
-                            {{ $wfStep > 2 ? 'bg-indigo-400' : 'bg-gray-200' }}"></div>
+                            {{ $wfStep > 2 ? 'bg-emerald-500' : 'bg-gray-200' }}"></div>
                 {{-- Cercle --}}
                 <div class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300
-                            {{ $wfStep > 2 ? 'bg-indigo-500 border-indigo-500 text-white'
-                               : ($wfStep === 2 ? 'bg-white border-indigo-500 text-indigo-600 ring-4 ring-indigo-100'
+                            {{ $wfStep > 2 ? 'bg-emerald-600 border-emerald-500 text-white'
+                               : ($wfStep === 2 ? 'bg-white border-emerald-500 text-emerald-700 ring-4 ring-indigo-100'
                                               : 'bg-white border-gray-200 text-gray-300') }}">
                     @if($wfStep > 2)
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
@@ -232,7 +232,7 @@
                     @endif
                 </div>
                 <div class="mt-2 text-center px-1">
-                    <div class="text-xs font-semibold {{ $wfStep >= 2 ? 'text-indigo-700' : 'text-gray-400' }}">Contrôle</div>
+                    <div class="text-xs font-semibold {{ $wfStep >= 2 ? 'text-emerald-800' : 'text-gray-400' }}">Contrôle</div>
                     @if($wfStep === 2)<div class="text-[10px] text-gray-500 mt-0.5 hidden sm:block">Vérification des montants</div>@endif
                     @if($wfSteps[2]['date'])<div class="text-[10px] text-gray-400 mt-0.5">{{ $wfSteps[2]['date'] }}</div>@endif
                 </div>
@@ -242,7 +242,7 @@
             <div class="flex-1 flex flex-col items-center relative min-w-0">
                 {{-- Connecteur gauche --}}
                 <div class="absolute left-0 top-5 -translate-y-1/2 w-1/2 h-0.5
-                            {{ $wfStep >= 3 ? 'bg-indigo-400' : 'bg-gray-200' }}"></div>
+                            {{ $wfStep >= 3 ? 'bg-emerald-500' : 'bg-gray-200' }}"></div>
                 {{-- Connecteur droite --}}
                 <div class="absolute right-0 top-5 -translate-y-1/2 w-1/2 h-0.5
                             {{ $wfStep > 3 ? 'bg-green-400' : 'bg-gray-200' }}"></div>
@@ -300,7 +300,7 @@
                     <span class="font-medium text-blue-700">Étape 1 : Préparation</span>
                     — Saisissez les variables mensuelles, vérifiez les paramètres, puis lancez le calcul.
                 @elseif($wfStep === 2)
-                    <span class="font-medium text-indigo-700">Étape 2 : Contrôle</span>
+                    <span class="font-medium text-emerald-800">Étape 2 : Contrôle</span>
                     — Vérifiez les montants calculés ligne par ligne avant validation.
                     @if($run->validatedBy)
                     Calculé le {{ $run->updated_at?->format('d/m/Y') }}.
@@ -320,7 +320,7 @@
                 {{-- Calculer → passe à Contrôle --}}
                 <form method="POST" action="{{ route('rh.paie.calculate', $run) }}">
                     @csrf
-                    <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 shadow-sm transition-colors">
+                    <button class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 shadow-sm transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
                         Lancer le calcul →
                     </button>
@@ -330,7 +330,7 @@
                 <form method="POST" action="{{ route('rh.paie.validate', $run) }}"
                       onsubmit="return confirm('Valider définitivement ce bulletin ? Cette action est irréversible.')">
                     @csrf
-                    <button class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 shadow-sm transition-colors">
+                    <button class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 shadow-sm transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Valider le bulletin →
                     </button>
@@ -338,7 +338,7 @@
                 {{-- Recalculer si besoin --}}
                 <form method="POST" action="{{ route('rh.paie.calculate', $run) }}">
                     @csrf
-                    <button class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition-colors">
+                    <button class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-600 rounded-[4px] text-sm hover:bg-gray-200 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         Recalculer
                     </button>
@@ -346,7 +346,7 @@
                 @elseif($wfStep === 3)
                 {{-- Payer → passe à Clôture --}}
                 <button @click="$refs.modalPaid.classList.remove('hidden')"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors">
+                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     Marquer comme payé →
                 </button>
@@ -372,7 +372,7 @@
         ['IUTS',            number_format($run->total_iuts,0,',',' ').' F',                        'purple'],
         ['Net à payer',     number_format($run->total_net,0,',',' ').' F',                         'emerald'],
     ] as [$l,$v,$col])
-    <div class="bg-white rounded-xl border border-gray-200 p-3 text-center">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-3 text-center">
         <div class="text-xs text-gray-500">{{ $l }}</div>
         <div class="font-mono font-bold text-{{ $col }}-700 text-sm mt-1">{{ $v }}</div>
     </div>
@@ -382,24 +382,24 @@
 
 {{-- ── Variables mensuelles (saisie) ──────────────────────────────────────── --}}
 @if($run->isEditable())
-<div class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
+<div class="bg-amber-50 border border-amber-200 rounded-[4px] p-5 mb-6">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-sm font-semibold text-amber-800">
             <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             Variables mensuelles — HS / Absences / Primes ponctuelles / Avances
         </h2>
         <button @click="showVarForm=!showVarForm"
-                class="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700">
+                class="px-3 py-1.5 bg-amber-600 text-white rounded-[4px] text-xs font-medium hover:bg-amber-700">
             + Ajouter une variable
         </button>
     </div>
 
     {{-- Formulaire d'ajout --}}
-    <div x-show="showVarForm" x-cloak class="bg-white rounded-lg border border-amber-200 p-4 mb-4">
+    <div x-show="showVarForm" x-cloak class="bg-white rounded-[4px] border border-amber-200 p-4 mb-4">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Employé *</label>
-                <select x-model="newVar.employee_id" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm">
+                <select x-model="newVar.employee_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
                     <option value="">— Choisir —</option>
                     @foreach($run->items->sortBy('employee_name') as $item)
                     <option value="{{ $item->employee_id }}">{{ $item->employee_name }}</option>
@@ -408,7 +408,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Type *</label>
-                <select x-model="newVar.type" @change="onTypeChange()" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm">
+                <select x-model="newVar.type" @change="onTypeChange()" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
                     @foreach(\App\Models\PayrollVariable::TYPES as $key=>$meta)
                     <option value="{{ $key }}">{{ $meta['label'] }}</option>
                     @endforeach
@@ -416,11 +416,11 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Libellé</label>
-                <input type="text" x-model="newVar.label" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm">
+                <input type="text" x-model="newVar.label" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Unité</label>
-                <select x-model="newVar.unit" class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm">
+                <select x-model="newVar.unit" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
                     <option value="heures">Heures</option>
                     <option value="jours">Jours</option>
                     <option value="forfait">Forfait</option>
@@ -429,12 +429,12 @@
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Quantité</label>
                 <input type="number" x-model="newVar.qty" min="0" step="0.5"
-                       class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right font-mono">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Montant (FCFA) *</label>
                 <input type="number" x-model="newVar.amount" min="0" step="100"
-                       class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right font-mono">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
             </div>
             <div class="flex items-end gap-3">
                 <label class="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
@@ -446,17 +446,17 @@
             </div>
             <div class="flex items-end justify-end gap-2">
                 <button @click="saveVariable()" :disabled="saving"
-                        class="px-4 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50">
+                        class="px-4 py-1.5 bg-amber-600 text-white rounded-[4px] text-sm font-medium hover:bg-amber-700 disabled:opacity-50">
                     <span x-text="saving ? 'Enregistrement…' : 'Ajouter'"></span>
                 </button>
-                <button @click="showVarForm=false" class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm">Annuler</button>
+                <button @click="showVarForm=false" class="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-[4px] text-sm">Annuler</button>
             </div>
         </div>
     </div>
 
     {{-- Liste des variables --}}
     <div x-show="variables.length > 0">
-        <table class="w-full text-xs bg-white rounded-lg overflow-hidden">
+        <table class="w-full text-xs bg-white rounded-[4px] overflow-hidden">
             <thead class="bg-gray-100 text-gray-500 uppercase">
                 <tr>
                     <th class="px-3 py-2 text-left">Employé</th>
@@ -498,15 +498,15 @@
 @endif
 
 {{-- ── Tableau des bulletins individuels ──────────────────────────────────── --}}
-<div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+<div class="bg-white rounded-[4px] border border-gray-300 overflow-x-auto">
+    <div class="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-gray-700">Bulletins individuels — {{ $run->employee_count }} employé(s)</h2>
         @if($run->status !== 'brouillon')
         <span class="text-xs text-gray-400">Coût total employeur : <strong class="text-gray-700">{{ number_format($run->total_brut + $run->total_cnss_employer, 0, ',', ' ') }} F</strong></span>
         @endif
     </div>
     <table class="w-full divide-y divide-gray-200 text-xs">
-        <thead class="bg-gray-50 text-gray-500 uppercase">
+        <thead class="bg-[#eef5f0] border-b border-gray-300 text-emerald-900 font-bold uppercase tracking-wide">
             <tr>
                 <th class="px-3 py-3 text-left">Mat.</th>
                 <th class="px-3 py-3 text-left">Employé / Poste</th>
@@ -539,7 +539,7 @@
                 @else —
                 @endif
             </td>
-            <td class="px-3 py-2 text-right font-mono text-indigo-600">
+            <td class="px-3 py-2 text-right font-mono text-emerald-700">
                 {{ $item->total_allowances_taxable + $item->primes_exceptionnelles + ($item->autres_gains ?? 0) > 0
                     ? number_format($item->total_allowances_taxable + $item->primes_exceptionnelles + ($item->autres_gains ?? 0), 0, ',', ' ')
                     : '—' }}
@@ -596,14 +596,14 @@
 
 {{-- Modal paiement --}}
 <div x-ref="modalPaid" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-80 p-6">
+    <div class="bg-white rounded-[4px] shadow-xl w-80 p-6">
         <h3 class="text-base font-semibold mb-4">Confirmer le paiement</h3>
         <form method="POST" action="{{ route('rh.paie.mark-paid', $run) }}">
             @csrf
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Date de paiement</label>
                 <input type="date" name="paid_at" value="{{ now()->toDateString() }}" required
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
             </div>
             <p class="text-xs text-gray-500 mb-4">
                 Net total à payer : <strong>{{ number_format($run->total_net, 0, ',', ' ') }} FCFA</strong>
@@ -611,8 +611,8 @@
             </p>
             <div class="flex justify-end gap-2">
                 <button type="button" @click="$refs.modalPaid.classList.add('hidden')"
-                        class="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm">Annuler</button>
-                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">Confirmer</button>
+                        class="px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm">Annuler</button>
+                <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white rounded-[4px] text-sm font-medium">Confirmer</button>
             </div>
         </form>
     </div>

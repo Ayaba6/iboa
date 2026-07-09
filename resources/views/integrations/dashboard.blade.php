@@ -41,7 +41,7 @@
             </a>
             @can('integrations.manage')
             <a href="{{ route('integrations.create') }}"
-               class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
+               class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Nouvelle intégration
             </a>
@@ -51,7 +51,7 @@
 
     {{-- ── Alertes erreurs ─────────────────────────────────────────────────── --}}
     @if($alertIntegrations->isNotEmpty())
-    <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+    <div class="bg-red-50 border border-red-200 rounded-[4px] p-4">
         <div class="flex items-start gap-3">
             <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -87,7 +87,7 @@
             ['label' => "Montant confirmé",  'value' => $fmtF($stats['amount_confirmed']), 'sub' => "Semaine : ".$fmtF($stats['amount_week']), 'color' => 'indigo'],
         ]; @endphp
         @foreach($kpis as $k)
-        <div class="bg-white rounded-xl border border-{{ $k['color'] === 'gray' ? 'gray' : $k['color'] }}-{{ $k['color'] === 'gray' ? '200' : '200' }} p-5">
+        <div class="bg-white rounded-[4px] border border-{{ $k['color'] === 'gray' ? 'gray' : $k['color'] }}-{{ $k['color'] === 'gray' ? '200' : '200' }} p-5">
             <p class="text-xs font-medium text-{{ $k['color'] }}-{{ $k['color'] === 'gray' ? '500' : '600' }} uppercase tracking-wide">{{ $k['label'] }}</p>
             <p class="mt-1 text-xl font-bold tabular-nums text-{{ $k['color'] === 'gray' ? 'gray-900' : $k['color'].'-700' }}">{{ $k['value'] }}</p>
             @if($k['sub'])
@@ -98,7 +98,7 @@
     </div>
 
     {{-- ── Graphe 7 jours ──────────────────────────────────────────────────── --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-800">Activité des 7 derniers jours</h2>
             <div class="flex items-center gap-4 text-xs text-gray-500">
@@ -136,7 +136,7 @@
             @php $amountH = $day['amount'] > 0 ? max(4, round($day['amount'] / $maxAmount * 100)) : 0; @endphp
             <div class="flex-1 flex flex-col items-center">
                 <div class="w-full flex flex-col justify-end" style="height: 36px;">
-                    <div class="w-full rounded-t-sm bg-indigo-200 transition-all" style="height: {{ $amountH }}%"
+                    <div class="w-full rounded-t-sm bg-emerald-200 transition-all" style="height: {{ $amountH }}%"
                          title="{{ number_format($day['amount'], 0, ',', ' ') }} FCFA"></div>
                 </div>
             </div>
@@ -147,7 +147,7 @@
 
     {{-- ── État des connecteurs ─────────────────────────────────────────────── --}}
     @if($integrations->isNotEmpty())
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
             <h2 class="text-sm font-semibold text-gray-700">État des connecteurs</h2>
             <a href="{{ route('integrations.index') }}" class="text-xs text-blue-600 hover:underline">Voir tous</a>
@@ -200,7 +200,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {{-- Derniers logs ─────────────────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                 <h2 class="text-sm font-semibold text-gray-700">Derniers appels API</h2>
                 <a href="{{ route('integrations.logs') }}" class="text-xs text-blue-600 hover:underline">Tout voir</a>
@@ -210,7 +210,7 @@
             @else
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
-                    <thead class="bg-gray-50 border-b border-gray-100">
+                    <thead class="bg-[#eef5f0] border-b border-gray-300">
                         <tr>
                             <th class="px-3 py-2 text-left text-gray-500">Service</th>
                             <th class="px-3 py-2 text-left text-gray-500">Méthode / Endpoint</th>
@@ -246,7 +246,7 @@
         </div>
 
         {{-- Transactions récentes ─────────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                 <h2 class="text-sm font-semibold text-gray-700">Transactions récentes</h2>
                 <a href="{{ route('integrations.transactions') }}" class="text-xs text-blue-600 hover:underline">Tout voir</a>
@@ -256,7 +256,7 @@
             @else
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
-                    <thead class="bg-gray-50 border-b border-gray-100">
+                    <thead class="bg-[#eef5f0] border-b border-gray-300">
                         <tr>
                             <th class="px-3 py-2 text-left text-gray-500">Référence</th>
                             <th class="px-3 py-2 text-left text-gray-500">Provider</th>
@@ -271,7 +271,7 @@
                         <tr class="hover:bg-gray-50">
                             <td class="px-3 py-2 font-mono text-gray-700 text-[10px]">
                                 @if($tx->invoice)
-                                <a href="{{ route('ventes.factures.show', $tx->invoice) }}" class="text-indigo-600 hover:underline">{{ $tx->invoice->number }}</a>
+                                <a href="{{ route('ventes.factures.show', $tx->invoice) }}" class="text-emerald-700 hover:underline">{{ $tx->invoice->number }}</a>
                                 @else
                                 {{ Str::limit($tx->internal_reference, 18) }}
                                 @endif
@@ -298,7 +298,7 @@
 
     {{-- ── Latence moyenne ──────────────────────────────────────────────────── --}}
     @if($stats['avg_latency_ms'] > 0)
-    <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-4 flex items-center gap-4">
         <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>

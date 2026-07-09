@@ -8,50 +8,50 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
-        <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1">
             <p class="text-xs text-gray-500">Total fournisseurs</p>
-            <p class="text-lg font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
+            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1">
             <p class="text-xs text-gray-500">Actifs</p>
-            <p class="text-lg font-bold text-emerald-600 tabular-nums">{{ $summary['active'] }}</p>
+            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $summary['active'] }}</p>
         </div>
     </div>
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Fournisseurs</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Fournisseurs</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $suppliers->total() }} fournisseur(s)</p>
         </div>
         <div class="flex items-center gap-2 self-start flex-wrap">
             <a href="{{ route('exports.suppliers', request()->query()) }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium rounded-lg transition-colors">
+               class="inline-flex items-center gap-2 px-3 py-1.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
                 </svg>
                 Exporter Excel
             </a>
             <a href="{{ route('exports.suppliers-pdf', request()->query()) }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium rounded-lg transition-colors">
+               class="inline-flex items-center gap-2 px-3 py-1.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
                 Exporter PDF
             </a>
             <a href="{{ route('import.index', ['type' => 'suppliers']) }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+               class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-[4px] text-[12px] font-semibold hover:bg-gray-50 transition-colors">
                 <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 0l4-4m0 0l4 4m-4-4V4"/>
                 </svg>
                 Importer
             </a>
             <a href="{{ route('suppliers.create') }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+               class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -70,7 +70,7 @@
             ['route' => 'suppliers.journal-achats',    'label' => 'Journal achats',   'icon' => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'],
             ['route' => 'suppliers.grand-livre',       'label' => 'Grand livre',      'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
         ] as $item)
-        <a href="{{ route($item['route']) }}" class="flex flex-col items-center gap-2 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 rounded-xl p-3 text-center transition-colors group">
+        <a href="{{ route($item['route']) }}" class="flex flex-col items-center gap-2 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 rounded-[4px] p-3 text-center transition-colors group">
             <svg class="w-6 h-6 text-amber-700 group-hover:text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="{{ $item['icon'] }}"/>
             </svg>
@@ -80,13 +80,13 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="Nom, code, téléphone, email..."
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                   class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
 
-            <select name="is_active" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="is_active" class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 <option value="1" {{ ($filters['is_active'] ?? '') === '1' ? 'selected' : '' }}>Actif</option>
                 <option value="0" {{ ($filters['is_active'] ?? '') === '0' ? 'selected' : '' }}>Inactif</option>
@@ -94,12 +94,12 @@
 
             <div class="flex gap-2 sm:col-span-2 lg:col-span-2">
                 <button type="submit"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(array_filter($filters ?? []))
                 <a href="{{ route('suppliers.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors">
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
                     ✕
                 </a>
                 @endif
@@ -108,49 +108,49 @@
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="tbl-scroll">
-            <table class="tbl tbl-sticky">
+            <table class="w-full text-[12.5px] border-collapse">
                 <thead>
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Email</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Téléphone</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contacts</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Solde dû</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                        <th class="px-4 py-3"></th>
+                    <tr class="bg-[#eef5f0] border-b border-gray-300">
+                        <th class="px-3 py-1 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Code</th>
+                        <th class="px-3 py-1 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Nom</th>
+                        <th class="px-3 py-1 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Email</th>
+                        <th class="px-3 py-1 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Téléphone</th>
+                        <th class="px-3 py-1 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden sm:table-cell">Contacts</th>
+                        <th class="px-3 py-1 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Solde dû</th>
+                        <th class="px-3 py-1 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                        <th class="px-3 py-1"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($suppliers as $supplier)
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-4 py-3 font-mono text-xs text-gray-500">
+                    <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                        <td class="px-3 py-1 font-mono text-emerald-800">
                             {{ $supplier->code ?: '—' }}
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1">
                             <a href="{{ route('suppliers.show', $supplier) }}"
-                               class="font-medium text-gray-900 hover:text-indigo-600 transition-colors">
+                               class="font-medium text-gray-900 hover:text-emerald-700 transition-colors">
                                 {{ $supplier->name }}
                             </a>
                             @if($supplier->city)
                                 <p class="text-xs text-gray-400">{{ $supplier->city }}</p>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+                        <td class="px-3 py-1 text-sm text-gray-600 hidden md:table-cell">
                             @if($supplier->email)
-                                <a href="mailto:{{ $supplier->email }}" class="hover:text-indigo-600 transition-colors">
+                                <a href="mailto:{{ $supplier->email }}" class="hover:text-emerald-700 transition-colors">
                                     {{ $supplier->email }}
                                 </a>
                             @else
                                 <span class="text-gray-400">—</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
+                        <td class="px-3 py-1 text-sm text-gray-600 hidden lg:table-cell">
                             {{ $supplier->phone ?: ($supplier->phone2 ?: '—') }}
                         </td>
-                        <td class="px-4 py-3 text-center hidden sm:table-cell">
+                        <td class="px-3 py-1 text-center hidden sm:table-cell">
                             @if($supplier->contacts_count > 0)
                                 <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
                                     {{ $supplier->contacts_count }}
@@ -159,24 +159,24 @@
                                 <span class="text-gray-400 text-sm">—</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right text-sm font-medium tabular-nums hidden lg:table-cell {{ ($supplier->balance ?? 0) > 0 ? 'text-red-600' : 'text-gray-400' }}">
+                        <td class="px-3 py-1 text-right text-sm font-medium tabular-nums hidden lg:table-cell {{ ($supplier->balance ?? 0) > 0 ? 'text-red-600' : 'text-gray-400' }}">
                             {{ ($supplier->balance ?? 0) > 0 ? number_format($supplier->balance, 0, ',', ' ').' FCFA' : '—' }}
                         </td>
-                        <td class="px-4 py-3 text-center">
+                        <td class="px-3 py-1 text-center">
                             @if($supplier->is_active)
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-100">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[11px] font-semibold bg-green-100 text-green-700 border border-green-100">
                                     <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Actif
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[11px] font-semibold bg-gray-100 text-gray-500">
                                     <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Inactif
                                 </span>
                             @endif
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1">
                             <div class="flex items-center justify-end gap-1">
                                 <a href="{{ route('suppliers.show', $supplier) }}"
-                                   class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                   class="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                                    title="Voir">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -214,9 +214,9 @@
                                 </svg>
                                 <p class="text-sm font-medium">Aucun fournisseur trouvé</p>
                                 @if(array_filter($filters ?? []))
-                                    <a href="{{ route('suppliers.index') }}" class="text-indigo-600 hover:text-indigo-700 text-sm">Effacer les filtres</a>
+                                    <a href="{{ route('suppliers.index') }}" class="text-emerald-700 hover:text-emerald-800 text-sm">Effacer les filtres</a>
                                 @else
-                                    <a href="{{ route('suppliers.create') }}" class="text-indigo-600 hover:text-indigo-700 text-sm">Créer le premier fournisseur</a>
+                                    <a href="{{ route('suppliers.create') }}" class="text-emerald-700 hover:text-emerald-800 text-sm">Créer le premier fournisseur</a>
                                 @endif
                             </div>
                         </td>
@@ -226,11 +226,10 @@
             </table>
         </div>
 
-        @if($suppliers->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
-            {{ $suppliers->links() }}
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+            <span>{{ $suppliers->total() }} fournisseur(s)</span>
+            @if($suppliers->hasPages())<div>{{ $suppliers->links() }}</div>@endif
         </div>
-        @endif
     </div>
 
 </div>

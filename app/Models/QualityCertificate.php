@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\HasCompanyScope;
+use App\Models\Traits\HasCompanyScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 

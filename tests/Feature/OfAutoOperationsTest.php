@@ -43,7 +43,7 @@ it('auto-loads operations from the routing when the OF is launched', function ()
     expect($of->operations()->count())->toBe(2);
 });
 
-it('reports a material shortage as a non-blocking warning', function () {
+it('blocks OF launch on material shortage (dérogation required)', function () {
     $this->actingAs(ofAutoAdmin());
     $co = Company::first();
     $matiere = \App\Models\Product::factory()->create(['reference' => 'MAT-X', 'allow_negative_stock' => false]);
@@ -60,8 +60,13 @@ it('reports a material shortage as a non-blocking warning', function () {
     expect($shortages[0]['need'])->toBe(20.0);
     expect($shortages[0]['available'])->toBe(5.0);
 
-    // Non bloquant : le lancement réussit malgré la pénurie.
-    app(ProductionService::class)->launch($of);
+    // [CDC §3] Bloquant : le lancement normal échoue en cas de rupture matière.
+    expect(fn () => app(ProductionService::class)->launch($of))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+    expect($of->fresh()->status)->toBe('brouillon');
+
+    // Dérogation explicite → lancement autorisé.
+    app(ProductionService::class)->launch($of->fresh(), true);
     expect($of->fresh()->status)->toBe('lance');
 });
 

@@ -60,7 +60,7 @@
     </div>
 
     {{-- Info banner --}}
-    <div class="bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-start gap-3">
+    <div class="bg-violet-50 border border-violet-200 rounded-[4px] p-4 flex items-start gap-3">
         <svg class="w-5 h-5 text-violet-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
@@ -103,7 +103,7 @@
     <form action="{{ route('integrations.simulate.send', $integration) }}"
           method="POST"
           @submit.prevent="submit($event)"
-          class="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          class="bg-white rounded-[4px] border border-gray-300 divide-y divide-gray-100">
 
         @csrf
 
@@ -152,7 +152,7 @@
 
                 {{-- Success --}}
                 <label :class="outcome === 'success' ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-300' : 'border-gray-200 hover:border-gray-300'"
-                       class="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all">
+                       class="relative flex flex-col items-center gap-2 p-4 rounded-[4px] border-2 cursor-pointer transition-all">
                     <input type="radio" name="outcome" value="success" x-model="outcome" class="sr-only">
                     <span class="text-2xl">✅</span>
                     <span class="text-sm font-semibold text-gray-800">Succès</span>
@@ -165,7 +165,7 @@
 
                 {{-- Failure --}}
                 <label :class="outcome === 'failure' ? 'border-red-400 bg-red-50 ring-2 ring-red-300' : 'border-gray-200 hover:border-gray-300'"
-                       class="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all">
+                       class="relative flex flex-col items-center gap-2 p-4 rounded-[4px] border-2 cursor-pointer transition-all">
                     <input type="radio" name="outcome" value="failure" x-model="outcome" class="sr-only">
                     <span class="text-2xl">❌</span>
                     <span class="text-sm font-semibold text-gray-800">Échec</span>
@@ -178,7 +178,7 @@
 
                 {{-- Pending --}}
                 <label :class="outcome === 'pending' ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-300' : 'border-gray-200 hover:border-gray-300'"
-                       class="relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all">
+                       class="relative flex flex-col items-center gap-2 p-4 rounded-[4px] border-2 cursor-pointer transition-all">
                     <input type="radio" name="outcome" value="pending" x-model="outcome" class="sr-only">
                     <span class="text-2xl">⏳</span>
                     <span class="text-sm font-semibold text-gray-800">En attente</span>
@@ -207,7 +207,7 @@
             <p class="text-xs text-gray-400">Aucune transaction financière réelle ne sera effectuée.</p>
             <button type="submit"
                     :disabled="loading || !amount || !phone"
-                    class="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+                    class="bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
                 <svg x-show="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -223,7 +223,7 @@
 
     {{-- Recent simulated transactions --}}
     @if(isset($recentTransactions) && $recentTransactions->isNotEmpty())
-    <div class="bg-white rounded-xl border border-gray-200">
+    <div class="bg-white rounded-[4px] border border-gray-300">
         <div class="px-6 py-4 border-b border-gray-100">
             <h2 class="text-sm font-semibold text-gray-900">Transactions simulées récentes</h2>
         </div>

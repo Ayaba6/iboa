@@ -39,6 +39,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Endpoint JSON polling — actualisation automatique KPIs (60s cache)
     Route::get('/dashboard/kpis', [DashboardController::class, 'kpisJson'])->name('dashboard.kpis');
 
+    // [CDC §Workflow] « Mes validations » — tout ce qui attend l'action de
+    // l'utilisateur selon ses habilitations (le contrôleur filtre par permission).
+    Route::get('/mes-validations', [\App\Http\Controllers\MyValidationsController::class, 'index'])->name('validations.index');
+
     // ── Users (users.manage) ────────────────────────────────────────────────────
     Route::middleware('permission:users.manage')->group(function () {
         Route::resource('users', UserController::class)->except(['destroy']);
@@ -52,6 +56,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // ── Company settings (settings.manage) ──────────────────────────────────────
     Route::middleware('permission:settings.manage')->group(function () {
+        // [Sync ERP] Administration des synchronisations inter-modules
+        Route::get('/admin/synchronisations', [\App\Http\Controllers\SyncLogController::class, 'index'])->name('sync-logs.index');
+        Route::post('/admin/synchronisations/{syncLog}/retry', [\App\Http\Controllers\SyncLogController::class, 'retry'])->name('sync-logs.retry');
+
         Route::get('/parametrage', [CompanyController::class, 'edit'])->name('company.edit');
         Route::put('/parametrage/general', [CompanyController::class, 'updateGeneral'])->name('company.update.general');
         Route::put('/parametrage/legal', [CompanyController::class, 'updateLegal'])->name('company.update.legal');
@@ -62,8 +70,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // ── Paramètres généraux ──────────────────────────────────────────────
         Route::prefix('parametres')->name('settings.')->group(function () {
+            // [Parametrage Vente X3] hub + parametres generaux + remises + modes reglement
+            Route::get('ventes',                          [\App\Http\Controllers\SalesConfigController::class, 'hub'])->name('sales.hub');
+            Route::get('ventes/general',                  [\App\Http\Controllers\SalesConfigController::class, 'settings'])->name('sales.settings');
+            Route::put('ventes/general',                  [\App\Http\Controllers\SalesConfigController::class, 'updateSettings'])->name('sales.settings.update');
+            Route::get('ventes/remises',                  [\App\Http\Controllers\SalesConfigController::class, 'discounts'])->name('sales.discounts');
+            Route::post('ventes/remises',                 [\App\Http\Controllers\SalesConfigController::class, 'storeDiscount'])->name('sales.discounts.store');
+            Route::put('ventes/remises/{discount}',       [\App\Http\Controllers\SalesConfigController::class, 'updateDiscount'])->name('sales.discounts.update');
+            Route::delete('ventes/remises/{discount}',    [\App\Http\Controllers\SalesConfigController::class, 'destroyDiscount'])->name('sales.discounts.destroy');
+            Route::get('modes-reglement',                 [\App\Http\Controllers\SalesConfigController::class, 'methods'])->name('payment-methods.index');
+            Route::post('modes-reglement',                [\App\Http\Controllers\SalesConfigController::class, 'storeMethod'])->name('payment-methods.store');
+            Route::put('modes-reglement/{method}',        [\App\Http\Controllers\SalesConfigController::class, 'updateMethod'])->name('payment-methods.update');
+
             // Exercices fiscaux
             Route::get('exercices',                                 [\App\Http\Controllers\FiscalYearController::class, 'index'])->name('fiscal-years.index');
+            Route::get('exercices/creer',                           [\App\Http\Controllers\FiscalYearController::class, 'create'])->name('fiscal-years.create');
+            Route::get('exercices/{fiscalYear}/modifier',           [\App\Http\Controllers\FiscalYearController::class, 'edit'])->name('fiscal-years.edit');
             Route::post('exercices',                                [\App\Http\Controllers\FiscalYearController::class, 'store'])->name('fiscal-years.store');
             Route::put('exercices/{fiscalYear}',                    [\App\Http\Controllers\FiscalYearController::class, 'update'])->name('fiscal-years.update');
             Route::post('exercices/{fiscalYear}/set-current',       [\App\Http\Controllers\FiscalYearController::class, 'setCurrent'])->name('fiscal-years.set-current');
@@ -93,6 +115,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Numérotation automatique
             Route::get('numerotation',                              [\App\Http\Controllers\DocumentSequenceController::class, 'index'])->name('sequences.index');
+            Route::put('numerotation-parametres',                   [\App\Http\Controllers\DocumentSequenceController::class, 'saveSettings'])->name('sequences.settings');
             Route::get('numerotation/{sequence}/modifier',          [\App\Http\Controllers\DocumentSequenceController::class, 'edit'])->name('sequences.edit');
             Route::put('numerotation/{sequence}',                   [\App\Http\Controllers\DocumentSequenceController::class, 'update'])->name('sequences.update');
             Route::post('numerotation/{sequence}/reset',            [\App\Http\Controllers\DocumentSequenceController::class, 'reset'])->name('sequences.reset');
@@ -187,6 +210,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('contentieux', [\App\Http\Controllers\LitigationCaseController::class, 'store'])->name('contentieux.store');
             Route::patch('contentieux/{case}', [\App\Http\Controllers\LitigationCaseController::class, 'update'])->name('contentieux.update');
             Route::delete('contentieux/{case}', [\App\Http\Controllers\LitigationCaseController::class, 'destroy'])->name('contentieux.destroy');
+
+            // ── Représentants commerciaux ──────────────────────────────────────
+            Route::resource('representants', \App\Http\Controllers\SalesRepController::class)
+                 ->parameters(['representants' => 'representant']);
+            Route::patch('commissions/{commission}/status',
+                [\App\Http\Controllers\SalesRepController::class, 'updateCommissionStatus']
+            )->name('representants.commissions.status');
         });
 
         // Fournisseurs — Rapports
@@ -236,6 +266,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ── Ventes / Module 5 ───────────────────────────────────────────────────────
     Route::prefix('ventes')->name('ventes.')->group(function () {
 
+        // [Parametrage Vente] prix conseille (client + article + unite + qte)
+        Route::get('api/prix', function (\Illuminate\Http\Request $r) {
+            $r->validate(['product_id' => 'required|exists:products,id']);
+            $client  = $r->client_id ? \App\Models\Client::find($r->client_id) : null;
+            $product = \App\Models\Product::findOrFail($r->product_id);
+            return response()->json(app(\App\Services\Sales\SalesPricingService::class)->resolve(
+                $client, $product, $r->integer('unit_id') ?: null, (float) ($r->qty ?? 1)
+            ));
+        })->name('api.prix');
+
+        // [Maquette X3] Contrats commerciaux
+        Route::get('contrats',                    [\App\Http\Controllers\Sales\CommercialContractController::class, 'index'])->name('contrats.index');
+        Route::get('contrats/nouveau',            [\App\Http\Controllers\Sales\CommercialContractController::class, 'create'])->name('contrats.create');
+        Route::get('contrats/{contrat}',          [\App\Http\Controllers\Sales\CommercialContractController::class, 'show'])->whereNumber('contrat')->name('contrats.show');
+        Route::get('contrats/{contrat}/pdf',      [\App\Http\Controllers\Sales\CommercialContractController::class, 'pdf'])->whereNumber('contrat')->name('contrats.pdf');
+        Route::post('contrats',                   [\App\Http\Controllers\Sales\CommercialContractController::class, 'store'])->name('contrats.store');
+        Route::get('contrats/{contrat}/modifier', [\App\Http\Controllers\Sales\CommercialContractController::class, 'edit'])->name('contrats.edit');
+        Route::put('contrats/{contrat}',          [\App\Http\Controllers\Sales\CommercialContractController::class, 'update'])->name('contrats.update');
+        Route::delete('contrats/{contrat}',       [\App\Http\Controllers\Sales\CommercialContractController::class, 'destroy'])->name('contrats.destroy');
+
         // [VENTES-PRO] Tableau de bord ventes (KPIs, top clients, pipeline)
         Route::middleware('permission:invoices.view')->group(function () {
             Route::get('/', [\App\Http\Controllers\Sales\SalesDashboardController::class, 'index'])->name('dashboard');
@@ -243,6 +293,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::middleware('permission:quotes.view')->group(function () {
             Route::get('devis/export', [\App\Http\Controllers\Sales\QuoteController::class, 'export'])->name('devis.export');
+            // [Maquette Nouveau devis] import lignes depuis commande (JSON)
+            Route::get('devis/order-items', [\App\Http\Controllers\Sales\QuoteController::class, 'orderItems'])->name('devis.order-items');
             Route::resource('devis', \App\Http\Controllers\Sales\QuoteController::class)
                 ->parameters(['devis' => 'devis']);
             Route::get('devis/{devis}/pdf',  [\App\Http\Controllers\Sales\QuoteController::class, 'pdf'])->name('devis.pdf');
@@ -270,11 +322,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         Route::middleware('permission:orders.view')->group(function () {
+            // [Maquette Commande client] import lignes depuis devis (JSON) — avant le resource
+            Route::get('commandes/quote-items', [\App\Http\Controllers\Sales\OrderController::class, 'quoteItems'])->name('commandes.quote-items');
             Route::resource('commandes', \App\Http\Controllers\Sales\OrderController::class);
         });
-        Route::middleware('permission:orders.validate')->group(function () {
+        // [CDC §13.1] Transformer une commande en BL/facture = sales.transform
+        // (le commercial transforme ; il ne détient plus orders.validate).
+        Route::middleware('permission:sales.transform')->group(function () {
             Route::post('commandes/{commande}/invoice',       [\App\Http\Controllers\Sales\OrderController::class, 'createInvoice'])->name('commandes.invoice');
             Route::post('commandes/{commande}/delivery-note', [\App\Http\Controllers\Sales\OrderController::class, 'createDeliveryNote'])->name('commandes.delivery-note');
+        });
+        Route::middleware('permission:orders.validate')->group(function () {
             Route::post('commandes/{commande}/confirm',       [\App\Http\Controllers\Sales\OrderController::class, 'confirm'])->name('commandes.confirm');
             Route::post('commandes/{commande}/cancel',        [\App\Http\Controllers\Sales\OrderController::class, 'cancel'])->name('commandes.cancel');
         });
@@ -290,6 +348,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
         Route::middleware('permission:sales.cancel')->group(function () {
             Route::post('commandes/{commande}/cancel-internal',  [\App\Http\Controllers\Sales\OrderController::class, 'cancelInternal'])->name('commandes.cancel-internal');
+        });
+        // [CDC §réouverture] Réouvrir une commande annulée — responsable hiérarchique uniquement
+        Route::middleware('permission:orders.reopen')->group(function () {
+            Route::post('commandes/{commande}/reopen', [\App\Http\Controllers\Sales\OrderController::class, 'reopen'])->name('commandes.reopen');
+        });
+        // [CDC §cash] Enregistrement paiement comptant par caissier → crée bon de préparation
+        Route::middleware('permission:payments.create')->group(function () {
+            Route::post('commandes/{commande}/register-payment', [\App\Http\Controllers\Sales\OrderController::class, 'registerPayment'])->name('commandes.register-payment');
+        });
+        // [CDC §bon-préparation] Module bon de préparation
+        Route::middleware('permission:bon_preparations.view')->group(function () {
+            Route::resource('bons-preparation', \App\Http\Controllers\Sales\BonPreparationController::class)
+                ->parameters(['bons-preparation' => 'bonPreparation'])
+                ->only(['index', 'show']);
+        });
+        Route::middleware('permission:bon_preparations.update')->group(function () {
+            Route::post('bons-preparation/{bonPreparation}/start-loading',  [\App\Http\Controllers\Sales\BonPreparationController::class, 'startLoading'])->name('bons-preparation.start-loading');
+            Route::post('bons-preparation/{bonPreparation}/finish-loading', [\App\Http\Controllers\Sales\BonPreparationController::class, 'finishLoading'])->name('bons-preparation.finish-loading');
         });
 
         Route::middleware('permission:deliveries.view')->group(function () {
@@ -321,6 +397,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::middleware('permission:invoices.view')->group(function () {
             Route::get('factures/export-pdf', [\App\Http\Controllers\Sales\InvoiceController::class, 'exportPdf'])->name('factures.export-pdf');
+            // [Maquette Facture] import lignes depuis commande / BL (JSON)
+            Route::get('factures/order-items', [\App\Http\Controllers\Sales\InvoiceController::class, 'orderItems'])->name('factures.order-items');
+            Route::get('factures/dn-items', [\App\Http\Controllers\Sales\InvoiceController::class, 'deliveryNoteItems'])->name('factures.dn-items');
             // [INVOICE-LOCK] Verrouille PUT/PATCH/DELETE quand status=payee ou annulee — renvoie 403
             // [CONCURRENCE] Anti-double-soumission intégré via x-form-guard (idempotency middleware)
             Route::resource('factures', \App\Http\Controllers\Sales\InvoiceController::class)
@@ -435,6 +514,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         Route::middleware('permission:purchase_orders.view')->group(function () {
+            // [Maquette Commande fournisseur] import lignes depuis DA approuvée (JSON) — avant le resource
+            Route::get('commandes/pr-items', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'prItems'])->name('commandes.pr-items');
             Route::resource('commandes', \App\Http\Controllers\Purchases\PurchaseOrderController::class);
             Route::get('commandes/{commande}/pdf', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'pdf'])->name('commandes.pdf');
         });
@@ -458,6 +539,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         Route::middleware('permission:supplier_invoices.view')->group(function () {
+            // [Maquette Facture fournisseur] import lignes depuis BC (JSON) — avant le resource
+            Route::get('factures-fournisseurs/po-items', [\App\Http\Controllers\Purchases\SupplierInvoiceController::class, 'poItems'])->name('factures-fournisseurs.po-items');
             // [INVOICE-LOCK] Verrouille PUT/PATCH/DELETE sur FF payee/annulee → 403
             Route::resource('factures-fournisseurs', \App\Http\Controllers\Purchases\SupplierInvoiceController::class)
                 ->parameters(['factures-fournisseurs' => 'facturesFournisseur'])
@@ -470,6 +553,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         Route::middleware('permission:supplier_returns.view')->group(function () {
+            // [Maquette Retour fournisseur] import lignes depuis réception (JSON) — avant le resource
+            Route::get('retours-fournisseurs/reception-items', [\App\Http\Controllers\Purchases\SupplierReturnController::class, 'receptionItems'])->name('retours-fournisseurs.reception-items');
             Route::resource('retours-fournisseurs', \App\Http\Controllers\Purchases\SupplierReturnController::class)
                 ->parameters(['retours-fournisseurs' => 'retoursFournisseurs'])
                 ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
@@ -525,8 +610,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         Route::middleware('permission:stocks.adjust')->group(function () {
-            Route::get('mouvement/nouveau', [\App\Http\Controllers\Stock\StockController::class, 'create'])->name('movement.create');
-            Route::post('mouvement', [\App\Http\Controllers\Stock\StockController::class, 'storeMovement'])->name('movement.store');
+            // [Maquette X3] formulaire multi-lignes remplace l'ancien mono-article
+            Route::get('mouvement/nouveau', [\App\Http\Controllers\Stock\StockController::class, 'createManualMovement'])->name('movement.create');
+            Route::post('mouvement', [\App\Http\Controllers\Stock\StockController::class, 'storeManualMovement'])->name('movement.store');
+            // [FIX mouvement bloqué] applique les lignes différées au stock
+            Route::post('mouvement/{movement}/debloquer', [\App\Http\Controllers\Stock\StockController::class, 'unblockManualMovement'])->name('movement.unblock');
             // Seuils min/max editor (batch)
             Route::get('seuils',  [\App\Http\Controllers\Stock\StockController::class, 'seuils'])->name('seuils');
             Route::post('seuils', [\App\Http\Controllers\Stock\StockController::class, 'seuilsUpdate'])->name('seuils.update');
@@ -571,6 +659,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // ── Comptabilité / Module 9 ─────────────────────────────────────────────
     Route::prefix('comptabilite')->name('comptabilite.')->group(function () {
+
+        // [Maquette X3] Paramètres comptables centralisés
+        Route::middleware('permission:accounting.manage')->group(function () {
+            Route::get('parametres',  [\App\Http\Controllers\Accounting\AccountingSettingController::class, 'edit'])->name('parametres.edit');
+            Route::put('parametres',  [\App\Http\Controllers\Accounting\AccountingSettingController::class, 'update'])->name('parametres.update');
+        });
 
         Route::middleware('permission:accounting.view')->group(function () {
             // Plan comptable — extra routes must come BEFORE the resource to avoid {account} conflict
@@ -1277,22 +1371,41 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     // Tableau de bord & rapports
     Route::get('dashboard', [\App\Modules\Production\Controllers\ProductionDashboardController::class, 'index'])->name('dashboard');
     Route::get('reports', [\App\Modules\Production\Controllers\ProductionReportController::class, 'index'])->name('reports');
+    // [BUG-002] Articles fabriqués sans nomenclature
+    Route::get('articles-sans-nomenclature', [\App\Modules\Production\Controllers\MissingBomController::class, 'index'])->name('articles-sans-nomenclature');
 
-    // Planification — plan de charge
-    Route::get('planning', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'index'])->name('planning');
-
-    // Optimisation de découpe (nesting 1D)
-    Route::get('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'index'])->name('cutting');
-    Route::post('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'optimize'])->name('cutting.optimize');
+    // Planification — plan de charge + optimisation découpe : pilotage
+    // production uniquement (chef production / directeur usine).
+    Route::middleware('permission:production.update')->group(function () {
+        Route::get('planning', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'index'])->name('planning');
+        Route::get('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'index'])->name('cutting');
+        Route::post('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'optimize'])->name('cutting.optimize');
+        // [Maquette Optimisation de découpe] fiches persistées
+        Route::get('cutting/create', [\App\Modules\Production\Controllers\CuttingController::class, 'create'])->name('cutting.create');
+        Route::get('cutting/import-lines', [\App\Modules\Production\Controllers\CuttingController::class, 'importLines'])->name('cutting.import-lines');
+        Route::post('cutting/store', [\App\Modules\Production\Controllers\CuttingController::class, 'store'])->name('cutting.store');
+        Route::get('cutting/{optimization}/edit', [\App\Modules\Production\Controllers\CuttingController::class, 'edit'])->name('cutting.edit');
+        Route::put('cutting/{optimization}', [\App\Modules\Production\Controllers\CuttingController::class, 'update'])->name('cutting.update');
+        Route::delete('cutting/{optimization}', [\App\Modules\Production\Controllers\CuttingController::class, 'destroyOptimization'])->name('cutting.destroy');
+        Route::post('cutting/{optimization}/run', [\App\Modules\Production\Controllers\CuttingController::class, 'run'])->name('cutting.run');
+    });
 
     // Maintenance machines
     Route::resource('maintenance', \App\Modules\Production\Controllers\MaintenanceController::class)->except('show')->parameters(['maintenance' => 'maintenance']);
     Route::post('maintenance/{maintenance}/start', [\App\Modules\Production\Controllers\MaintenanceController::class, 'start'])->name('maintenance.start');
     Route::post('maintenance/{maintenance}/finish', [\App\Modules\Production\Controllers\MaintenanceController::class, 'finish'])->name('maintenance.finish');
+    // [CDC §13.8] Pièces de rechange consommées
+    Route::post('maintenance/{maintenance}/parts', [\App\Modules\Production\Controllers\MaintenanceController::class, 'storePart'])->name('maintenance.parts.store');
+    Route::delete('maintenance/parts/{part}', [\App\Modules\Production\Controllers\MaintenanceController::class, 'destroyPart'])->name('maintenance.parts.destroy');
+    // [CDC §13.8] Plans de maintenance préventive
+    Route::resource('maintenance-plans', \App\Modules\Production\Controllers\MaintenancePlanController::class)->except('show')->parameters(['maintenance-plans' => 'plan']);
+    Route::post('maintenance-plans/generate', [\App\Modules\Production\Controllers\MaintenancePlanController::class, 'generate'])->name('maintenance-plans.generate');
 
-    // MRP — réapprovisionnement bobines
-    Route::get('mrp', [\App\Modules\Production\Controllers\MrpController::class, 'index'])->name('mrp');
-    Route::post('mrp/generate', [\App\Modules\Production\Controllers\MrpController::class, 'generate'])->name('mrp.generate');
+    // MRP — réapprovisionnement bobines : pilotage production uniquement
+    Route::middleware('permission:production.update')->group(function () {
+        Route::get('mrp', [\App\Modules\Production\Controllers\MrpController::class, 'index'])->name('mrp');
+        Route::post('mrp/generate', [\App\Modules\Production\Controllers\MrpController::class, 'generate'])->name('mrp.generate');
+    });
 
     // Réception bobine ← Achats : génère des Coil depuis une réception validée
     Route::post('receptions/{reception}/coils', [\App\Modules\Production\Controllers\CoilReceptionController::class, 'generate'])->name('receptions.coils');
@@ -1322,19 +1435,31 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     Route::post('orders/{order}/cancel', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'cancel'])->name('orders.cancel');
     // §13.2 CDC — Validation financière DAF/DG avant lancement OF
     Route::post('orders/{order}/authorize-finance', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'authorizeFinance'])->name('orders.authorize-finance');
-    // §13.10 CDC — Demande de modification OF lancé (multi-validation)
+    // §13.3 CDC — Validation 2-niveaux avant lancement (Chef Atelier → Responsable Production)
+    Route::post('orders/{order}/submit-validation', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'submitForValidation'])->name('orders.submit-validation');
+    Route::post('orders/{order}/validate-chef', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'validateChefAtelier'])->name('orders.validate-chef');
+    Route::post('orders/{order}/validate-responsable', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'validateResponsable'])->name('orders.validate-responsable');
+    // §13.10 CDC — Modification OF exceptionnelle : 4 étapes séquentielles
+    // Chef Production → Commercial → Finance → DG
     Route::post('orders/{order}/request-modification', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'requestModification'])->name('orders.request-modification');
+    Route::post('orders/{order}/modification-avis-chef', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'modificationChefAvis'])->name('orders.modification-avis-chef');
+    Route::post('orders/{order}/modification-avis-commercial', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'modificationCommercialAvis'])->name('orders.modification-avis-commercial');
+    Route::post('orders/{order}/modification-avis-finance', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'modificationFinanceAvis'])->name('orders.modification-avis-finance');
+    Route::post('orders/{order}/modification-approve-dg', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'modificationDgApprove'])->name('orders.modification-approve-dg');
+    Route::post('orders/{order}/modification-reject', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'modificationReject'])->name('orders.modification-reject');
 
     // Exécution : consommation matière, sorties PF, chutes
     Route::post('orders/{order}/consume', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'consume'])->name('orders.consume');
     Route::delete('consumptions/{consumption}', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'destroyConsumption'])->name('consumptions.destroy');
     Route::post('orders/{order}/output', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'output'])->name('orders.output');
     Route::delete('outputs/{output}', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'destroyOutput'])->name('outputs.destroy');
+    // [CDC §13.3] Visa chef d'équipe sur déclaration de production
+    Route::post('outputs/{output}/validate', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'validateOutput'])->name('outputs.validate');
     Route::post('orders/{order}/waste', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'waste'])->name('orders.waste');
     Route::post('orders/{order}/byproduct', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'byproduct'])->name('orders.byproduct');
     Route::delete('wastes/{waste}', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'destroyWaste'])->name('wastes.destroy');
     // [§13.9 CDC] Validation rebuts : Chef Atelier → Responsable Qualité → GL
-    Route::post('wastes/{waste}/validate-chef',    [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'validateChef'])->middleware('permission:production.manage')->name('wastes.validate-chef');
+    Route::post('wastes/{waste}/validate-chef',    [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'validateChef'])->middleware('permission:production.declare')->name('wastes.validate-chef');
     Route::post('wastes/{waste}/validate-quality', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'validateQuality'])->middleware('permission:quality.manage')->name('wastes.validate-quality');
 
     // Coût de revient + contrôle qualité
@@ -1359,11 +1484,13 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
 });
 
 // ═══ Direction — tableau de bord exécutif (cross-module) ═══
-Route::middleware(['auth', 'verified', 'permission:reports.view'])
+// [SEC §15] Synthèse exécutive (trésorerie, marges, cross-module) : réservée
+// à la direction — reports.view ne suffit pas (le commercial l'a pour SES rapports).
+Route::middleware(['auth', 'verified', 'permission:direction.view'])
     ->get('direction', [\App\Http\Controllers\DirectionDashboardController::class, 'index'])->name('direction.dashboard');
 
 // ═══ Chaîne de Valeur Intégrée (§3 CDC) ═══
-Route::middleware(['auth', 'verified', 'permission:reports.view'])
+Route::middleware(['auth', 'verified', 'permission:direction.view'])
     ->get('chaine-valeur', [\App\Http\Controllers\ValueChainController::class, 'index'])->name('chaine-valeur');
 
 // ═══ Qualité — contrôles, non-conformités & certificats (§10 CDC) ═══

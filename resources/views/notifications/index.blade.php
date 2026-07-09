@@ -13,14 +13,14 @@
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-xl font-bold text-gray-900">Notifications</h1>
+            <h1 class="text-[17px] font-bold text-gray-900">Notifications</h1>
             @if($unreadCount > 0)
             <p class="text-sm text-gray-500 mt-0.5">{{ $unreadCount }} non lue(s)</p>
             @endif
         </div>
         @if($unreadCount > 0)
         <button id="markAllBtn"
-                class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors border border-indigo-200">
+                class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-[4px] transition-colors border border-emerald-200">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
             </svg>
@@ -41,11 +41,11 @@
                 'orange' => 'bg-orange-100 text-orange-600',
                 'green'  => 'bg-green-100 text-green-600',
                 'blue'   => 'bg-blue-100 text-blue-600',
-                'indigo' => 'bg-indigo-100 text-indigo-600',
+                'indigo' => 'bg-emerald-100 text-emerald-700',
             ];
             $dot = $colors[$color] ?? $colors['indigo'];
         @endphp
-        <div class="group flex items-start gap-4 p-4 rounded-xl border {{ $read ? 'bg-white border-gray-100' : 'bg-indigo-50/50 border-indigo-100' }} hover:shadow-sm transition-shadow"
+        <div class="group flex items-start gap-4 p-4 rounded-[4px] border {{ $read ? 'bg-white border-gray-100' : 'bg-[#eef5f0]/50 border-emerald-100' }} hover:shadow-sm transition-shadow"
              data-id="{{ $notif->id }}">
 
             {{-- Dot --}}
@@ -60,7 +60,7 @@
                 <div class="flex items-start justify-between gap-2">
                     <p class="text-sm font-semibold text-gray-900">{{ $data['title'] ?? '' }}</p>
                     @if(!$read)
-                    <span class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 mt-1.5"></span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-600 flex-shrink-0 mt-1.5"></span>
                     @endif
                 </div>
                 <p class="text-sm text-gray-600 mt-0.5 leading-relaxed">{{ $data['message'] ?? '' }}</p>
@@ -68,7 +68,7 @@
                     <span class="text-xs text-gray-400">{{ $notif->created_at->diffForHumans() }}</span>
                     @if(!empty($data['url']))
                     <a href="{{ route('notifications.read', $notif->id) }}"
-                       class="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+                       class="text-xs font-medium text-emerald-700 hover:text-emerald-900 transition-colors">
                         Voir →
                     </a>
                     @endif
@@ -76,7 +76,7 @@
             </div>
 
             {{-- Delete --}}
-            <button class="delete-btn opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
+            <button class="delete-btn opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-[4px] text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
                     data-id="{{ $notif->id }}">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -110,7 +110,7 @@
             const id  = btn.dataset.id;
             const row = btn.closest('[data-id]');
             try {
-                await fetch(`/notifications/${id}`, { method:'DELETE', headers:{ 'X-CSRF-TOKEN': csrf() } });
+                await fetch(`{{ url('/notifications') }}/${id}`, { method:'DELETE', headers:{ 'X-CSRF-TOKEN': csrf() } });
                 row?.remove();
             } catch (_) {}
         });
@@ -119,7 +119,7 @@
     // Mark all read — utilise Turbo.visit pour éviter un rechargement complet
     document.getElementById('markAllBtn')?.addEventListener('click', async () => {
         try {
-            await fetch('/notifications/mark-all-read', { method:'POST', headers:{ 'X-CSRF-TOKEN': csrf() } });
+            await fetch('{{ url('/notifications/mark-all-read') }}', { method:'POST', headers:{ 'X-CSRF-TOKEN': csrf() } });
             window.Turbo?.visit(location.href, { action: 'replace' }) ?? location.reload();
         } catch (_) {}
     });

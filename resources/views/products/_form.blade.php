@@ -1,31 +1,38 @@
 {{--
-    Formulaire article — niveau Sage GesCom.
+    Formulaire article — fiche « Articles : Création complète » style SAGE X3
+    avec barre d'onglets : Général · Unités · Stock · Achat · Vente ·
+    Production · Qualité · Comptabilité · Documents.
 
-    Structure :
-      - Section 1 : Identification (référence, désignation, code-barres, description, photo)
-      - Section 2 : Classification (type, famille, marque, unité)
-      - Section 3 : Tarification (achat, vente, marge, TVA, valorisation)
-      - Section 4 : Stock & seuils
-      - Section 5 : Comptabilité (3 comptes : vente/achat/stock)
-      - Section 6 : Fournisseur principal
-      - Section 7 : Traçabilité (lot/série/expiration)
-      - Section 8 : Composants (kit)
-      - Section 9 : Comportement (flags)
-
-    Rendu 100 % serveur — Alpine.js uniquement pour les composants vraiment dynamiques
-    (composants kit, modale création rapide).
+    Variables : $families, $brands, $units, $taxRates, $suppliers, $accounts,
+    $componentProducts, $warehouses, $familiesFlat, $typeArticleOptions,
+    $costCenters, $machines, $linkables ; $product en édition.
 --}}
-
 @php
     $p = $product ?? null;
     $isEdit = isset($product);
-    // Cast helpers pour les checkboxes
-    $boolVal = fn($field, $default = false) => old($field, $p?->{$field} ?? $default) ? '1' : '0';
+
+    $lbl   = 'block text-[11px] font-bold text-gray-700 mb-1';
+    $inp   = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $inpR  = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white text-right font-mono tabular-nums focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $lk    = 'appearance-none w-full h-8 py-0 pl-2 pr-8 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $chk   = 'w-[15px] h-[15px] border-[1.5px] border-gray-400 rounded-[2px] text-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $chkLb = 'text-[12.5px] font-semibold text-gray-700 select-none';
+    $secH  = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
+    $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
+    $depotOn = function ($wh, $cap) use ($p) {
+        $default = $p
+            ? (optional($p->warehouses->firstWhere('id', $wh->id))->pivot->{$cap} ?? false)
+            : ($wh->{$cap} ?? false);
+        return old("depots.{$wh->id}.{$cap}", $default);
+    };
 @endphp
 
 <form action="{{ $isEdit ? route('products.update', $p) : route('products.store') }}"
       method="POST" enctype="multipart/form-data" data-turbo="false"
       x-data="productForm({
+          tab: 'general',
+          manuf: {{ old('is_manufacturable', $p->is_manufacturable ?? false) ? 'true' : 'false' }},
+          thickness: '{{ old('thickness', $p->thickness ?? '') }}',
           type: '{{ old('type', $p->type ?? 'simple') }}',
           purchasePrice: {{ (int) old('purchase_price', $p->purchase_price ?? 0) }},
           marginRate: {{ (float) old('margin_rate_target', $p->margin_rate_target ?? 0) }},
@@ -34,598 +41,582 @@
               ? $p->components->map(fn($c) => ['component_product_id' => $c->component_product_id, 'quantity' => $c->quantity])->toArray()
               : [])) }}
       })"
-      class="space-y-5">
+      class="space-y-3">
     @csrf
     @if($isEdit) @method('PUT') @endif
 
     <x-validation-errors />
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {{-- ═══════════ COLONNE PRINCIPALE (2/3) ═══════════ --}}
-        <div class="lg:col-span-2 space-y-5">
-
-            {{-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                 1. IDENTIFICATION
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-blue-500 rounded-full"></span>
-                    Identification
-                </h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div class="sm:col-span-1">
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Référence</label>
-                        <input type="text" name="reference" value="{{ old('reference', $p->reference ?? '') }}"
-                               maxlength="50" placeholder="Auto si vide (ART-00001)"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-xs font-medium text-gray-600 mb-1">
-                            Désignation <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="name" value="{{ old('name', $p->name ?? '') }}"
-                               required maxlength="200"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-medium">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Code article</label>
-                        <input type="text" name="code_article" value="{{ old('code_article', $p->code_article ?? '') }}"
-                               maxlength="10" placeholder="10 car. max — auto si vide"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Statut</label>
-                        <select name="statut" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                            <option value="actif" @selected(old('statut', $p->statut ?? 'actif') === 'actif')>Actif</option>
-                            <option value="sommeil" @selected(old('statut', $p->statut ?? '') === 'sommeil')>En sommeil</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Code-barres (EAN/UPC)</label>
-                        <input type="text" name="barcode" value="{{ old('barcode', $p->barcode ?? '') }}"
-                               maxlength="50"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Marque</label>
-                        <select name="brand_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                            <option value="">— Aucune —</option>
-                            @foreach($brands as $b)
-                                <option value="{{ $b->id }}" @selected(old('brand_id', $p->brand_id ?? '') == $b->id)>{{ $b->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Description / notes</label>
-                    <textarea name="description" rows="2"
-                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 resize-none">{{ old('description', $p->description ?? '') }}</textarea>
-                </div>
+    {{-- ═══ Bandeau + onglets SAGE ═════════════════════════════════════════════ --}}
+    <div class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+            <h2 class="text-[15px] font-bold text-gray-900">
+                Articles : Création complète
+                @if($isEdit)<span class="font-mono text-emerald-700 ml-1">{{ $p->code_article ?: $p->reference }}</span>@endif
+            </h2>
+            <div class="flex items-center gap-2">
+                <button type="submit"
+                        class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">
+                    Enregistrer
+                </button>
+                <a href="{{ route('products.index') }}"
+                   class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">
+                    Abandon
+                </a>
+                <a href="{{ route('products.create') }}"
+                   class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-full transition-colors">
+                    Créer +
+                </a>
             </div>
-
-            {{-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                 RÉFÉRENTIEL AVANCÉ (Phase E) — familles, unités, poids, stock
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-indigo-500 rounded-full"></span>
-                    Référentiel avancé
-                </h3>
-
-                {{-- Familles 3 niveaux --}}
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    @foreach(['famille1_id' => 'Famille 1', 'famille2_id' => 'Famille 2', 'famille3_id' => 'Famille 3'] as $fname => $flabel)
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">{{ $flabel }}</label>
-                        <select name="{{ $fname }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
-                            <option value="">—</option>
-                            @foreach($familiesFlat as $f)
-                                <option value="{{ $f->id }}" @selected(old($fname, $p->$fname ?? '') == $f->id)>{{ $f->code }} — {{ $f->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endforeach
-                </div>
-
-                {{-- Unités multiples + coefficients --}}
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-100">
-                    @foreach(['purchase_unit_id' => 'Unité d\'achat (UA)', 'sale_unit_id' => 'Unité de vente (UV)', 'weight_unit_id' => 'Unité de poids (UP)'] as $uname => $ulabel)
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">{{ $ulabel }}</label>
-                        <select name="{{ $uname }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
-                            <option value="">—</option>
-                            @foreach($units as $u)
-                                <option value="{{ $u->id }}" @selected(old($uname, $p->$uname ?? '') == $u->id)>{{ $u->abbreviation }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endforeach
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Coef. UA → US</label>
-                        <input type="number" step="0.0001" min="0" name="ua_to_us_coef" value="{{ old('ua_to_us_coef', $p->ua_to_us_coef ?? 1) }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right font-mono focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Coef. UV → US</label>
-                        <input type="number" step="0.0001" min="0" name="uv_to_us_coef" value="{{ old('uv_to_us_coef', $p->uv_to_us_coef ?? 1) }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right font-mono focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Poids brut / US</label>
-                        <input type="number" step="0.0001" min="0" name="gross_weight_per_us" value="{{ old('gross_weight_per_us', $p->gross_weight_per_us ?? '') }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right font-mono focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Poids net / US</label>
-                        <input type="number" step="0.0001" min="0" name="net_weight_per_us" value="{{ old('net_weight_per_us', $p->net_weight_per_us ?? '') }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right font-mono focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                </div>
-
-                {{-- Stock avancé --}}
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-100">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Stock de sécurité</label>
-                        <input type="number" step="0.001" min="0" name="stock_securite" value="{{ old('stock_securite', $p->stock_securite ?? 0) }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right font-mono focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Dépôt principal</label>
-                        <select name="main_warehouse_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
-                            <option value="">—</option>
-                            @foreach($warehouses as $w)
-                                <option value="{{ $w->id }}" @selected(old('main_warehouse_id', $p->main_warehouse_id ?? '') == $w->id)>{{ $w->code }} — {{ $w->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                            <input type="hidden" name="allow_negative_stock" value="0">
-                            <input type="checkbox" name="allow_negative_stock" value="1" @checked(old('allow_negative_stock', $p->allow_negative_stock ?? false))
-                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            Stock négatif autorisé
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            {{-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                 2. TARIFICATION + MARGE
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-emerald-500 rounded-full"></span>
-                    Tarification & marges
-                </h3>
-
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Prix d'achat HT</label>
-                        <div class="relative">
-                            <input type="number" name="purchase_price" x-model.number="purchasePrice"
-                                   value="{{ old('purchase_price', $p->purchase_price ?? 0) }}"
-                                   min="0" step="1"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 text-right tabular-nums pr-12">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">FCFA</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-orange-700 mb-1">Marge cible</label>
-                        <div class="relative">
-                            <input type="number" name="margin_rate_target" x-model.number="marginRate"
-                                   @input="recomputeFromMargin()"
-                                   value="{{ old('margin_rate_target', $p->margin_rate_target ?? '') }}"
-                                   min="0" max="999" step="0.01"
-                                   class="w-full border border-orange-300 bg-orange-50/40 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 text-right tabular-nums pr-8">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-emerald-700 mb-1">Prix vente HT <span class="text-red-500">*</span></label>
-                        <div class="relative">
-                            <input type="number" name="sale_price" x-model.number="salePrice"
-                                   @input="recomputeMargin()"
-                                   value="{{ old('sale_price', $p->sale_price ?? 0) }}"
-                                   min="0" step="1"
-                                   class="w-full border border-emerald-300 bg-emerald-50/40 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 text-right tabular-nums font-semibold pr-12">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">FCFA</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Prix plancher</label>
-                        <div class="relative">
-                            <input type="number" name="min_sale_price"
-                                   value="{{ old('min_sale_price', $p->min_sale_price ?? 0) }}"
-                                   min="0" step="1"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 text-right tabular-nums pr-12">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">FCFA</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg flex items-center gap-2">
-                    <span>💡 Marge calculée :</span>
-                    <strong x-text="formatPercent(actualMargin())" class="text-emerald-700"></strong>
-                    <span class="mx-1 text-gray-300">|</span>
-                    <span>Marge en valeur :</span>
-                    <strong x-text="formatMoney(salePrice - purchasePrice)" class="text-emerald-700"></strong>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Taux TVA</label>
-                        <select name="tax_rate_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                            <option value="">— Exonéré —</option>
-                            @foreach($taxRates as $tr)
-                                <option value="{{ $tr->id }}" @selected(old('tax_rate_id', $p->tax_rate_id ?? '') == $tr->id)>
-                                    {{ $tr->name }} ({{ $tr->rate }} %)
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Méthode de valorisation</label>
-                        <select name="valuation_method" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                            @php $vm = old('valuation_method', $p->valuation_method ?? 'cmp'); @endphp
-                            <option value="cmp"  @selected($vm === 'cmp')>CMP — Coût Moyen Pondéré</option>
-                            <option value="fifo" @selected($vm === 'fifo')>FIFO — Premier Entré / Premier Sorti</option>
-                            <option value="lifo" @selected($vm === 'lifo')>LIFO — Dernier Entré / Premier Sorti</option>
-                        </select>
-                    </div>
-                </div>
-
-                @if($isEdit && ($p->last_purchase_price > 0 || $p->weighted_avg_cost > 0))
-                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100 text-sm">
-                    <div class="bg-gray-50 rounded-lg p-2.5">
-                        <div class="text-xs text-gray-500">Dernier prix d'achat</div>
-                        <div class="font-mono font-semibold text-gray-900 tabular-nums">{{ number_format($p->last_purchase_price, 0, ',', ' ') }} FCFA</div>
-                    </div>
-                    <div class="bg-gray-50 rounded-lg p-2.5">
-                        <div class="text-xs text-gray-500">PMP (Prix moyen pondéré)</div>
-                        <div class="font-mono font-semibold text-gray-900 tabular-nums">{{ number_format($p->weighted_avg_cost, 2, ',', ' ') }} FCFA</div>
-                    </div>
-                </div>
-                @endif
-            </div>
-
-            {{-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                 3. STOCK & SEUILS (visible si stockable)
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-amber-500 rounded-full"></span>
-                    Stock & seuils
-                </h3>
-
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Stock minimum</label>
-                        <input type="number" name="stock_min"
-                               value="{{ old('stock_min', $p->stock_min ?? 0) }}"
-                               min="0" step="0.01"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 text-right tabular-nums">
-                        <p class="text-[10px] text-gray-400 mt-1">Alerte rupture</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Stock maximum</label>
-                        <input type="number" name="stock_max"
-                               value="{{ old('stock_max', $p->stock_max ?? '') }}"
-                               min="0" step="0.01"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 text-right tabular-nums">
-                        <p class="text-[10px] text-gray-400 mt-1">Plafond</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Point de commande</label>
-                        <input type="number" name="reorder_point"
-                               value="{{ old('reorder_point', $p->reorder_point ?? 0) }}"
-                               min="0" step="0.01"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 text-right tabular-nums">
-                        <p class="text-[10px] text-gray-400 mt-1">Déclenche réappro.</p>
-                    </div>
-                </div>
-            </div>
-
-            {{-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                 4. COMPTABILITÉ (Sage GesCom)
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-indigo-500 rounded-full"></span>
-                    Comptabilité
-                    <span class="text-[10px] font-normal text-gray-400 normal-case">(facultatif — utilise la famille si vide)</span>
-                </h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-emerald-700 mb-1">Compte de vente (701x)</label>
-                        <select name="sale_account_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
-                            <option value="">— Hériter famille —</option>
-                            @foreach($accounts->filter(fn($a) => str_starts_with($a->code, '7')) as $a)
-                                <option value="{{ $a->id }}" @selected(old('sale_account_id', $p->sale_account_id ?? '') == $a->id)>
-                                    {{ $a->code }} — {{ $a->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-orange-700 mb-1">Compte d'achat (601x)</label>
-                        <select name="purchase_account_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500">
-                            <option value="">— Hériter famille —</option>
-                            @foreach($accounts->filter(fn($a) => str_starts_with($a->code, '6')) as $a)
-                                <option value="{{ $a->id }}" @selected(old('purchase_account_id', $p->purchase_account_id ?? '') == $a->id)>
-                                    {{ $a->code }} — {{ $a->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-purple-700 mb-1">Compte de stock (311x)</label>
-                        <select name="stock_account_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500">
-                            <option value="">— Hériter famille —</option>
-                            @foreach($accounts->filter(fn($a) => str_starts_with($a->code, '3')) as $a)
-                                <option value="{{ $a->id }}" @selected(old('stock_account_id', $p->stock_account_id ?? '') == $a->id)>
-                                    {{ $a->code }} — {{ $a->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            {{-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                 5. FOURNISSEUR PRINCIPAL
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-cyan-500 rounded-full"></span>
-                    Fournisseur principal
-                </h3>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div class="sm:col-span-2">
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Fournisseur</label>
-                        <select name="default_supplier_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500">
-                            <option value="">— Aucun fournisseur principal —</option>
-                            @foreach($suppliers as $s)
-                                <option value="{{ $s->id }}" @selected(old('default_supplier_id', $p->default_supplier_id ?? '') == $s->id)>
-                                    {{ $s->code }} — {{ $s->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Délai de livraison</label>
-                        <div class="relative">
-                            <input type="number" name="delivery_delay_days"
-                                   value="{{ old('delivery_delay_days', $p->delivery_delay_days ?? '') }}"
-                                   min="0" max="365"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 text-right tabular-nums pr-14">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">jours</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">
-                        Référence chez le fournisseur
-                        <span class="text-gray-400 font-normal">(SKU fournisseur)</span>
-                    </label>
-                    <input type="text" name="supplier_reference"
-                           value="{{ old('supplier_reference', $p->supplier_reference ?? '') }}"
-                           maxlength="80"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-cyan-500">
-                </div>
-            </div>
-
-            {{-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                 6. COMPOSANTS (Kit) — si type = compose
-            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ --}}
-            <div x-show="type === 'compose'" x-cloak
-                 class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <div class="flex items-center justify-between border-b border-gray-100 pb-2">
-                    <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                        <span class="w-1.5 h-5 bg-purple-500 rounded-full"></span>
-                        Composants du kit
-                    </h3>
-                    <button type="button" @click="addComponent()"
-                            class="inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-800 bg-purple-50 px-2 py-1 rounded">
-                        + Ajouter
-                    </button>
-                </div>
-
-                <template x-if="components.length === 0">
-                    <p class="text-sm text-gray-400 text-center py-4">Cliquez sur « + Ajouter » pour définir les articles qui composent ce kit.</p>
-                </template>
-
-                <template x-for="(c, i) in components" :key="i">
-                    <div class="flex items-end gap-3 bg-gray-50 rounded-lg p-3">
-                        <div class="flex-1">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Article composant</label>
-                            <select :name="`components[${i}][component_product_id]`" x-model="c.component_product_id" required
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                                <option value="">— Choisir —</option>
-                                @foreach($componentProducts as $cp)
-                                    <option value="{{ $cp->id }}">{{ $cp->name }} ({{ $cp->reference }})</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div style="width:120px">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Quantité</label>
-                            <input type="number" :name="`components[${i}][quantity]`" x-model="c.quantity"
-                                   min="0.001" step="0.001" required
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right">
-                        </div>
-                        <button type="button" @click="removeComponent(i)"
-                                class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded mb-0.5">✕</button>
-                    </div>
-                </template>
-            </div>
-
         </div>
 
-        {{-- ═══════════ COLONNE LATÉRALE (1/3) ═══════════ --}}
-        <div class="space-y-5">
+        <nav class="flex items-stretch border-b border-gray-200 px-2 overflow-x-auto">
+            @foreach([
+                'general' => 'Général', 'unites' => 'Unités', 'stock' => 'Stock',
+                'achat' => 'Achat', 'vente' => 'Vente', 'prod' => 'Production',
+                'qualite' => 'Qualité', 'compta' => 'Comptabilité', 'docs' => 'Documents',
+            ] as $key => $label)
+            {{-- [SAGE X3] Onglet = ancre : sections toutes visibles, clic = scroll --}}
+            <button type="button"
+                    @click="tab = '{{ $key }}'; document.getElementById('sec-{{ $key }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                    class="px-3 py-1.5 text-[13px] font-semibold border-b-2 transition-colors whitespace-nowrap"
+                    :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-800' : 'border-transparent text-gray-500 hover:text-gray-700'">
+                {{ $label }}
+            </button>
+            @endforeach
+        </nav>
 
-            {{-- ━━━ TYPE + FAMILLE + UNITÉ ━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-blue-500 rounded-full"></span>
-                    Classification
-                </h3>
+        {{-- ══════════════════ GÉNÉRAL ═════════════════════════════════════════ --}}
+        <div id="sec-general" class="p-4 space-y-4 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Identification</div>
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Site</label>
+                        <div class="relative">
+                            <select name="site_id" class="{{ $lk }} font-mono">
+                                <option value="">—</option>
+                                @foreach($warehouses as $wh)<option value="{{ $wh->id }}" @selected(old('site_id', $p->site_id ?? '') == $wh->id)>{{ $wh->code }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="{{ $lbl }}">Catégorie article <span class="text-red-600">*</span></label>
+                        @php
+                            $famProps = fn($f) => 'data-props=\'' . json_encode([
+                                'flux'=>(array)($f->type_flux ?? []),'gs'=>(bool)$f->gestion_stock,'sneg'=>(bool)($f->stock_negatif ?? false),
+                                'gl'=>(bool)$f->gestion_lot,'serie'=>(bool)$f->gestion_numero_serie,'qc'=>(bool)$f->controle_qualite,
+                                'us'=>$f->unite_stock_id,'ua'=>$f->unite_achat_id,'uv'=>$f->unite_vente_id,'depot'=>$f->site_stockage_id,
+                            ], JSON_HEX_APOS) . '\'';
+                        @endphp
+                        <div class="relative">
+                            <select name="family_id" id="family_id_select" class="{{ $lk }}">
+                                <option value="">—</option>
+                                @foreach($families as $f)
+                                    <option value="{{ $f->id }}" {!! $famProps($f) !!} @selected(old('family_id', $p->family_id ?? '') == $f->id)>{{ $f->code ?: $f->name }}</option>
+                                    @foreach($f->children as $child)
+                                        <option value="{{ $child->id }}" {!! $famProps($child) !!} @selected(old('family_id', $p->family_id ?? '') == $child->id)>&nbsp;&nbsp;└ {{ $child->code ?: $child->name }}</option>
+                                    @endforeach
+                                @endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Code article <span class="text-red-600">*</span></label>
+                        <input type="text" name="code_article" maxlength="10" value="{{ old('code_article', $p->code_article ?? '') }}"
+                               class="{{ $inp }} font-mono uppercase" placeholder="PRFTC0001" oninput="this.value = this.value.toUpperCase()">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Référence</label>
+                        <input type="text" name="reference" maxlength="16" value="{{ old('reference', $p->reference ?? '') }}"
+                               class="{{ $inp }} font-mono" placeholder="Auto si vide">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="{{ $lbl }}">Nature article <span class="text-red-600">*</span></label>
+                        <div class="relative">
+                            <select name="type_article" required class="{{ $lk }}">
+                                <option value="">—</option>
+                                @foreach($typeArticleOptions as $val => $label)<option value="{{ $val }}" @selected(old('type_article', $p->type_article ?? '') === $val)>{{ $label }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
 
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                    <select name="type" x-model="type" required
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                        <option value="simple">Article simple</option>
-                        <option value="service">Service / Prestation</option>
-                        <option value="compose">Composé (Kit / Nomenclature)</option>
-                    </select>
+                    <div class="sm:col-span-6">
+                        <label class="{{ $lbl }}">Désignation 1 <span class="text-red-600">*</span></label>
+                        <input type="text" name="name" maxlength="110" required value="{{ old('name', $p->name ?? '') }}"
+                               class="{{ $inp }} font-medium" placeholder="TOLE BAC ALU PUR DE 70/100 AL6">
+                    </div>
+                    <div class="sm:col-span-6">
+                        <label class="{{ $lbl }}">Désignation 2</label>
+                        <input type="text" name="designation_2" maxlength="200" value="{{ old('designation_2', $p->designation_2 ?? '') }}"
+                               class="{{ $inp }}" placeholder="TÔLE BAC ALUMINIUM PUR 70/100 AL6">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Statut</label>
+                        <div class="relative">
+                            <select name="statut" class="{{ $lk }}">
+                                @php $st = old('statut', $p->statut ?? 'actif'); @endphp
+                                <option value="actif" @selected($st==='actif')>Actif</option>
+                                <option value="inactif" @selected($st==='inactif')>En sommeil</option>
+                                <option value="bloque" @selected($st==='bloque')>Bloqué</option>
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Structure</label>
+                        <div class="relative">
+                            <select name="type" x-model="type" required class="{{ $lk }}">
+                                <option value="simple">Simple</option>
+                                <option value="service">Service</option>
+                                <option value="compose">Composé (kit)</option>
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    @foreach(['famille1_id' => 'Famille 1', 'famille2_id' => 'Famille 2', 'famille3_id' => 'Famille 3'] as $fname => $flabel)
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">{{ $flabel }}</label>
+                        <div class="relative">
+                            <select name="{{ $fname }}" class="{{ $lk }} font-mono">
+                                <option value="">—</option>
+                                @foreach($familiesFlat as $fam)<option value="{{ $fam->id }}" @selected(old($fname, $p->$fname ?? '') == $fam->id)>{{ $fam->code }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    @endforeach
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Marque</label>
+                        <div class="relative">
+                            <select name="brand_id" class="{{ $lk }}">
+                                <option value="">—</option>
+                                @foreach($brands as $b)<option value="{{ $b->id }}" @selected(old('brand_id', $p->brand_id ?? '') == $b->id)>{{ $b->name }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Famille</label>
-                    <select name="family_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                        <option value="">— Aucune —</option>
-                        @foreach($families as $f)
-                            <option value="{{ $f->id }}" @selected(old('family_id', $p->family_id ?? '') == $f->id)>{{ $f->name }}</option>
-                            @foreach($f->children as $child)
-                                <option value="{{ $child->id }}" @selected(old('family_id', $p->family_id ?? '') == $child->id)>
-                                    &nbsp;&nbsp;└ {{ $child->name }}
-                                </option>
+                <div class="px-4 pb-4">
+                    <p class="{{ $lbl }} mb-2">Type de flux</p>
+                    <div class="flex flex-wrap gap-x-8 gap-y-2">
+                        @foreach([
+                            'is_purchasable' => 'Acheté (A)', 'is_sellable' => 'Vendu (V)', 'is_manufacturable' => 'Fabriqué (F)',
+                        ] as $fl => $fllabel)
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="hidden" name="{{ $fl }}" value="0">
+                            {{-- [FIX Fabriqué(F)] x-model synchronise avec la case dupliquée de l'onglet
+                                 Production (qui n'a plus de name) — un seul champ soumis, plus d'écrasement. --}}
+                            <input type="checkbox" name="{{ $fl }}" value="1" class="{{ $chk }}"
+                                   @if($fl === 'is_manufacturable') x-model="manuf" @endif
+                                   {{ old($fl, $p->{$fl} ?? ($fl !== 'is_manufacturable')) ? 'checked' : '' }}>
+                            <span class="{{ $chkLb }}">{{ $fllabel }}</span>
+                        </label>
+                        @endforeach
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-1.5">Un article non coché dans un flux ne peut pas y être exécuté (achat / vente / OF).</p>
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ UNITÉS ══════════════════════════════════════════ --}}
+        <div id="sec-unites" class="p-4 pt-0 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Unités</div>
+                <div class="p-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-3">
+                    @foreach(['purchase_unit_id' => 'Unité achat (UA)', 'unit_id' => 'Unité stock (US)', 'sale_unit_id' => 'Unité vente (UV)', 'weight_unit_id' => 'Unité poids (UP)'] as $uname => $ulabel)
+                    <div>
+                        <label class="{{ $lbl }}">{{ $ulabel }}</label>
+                        <div class="relative">
+                            <select name="{{ $uname }}" class="{{ $lk }} font-mono">
+                                <option value="">—</option>
+                                @foreach($units as $u)<option value="{{ $u->id }}" @selected(old($uname, $p->$uname ?? '') == $u->id)>{{ $u->abbreviation }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    @endforeach
+                    <div><label class="{{ $lbl }}">Coef UA/US</label><input type="number" step="0.000001" min="0" name="ua_to_us_coef" id="ua_to_us_coef" value="{{ old('ua_to_us_coef', $p->ua_to_us_coef ?? 1) }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Coef UV/US</label><input type="number" step="0.000001" min="0" name="uv_to_us_coef" value="{{ old('uv_to_us_coef', $p->uv_to_us_coef ?? 1) }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Poids brut US</label><input type="number" step="0.0001" min="0" name="gross_weight_per_us" value="{{ old('gross_weight_per_us', $p->gross_weight_per_us ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Poids net US</label><input type="number" step="0.0001" min="0" name="net_weight_per_us" value="{{ old('net_weight_per_us', $p->net_weight_per_us ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Densité</label><input type="number" step="0.001" min="0" name="density" value="{{ old('density', $p->density ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Épaisseur / diamètre (mm)</label><input type="number" step="0.01" min="0" name="thickness" x-model="thickness" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Métrage (M)</label><input type="number" step="0.01" min="0" name="linear_meters" value="{{ old('linear_meters', $p->linear_meters ?? '') }}" class="{{ $inpR }}"></div>
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ STOCK ═══════════════════════════════════════════ --}}
+        <div id="sec-stock" class="p-4 pt-0 space-y-4 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Gestion stock</div>
+                <div class="p-4 space-y-4">
+                    <div class="flex flex-wrap gap-x-8 gap-y-2">
+                        @foreach([
+                            'is_stockable' => ['Géré en stock', true],
+                            'allow_negative_stock' => ['Stock négatif autorisé', false],
+                            'has_lot_number' => ['Géré en lot', false],
+                        ] as $fl => [$fllabel, $def])
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="hidden" name="{{ $fl }}" value="0">
+                            <input type="checkbox" name="{{ $fl }}" value="1" class="{{ $chk }}"
+                                   {{ old($fl, $p->{$fl} ?? $def) ? 'checked' : '' }}>
+                            <span class="{{ $chkLb }}">{{ $fllabel }}</span>
+                        </label>
+                        @endforeach
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        @foreach(['main_warehouse_id' => 'Dépôt principal', 'production_warehouse_id' => 'Dépôt production', 'sale_warehouse_id' => 'Dépôt vente', 'quality_warehouse_id' => 'Dépôt qualité'] as $wname => $wlabel)
+                        <div>
+                            <label class="{{ $lbl }}">{{ $wlabel }}</label>
+                            <div class="relative">
+                                <select name="{{ $wname }}" class="{{ $lk }} font-mono">
+                                    <option value="">—</option>
+                                    @foreach($warehouses as $wh)<option value="{{ $wh->id }}" @selected(old($wname, $p->$wname ?? '') == $wh->id)>{{ $wh->code }}</option>@endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div><label class="{{ $lbl }}">Stock mini</label><input type="number" step="0.001" min="0" name="stock_min" value="{{ old('stock_min', $p->stock_min ?? 0) }}" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Stock maxi</label><input type="number" step="0.001" min="0" name="stock_max" value="{{ old('stock_max', $p->stock_max ?? '') }}" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Seuil alerte</label><input type="number" step="0.001" min="0" name="seuil_alerte" value="{{ old('seuil_alerte', $p->seuil_alerte ?? '') }}" class="{{ $inpR }}"></div>
+                        <div>
+                            <label class="{{ $lbl }}">Valorisation</label>
+                            <div class="relative">
+                                <select name="valuation_method" class="{{ $lk }}">
+                                    @php $vm = old('valuation_method', $p->valuation_method ?? 'cmp'); @endphp
+                                    <option value="cmp" @selected($vm==='cmp')>CMP</option>
+                                    <option value="fifo" @selected($vm==='fifo')>FIFO</option>
+                                    <option value="lifo" @selected($vm==='lifo')>LIFO</option>
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Dépôts autorisés</div>
+                <div class="p-4">
+                    <table class="w-full text-[12.5px] border border-gray-200">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600">
+                                <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200 w-10">#</th>
+                                <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Code dépôt</th>
+                                <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Intitulé</th>
+                                <th class="text-center font-bold px-3 py-1.5 border-b border-gray-200">Production</th>
+                                <th class="text-center font-bold px-3 py-1.5 border-b border-gray-200">Vente</th>
+                                <th class="text-center font-bold px-3 py-1.5 border-b border-gray-200">Achat</th>
+                                <th class="text-center font-bold px-3 py-1.5 border-b border-gray-200">Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($warehouses as $i => $wh)
+                            <tr class="border-b border-gray-100 last:border-0">
+                                <td class="px-3 py-1.5 text-gray-400">{{ $i + 1 }}</td>
+                                <td class="px-3 py-1.5 font-mono font-semibold text-gray-700">{{ $wh->code }}</td>
+                                <td class="px-3 py-1.5 text-gray-700">{{ $wh->name }}</td>
+                                @foreach(['can_production', 'can_sale', 'can_purchase', 'can_stock'] as $cap)
+                                <td class="px-3 py-1.5 text-center">
+                                    <input type="hidden" name="depots[{{ $wh->id }}][{{ $cap }}]" value="0">
+                                    <input type="checkbox" name="depots[{{ $wh->id }}][{{ $cap }}]" value="1" {{ $depotOn($wh, $cap) ? 'checked' : '' }} class="{{ $chk }}">
+                                </td>
+                                @endforeach
+                            </tr>
+                            @empty
+                            <tr><td colspan="7" class="px-3 py-4 text-center text-gray-400">Aucun dépôt configuré.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ ACHAT ═══════════════════════════════════════════ --}}
+        <div id="sec-achat" class="p-4 pt-0 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Achat</div>
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div><label class="{{ $lbl }}">Prix d'achat HT</label><input type="number" min="0" step="1" name="purchase_price" x-model.number="purchasePrice" value="{{ old('purchase_price', $p->purchase_price ?? 0) }}" class="{{ $inpR }}"></div>
+                    <div>
+                        <label class="{{ $lbl }}">TVA achat</label>
+                        <div class="relative">
+                            <select name="tax_rate_achat_id" class="{{ $lk }}">
+                                <option value="">—</option>
+                                @foreach($taxRates as $tr)<option value="{{ $tr->id }}" @selected(old('tax_rate_achat_id', $p->tax_rate_achat_id ?? '') == $tr->id)>{{ $tr->rate }} %</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div><label class="{{ $lbl }}">Délai livraison (jours)</label><input type="number" min="0" max="365" name="delivery_delay_days" value="{{ old('delivery_delay_days', $p->delivery_delay_days ?? '') }}" class="{{ $inpR }}"></div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Fournisseur principal</label>
+                        <div class="relative">
+                            <select name="default_supplier_id" class="{{ $lk }}">
+                                <option value="">—</option>
+                                @foreach($suppliers as $s)<option value="{{ $s->id }}" @selected(old('default_supplier_id', $p->default_supplier_id ?? '') == $s->id)>{{ $s->code }} — {{ $s->name }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div><label class="{{ $lbl }}">Référence fournisseur</label><input type="text" maxlength="80" name="supplier_reference" value="{{ old('supplier_reference', $p->supplier_reference ?? '') }}" class="{{ $inp }} font-mono"></div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Compte d'achat (6xx)</label>
+                        <div class="relative">
+                            <select name="purchase_account_id" class="{{ $lk }} font-mono">
+                                <option value="">— Hériter catégorie —</option>
+                                @foreach($accounts->filter(fn($a)=>str_starts_with($a->code,'6')) as $a)<option value="{{ $a->id }}" @selected(old('purchase_account_id', $p->purchase_account_id ?? '') == $a->id)>{{ $a->code }} — {{ $a->name }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ VENTE ═══════════════════════════════════════════ --}}
+        <div id="sec-vente" class="p-4 pt-0 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Vente</div>
+                <div class="p-4 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="{{ $lbl }}">Prix vente de base</label>
+                            <input type="number" min="0" step="1" name="sale_price" x-model.number="salePrice" @input="recomputeMargin()" value="{{ old('sale_price', $p->sale_price ?? 0) }}"
+                                   :class="(purchasePrice > 0 && salePrice > 0 && salePrice < purchasePrice) ? '!border-red-500 !text-red-600 bg-red-50' : 'border-emerald-400'"
+                                   class="{{ $inpR }} font-semibold">
+                            {{-- [Vente à perte interdite] Alerte visible avant soumission ; le serveur bloque aussi. --}}
+                            <p x-show="purchasePrice > 0 && salePrice > 0 && salePrice < purchasePrice" x-cloak
+                               class="text-[11px] text-red-600 font-semibold mt-0.5">⚠ Vente à perte : prix de vente &lt; prix d'achat — enregistrement refusé.</p>
+                        </div>
+                        {{-- [FIX submit silencieux] Aucune contrainte native min/max : dans un onglet masqué,
+                             une valeur hors bornes (ex. marge réelle négative recalculée après baisse de prix)
+                             bloquait la soumission SANS message (le navigateur ne peut afficher la bulle sur un
+                             champ caché). La validation serveur (nullable|numeric|min:0|max:999.99) reste active
+                             et affiche une erreur visible via <x-validation-errors>. --}}
+                        <div><label class="{{ $lbl }}">Marge cible (%)</label><input type="number" step="0.01" name="margin_rate_target" x-model.number="marginRate" @input="recomputeFromMargin()" value="{{ old('margin_rate_target', $p->margin_rate_target ?? '') }}" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Prix plancher</label><input type="number" min="0" step="1" name="min_sale_price" value="{{ old('min_sale_price', $p->min_sale_price ?? 0) }}" class="{{ $inpR }}"></div>
+                        <div>
+                            <label class="{{ $lbl }}">TVA vente</label>
+                            <div class="relative">
+                                <select name="tax_rate_id" class="{{ $lk }}">
+                                    <option value="">Exonéré</option>
+                                    @foreach($taxRates as $tr)<option value="{{ $tr->id }}" @selected(old('tax_rate_id', $p->tax_rate_id ?? '') == $tr->id)>{{ $tr->rate }} %</option>@endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div><label class="{{ $lbl }}">Client type / canal</label><input type="text" maxlength="60" name="client_type_canal" value="{{ old('client_type_canal', $p->client_type_canal ?? '') }}" class="{{ $inp }}" placeholder="PRO / DIR"></div>
+                        <div class="sm:col-span-2">
+                            <label class="{{ $lbl }}">Compte de vente (7xx)</label>
+                            <div class="relative">
+                                <select name="sale_account_id" class="{{ $lk }} font-mono">
+                                    <option value="">— Hériter catégorie —</option>
+                                    @foreach($accounts->filter(fn($a)=>str_starts_with($a->code,'7')) as $a)<option value="{{ $a->id }}" @selected(old('sale_account_id', $p->sale_account_id ?? '') == $a->id)>{{ $a->code }} — {{ $a->name }}</option>@endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-[12px] text-gray-600 bg-gray-50 border border-gray-200 rounded-[3px] px-3 py-1.5 inline-flex items-center gap-2">
+                        <span>Marge :</span><strong x-text="formatPercent(actualMargin())" class="text-emerald-700 font-mono"></strong>
+                        <span class="text-gray-300">|</span><span>en valeur :</span><strong x-text="formatMoney(salePrice - purchasePrice)" class="text-emerald-700 font-mono"></strong>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ PRODUCTION ══════════════════════════════════════ --}}
+        <div id="sec-prod" class="p-4 pt-0 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Production tôle bac</div>
+                <div class="p-4 space-y-4">
+                    <div class="flex flex-wrap gap-x-8 gap-y-2">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            {{-- [FIX Fabriqué(F)] Miroir de la case « Type de flux » (onglet Général) : cette
+                                 paire hidden+checkbox dupliquée, non cochée, écrasait la valeur soumise (« 0 »
+                                 gagnait toujours). x-model synchronise, pas de name → un seul champ soumis. --}}
+                            <input type="checkbox" class="{{ $chk }}" x-model="manuf">
+                            <span class="{{ $chkLb }}">Fabriqué (flux F)</span>
+                        </label>
+                        <div class="inline-flex items-center gap-2">
+                            <span class="{{ $lbl }} mb-0">Mode</span>
+                            <div class="relative">
+                                <select name="production_mode" class="{{ $lk }} h-7 w-32">
+                                    @php $pm = old('production_mode', $p->production_mode ?? ''); @endphp
+                                    <option value="">—</option>
+                                    <option value="mts" @selected($pm==='mts')>MTS (sur stock)</option>
+                                    <option value="mto" @selected($pm==='mto')>MTO (sur commande)</option>
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div><label class="{{ $lbl }}">Article parent / nomenclature</label><input type="text" maxlength="60" name="nomenclature_ref" value="{{ old('nomenclature_ref', $p->nomenclature_ref ?? '') }}" class="{{ $inp }} font-mono" placeholder="OFOUTLB…"></div>
+                        <div><label class="{{ $lbl }}">Profil</label><input type="text" maxlength="60" name="profil" value="{{ old('profil', $p->profil ?? '') }}" class="{{ $inp }}" placeholder="TBA1000-5N"></div>
+                        <div><label class="{{ $lbl }}">Couleur</label><input type="text" maxlength="60" name="couleur" value="{{ old('couleur', $p->couleur ?? '') }}" class="{{ $inp }}" placeholder="ALU NATUREL"></div>
+                        {{-- [FIX doublons] miroir de « Épaisseur / diamètre » (onglet Stock) — pas de name --}}
+                        <div><label class="{{ $lbl }}">Épaisseur (mm)</label><input type="number" step="0.01" min="0" x-model="thickness" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Largeur utile (mm)</label><input type="number" step="0.01" min="0" name="largeur_utile" value="{{ old('largeur_utile', $p->largeur_utile ?? '') }}" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Longueur standard (mm)</label><input type="number" step="0.01" min="0" name="longueur_standard" value="{{ old('longueur_standard', $p->longueur_standard ?? '') }}" class="{{ $inpR }}"></div>
+                        <div>
+                            <label class="{{ $lbl }}">Machine par défaut</label>
+                            <div class="relative">
+                                <select name="machine_defaut_id" class="{{ $lk }} font-mono">
+                                    <option value="">—</option>
+                                    @foreach($machines as $m)<option value="{{ $m->id }}" @selected(old('machine_defaut_id', $p->machine_defaut_id ?? '') == $m->id)>{{ $m->code }} — {{ $m->name }}</option>@endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                        <div><label class="{{ $lbl }}">Rendement standard</label><input type="number" step="0.0001" min="0" max="9.9999" name="rendement_standard" value="{{ old('rendement_standard', $p->rendement_standard ?? '') }}" class="{{ $inpR }}" placeholder="0,965"></div>
+                        <div><label class="{{ $lbl }}">Taux de perte</label><input type="number" step="0.0001" min="0" max="9.9999" name="taux_perte" value="{{ old('taux_perte', $p->taux_perte ?? '') }}" class="{{ $inpR }}" placeholder="0,035"></div>
+                        <div>
+                            <label class="{{ $lbl }}">Article avarié lié</label>
+                            <div class="relative">
+                                <select name="article_avarie_id" class="{{ $lk }}">
+                                    <option value="">—</option>
+                                    @foreach($linkables as $la)<option value="{{ $la->id }}" @selected(old('article_avarie_id', $p->article_avarie_id ?? '') == $la->id)>{{ $la->code_article }} — {{ \Illuminate\Support\Str::limit($la->name, 30) }}</option>@endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="{{ $lbl }}">Article chute lié</label>
+                            <div class="relative">
+                                <select name="article_chute_id" class="{{ $lk }}">
+                                    <option value="">—</option>
+                                    @foreach($linkables as $la)<option value="{{ $la->id }}" @selected(old('article_chute_id', $p->article_chute_id ?? '') == $la->id)>{{ $la->code_article }} — {{ \Illuminate\Support\Str::limit($la->name, 30) }}</option>@endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ QUALITÉ ═════════════════════════════════════════ --}}
+        <div id="sec-qualite" class="p-4 pt-0 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Qualité &amp; traçabilité</div>
+                <div class="p-4 flex flex-wrap gap-x-8 gap-y-2.5">
+                    @foreach([
+                        'controle_qualite' => 'Contrôle qualité',
+                        'has_lot_number' => 'Géré en lot',
+                        'has_serial_number' => 'Numéro de série',
+                        'has_expiry_date' => "Date d'expiration",
+                    ] as $fl => $fllabel)
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="hidden" name="{{ $fl }}" value="0">
+                        <input type="checkbox" name="{{ $fl }}" value="1" class="{{ $chk }}" {{ old($fl, $p->{$fl} ?? false) ? 'checked' : '' }}>
+                        <span class="{{ $chkLb }}">{{ $fllabel }}</span>
+                    </label>
+                    @endforeach
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ COMPTABILITÉ ════════════════════════════════════ --}}
+        <div id="sec-compta" class="p-4 pt-0 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Comptabilité</div>
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="{{ $lbl }}">Compte de stock (3xx)</label>
+                        <div class="relative">
+                            <select name="stock_account_id" class="{{ $lk }} font-mono">
+                                <option value="">— Hériter catégorie —</option>
+                                @foreach($accounts->filter(fn($a)=>str_starts_with($a->code,'3')) as $a)<option value="{{ $a->id }}" @selected(old('stock_account_id', $p->stock_account_id ?? '') == $a->id)>{{ $a->code }} — {{ $a->name }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="{{ $lbl }}">Variation de stocks (603x)</label>
+                        <div class="relative">
+                            <select name="variation_stock_account_id" class="{{ $lk }} font-mono">
+                                <option value="">—</option>
+                                @foreach($accounts->filter(fn($a)=>str_starts_with($a->code,'6')) as $a)<option value="{{ $a->id }}" @selected(old('variation_stock_account_id', $p->variation_stock_account_id ?? '') == $a->id)>{{ $a->code }} — {{ $a->name }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div><label class="{{ $lbl }}">Coût standard</label><input type="number" step="0.0001" min="0" name="cout_standard" value="{{ old('cout_standard', $p->cout_standard ?? 0) }}" class="{{ $inpR }}"></div>
+                    <div>
+                        <label class="{{ $lbl }}">Section analytique</label>
+                        <div class="relative">
+                            <select name="section_analytique_id" class="{{ $lk }} font-mono">
+                                <option value="">—</option>
+                                @foreach($costCenters as $cc)<option value="{{ $cc->id }}" @selected(old('section_analytique_id', $p->section_analytique_id ?? '') == $cc->id)>{{ $cc->code }} — {{ $cc->name }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="{{ $lbl }}">Centre de coût</label>
+                        <div class="relative">
+                            <select name="cost_center_id" class="{{ $lk }} font-mono">
+                                <option value="">—</option>
+                                @foreach($costCenters as $cc)<option value="{{ $cc->id }}" @selected(old('cost_center_id', $p->cost_center_id ?? '') == $cc->id)>{{ $cc->code }} — {{ $cc->name }}</option>@endforeach
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{-- ══════════════════ DOCUMENTS ═══════════════════════════════════════ --}}
+        <div id="sec-docs" class="p-4 pt-0 scroll-mt-28">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Documents / pièces jointes</div>
+                <div class="p-4 space-y-4">
+                    @if($isEdit && $p->attachments->isNotEmpty())
+                    <table class="w-full text-[12.5px] border border-gray-200">
+                        <thead><tr class="bg-gray-50 text-gray-600">
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200 w-10">#</th>
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Fichier</th>
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Type</th>
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Taille</th>
+                        </tr></thead>
+                        <tbody>
+                            @foreach($p->attachments as $i => $att)
+                            <tr class="border-b border-gray-100 last:border-0">
+                                <td class="px-3 py-1.5 text-gray-400">{{ $i + 1 }}</td>
+                                <td class="px-3 py-1.5 text-gray-700 font-mono">{{ $att->filename }}</td>
+                                <td class="px-3 py-1.5 text-gray-500">{{ $att->mime_type }}</td>
+                                <td class="px-3 py-1.5 text-gray-500 tabular-nums">{{ number_format($att->size / 1024, 0, ',', ' ') }} Ko</td>
+                            </tr>
                             @endforeach
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Unité de mesure</label>
-                    <select name="unit_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                        <option value="">— Aucune —</option>
-                        @foreach($units as $u)
-                            <option value="{{ $u->id }}" @selected(old('unit_id', $p->unit_id ?? '') == $u->id)>
-                                {{ $u->name }} ({{ $u->abbreviation }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            {{-- ━━━ COMPORTEMENT (flags) ━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-teal-500 rounded-full"></span>
-                    Comportement
-                </h3>
-
-                @foreach([
-                    ['name' => 'is_stockable',   'label' => 'Géré en stock',    'desc' => 'Suivi des entrées/sorties', 'default' => true],
-                    ['name' => 'is_purchasable', 'label' => 'Achetable',        'desc' => 'Peut figurer sur un BC',     'default' => true],
-                    ['name' => 'is_sellable',    'label' => 'Vendable',         'desc' => 'Peut être facturé',          'default' => true],
-                    ['name' => 'is_active',      'label' => 'Actif',            'desc' => 'Visible dans les listes',    'default' => true],
-                ] as $opt)
-                <label class="flex items-start gap-2.5 cursor-pointer">
-                    <input type="hidden" name="{{ $opt['name'] }}" value="0">
-                    <input type="checkbox" name="{{ $opt['name'] }}" value="1"
-                           {{ old($opt['name'], $p->{$opt['name']} ?? $opt['default']) ? 'checked' : '' }}
-                           class="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        </tbody>
+                    </table>
+                    @endif
                     <div>
-                        <span class="text-sm font-medium text-gray-700">{{ $opt['label'] }}</span>
-                        <p class="text-xs text-gray-400">{{ $opt['desc'] }}</p>
-                    </div>
-                </label>
-                @endforeach
-            </div>
-
-            {{-- ━━━ TRAÇABILITÉ ━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-orange-500 rounded-full"></span>
-                    Traçabilité
-                </h3>
-
-                @foreach([
-                    ['name' => 'has_lot_number',    'label' => 'Numéro de lot',     'desc' => 'Produits chimiques, alimentaires'],
-                    ['name' => 'has_serial_number', 'label' => 'Numéro de série',   'desc' => 'Matériel, équipements'],
-                    ['name' => 'has_expiry_date',   'label' => 'Date d\'expiration', 'desc' => 'Médicaments, périssables'],
-                ] as $opt)
-                <label class="flex items-start gap-2.5 cursor-pointer">
-                    <input type="hidden" name="{{ $opt['name'] }}" value="0">
-                    <input type="checkbox" name="{{ $opt['name'] }}" value="1"
-                           {{ old($opt['name'], $p->{$opt['name']} ?? false) ? 'checked' : '' }}
-                           class="mt-0.5 w-4 h-4 text-orange-500 rounded focus:ring-orange-400">
-                    <div>
-                        <span class="text-sm font-medium text-gray-700">{{ $opt['label'] }}</span>
-                        <p class="text-xs text-gray-400">{{ $opt['desc'] }}</p>
-                    </div>
-                </label>
-                @endforeach
-            </div>
-
-            {{-- ━━━ POIDS ━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-gray-400 rounded-full"></span>
-                    Poids
-                </h3>
-                <div class="flex gap-3">
-                    <div class="flex-1">
-                        <input type="number" name="weight" value="{{ old('weight', $p->weight ?? '') }}"
-                               min="0" step="0.001" placeholder="0.000"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 text-right tabular-nums">
-                    </div>
-                    <div style="width:80px">
-                        <select name="weight_unit" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                            @php $wu = old('weight_unit', $p->weight_unit ?? 'kg'); @endphp
-                            <option value="kg" @selected($wu === 'kg')>kg</option>
-                            <option value="g"  @selected($wu === 'g')>g</option>
-                            <option value="t"  @selected($wu === 't')>t</option>
-                        </select>
+                        <label class="{{ $lbl }}">Ajouter des pièces jointes</label>
+                        <input type="file" name="documents[]" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                               class="w-full text-[13px] border border-[#c3d3c9] rounded-[3px] px-2 py-1.5 cursor-pointer
+                                      file:mr-3 file:py-0.5 file:px-2 file:border-0 file:bg-emerald-50 file:text-emerald-700
+                                      file:rounded-[2px] file:text-[12px] file:font-semibold hover:file:bg-emerald-100">
+                        <p class="text-[11px] text-gray-400 mt-1">PDF, images, Word, Excel — max 5 Mo par fichier.</p>
                     </div>
                 </div>
-            </div>
-
-            {{-- ━━━ PHOTO ━━━ --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <span class="w-1.5 h-5 bg-pink-400 rounded-full"></span>
-                    Photo
-                </h3>
-                @if($isEdit && $p->image)
-                <div class="mb-2 w-full h-32 bg-gray-50 rounded-lg border overflow-hidden">
-                    <img src="{{ url(Storage::url($p->image)) }}" alt="" class="w-full h-full object-contain">
-                </div>
-                @endif
-                <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp"
-                       class="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 cursor-pointer
-                              file:mr-3 file:py-1 file:px-3 file:border-0 file:bg-blue-50 file:text-blue-700
-                              file:rounded file:text-xs file:font-medium hover:file:bg-blue-100">
-                <p class="text-[10px] text-gray-400">JPEG, PNG, GIF, WebP — max 2 Mo</p>
-            </div>
+            </section>
         </div>
     </div>
 
-    {{-- ── Boutons d'action ── --}}
-    <div class="flex justify-end gap-3 pt-2">
-        <a href="{{ route('products.index') }}"
-           class="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg">
-            Annuler
-        </a>
-        <button type="submit"
-                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg">
-            ✓ {{ $isEdit ? 'Enregistrer' : 'Créer l\'article' }}
-        </button>
+    {{-- Composants kit (hors onglets, si structure composé) --}}
+    <div x-show="type === 'compose'" x-cloak class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="{{ $secH }} flex items-center justify-between">
+            <span>Composants du kit</span>
+            <button type="button" @click="addComponent()" class="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-[3px]">+ Ajouter</button>
+        </div>
+        <div class="p-4 space-y-2">
+            <template x-if="components.length === 0"><p class="text-[13px] text-gray-400 text-center py-3">Cliquez sur « + Ajouter ».</p></template>
+            <template x-for="(c, i) in components" :key="i">
+                <div class="flex items-end gap-3 bg-gray-50 border border-gray-200 rounded-[3px] p-2.5">
+                    <div class="flex-1">
+                        <label class="{{ $lbl }}">Article composant</label>
+                        <select :name="`components[${i}][component_product_id]`" x-model="c.component_product_id" required class="{{ $inp }}">
+                            <option value="">—</option>
+                            @foreach($componentProducts as $cp)<option value="{{ $cp->id }}">{{ $cp->name }} ({{ $cp->reference }})</option>@endforeach
+                        </select>
+                    </div>
+                    <div style="width:120px"><label class="{{ $lbl }}">Quantité</label><input type="number" :name="`components[${i}][quantity]`" x-model="c.quantity" min="0.001" step="0.001" required class="{{ $inpR }}"></div>
+                    <button type="button" @click="removeComponent(i)" class="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-[3px]">✕</button>
+                </div>
+            </template>
+        </div>
     </div>
 </form>
 
@@ -633,6 +624,9 @@
 <script>
 function productForm(init) {
     return {
+        tab:           init.tab || 'general',
+        manuf:         !!init.manuf,
+        thickness:     init.thickness ?? '',
         type:          init.type || 'simple',
         purchasePrice: Number(init.purchasePrice) || 0,
         marginRate:    Number(init.marginRate)    || 0,
@@ -646,20 +640,51 @@ function productForm(init) {
             if (!this.salePrice) return 0;
             return ((this.salePrice - this.purchasePrice) / this.salePrice) * 100;
         },
-        recomputeMargin() {
-            this.marginRate = Math.round(this.actualMargin() * 100) / 100;
-        },
+        recomputeMargin()     { this.marginRate = Math.round(this.actualMargin() * 100) / 100; },
         recomputeFromMargin() {
             if (this.marginRate >= 100 || !this.purchasePrice) return;
             this.salePrice = Math.round(this.purchasePrice / (1 - this.marginRate / 100));
         },
-        formatPercent(v) {
-            return (Math.round(v * 100) / 100).toFixed(2) + ' %';
-        },
-        formatMoney(v) {
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v) + ' FCFA';
-        },
+        formatPercent(v) { return (Math.round(v * 100) / 100).toFixed(2) + ' %'; },
+        formatMoney(v)   { return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v) + ' FCFA'; },
     };
 }
+
+// ── CDC articles : héritage des propriétés de la catégorie ──────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    const catSelect = document.getElementById('family_id_select');
+    if (catSelect) {
+        catSelect.addEventListener('change', function () {
+            const opt = this.options[this.selectedIndex];
+            if (!opt || !opt.dataset.props) return;
+            const p = JSON.parse(opt.dataset.props);
+            // [FIX Fabriqué(F)] dispatch 'change' pour que les cases pilotées par x-model
+            // (état Alpine) prennent la nouvelle valeur — sinon l'état écraserait le .checked.
+            const setCheck = (name, val) => { const b = document.querySelector('input[type="checkbox"][name="' + name + '"]'); if (b) { b.checked = !!val; b.dispatchEvent(new Event('change')); } };
+            const setSelect = (name, val) => { const s = document.querySelector('select[name="' + name + '"]'); if (s && val) s.value = val; };
+            setCheck('is_stockable', p.gs);
+            setCheck('allow_negative_stock', p.sneg);
+            setCheck('has_lot_number', p.gl);
+            setCheck('has_serial_number', p.serie);
+            setCheck('controle_qualite', p.qc);
+            setCheck('is_purchasable', (p.flux || []).includes('achete'));
+            setCheck('is_sellable', (p.flux || []).includes('vendu'));
+            setCheck('is_manufacturable', (p.flux || []).includes('fabrique'));
+            setSelect('unit_id', p.us);
+            setSelect('purchase_unit_id', p.ua);
+            setSelect('sale_unit_id', p.uv);
+            setSelect('main_warehouse_id', p.depot);
+        });
+    }
+    // Coef UA-US auto = 1 / poids net
+    const netWeight = document.querySelector('input[name="net_weight_per_us"]');
+    const coefUaUs  = document.getElementById('ua_to_us_coef');
+    if (netWeight && coefUaUs) {
+        netWeight.addEventListener('change', function () {
+            const w = parseFloat(this.value);
+            if (w > 0 && (!coefUaUs.value || parseFloat(coefUaUs.value) === 1)) coefUaUs.value = (1 / w).toFixed(6);
+        });
+    }
+});
 </script>
 @endpush

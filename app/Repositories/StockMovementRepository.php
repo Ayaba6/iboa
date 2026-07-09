@@ -17,7 +17,7 @@ class StockMovementRepository extends BaseRepository
         $query = $this->model
             ->leftJoin('products', 'stock_movements.product_id', '=', 'products.id')
             ->select('stock_movements.*')
-            ->with(['product.family', 'warehouse', 'createdBy']);
+            ->with(['product.family', 'product.unit', 'warehouse', 'createdBy', 'fromWarehouse', 'toWarehouse']);
 
         if (!empty($filters['product_id'])) {
             $query->where('stock_movements.product_id', $filters['product_id']);
@@ -38,6 +38,22 @@ class StockMovementRepository extends BaseRepository
             $s = '%' . $filters['search'] . '%';
             $query->where(fn($q) => $q->where('products.name', 'like', $s)
                                       ->orWhere('products.reference', 'like', $s));
+        }
+        if (!empty($filters['lot'])) {
+            $query->where('stock_movements.lot_number', 'like', '%' . $filters['lot'] . '%');
+        }
+        if (!empty($filters['user_id'])) {
+            $query->where('stock_movements.created_by', $filters['user_id']);
+        }
+        if (!empty($filters['ref'])) {
+            $r = $filters['ref'];
+            $query->where(function ($q) use ($r) {
+                if (is_numeric($r)) {
+                    $q->where('stock_movements.reference_id', (int) $r);
+                } else {
+                    $q->where('stock_movements.reference_type', 'like', '%' . $r . '%');
+                }
+            });
         }
 
         return $query->orderByDesc('stock_movements.occurred_at')->orderByDesc('stock_movements.id')->paginate($perPage)->withQueryString();

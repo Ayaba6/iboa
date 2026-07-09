@@ -10,13 +10,9 @@
 @endsection
 
 @section('content')
-<div class="space-y-1 mb-5">
-    <h1 class="text-2xl font-bold text-gray-900">Nouvelle facture fournisseur</h1>
-</div>
-
 <x-validation-errors />
 
-<form method="POST" action="{{ route('achats.factures-fournisseurs.store') }}">
+<form method="POST" enctype="multipart/form-data" action="{{ route('achats.factures-fournisseurs.store') }}" class="max-w-6xl">
     @csrf
     @include('achats.factures-fournisseurs._form')
 </form>

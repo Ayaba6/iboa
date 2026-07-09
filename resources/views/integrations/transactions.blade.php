@@ -43,20 +43,20 @@
 
     {{-- KPI bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
             <p class="text-xs font-medium text-gray-500 uppercase">Total</p>
             <p class="text-2xl font-bold text-gray-900 mt-1">{{ $transactions->total() }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-emerald-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-emerald-200 p-4 text-center">
             <p class="text-xs font-medium text-emerald-600 uppercase">Confirmées</p>
             <p class="text-2xl font-bold text-emerald-700 mt-1">{{ number_format($totals['confirmed_sum'] ?? 0, 0, ',', ' ') }}</p>
             <p class="text-xs text-emerald-500 mt-0.5">XOF</p>
         </div>
-        <div class="bg-white rounded-xl border border-amber-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-amber-200 p-4 text-center">
             <p class="text-xs font-medium text-amber-600 uppercase">En attente</p>
             <p class="text-2xl font-bold text-amber-700 mt-1">{{ $totals['pending_count'] ?? 0 }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-red-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-red-200 p-4 text-center">
             <p class="text-xs font-medium text-red-600 uppercase">Échouées</p>
             <p class="text-2xl font-bold text-red-700 mt-1">{{ $totals['failed_count'] ?? 0 }}</p>
         </div>
@@ -64,13 +64,13 @@
 
     {{-- Filters --}}
     <form method="GET" action="{{ route('integrations.transactions') }}"
-          class="bg-white rounded-xl border border-gray-200 p-4">
+          class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
 
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Statut</label>
                 <select name="status"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                     <option value="">Tous</option>
                     <option value="pending"   {{ request('status') === 'pending'   ? 'selected' : '' }}>En attente</option>
                     <option value="confirmed" {{ request('status') === 'confirmed' ? 'selected' : '' }}>Confirmé</option>
@@ -82,7 +82,7 @@
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Fournisseur</label>
                 <select name="provider"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                     <option value="">Tous</option>
                     @foreach($providers as $prov)
                         <option value="{{ $prov }}" {{ request('provider') === $prov ? 'selected' : '' }}>
@@ -95,18 +95,18 @@
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Date début</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Date fin</label>
                 <input type="date" name="date_to" value="{{ request('date_to') }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                     Filtrer
                 </button>
                 <a href="{{ route('integrations.transactions') }}"
@@ -118,11 +118,11 @@
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
 
         @if($transactions->isEmpty())
         <div class="p-16 text-center">
-            <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <div class="w-14 h-14 rounded-[4px] bg-gray-100 flex items-center justify-center mx-auto mb-4">
                 <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
@@ -135,14 +135,14 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200">
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Référence</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Montant</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fournisseur</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Statut</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Téléphone</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">Tentatives</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                        <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Référence</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Montant</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Fournisseur</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Statut</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide hidden lg:table-cell">Téléphone</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide hidden xl:table-cell">Tentatives</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Date</th>
+                        <th class="text-right px-4 py-3 text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100" x-data="{ expanded: null }">
@@ -292,7 +292,7 @@
 
                 @foreach($transactions->getUrlRange(max(1, $transactions->currentPage()-2), min($transactions->lastPage(), $transactions->currentPage()+2)) as $page => $url)
                     @if($page == $transactions->currentPage())
-                        <span class="px-3 py-1.5 text-xs bg-blue-600 text-white border border-blue-600 rounded-lg">{{ $page }}</span>
+                        <span class="px-3 py-1.5 text-xs bg-emerald-700 text-white border border-blue-600 rounded-lg">{{ $page }}</span>
                     @else
                         <a href="{{ $url }}" class="px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">{{ $page }}</a>
                     @endif

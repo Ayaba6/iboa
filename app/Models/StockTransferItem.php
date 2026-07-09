@@ -15,7 +15,7 @@ class StockTransferItem extends Model
     protected $fillable = [
         'stock_transfer_id', 'product_id', 'quantity', 'received_quantity',
         'unit_cost', 'lot_number', 'serial_number', 'expiry_date',
-        'label', 'sort_order',
+        'label', 'sort_order', 'requested_quantity', 'weight', 'volume',
     ];
 
     protected $casts = [

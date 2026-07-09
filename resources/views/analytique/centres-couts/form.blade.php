@@ -11,12 +11,12 @@
 
 @section('content')
 <div class="max-w-lg mx-auto">
-    <h1 class="text-xl font-bold text-gray-900 mb-6">{{ $center->exists ? 'Modifier le centre' : 'Nouveau centre de coûts/profit' }}</h1>
+    <h1 class="text-[17px] font-bold text-gray-900 mb-6">{{ $center->exists ? 'Modifier le centre' : 'Nouveau centre de coûts/profit' }}</h1>
 
     <x-validation-errors />
 
     <form method="POST" action="{{ $center->exists ? route('analytique.centres-couts.update', $center) : route('analytique.centres-couts.store') }}"
-          class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+          class="bg-white rounded-[4px] border border-gray-300 p-6 space-y-4">
         @csrf
         @if($center->exists) @method('PUT') @endif
 
@@ -62,7 +62,7 @@
         <div class="flex items-center gap-2">
             <input type="checkbox" name="is_active" value="1" id="is_active"
                    {{ old('is_active', $center->is_active ?? true) ? 'checked' : '' }}
-                   class="w-4 h-4 text-indigo-600 rounded">
+                   class="w-4 h-4 text-emerald-700 rounded">
             <label for="is_active" class="text-sm text-gray-700">Centre actif</label>
         </div>
 

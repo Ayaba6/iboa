@@ -14,10 +14,10 @@ $colorMap = [
     'violet' => ['bg'=>'bg-violet-50',  'border'=>'border-violet-200',  'icon'=>'text-violet-500',  'badge'=>'bg-violet-100 text-violet-700',  'dot'=>'bg-violet-400',  'arrow'=>'text-violet-300',  'header'=>'bg-violet-500'],
     'sky'    => ['bg'=>'bg-sky-50',     'border'=>'border-sky-200',     'icon'=>'text-sky-500',     'badge'=>'bg-sky-100 text-sky-700',        'dot'=>'bg-sky-400',     'arrow'=>'text-sky-300',     'header'=>'bg-sky-500'],
     'lime'   => ['bg'=>'bg-lime-50',    'border'=>'border-lime-200',    'icon'=>'text-lime-600',    'badge'=>'bg-lime-100 text-lime-700',      'dot'=>'bg-lime-500',    'arrow'=>'text-lime-300',    'header'=>'bg-lime-600'],
-    'teal'   => ['bg'=>'bg-teal-50',    'border'=>'border-teal-200',    'icon'=>'text-teal-500',    'badge'=>'bg-teal-100 text-teal-700',      'dot'=>'bg-teal-400',    'arrow'=>'text-teal-300',    'header'=>'bg-teal-500'],
+    'teal'   => ['bg'=>'bg-emerald-50',    'border'=>'border-emerald-200',    'icon'=>'text-teal-500',    'badge'=>'bg-emerald-100 text-emerald-800',      'dot'=>'bg-teal-400',    'arrow'=>'text-teal-300',    'header'=>'bg-emerald-600'],
     'green'  => ['bg'=>'bg-green-50',   'border'=>'border-green-200',   'icon'=>'text-green-600',   'badge'=>'bg-green-100 text-green-700',    'dot'=>'bg-green-500',   'arrow'=>'text-green-300',   'header'=>'bg-green-600'],
     'cyan'   => ['bg'=>'bg-cyan-50',    'border'=>'border-cyan-200',    'icon'=>'text-cyan-500',    'badge'=>'bg-cyan-100 text-cyan-700',      'dot'=>'bg-cyan-400',    'arrow'=>'text-cyan-300',    'header'=>'bg-cyan-500'],
-    'indigo' => ['bg'=>'bg-indigo-50',  'border'=>'border-indigo-200',  'icon'=>'text-indigo-500',  'badge'=>'bg-indigo-100 text-indigo-700',  'dot'=>'bg-indigo-400',  'arrow'=>'text-indigo-300',  'header'=>'bg-indigo-500'],
+    'indigo' => ['bg'=>'bg-[#eef5f0]',  'border'=>'border-emerald-200',  'icon'=>'text-emerald-600',  'badge'=>'bg-emerald-100 text-emerald-800',  'dot'=>'bg-emerald-500',  'arrow'=>'text-indigo-300',  'header'=>'bg-emerald-600'],
     'amber'  => ['bg'=>'bg-amber-50',   'border'=>'border-amber-200',   'icon'=>'text-amber-500',   'badge'=>'bg-amber-100 text-amber-700',   'dot'=>'bg-amber-400',   'arrow'=>'text-amber-300',   'header'=>'bg-amber-500'],
     'rose'   => ['bg'=>'bg-rose-50',    'border'=>'border-rose-200',    'icon'=>'text-rose-500',    'badge'=>'bg-rose-100 text-rose-700',      'dot'=>'bg-rose-400',    'arrow'=>'text-rose-300',    'header'=>'bg-rose-500'],
     'purple' => ['bg'=>'bg-purple-50',  'border'=>'border-purple-200',  'icon'=>'text-purple-500',  'badge'=>'bg-purple-100 text-purple-700',  'dot'=>'bg-purple-400',  'arrow'=>'text-purple-300',  'header'=>'bg-purple-500'],
@@ -26,15 +26,15 @@ $colorMap = [
 
 <div class="space-y-6">
 
-    {{-- Header --}}
-    <div class="flex items-start justify-between">
+    {{-- Bandeau SAGE --}}
+    <div class="bg-white border border-gray-300 rounded-[4px] px-4 py-2.5 flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Chaîne de Valeur Intégrée</h1>
-            <p class="text-sm text-gray-500 mt-0.5">§3 CDC — Vue temps réel de l'ensemble du processus industriel et commercial</p>
+            <h1 class="text-[17px] font-bold text-gray-900">Chaîne de Valeur Intégrée</h1>
+            <p class="text-[12px] text-gray-500">§3 CDC — Vue temps réel de l'ensemble du processus industriel et commercial</p>
         </div>
-        <div class="text-right text-xs text-gray-400">
-            <div class="font-medium text-gray-600">{{ now()->format('d/m/Y H:i') }}</div>
-            <div>Mois {{ now()->format('F Y') }}</div>
+        <div class="text-right text-[11.5px] text-emerald-700">
+            <div class="font-semibold">Actualisé à {{ now()->format('H:i:s') }}</div>
+            <div class="text-gray-400">Mois {{ now()->locale('fr')->isoFormat('MMMM YYYY') }}</div>
         </div>
     </div>
 
@@ -48,12 +48,11 @@ $colorMap = [
             ['Commandes à facturer', $fluxMois['cmd_non_fact'], 'F', 'violet'],
             ['BC en cours (valeur)', $fluxMois['bc_en_cours_val'], 'F', 'amber'],
         ] as [$label, $val, $unit, $col])
-        <div class="bg-white rounded-xl border border-gray-200 p-3 text-center">
-            <p class="text-xs text-gray-500 mb-1 leading-tight">{{ $label }}</p>
-            <p class="text-sm font-bold tabular-nums {{ $col === 'red' ? 'text-red-600' : 'text-gray-900' }}">
-                {{ number_format($val, 0, ',', ' ') }}
+        <div class="bg-white rounded-[4px] border border-gray-300 p-3">
+            <p class="text-[10.5px] font-bold text-gray-500 uppercase tracking-wide mb-1 leading-tight">{{ $label }}</p>
+            <p class="text-[16px] font-bold tabular-nums {{ $col === 'red' ? 'text-red-600' : 'text-gray-900' }}">
+                {{ number_format($val, 0, ',', ' ') }} <span class="text-[10px] font-semibold text-gray-400">FCFA</span>
             </p>
-            <p class="text-xs text-gray-400">{{ $unit }}</p>
         </div>
         @endforeach
     </div>
@@ -68,7 +67,7 @@ $colorMap = [
             {{-- Étape --}}
             <div class="flex items-stretch">
                 <a href="{{ $step['route'] }}"
-                   class="group relative flex flex-col w-48 rounded-xl border-2 {{ $c['border'] }} {{ $c['bg'] }} hover:shadow-lg transition-all duration-200 overflow-hidden no-underline">
+                   class="group relative flex flex-col w-48 rounded-[4px] border {{ $c['border'] }} {{ $c['bg'] }} hover:shadow-md transition-all duration-200 overflow-hidden no-underline">
 
                     {{-- Header coloré --}}
                     <div class="{{ $c['header'] }} px-3 py-2 flex items-center gap-2">
@@ -124,12 +123,12 @@ $colorMap = [
 
     {{-- Vue grille responsive (mobile + vue détaillée) --}}
     <div>
-        <h2 class="text-base font-semibold text-gray-900 mb-4">Détail par module</h2>
+        <h2 class="text-[13px] font-bold text-emerald-900 uppercase tracking-wide bg-[#eef5f0] border border-gray-300 rounded-[4px] px-4 py-2 mb-4">Détail par module</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             @foreach($steps as $idx => $step)
             @php $c = $colorMap[$step['color']]; @endphp
             <a href="{{ $step['route'] }}"
-               class="group bg-white rounded-xl border border-gray-200 hover:border-{{ $step['color'] }}-300 hover:shadow-md transition-all duration-200 overflow-hidden block no-underline">
+               class="group bg-white rounded-[4px] border border-gray-300 hover:border-{{ $step['color'] }}-300 hover:shadow-md transition-all duration-200 overflow-hidden block no-underline">
                 <div class="{{ $c['header'] }} px-4 py-3 flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,7 +169,7 @@ $colorMap = [
     </div>
 
     {{-- Légende alertes --}}
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+    <div class="bg-[#fff8e6] border border-[#f2d675] rounded-[4px] p-4 flex items-start gap-3">
         <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>

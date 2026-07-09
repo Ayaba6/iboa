@@ -22,15 +22,15 @@
     ];
 @endphp
 
-<div class="max-w-5xl mx-auto space-y-6">
+<div class="max-w-5xl mx-auto space-y-3">
 
     {{-- Header --}}
     <div class="flex items-start justify-between gap-4">
         <div>
             <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-bold text-gray-900">{{ $asset->name }}</h1>
+                <h1 class="text-[16px] font-bold text-gray-900">{{ $asset->name }}</h1>
                 <span class="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ $asset->code }}</span>
-                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$asset->status] ?? 'bg-gray-100 text-gray-500' }}">
+                <span class="inline-flex px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $statusColors[$asset->status] ?? 'bg-gray-100 text-gray-500' }}">
                     {{ $statusLabels[$asset->status] ?? $asset->status }}
                 </span>
             </div>
@@ -46,7 +46,7 @@
         <form method="POST" action="{{ route('comptabilite.immobilisations.regenerate', $asset) }}">
             @csrf
             <button type="submit"
-                    class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-medium px-3 py-1.5 rounded-lg"
+                    class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-medium px-3 py-1.5 rounded-[4px]"
                     onclick="return confirm('Recalculer le plan d\'amortissement ? Les dotations déjà comptabilisées resteront intactes.')">
                 ↺ Recalculer plan
             </button>
@@ -56,40 +56,40 @@
 
     {{-- Flash messages --}}
     @if(session('success'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-3 text-sm">{{ session('success') }}</div>
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[4px] px-3 py-1.5 text-sm">{{ session('success') }}</div>
     @endif
     @if(session('error'))
-        <div class="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 text-sm">{{ session('error') }}</div>
+        <div class="bg-red-50 border border-red-200 text-red-800 rounded-[4px] px-3 py-1.5 text-sm">{{ session('error') }}</div>
     @endif
 
     {{-- KPIs --}}
     <div class="grid grid-cols-4 gap-4">
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Valeur brute</p>
-            <p class="text-xl font-bold text-gray-900 mt-1">{{ $fmt($asset->acquisition_cost) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[17px] font-bold text-gray-900 mt-1">{{ $fmt($asset->acquisition_cost) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
         </div>
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Amort. cumulé</p>
-            <p class="text-xl font-bold text-orange-600 mt-1">{{ $fmt($cumulPosted) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[17px] font-bold text-orange-600 mt-1">{{ $fmt($cumulPosted) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
             <div class="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div class="h-1.5 {{ $pct >= 100 ? 'bg-red-400' : 'bg-orange-400' }} rounded-full" style="width:{{ $pct }}%"></div>
             </div>
             <p class="text-xs text-gray-500 mt-0.5">{{ $pct }} % amorti</p>
         </div>
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">VNC actuelle</p>
-            <p class="text-xl font-bold text-blue-600 mt-1">{{ $fmt($vnc) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[17px] font-bold text-blue-600 mt-1">{{ $fmt($vnc) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
         </div>
-        <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Valeur résiduelle</p>
-            <p class="text-xl font-bold text-gray-600 mt-1">{{ $fmt($asset->residual_value) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[17px] font-bold text-gray-600 mt-1">{{ $fmt($asset->residual_value) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
         </div>
     </div>
 
     <div class="grid grid-cols-3 gap-6">
 
         {{-- Fiche détaillée --}}
-        <div class="col-span-1 bg-white border border-gray-200 rounded-xl p-5 space-y-3 text-sm">
+        <div class="col-span-1 bg-white border border-gray-300 rounded-[4px] p-5 space-y-3 text-sm">
             <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Fiche</h2>
 
             <div class="space-y-2 text-gray-600">
@@ -148,7 +148,7 @@
         </div>
 
         {{-- Plan d'amortissement --}}
-        <div class="col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div class="col-span-2 bg-white border border-gray-300 rounded-[4px] overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
                 <h2 class="text-sm font-semibold text-gray-700">Plan d'amortissement</h2>
                 @if(!$asset->isDepreciable())
@@ -158,24 +158,24 @@
 
             @if($asset->isDepreciable())
             <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                     <tr>
-                        <th class="px-4 py-2 text-left">Exercice</th>
-                        <th class="px-4 py-2 text-right">Dotation</th>
-                        <th class="px-4 py-2 text-right">Cumul</th>
-                        <th class="px-4 py-2 text-right">VNC fin</th>
-                        <th class="px-4 py-2 text-center">État</th>
-                        <th class="px-4 py-2 text-right">Action</th>
+                        <th class="px-3 py-1.5 text-left">Exercice</th>
+                        <th class="px-3 py-1.5 text-right">Dotation</th>
+                        <th class="px-3 py-1.5 text-right">Cumul</th>
+                        <th class="px-3 py-1.5 text-right">VNC fin</th>
+                        <th class="px-3 py-1.5 text-center">État</th>
+                        <th class="px-3 py-1.5 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @forelse($asset->depreciations as $line)
                     <tr class="{{ $line->is_posted ? 'bg-emerald-50/40' : 'hover:bg-gray-50' }}">
-                        <td class="px-4 py-2.5 font-semibold text-gray-900">{{ $line->fiscal_year }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums text-gray-800">{{ $fmt($line->depreciation_amount) }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums text-orange-600">{{ $fmt($line->cumulated_depreciation) }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums text-blue-600 font-medium">{{ $fmt($line->net_book_value) }}</td>
-                        <td class="px-4 py-2.5 text-center">
+                        <td class="px-3 py-2.5 font-semibold text-gray-900">{{ $line->fiscal_year }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums text-gray-800">{{ $fmt($line->depreciation_amount) }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums text-orange-600">{{ $fmt($line->cumulated_depreciation) }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums text-blue-600 font-medium">{{ $fmt($line->net_book_value) }}</td>
+                        <td class="px-3 py-2.5 text-center">
                             @if($line->is_posted)
                                 <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
                                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -185,10 +185,10 @@
                                     <p class="text-xs text-gray-500 mt-0.5">{{ $line->journalEntry->number }}</p>
                                 @endif
                             @else
-                                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Planifié</span>
+                                <span class="inline-flex px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-gray-100 text-gray-500">Planifié</span>
                             @endif
                         </td>
-                        <td class="px-4 py-2.5 text-right">
+                        <td class="px-3 py-2.5 text-right">
                             @if(!$line->is_posted && $asset->status === 'en_service')
                                 @can('accounting.validate')
                                 <form method="POST" action="{{ route('comptabilite.immobilisations.post-depreciation', $line) }}"
@@ -221,14 +221,14 @@
                 @if($asset->depreciations->isNotEmpty())
                 <tfoot class="bg-gray-50 text-xs font-semibold text-gray-700">
                     <tr>
-                        <td class="px-4 py-2">Total</td>
-                        <td class="px-4 py-2 text-right tabular-nums">{{ $fmt($asset->depreciations->sum('depreciation_amount')) }}</td>
-                        <td class="px-4 py-2"></td>
-                        <td class="px-4 py-2"></td>
-                        <td class="px-4 py-2 text-center text-xs text-gray-400">
+                        <td class="px-3 py-1.5">Total</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($asset->depreciations->sum('depreciation_amount')) }}</td>
+                        <td class="px-3 py-1.5"></td>
+                        <td class="px-3 py-1.5"></td>
+                        <td class="px-3 py-1.5 text-center text-xs text-gray-400">
                             {{ $asset->depreciations->where('is_posted', true)->count() }}/{{ $asset->depreciations->count() }} passées
                         </td>
-                        <td class="px-4 py-2"></td>
+                        <td class="px-3 py-1.5"></td>
                     </tr>
                 </tfoot>
                 @endif
@@ -241,7 +241,7 @@
                 $ecart = abs($totalPlan - $baseAmort);
             @endphp
             @if($ecart > 1 && $asset->depreciations->isNotEmpty())
-            <div class="px-4 py-2 border-t border-amber-100 bg-amber-50 text-xs text-amber-700">
+            <div class="px-3 py-1.5 border-t border-amber-100 bg-amber-50 text-xs text-amber-700">
                 ⚠ Écart plan vs base amortissable : {{ number_format($ecart, 0, ',', ' ') }} FCFA (arrondi prorata).
             </div>
             @endif

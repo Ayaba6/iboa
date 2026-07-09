@@ -156,18 +156,29 @@ class ClientPaymentService
                 'unallocated_amount' => max(0, $payment->amount - $totalAllocated),
             ]);
 
-            // Enregistrer la transaction de caisse si un compte est lié
+            // Enregistrer la transaction de caisse si un compte est lié.
+            // [Sync ERP] journalisée + idempotente (jamais deux transactions de
+            // trésorerie pour le même encaissement) + relançable via sync_logs.
             if (!empty($data['cash_account_id'])) {
                 $cashAccount = CashAccount::find($data['cash_account_id']);
                 if ($cashAccount) {
-                    $this->cashService->recordTransaction($cashAccount, [
-                        'type'             => 'credit',
-                        'reference_type'   => 'ClientPayment',
-                        'reference_id'     => $payment->id,
-                        'amount'           => $payment->amount,
-                        'label'            => 'Encaissement '.$payment->number.' — '.$payment->client?->displayName(),
-                        'transaction_date' => $payment->payment_date ?? today(),
-                    ]);
+                    app(\App\Services\Sync\SyncOrchestrator::class)->run(
+                        sourceModule: 'ventes',
+                        targetModule: 'tresorerie',
+                        eventName: 'client_payment.registered',
+                        action: 'create_cash_transaction',
+                        source: $payment,
+                        callback: fn () => $this->cashService->recordTransaction($cashAccount, [
+                            'type'             => 'credit',
+                            'reference_type'   => 'ClientPayment',
+                            'reference_id'     => $payment->id,
+                            'amount'           => $payment->amount,
+                            'label'            => 'Encaissement '.$payment->number.' — '.$payment->client?->displayName(),
+                            'transaction_date' => $payment->payment_date ?? today(),
+                        ]),
+                        payload: ['cash_account_id' => $cashAccount->id],
+                        handlerClass: \App\Services\Sync\Handlers\ReplayClientPaymentTreasurySync::class,
+                    );
                 }
             }
 

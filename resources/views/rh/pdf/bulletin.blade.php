@@ -161,7 +161,7 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 7.5pt; color: #111; back
                 @if($companyPhone)
                 <div class="company-line"><strong>Tél. : {{ $companyPhone }}</strong></div>
                 @endif
-                <div class="company-name">{{ strtoupper($company?->name ?? '') }}</div>
+                <div class="company-name">{{ mb_strtoupper($company?->name ?? '') }}</div>
                 @if($companyAddr)
                 <div class="company-line">{{ $companyAddr }}</div>
                 @endif
@@ -204,11 +204,11 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 7.5pt; color: #111; back
                 </tr>
                 <tr>
                     <td class="inf-lbl">Emploi :</td>
-                    <td>{{ strtoupper($item->job_title ?? ($emp?->job_title ?? '')) }}</td>
+                    <td>{{ mb_strtoupper($item->job_title ?? ($emp?->job_title ?? '')) }}</td>
                 </tr>
                 <tr>
                     <td class="inf-lbl">Service :</td>
-                    <td>{{ strtoupper($item->department_name ?? ($emp?->department?->name ?? '')) }}</td>
+                    <td>{{ mb_strtoupper($item->department_name ?? ($emp?->department?->name ?? '')) }}</td>
                 </tr>
             </table>
         </td>
@@ -220,7 +220,7 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 7.5pt; color: #111; back
                     <td style="font-weight:bold;">{{ $item->employee_matricule }}</td>
                 </tr>
             </table>
-            <div class="emp-name">{{ $civility }}&nbsp;&nbsp;{{ strtoupper($item->employee_name) }}</div>
+            <div class="emp-name">{{ $civility }}&nbsp;&nbsp;{{ mb_strtoupper($item->employee_name) }}</div>
         </td>
     </tr>
 </table>
@@ -576,7 +576,7 @@ body { font-family: DejaVu Sans, sans-serif; font-size: 7.5pt; color: #111; back
             <div style="font-size:8pt; font-weight:bold;">Cachet de l'employeur</div>
             @if($emp && ($emp->bank_name || $emp->bank_account_number))
             <div style="font-size:6.5pt; color:#555; margin-top:4px;">
-                Règlement : <strong>{{ strtoupper($emp->payment_mode ?? 'VIREMENT') }}</strong>
+                Règlement : <strong>{{ mb_strtoupper($emp->payment_mode ?? 'VIREMENT') }}</strong>
                 @if($emp->bank_name) &mdash; {{ $emp->bank_name }}@endif
                 @if($emp->bank_account_number) — n° {{ $emp->bank_account_number }}@endif
             </div>

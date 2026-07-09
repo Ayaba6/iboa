@@ -14,34 +14,29 @@
     editId: null,
     openCreate() { this.form = { label: '', starts_at: '', ends_at: '', is_current: false }; this.editId = null; this.modal = 'form'; },
     openEdit(id, label, starts, ends) { this.form = { label, starts_at: starts, ends_at: ends, is_current: false }; this.editId = id; this.modal = 'form'; },
-}" class="space-y-5">
+}" class="space-y-3">
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Exercices fiscaux</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Exercices fiscaux</h1>
             <p class="text-sm text-gray-500 mt-0.5">Gérez les exercices comptables de votre société</p>
         </div>
         @can('settings.manage')
-        <button @click="openCreate()"
-                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Nouvel exercice
-        </button>
+        <a href="{{ route('settings.fiscal-years.create') }}"
+           class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-semibold px-4 py-1.5 rounded-full transition-colors">+ Nouvel exercice</a>
         @endcan
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <table class="w-full divide-y divide-gray-100 text-sm">
-            <thead class="bg-gray-50">
+            <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Exercice</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Début</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Fin</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Durée</th>
-                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Statut</th>
-                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Courant</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Exercice</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Début</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Fin</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Durée</th>
+                    <th class="px-5 py-3 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                    <th class="px-5 py-3 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Courant</th>
                     <th class="px-5 py-3"></th>
                 </tr>
             </thead>
@@ -70,7 +65,7 @@
                     <td class="px-5 py-3 text-gray-600">{{ $fy->ends_at->format('d/m/Y') }}</td>
                     <td class="px-5 py-3 text-gray-500 text-xs">{{ $days }} j (≈ {{ $months }} mois)</td>
                     <td class="px-5 py-3 text-center">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $statusConfig[0] }}">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $statusConfig[0] }}">
                             {{ $statusConfig[1] }}
                         </span>
                     </td>
@@ -92,8 +87,8 @@
                             </form>
                             @endif
                             @if($fy->status === 'ouvert')
-                            <button @click="openEdit({{ $fy->id }}, '{{ addslashes($fy->label) }}', '{{ $fy->starts_at->format('Y-m-d') }}', '{{ $fy->ends_at->format('Y-m-d') }}')"
-                                    class="text-xs text-gray-500 hover:text-gray-700 font-medium">Modifier</button>
+                            <a href="{{ route('settings.fiscal-years.edit', $fy) }}"
+                                    class="text-xs text-emerald-700 hover:text-emerald-900 font-medium hover:underline">Modifier</a>
                             <form method="POST" action="{{ route('settings.fiscal-years.close', $fy) }}"
                                   onsubmit="return confirm('Clôturer l\'exercice {{ addslashes($fy->label) }} ? Cette action est irréversible.')">@csrf
                                 <button type="submit" class="text-xs text-orange-600 hover:text-orange-800 font-medium">Clôturer</button>
@@ -136,8 +131,8 @@
     {{-- Modal create/edit --}}
     <div x-show="modal === 'form'" x-transition
          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-5"
+        <div class="bg-white rounded-[4px] shadow-xl w-full max-w-md p-6">
+            <h3 class="text-[16px] font-bold text-gray-900 mb-5"
                 x-text="editId ? 'Modifier l\'exercice' : 'Nouvel exercice fiscal'"></h3>
             <form method="POST"
                   :action="editId ? ('{{ url('parametres/exercices') }}/' + editId) : '{{ route('settings.fiscal-years.store') }}'"
@@ -148,35 +143,35 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Libellé <span class="text-red-500">*</span></label>
                     <input type="text" name="label" x-model="form.label" required maxlength="50"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500"
                            placeholder="2025-2026">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Début <span class="text-red-500">*</span></label>
                         <input type="date" name="starts_at" x-model="form.starts_at" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Fin <span class="text-red-500">*</span></label>
                         <input type="date" name="ends_at" x-model="form.ends_at" required
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                     </div>
                 </div>
                 <template x-if="!editId">
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="hidden" name="is_current" value="0">
                         <input type="checkbox" name="is_current" value="1" x-model="form.is_current"
-                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                               class="rounded border-gray-300 text-blue-600 focus:ring-emerald-500">
                         <span class="text-sm font-medium text-gray-700">Définir comme exercice courant</span>
                     </label>
                 </template>
 
                 <div class="flex gap-3 justify-end pt-2">
                     <button type="button" @click="modal = ''"
-                            class="border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Annuler</button>
+                            class="border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px]">Annuler</button>
                     <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg"
+                            class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px]"
                             x-text="editId ? 'Enregistrer' : 'Créer'"></button>
                 </div>
             </form>

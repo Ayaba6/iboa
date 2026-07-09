@@ -14,16 +14,16 @@
     $totalProducts    = $families->sum(fn($f) => $f->products_count + $f->children->sum('products_count'));
 @endphp
 
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Familles / Catégories</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Familles / Catégories</h1>
             <p class="text-sm text-gray-500 mt-0.5">Organisez vos articles en familles et sous-familles</p>
         </div>
         <a href="{{ route('product-families.create') }}"
-           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors self-start">
+           class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-2.5 rounded-[4px] transition-colors self-start">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -33,43 +33,43 @@
 
     {{-- Stats --}}
     <div class="grid grid-cols-3 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-[4px] bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                 </svg>
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900">{{ $totalFamilies }}</p>
+                <p class="text-[16px] font-bold text-gray-900">{{ $totalFamilies }}</p>
                 <p class="text-xs text-gray-500">Famille(s) racine</p>
             </div>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-[4px] bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900">{{ $totalSubFamilies }}</p>
+                <p class="text-[16px] font-bold text-gray-900">{{ $totalSubFamilies }}</p>
                 <p class="text-xs text-gray-500">Sous-famille(s)</p>
             </div>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-[4px] bg-emerald-100 flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
                 </svg>
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900">{{ $totalProducts }}</p>
+                <p class="text-[16px] font-bold text-gray-900">{{ $totalProducts }}</p>
                 <p class="text-xs text-gray-500">Articles classifiés</p>
             </div>
         </div>
     </div>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         @if($families->isEmpty())
         <div class="text-center py-16">
             <svg class="w-14 h-14 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +78,7 @@
             <p class="text-sm font-medium text-gray-600">Aucune famille créée</p>
             <p class="text-xs mt-1 text-gray-400">Commencez par créer votre première famille de produits</p>
             <a href="{{ route('product-families.create') }}"
-               class="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
+               class="mt-4 inline-flex items-center gap-2 text-sm text-emerald-700 hover:text-emerald-800 font-medium">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -92,16 +92,16 @@
             Solution : un <tbody> par famille avec x-data="{ open: true }".
             HTML5 autorise plusieurs <tbody> dans une même <table>.
         --}}
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 border-b border-gray-100">
+        <table class="w-full text-[12.5px] border-collapse">
+            <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
-                    <th class="w-12 px-4 py-3"></th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nom</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Code</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Sous-familles</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Articles</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th class="w-12 px-3 py-1.5"></th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Nom</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Code</th>
+                    <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Sous-familles</th>
+                    <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Articles</th>
+                    <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                    <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Actions</th>
                 </tr>
             </thead>
 
@@ -112,11 +112,11 @@
             <tbody x-data="{ open: true }" class="divide-y divide-gray-100 border-b border-gray-100">
 
                 {{-- Ligne famille racine --}}
-                <tr class="bg-blue-50/30 hover:bg-blue-50/60 transition-colors">
-                    <td class="px-4 py-3 text-center">
+                <tr class="bg-[#f4f9f6] hover:bg-emerald-50/70 transition-colors">
+                    <td class="px-3 py-1.5 text-center">
                         @if($childCount > 0)
                         <button type="button" @click="open = !open"
-                                class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
+                                class="inline-flex items-center justify-center w-5 h-5 rounded text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                                 :title="open ? 'Réduire' : 'Développer'">
                             <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-90' : ''"
                                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,12 +124,12 @@
                             </svg>
                         </button>
                         @else
-                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-50 text-blue-400 text-xs font-bold">1</span>
+                        <span class="text-gray-300">—</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-1.5">
                         <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                             </svg>
                             <span class="font-semibold text-gray-900">{{ $family->name }}</span>
@@ -141,31 +141,31 @@
                             <p class="text-xs text-gray-400 mt-0.5 ml-6 truncate max-w-xs">{{ $family->description }}</p>
                         @endif
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-1.5">
                         @if($family->code)
-                            <code class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded font-mono border border-blue-100">{{ $family->code }}</code>
+                            <code class="font-mono text-emerald-800 text-[12px]">{{ $family->code }}</code>
                         @else
                             <span class="text-gray-300">—</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-3 py-1.5 text-center">
                         @if($childCount > 0)
-                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">{{ $childCount }}</span>
+                            <span class="font-semibold text-gray-900 tabular-nums">{{ $childCount }}</span>
                         @else
                             <span class="text-gray-300">—</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-3 py-1.5 text-center">
                         @php $totalFamilyProducts = $family->products_count + $family->children->sum('products_count'); @endphp
                         @if($totalFamilyProducts > 0)
                             <a href="{{ route('products.index', ['family_id' => $family->id]) }}"
-                               class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold hover:bg-emerald-200 transition-colors"
+                               class="font-semibold text-emerald-800 tabular-nums hover:underline"
                                title="Voir les articles">{{ $totalFamilyProducts }}</a>
                         @else
                             <span class="text-gray-400 text-xs">0</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-3 py-1.5 text-center">
                         @if($family->is_active)
                         <span class="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full border border-green-100">
                             <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Actif
@@ -176,10 +176,10 @@
                         </span>
                         @endif
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-1.5">
                         <div class="flex items-center justify-end gap-1">
                             <a href="{{ route('product-families.edit', $family) }}"
-                               class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                               class="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                                title="Modifier">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -209,11 +209,11 @@
                     x-transition:leave="transition-opacity duration-100"
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
-                    class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-2.5 text-center">
+                    class="hover:bg-emerald-50/40 transition-colors">
+                    <td class="px-3 py-2.5 text-center">
                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold">2</span>
                     </td>
-                    <td class="px-4 py-2.5">
+                    <td class="px-3 py-2.5">
                         <div class="flex items-center gap-2 pl-5">
                             <svg class="w-3 h-3 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -224,24 +224,24 @@
                             @endunless
                         </div>
                     </td>
-                    <td class="px-4 py-2.5">
+                    <td class="px-3 py-2.5">
                         @if($child->code)
                             <code class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded font-mono">{{ $child->code }}</code>
                         @else
                             <span class="text-gray-300">—</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2.5 text-center text-gray-300">—</td>
-                    <td class="px-4 py-2.5 text-center">
+                    <td class="px-3 py-2.5 text-center text-gray-300">—</td>
+                    <td class="px-3 py-2.5 text-center">
                         @if($child->products_count > 0)
                             <a href="{{ route('products.index', ['family_id' => $child->id]) }}"
-                               class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold hover:bg-emerald-200 transition-colors"
+                               class="font-semibold text-emerald-800 tabular-nums hover:underline"
                                title="Voir les articles">{{ $child->products_count }}</a>
                         @else
                             <span class="text-gray-400 text-xs">0</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2.5 text-center">
+                    <td class="px-3 py-2.5 text-center">
                         @if($child->is_active)
                         <span class="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-medium px-2.5 py-0.5 rounded-full border border-green-100">
                             <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Actif
@@ -252,10 +252,10 @@
                         </span>
                         @endif
                     </td>
-                    <td class="px-4 py-2.5">
+                    <td class="px-3 py-2.5">
                         <div class="flex items-center justify-end gap-1">
                             <a href="{{ route('product-families.edit', $child) }}"
-                               class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                               class="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                                title="Modifier">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -281,6 +281,12 @@
             @endforeach
 
         </table>
+        @endif
+
+        @if($families->hasPages())
+        <div class="px-3 py-1.5 border-t border-gray-100">
+            {{ $families->links() }}
+        </div>
         @endif
     </div>
 

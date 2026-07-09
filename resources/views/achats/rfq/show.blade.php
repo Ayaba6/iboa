@@ -21,15 +21,15 @@
     ];
 @endphp
 
-<div class="max-w-6xl mx-auto space-y-6">
+<div class="max-w-6xl mx-auto space-y-3">
 
     {{-- Header --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
                 <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $rfq->number }}</h1>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $color }}-100 text-{{ $color }}-700">{{ $rfq->statusLabel() }}</span>
+                    <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $rfq->number }}</h1>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $color }}-100 text-{{ $color }}-700">{{ $rfq->statusLabel() }}</span>
                 </div>
                 <p class="text-lg text-gray-700 mt-1">{{ $rfq->title }}</p>
                 <p class="text-xs text-gray-500 mt-0.5">
@@ -43,25 +43,25 @@
                     @if($rfq->isDraft())
                     <form action="{{ route('achats.rfq.send', $rfq) }}" method="POST" onsubmit="return confirm('Marquer la RFQ comme envoyée à tous les fournisseurs ?')">
                         @csrf
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">📤 Marquer envoyée</button>
+                        <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">📤 Marquer envoyée</button>
                     </form>
                     @endif
                     @if(!$rfq->isClosed() && !$rfq->isCancelled())
-                    <a href="{{ route('achats.rfq.compare', $rfq) }}" class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg">📊 Comparatif</a>
+                    <a href="{{ route('achats.rfq.compare', $rfq) }}" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">📊 Comparatif</a>
                     @endif
                     @if($rfq->isDraft())
                     <form action="{{ route('achats.rfq.destroy', $rfq) }}" method="POST" onsubmit="return confirm('Supprimer cette RFQ ?')">
                         @csrf @method('DELETE')
-                        <button type="submit" class="border border-gray-300 text-gray-600 hover:bg-red-50 hover:text-red-600 text-sm font-medium px-4 py-2 rounded-lg">Supprimer</button>
+                        <button type="submit" class="border border-gray-300 text-gray-600 hover:bg-red-50 hover:text-red-600 text-sm font-medium px-3 py-1.5 rounded-[4px]">Supprimer</button>
                     </form>
                     @endif
                 @endcan
-                <a href="{{ route('achats.rfq.index') }}" class="border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg">← Retour</a>
+                <a href="{{ route('achats.rfq.index') }}" class="border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px]">← Retour</a>
             </div>
         </div>
 
         @if($rfq->awardedQuote)
-        <div class="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-800">
+        <div class="mt-4 bg-emerald-50 border border-emerald-200 rounded-[4px] p-3 text-sm text-emerald-800">
             ✓ <strong>Attribuée</strong> à {{ $rfq->awardedQuote->rfqSupplier?->supplier?->name }} ·
             Total {{ $fmt($rfq->awardedQuote->total_ttc) }} FCFA ·
             @if($rfq->purchase_order_id)
@@ -74,20 +74,20 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {{-- Items --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100"><h2 class="text-sm font-semibold text-gray-700">Lignes demandées ({{ $rfq->items->count() }})</h2></div>
             <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-                    <tr><th class="px-4 py-2 text-left">Description</th><th class="px-4 py-2 text-right">Quantité</th></tr>
+                <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
+                    <tr><th class="px-3 py-1.5 text-left">Description</th><th class="px-3 py-1.5 text-right">Quantité</th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @foreach($rfq->items as $item)
                     <tr>
-                        <td class="px-4 py-2 text-sm">
+                        <td class="px-3 py-1.5 text-sm">
                             @if($item->product)<span class="font-mono text-xs text-blue-700">{{ $item->product->reference }}</span><br>@endif
                             {{ $item->description }}
                         </td>
-                        <td class="px-4 py-2 text-right tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -95,25 +95,25 @@
         </div>
 
         {{-- Suppliers + statut --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100"><h2 class="text-sm font-semibold text-gray-700">Fournisseurs consultés ({{ $rfq->rfqSuppliers->count() }})</h2></div>
             <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                     <tr>
-                        <th class="px-4 py-2 text-left">Fournisseur</th>
-                        <th class="px-4 py-2 text-center">Statut</th>
-                        <th class="px-4 py-2 text-right">Action</th>
+                        <th class="px-3 py-1.5 text-left">Fournisseur</th>
+                        <th class="px-3 py-1.5 text-center">Statut</th>
+                        <th class="px-3 py-1.5 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     @foreach($rfq->rfqSuppliers as $rs)
                     @php $c = $supplierStatusColor[$rs->status] ?? 'gray'; @endphp
                     <tr>
-                        <td class="px-4 py-2 text-sm">{{ $rs->supplier?->name ?? '—' }}</td>
-                        <td class="px-4 py-2 text-center">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{ $c }}-100 text-{{ $c }}-700">{{ $supplierStatusLabel[$rs->status] ?? $rs->status }}</span>
+                        <td class="px-3 py-1.5 text-sm">{{ $rs->supplier?->name ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $c }}-100 text-{{ $c }}-700">{{ $supplierStatusLabel[$rs->status] ?? $rs->status }}</span>
                         </td>
-                        <td class="px-4 py-2 text-right">
+                        <td class="px-3 py-1.5 text-right">
                             @can('purchase_orders.create')
                             @if(!$rfq->isClosed() && !$rfq->isCancelled() && !$rfq->isDraft())
                                 @if($rs->quote)
@@ -127,7 +127,7 @@
                     </tr>
                     @if(!$rfq->isClosed() && !$rfq->isCancelled() && !$rfq->isDraft() && !$rs->quote)
                     <tr id="quote-form-{{ $rs->id }}" class="hidden bg-blue-50/40">
-                        <td colspan="3" class="px-4 py-3">
+                        <td colspan="3" class="px-3 py-1.5">
                             <form action="{{ route('achats.rfq.record-quote', $rfq) }}" method="POST" class="space-y-3">
                                 @csrf
                                 <input type="hidden" name="rfq_supplier_id" value="{{ $rs->id }}">
@@ -154,7 +154,7 @@
                                 </table>
                                 <div class="flex justify-end gap-2">
                                     <button type="button" onclick="document.getElementById('quote-form-{{ $rs->id }}').classList.add('hidden')" class="border border-gray-300 text-gray-700 text-xs px-3 py-1.5 rounded">Annuler</button>
-                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded">Enregistrer la cotation</button>
+                                    <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium px-3 py-1.5 rounded">Enregistrer la cotation</button>
                                 </div>
                             </form>
                         </td>
@@ -168,36 +168,36 @@
 
     {{-- Synthèse cotations reçues --}}
     @if($rfq->quotes->isNotEmpty())
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <h2 class="text-sm font-semibold text-gray-700">Cotations reçues ({{ $rfq->quotes->count() }})</h2>
             <a href="{{ route('achats.rfq.compare', $rfq) }}" class="text-xs text-violet-600 hover:underline font-medium">Voir le comparatif détaillé →</a>
         </div>
         <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+            <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                 <tr>
-                    <th class="px-4 py-2 text-left">Fournisseur</th>
-                    <th class="px-4 py-2 text-right">Total HT</th>
-                    <th class="px-4 py-2 text-right">Total TTC</th>
-                    <th class="px-4 py-2 text-right">Délai (j)</th>
-                    <th class="px-4 py-2 text-right">Valide jusqu'au</th>
-                    <th class="px-4 py-2 text-center">Statut</th>
+                    <th class="px-3 py-1.5 text-left">Fournisseur</th>
+                    <th class="px-3 py-1.5 text-right">Total HT</th>
+                    <th class="px-3 py-1.5 text-right">Total TTC</th>
+                    <th class="px-3 py-1.5 text-right">Délai (j)</th>
+                    <th class="px-3 py-1.5 text-right">Valide jusqu'au</th>
+                    <th class="px-3 py-1.5 text-center">Statut</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @foreach($rfq->quotes->sortBy('total_ttc') as $q)
                 <tr class="{{ $q->is_winner ? 'bg-emerald-50/50' : '' }}">
-                    <td class="px-4 py-2 text-sm font-medium text-gray-900">
+                    <td class="px-3 py-1.5 text-sm font-medium text-gray-900">
                         {{ $q->rfqSupplier?->supplier?->name }}
                         @if($q->supplier_reference) <span class="text-xs text-gray-400 ml-1">({{ $q->supplier_reference }})</span>@endif
                     </td>
-                    <td class="px-4 py-2 text-right tabular-nums">{{ $fmt($q->subtotal_ht) }}</td>
-                    <td class="px-4 py-2 text-right tabular-nums font-semibold">{{ $fmt($q->total_ttc) }}</td>
-                    <td class="px-4 py-2 text-right tabular-nums">{{ $q->delivery_days ?? '—' }}</td>
-                    <td class="px-4 py-2 text-right text-xs text-gray-600">{{ $q->valid_until?->format('d/m/Y') ?? '—' }}</td>
-                    <td class="px-4 py-2 text-center">
+                    <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($q->subtotal_ht) }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums font-semibold">{{ $fmt($q->total_ttc) }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums">{{ $q->delivery_days ?? '—' }}</td>
+                    <td class="px-3 py-1.5 text-right text-xs text-gray-600">{{ $q->valid_until?->format('d/m/Y') ?? '—' }}</td>
+                    <td class="px-3 py-1.5 text-center">
                         @if($q->is_winner)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">🏆 Gagnante</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-emerald-100 text-emerald-800">🏆 Gagnante</span>
                         @endif
                     </td>
                 </tr>
