@@ -14,7 +14,7 @@ class CoilController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:production.view')->only(['index', 'show']);
+        $this->middleware('permission:production.create|stocks.adjust')->only(['index', 'show']);
         $this->middleware('permission:production.create')->except(['index', 'show']);
     }
 
@@ -90,26 +90,60 @@ class CoilController extends Controller
     private function formData(Coil $coil): array
     {
         return [
-            'coil'      => $coil,
-            'products'  => Product::orderBy('name')->get(['id', 'name', 'reference']),
-            'suppliers' => Supplier::orderBy('name')->get(['id', 'name']),
+            'coil'       => $coil,
+            'products'   => Product::orderBy('name')->get(['id', 'name', 'reference']),
+            'suppliers'  => Supplier::orderBy('name')->get(['id', 'name']),
+            'warehouses' => \App\Models\Warehouse::active()->orderBy('name')->get(['id', 'name', 'code']),
         ];
     }
 
     private function validateData(Request $request, ?int $id = null): array
     {
-        return $request->validate([
+        // [CDC §13.5] Contrôles obligatoires à la réception bobine :
+        // poids, largeur, épaisseur, couleur, lot, fournisseur.
+        $data = $request->validate([
             'product_id'       => ['nullable', 'integer', 'exists:products,id'],
-            'supplier_id'      => ['nullable', 'integer', 'exists:suppliers,id'],
+            'supplier_id'      => ['required', 'integer', 'exists:suppliers,id'],
             'reference'        => ['required', 'string', 'max:60'],
-            'lot_number'       => ['nullable', 'string', 'max:60'],
-            'color'            => ['nullable', 'string', 'max:60'],
-            'thickness'        => ['nullable', 'numeric', 'min:0'],
-            'width'            => ['nullable', 'numeric', 'min:0'],
+            'lot_number'       => ['required', 'string', 'max:60'],
+            'color'            => ['required', 'string', 'max:60'],
+            'thickness'        => ['required', 'numeric', 'min:0.01'],
+            'width'            => ['required', 'numeric', 'min:0.01'],
             'initial_weight'   => ['required', 'numeric', 'min:0.01'],
             'estimated_length' => ['nullable', 'numeric', 'min:0'],
             'purchase_price'   => ['required', 'integer', 'min:0'],
             'received_at'      => ['nullable', 'date'],
+            // [Maquette Bobine] réception + caractéristiques + gestion
+            'supplier_reference'   => ['nullable', 'string', 'max:60'],
+            'warehouse_id'         => ['nullable', 'integer', 'exists:warehouses,id'],
+            'site'                 => ['nullable', 'string', 'max:20'],
+            'bl_number'            => ['nullable', 'string', 'max:60'],
+            'origine'              => ['nullable', 'string', 'max:30'],
+            'devise'               => ['nullable', 'string', 'max:10'],
+            'nuance'               => ['nullable', 'string', 'max:30'],
+            'gross_weight'         => ['nullable', 'numeric', 'min:0'],
+            'inner_diameter'       => ['nullable', 'numeric', 'min:0'],
+            'outer_diameter'       => ['nullable', 'numeric', 'min:0'],
+            'coating'              => ['nullable', 'string', 'max:30'],
+            'surface_finish'       => ['nullable', 'string', 'max:30'],
+            'tolerance_thickness'  => ['nullable', 'numeric', 'min:0'],
+            'barcode'              => ['nullable', 'string', 'max:60'],
+            'brand'                => ['nullable', 'string', 'max:60'],
+            'serial_number'        => ['nullable', 'string', 'max:60'],
+            'valuation_method'     => ['nullable', 'string', 'max:20'],
+            'notes'                => ['nullable', 'string', 'max:2000'],
         ]);
+
+        // [FIX null-vs-défaut] estimated_length est NOT NULL en base : un champ laissé
+        // vide (null explicite) provoquerait « Column cannot be null » (500).
+        if (array_key_exists('estimated_length', $data) && $data['estimated_length'] === null) {
+            $data['estimated_length'] = 0;
+        }
+
+        return $data + [
+            'is_stock_managed'     => $request->boolean('is_stock_managed'),
+            'lot_tracking'         => $request->boolean('lot_tracking'),
+            'allow_negative_stock' => $request->boolean('allow_negative_stock'),
+        ];
     }
 }

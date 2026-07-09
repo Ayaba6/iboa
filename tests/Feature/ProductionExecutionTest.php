@@ -40,6 +40,9 @@ function p4Order(): ProductionOrder
         'quantity_requested' => 100,
         'quantity_produced'  => 0,
         'launched_at'        => now(),
+        // Les scénarios P4 testent transitions/écarts — le contrôle qualité
+        // obligatoire est couvert par ProductionClosureGuardsTest.
+        'controle_qualite_obligatoire' => false,
     ]);
 }
 
@@ -60,7 +63,11 @@ function p4Warehouse(): Warehouse
 {
     return Warehouse::firstOrCreate(
         ['code' => 'WH-EXEC'],
-        ['name' => 'Exec WH', 'company_id' => p4Company()->id, 'is_active' => true, 'is_default' => true]
+        [
+            'name' => 'Exec WH', 'company_id' => p4Company()->id, 'is_active' => true, 'is_default' => true,
+            // CDC dépôts : la sortie d'OF exige un dépôt de production
+            'can_production' => true, 'can_sale' => true, 'can_purchase' => true, 'can_stock' => true,
+        ]
     );
 }
 
@@ -168,6 +175,136 @@ it('blocks reversing execution records once OF is no longer in progress', functi
     expect($order->outputs()->count())->toBe(1);
     expect($order->wastes()->count())->toBe(1);
     expect((float) $coil->fresh()->remaining_weight)->toEqual(900.0);
+});
+
+it('auto-consumes BOM components on production declaration (Bug #19)', function () {
+    $this->actingAs(p4Admin());
+    $wh = p4Warehouse();
+
+    // Produit fini + composant suivi en product_stocks (stock 64).
+    $finished  = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    $component = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    \App\Models\ProductStock::create([
+        'product_id' => $component->id, 'warehouse_id' => $wh->id,
+        'quantity' => 64, 'reserved_quantity' => 0, 'avg_cost' => 3048,
+    ]);
+
+    // Nomenclature : 2 composants par unité produite.
+    $bom = \App\Modules\Production\Models\BillOfMaterial::create([
+        'company_id' => p4Company()->id, 'product_id' => $finished->id,
+        'name' => 'BOM Test #19', 'is_active' => true,
+    ]);
+    \App\Modules\Production\Models\BomLine::create([
+        'bill_of_material_id' => $bom->id, 'product_id' => $component->id,
+        'quantity_per_meter' => 2, 'sort_order' => 1,
+    ]);
+
+    $order = p4Order();
+    $order->update(['product_id' => $finished->id, 'bill_of_material_id' => $bom->id, 'quantity_requested' => 5]);
+
+    // Déclaration de production de 5 unités.
+    $this->post(route('production.orders.output', $order), [
+        'warehouse_id' => $wh->id, 'length' => 6, 'quantity' => 5, 'unit_cost' => 3000,
+    ])->assertRedirect();
+
+    // Produit fini : +5 ; composant : -10 (2 × 5) → 54.
+    $pf = \App\Models\ProductStock::where('product_id', $finished->id)->where('warehouse_id', $wh->id)->first();
+    expect((float) $pf->quantity)->toEqual(5.0);
+
+    $comp = \App\Models\ProductStock::where('product_id', $component->id)->where('warehouse_id', $wh->id)->first();
+    expect((float) $comp->quantity)->toEqual(54.0);
+
+    // Annulation de la déclaration → composant restauré à 64, PF à 0.
+    $out = $order->outputs()->first();
+    $this->delete(route('production.outputs.destroy', $out))->assertRedirect();
+    expect((float) $comp->fresh()->quantity)->toEqual(64.0);
+    expect((float) $pf->fresh()->quantity)->toEqual(0.0);
+});
+
+it('blocks OF launch on material shortage, allows launch with derogation (Bug #20)', function () {
+    $this->actingAs(p4Admin());
+    $wh = p4Warehouse();
+
+    $finished  = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    $component = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp', 'allow_negative_stock' => false]);
+    \App\Models\ProductStock::create([
+        'product_id' => $component->id, 'warehouse_id' => $wh->id,
+        'quantity' => 64, 'reserved_quantity' => 0, 'avg_cost' => 3048,
+    ]);
+
+    $bom = \App\Modules\Production\Models\BillOfMaterial::create([
+        'company_id' => p4Company()->id, 'product_id' => $finished->id, 'name' => 'BOM #20', 'is_active' => true,
+    ]);
+    \App\Modules\Production\Models\BomLine::create([
+        'bill_of_material_id' => $bom->id, 'product_id' => $component->id, 'quantity_per_meter' => 2, 'sort_order' => 1,
+    ]);
+
+    // besoin = 2 × 100 = 200 > dispo 64 → rupture.
+    $order = p4Order();
+    $order->update(['status' => 'matiere_allouee', 'product_id' => $finished->id, 'bill_of_material_id' => $bom->id]);
+
+    $svc = app(\App\Modules\Production\Services\ProductionService::class);
+
+    // 1. Lancement normal bloqué.
+    expect(fn () => $svc->launch($order->fresh()))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+    expect($order->fresh()->status)->toBe('matiere_allouee');
+
+    // 2. Dérogation → lancement autorisé.
+    $svc->launch($order->fresh(), true);
+    expect($order->fresh()->status)->toBe('lance');
+});
+
+it('launches normally when material is sufficient', function () {
+    $this->actingAs(p4Admin());
+    $wh = p4Warehouse();
+
+    $finished  = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    $component = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    \App\Models\ProductStock::create([
+        'product_id' => $component->id, 'warehouse_id' => $wh->id,
+        'quantity' => 500, 'reserved_quantity' => 0, 'avg_cost' => 3048,
+    ]);
+
+    $bom = \App\Modules\Production\Models\BillOfMaterial::create([
+        'company_id' => p4Company()->id, 'product_id' => $finished->id, 'name' => 'BOM OK', 'is_active' => true,
+    ]);
+    \App\Modules\Production\Models\BomLine::create([
+        'bill_of_material_id' => $bom->id, 'product_id' => $component->id, 'quantity_per_meter' => 2, 'sort_order' => 1,
+    ]);
+
+    $order = p4Order();
+    $order->update(['status' => 'matiere_allouee', 'product_id' => $finished->id, 'bill_of_material_id' => $bom->id]);
+
+    app(\App\Modules\Production\Services\ProductionService::class)->launch($order->fresh());
+    expect($order->fresh()->status)->toBe('lance');
+});
+
+it('blocks full OF closure when produced < requested, allows with confirmation (Bug #21)', function () {
+    $this->actingAs(p4Admin());
+    $svc = app(\App\Modules\Production\Services\ProductionService::class);
+
+    // Produit 25 sur 100 demandés, aucune déclaration en attente de visa.
+    $order = p4Order();
+    $order->update(['status' => 'en_cours', 'quantity_requested' => 100, 'quantity_produced' => 25]);
+
+    // 1. Clôture normale bloquée (écart).
+    expect(fn () => $svc->finish($order->fresh()))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+    expect($order->fresh()->status)->toBe('en_cours');
+
+    // 2. Dérogation (écart confirmé) → clôture autorisée.
+    $svc->finish($order->fresh(), true);
+    expect($order->fresh()->status)->toBe('termine');
+});
+
+it('closes OF normally when produced meets requested', function () {
+    $this->actingAs(p4Admin());
+    $order = p4Order();
+    $order->update(['status' => 'en_cours', 'quantity_requested' => 100, 'quantity_produced' => 100]);
+
+    app(\App\Modules\Production\Services\ProductionService::class)->finish($order->fresh());
+    expect($order->fresh()->status)->toBe('termine');
 });
 
 it('records a waste and values it from consumed cost', function () {

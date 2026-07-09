@@ -3,7 +3,9 @@
 namespace App\Modules\Production\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\BonPreparation;
 use App\Models\Invoice;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\StockMovement;
@@ -71,7 +73,7 @@ class ProductionDashboardController extends Controller
         // Rendement matière moyen sur la période (OF terminés)
         $consumed = (float) ProductionConsumption::whereBetween('consumed_at', [$f, $t])->sum('weight_consumed');
         $waste    = $kpis['waste_weight'];
-        $kpis['yield'] = $consumed > 0 ? round((($consumed - $waste) / $consumed) * 100, 1) : null;
+        $kpis['yield'] = $consumed > 0 ? max(0, min(100, round((($consumed - $waste) / $consumed) * 100, 1))) : null;
 
         // Production par jour (mètres)
         $daily = ProductionOutput::whereBetween('produced_at', [$f, $t])
@@ -105,9 +107,137 @@ class ProductionDashboardController extends Controller
         // ── Coût standard vs réel (§11 CDC) ──────────────────────────────────
         $coutComparaison = $this->computeCostComparison($f, $t);
 
+        // [CDC §tôles-bac] Commandes tôles bac autorisées vs en attente d'autorisation.
+        // Tôles bac = articles de famille BPRE ou BGAL.
+        // Une commande est autorisée si : client cash + BP créé, OU client crédit + BP créé.
+        $toBacAutorisees = Order::whereIn('status', ['confirme', 'en_preparation'])
+            ->whereHas('items.product.family', fn ($q) => $q->whereIn('code', ['BPRE', 'BGAL']))
+            ->whereHas('bonPreparations', fn ($q) => $q->whereIn('status', ['en_attente', 'en_cours', 'charge']))
+            ->with(['client:id,name,payment_mode', 'bonPreparations' => fn ($q) => $q->latest()->limit(1)])
+            ->orderByDesc('id')->limit(10)->get();
+
+        $toBacEnAttente = Order::whereIn('status', ['confirme', 'en_preparation'])
+            ->whereHas('items.product.family', fn ($q) => $q->whereIn('code', ['BPRE', 'BGAL']))
+            ->whereDoesntHave('bonPreparations', fn ($q) => $q->whereIn('status', ['en_attente', 'en_cours', 'charge']))
+            ->with(['client:id,name,payment_mode'])
+            ->orderByDesc('id')->limit(10)->get();
+
+        // ── Écran SAGE : validations, sparkline, panneaux ─────────────────────
+        $pendingCount = app(\App\Services\PendingValidationsService::class)->for($request->user())->count();
+
+        $prod7Raw = ProductionOutput::where('produced_at', '>=', today()->subDays(6)->startOfDay())
+            ->selectRaw('DATE(produced_at) d, SUM(total_meters) m')
+            ->groupByRaw('DATE(produced_at)')->pluck('m', 'd');
+        $prod7Days = collect(range(6, 0))
+            ->map(fn ($i) => round((float) ($prod7Raw[today()->subDays($i)->format('Y-m-d')] ?? 0), 1))->all();
+
+        $kpis['rebut_pct'] = $consumed > 0 ? min(100, round(($waste / $consumed) * 100, 2)) : null;
+
+        $inspPeriode = QualityInspection::whereBetween('inspected_at', [$f, $t]);
+        $inspTotal   = (clone $inspPeriode)->count();
+        if ($inspTotal === 0) {
+            $inspTotal = QualityInspection::count();
+            $inspConf  = QualityInspection::where('status', 'conforme')->count();
+        } else {
+            $inspConf  = (clone $inspPeriode)->where('status', 'conforme')->count();
+        }
+        $kpis['conformite'] = $inspTotal > 0 ? round(($inspConf / $inspTotal) * 100, 1) : null;
+
+        $ofEnCours = ProductionOrder::with(['product:id,name,reference', 'productionLine:id,name'])
+            ->orderByRaw("CASE status WHEN 'en_cours' THEN 1 WHEN 'lance' THEN 2 WHEN 'planifie' THEN 3 WHEN 'valide' THEN 4 WHEN 'brouillon' THEN 5 WHEN 'termine' THEN 6 ELSE 7 END ASC")
+            ->orderByDesc('id')->limit(7)->get();
+
+        $suiviJour = ProductionOutput::with(['productionOrder:id,number', 'product:id,name'])
+            ->orderByDesc('produced_at')->orderByDesc('id')->limit(5)->get();
+        $suiviUsers = \App\Models\User::whereIn('id', $suiviJour->pluck('created_by')->filter())->pluck('name', 'id');
+
+        // Alertes production
+        $alertes = collect();
+        MachineMaintenance::with('machine:id,code,name')
+            ->whereNotIn('status', ['termine', 'cloture', 'annule'])
+            ->orderByDesc('started_at')->limit(2)->get()
+            ->each(fn ($m) => $alertes->push([
+                'niveau' => 'rouge',
+                'titre'  => 'Arrêt machine ' . ($m->machine?->code ?? '—'),
+                'detail' => $m->title,
+                'heure'  => ($m->started_at ?? $m->planned_at)?->format('H:i'),
+            ]));
+        Product::whereHas('family', fn ($q) => $q->whereIn('code', ['MP', 'BPRE', 'BGAL']))
+            ->where('stock_min', '>', 0)
+            ->whereRaw('(SELECT COALESCE(SUM(quantity - reserved_quantity), 0) FROM product_stocks WHERE product_stocks.product_id = products.id) < products.stock_min')
+            ->limit(2)->get(['id', 'name', 'stock_min'])
+            ->each(fn ($p) => $alertes->push([
+                'niveau' => 'orange',
+                'titre'  => 'Stock matière faible',
+                'detail' => $p->name . ' — seuil : ' . number_format((float) $p->stock_min, 0, ',', ' '),
+                'heure'  => null,
+            ]));
+        ProductionOrder::whereIn('status', ['lance', 'en_cours'])
+            ->whereHas('order', fn ($q) => $q->whereNotNull('delivery_date')->whereDate('delivery_date', '<', today()))
+            ->limit(2)->get(['id', 'number'])
+            ->each(fn ($of) => $alertes->push([
+                'niveau' => 'rouge',
+                'titre'  => 'Retard OF ' . $of->number,
+                'detail' => 'Date de livraison dépassée',
+                'heure'  => null,
+            ]));
+        if (($kpis['rebut_pct'] ?? 0) > 3) {
+            $alertes->push([
+                'niveau' => 'orange',
+                'titre'  => 'Taux de rebut élevé',
+                'detail' => $kpis['rebut_pct'] . ' % (seuil 3 %)',
+                'heure'  => null,
+            ]);
+        }
+
+        // Consommation matières (MP + consommables)
+        $mpIds = Product::whereHas('family', fn ($q) => $q->whereIn('code', ['MP', 'CONS']))->pluck('id');
+        $stockDispoMp = ProductStock::whereIn('product_id', $mpIds)
+            ->selectRaw('product_id, SUM(quantity - reserved_quantity) q')->groupBy('product_id')->pluck('q', 'product_id');
+        $consoJour = StockMovement::where('type', 'sortie')->whereIn('product_id', $mpIds)
+            ->whereDate('occurred_at', today())
+            ->selectRaw('product_id, SUM(quantity) q')->groupBy('product_id')->pluck('q', 'product_id');
+        $consoMois = StockMovement::where('type', 'sortie')->whereIn('product_id', $mpIds)
+            ->whereBetween('occurred_at', [now()->startOfMonth(), now()])
+            ->selectRaw('product_id, SUM(quantity) q')->groupBy('product_id')->pluck('q', 'product_id');
+        $consoMatieres = Product::with('unit:id,abbreviation')->whereIn('id', $mpIds)
+            ->orderBy('name')->limit(4)->get(['id', 'name', 'unit_id'])
+            ->map(fn ($p) => [
+                'name'  => $p->name,
+                'stock' => (float) ($stockDispoMp[$p->id] ?? 0),
+                'jour'  => (float) ($consoJour[$p->id] ?? 0),
+                'mois'  => (float) ($consoMois[$p->id] ?? 0),
+                'unite' => $p->unit?->abbreviation ?? '—',
+            ]);
+
+        // Performances machines (disponibilité mois courant)
+        $moisDebut     = now()->startOfMonth();
+        $joursMois     = max(1, $moisDebut->diffInDays(now()) + 1);
+        $downByMachine = MachineMaintenance::whereBetween('started_at', [$moisDebut, now()])
+            ->selectRaw('machine_id, SUM(downtime_minutes) dm')->groupBy('machine_id')->pluck('dm', 'machine_id');
+        $perfMachines = \App\Modules\Production\Models\ProductionMachine::where('is_active', true)
+            ->orderBy('code')->limit(5)->get(['id', 'code', 'name', 'status'])
+            ->map(function ($m) use ($downByMachine, $joursMois) {
+                $dm    = (float) ($downByMachine[$m->id] ?? 0);
+                $dispo = max(0, min(100, round((1 - $dm / ($joursMois * 8 * 60)) * 100, 1)));
+                return [
+                    'code'   => $m->code,
+                    'name'   => $m->name,
+                    'dispo'  => $dispo,
+                    'arrets' => round($dm / 60, 1),
+                    'statut' => $m->status,
+                ];
+            });
+
+        $controlesQualite = QualityInspection::with(['productionOrder:id,number', 'controller'])
+            ->orderByDesc('inspected_at')->limit(5)->get();
+
         return view('production.dashboard', compact(
             'kpis', 'chartDaily', 'byStatus', 'topClients', 'avgCost',
-            'stockParDepot', 'from', 'to', 'trs', 'coutComparaison'
+            'stockParDepot', 'from', 'to', 'trs', 'coutComparaison',
+            'toBacAutorisees', 'toBacEnAttente',
+            'pendingCount', 'prod7Days', 'ofEnCours', 'suiviJour', 'suiviUsers',
+            'alertes', 'consoMatieres', 'perfMachines', 'controlesQualite'
         ));
     }
 
@@ -139,7 +269,7 @@ class ProductionDashboardController extends Controller
         // Cadence standard = mètres théoriques basés sur les OF terminés avec quantité planifiée
         $metersPlanned = (float) ProductionOrder::where('status', 'termine')
             ->whereBetween('finished_at', [$f, $t])
-            ->sum('quantity_planned');
+            ->sum('quantity_requested');
         $performance = $metersPlanned > 0
             ? max(0, min(100, round(($metersReal / $metersPlanned) * 100, 1)))
             : ($metersReal > 0 ? 85.0 : 0.0); // fallback estimation si pas de quantité planifiée

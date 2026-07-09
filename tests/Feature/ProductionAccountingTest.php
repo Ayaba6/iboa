@@ -43,6 +43,9 @@ function paOrderInProgress(): ProductionOrder
     $order = ProductionOrder::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id, 'number' => 'OF-2026-8000',
         'status' => 'en_cours', 'quantity_requested' => 10, 'product_id' => $product->id,
+        // Scénarios comptables — le contrôle qualité obligatoire est couvert
+        // par ProductionClosureGuardsTest.
+        'controle_qualite_obligatoire' => false,
     ]);
 
     $coil = Coil::create([
@@ -51,9 +54,11 @@ function paOrderInProgress(): ProductionOrder
     ]);
     app(CoilConsumptionService::class)->consume($order, $coil, 100); // material 50000
 
-    app(ProductionStockService::class)->recordOutput($order, [
+    $out = app(ProductionStockService::class)->recordOutput($order, [
         'warehouse_id' => $wh->id, 'length' => 6, 'quantity' => 10, 'unit_cost' => 3000, // PF value 30000
     ]);
+    // [CDC §13.3] Visa chef d'équipe — requis pour la clôture
+    $out->update(['status' => 'validee', 'validated_at' => now()]);
 
     return $order->fresh();
 }

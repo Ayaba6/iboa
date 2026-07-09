@@ -65,9 +65,24 @@ it('runs the full workflow brouillon -> termine', function () {
     $this->post(route('production.orders.start', $order))->assertRedirect();
     expect($order->fresh()->status)->toBe('en_cours');
 
+    // Production réelle déclarée avant clôture (= quantité demandée → pas d'écart).
+    // QC obligatoire couvert par ProductionClosureGuardsTest — hors sujet ici.
+    $order->update(['quantity_produced' => $order->quantity_requested, 'controle_qualite_obligatoire' => false]);
     $this->post(route('production.orders.finish', $order))->assertRedirect();
     expect($order->fresh()->status)->toBe('termine');
     expect($order->fresh()->finished_at)->not->toBeNull();
+});
+
+it('blocks finishing an OF with zero produced quantity', function () {
+    $this->actingAs(poAdmin());
+    $order = makeOrder();
+
+    $this->post(route('production.orders.launch', $order))->assertRedirect();
+    $this->post(route('production.orders.start', $order))->assertRedirect();
+
+    // Aucune production déclarée (quantity_produced = 0) → clôture refusée.
+    $this->post(route('production.orders.finish', $order))->assertSessionHasErrors('quantity_produced');
+    expect($order->fresh()->status)->toBe('en_cours');
 });
 
 it('rejects an invalid transition (finish a draft)', function () {

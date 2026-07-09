@@ -19,11 +19,14 @@ class ProductionCostController extends Controller
     public function compute(Request $request, ProductionOrder $order): RedirectResponse
     {
         $data = $request->validate([
-            'labor_cost'    => ['nullable', 'integer', 'min:0'],
-            'machine_cost'  => ['nullable', 'integer', 'min:0'],
-            'overhead_cost' => ['nullable', 'integer', 'min:0'],
-            'overhead_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'revenue'       => ['nullable', 'numeric', 'min:0'],
+            'labor_cost'       => ['nullable', 'integer', 'min:0'],
+            'machine_cost'     => ['nullable', 'integer', 'min:0'],
+            'energy_cost'      => ['nullable', 'integer', 'min:0'],
+            'maintenance_cost' => ['nullable', 'integer', 'min:0'],
+            'packaging_cost'   => ['nullable', 'integer', 'min:0'],
+            'overhead_cost'    => ['nullable', 'integer', 'min:0'],
+            'overhead_rate'    => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'revenue'          => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $this->costs->compute($order, $data);

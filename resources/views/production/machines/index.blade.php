@@ -8,76 +8,105 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+@php
+    $lbl = 'block text-[11px] font-bold text-gray-700 mb-1';
+    $lk  = 'appearance-none w-full h-8 py-0 pl-2 pr-7 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
+    $th  = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+@endphp
+<div class="space-y-4">
 
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    {{-- Bandeau --}}
+    <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Machines de production</h1>
-            <p class="text-sm text-gray-500 mt-0.5">Découpe, profilage — coût horaire & disponibilité</p>
+            <h1 class="text-[17px] font-bold text-gray-900">Machines de production</h1>
+            <p class="text-[12px] text-gray-500">Découpe, profilage — coût horaire &amp; disponibilité</p>
         </div>
         @can('production.create')
         <a href="{{ route('production.machines.create') }}"
-           class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+           class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-semibold px-4 py-1.5 rounded-[4px] flex items-center gap-1.5 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Nouvelle machine
         </a>
         @endcan
     </div>
 
-    <form method="GET" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3">
-        <select name="type" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-            <option value="">Tous les types</option>
-            <option value="decoupe"   @selected(request('type')==='decoupe')>Découpe</option>
-            <option value="profilage" @selected(request('type')==='profilage')>Profilage</option>
-            <option value="mixte"     @selected(request('type')==='mixte')>Mixte</option>
-        </select>
-        <button type="submit" class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-700">Filtrer</button>
-        @if(request('type'))<a href="{{ route('production.machines.index') }}" class="px-3 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50">✕</a>@endif
+    {{-- Filtres --}}
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 items-end">
+            <div>
+                <label class="{{ $lbl }}">Type machine</label>
+                <div class="relative"><select name="type" class="{{ $lk }}">
+                    <option value="">Tous</option>
+                    <option value="decoupe"   @selected(request('type')==='decoupe')>Découpe</option>
+                    <option value="profilage" @selected(request('type')==='profilage')>Profilage</option>
+                    <option value="mixte"     @selected(request('type')==='mixte')>Mixte</option>
+                </select>{!! $caret !!}</div>
+            </div>
+            <div class="col-span-2 sm:col-span-3 flex justify-end gap-2">
+                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-semibold px-4 h-8 rounded-[4px] flex items-center gap-1.5 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    Rechercher
+                </button>
+                @if(request('type'))
+                <a href="{{ route('production.machines.index') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] font-semibold px-4 h-8 rounded-[4px] flex items-center transition-colors">Réinitialiser</a>
+                @endif
+            </div>
+        </div>
     </form>
 
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="tbl-scroll">
-            <table class="tbl tbl-sticky w-full">
-                <thead>
+    {{-- Table --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-[12.5px] border-collapse">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="text-left">Code</th>
-                        <th class="text-left">Nom</th>
-                        <th class="text-left">Type</th>
-                        <th class="text-right">Coût horaire</th>
-                        <th class="text-left">Statut</th>
-                        <th></th>
+                        <th class="{{ $th }} text-left">Code</th>
+                        <th class="{{ $th }} text-left">Nom</th>
+                        <th class="{{ $th }} text-left">Type</th>
+                        <th class="{{ $th }} text-right">Coût horaire</th>
+                        <th class="{{ $th }} text-center">Statut</th>
+                        <th class="{{ $th }}"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($machines as $m)
-                    <tr class="{{ $m->is_active ? '' : 'opacity-50' }}">
-                        <td class="font-mono text-xs text-indigo-600">{{ $m->code }}</td>
-                        <td class="text-gray-800 font-medium">{{ $m->name }}</td>
-                        <td class="text-gray-600">{{ ucfirst($m->type) }}</td>
-                        <td class="text-right font-mono tabular-nums text-gray-900">{{ number_format($m->hourly_cost, 0, ',', ' ') }} F</td>
-                        <td>
-                            @php $sc = match($m->status){ 'active'=>'bg-green-100 text-green-700','maintenance'=>'bg-amber-100 text-amber-700',default=>'bg-red-100 text-red-700' }; @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $sc }}">{{ ucfirst($m->status) }}</span>
+                    <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors {{ $m->is_active ? '' : 'opacity-50' }}">
+                        <td class="px-3 py-1.5 font-mono text-emerald-800 whitespace-nowrap">{{ $m->code }}</td>
+                        <td class="px-3 py-1.5 font-medium text-gray-900">{{ $m->name }}</td>
+                        <td class="px-3 py-1.5 text-gray-600">{{ ucfirst($m->type) }}</td>
+                        <td class="px-3 py-1.5 text-right font-mono tabular-nums text-gray-900">{{ number_format($m->hourly_cost, 0, ',', ' ') }} F</td>
+                        <td class="px-3 py-1.5 text-center">
+                            @php [$sl, $sc] = match($m->status){
+                                'active'      => ['Active',      'bg-emerald-100 text-emerald-700'],
+                                'maintenance' => ['Maintenance', 'bg-amber-100 text-amber-700'],
+                                'en_panne'    => ['En panne',    'bg-red-100 text-red-700'],
+                                default       => [ucfirst(str_replace('_', ' ', (string) $m->status)), 'bg-gray-100 text-gray-500'],
+                            }; @endphp
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium {{ $sc }}">{{ $sl }}</span>
                         </td>
-                        <td class="text-right whitespace-nowrap">
+                        <td class="px-3 py-1.5 text-right whitespace-nowrap">
                             @can('production.update')
-                            <a href="{{ route('production.machines.edit', $m) }}" class="text-indigo-600 hover:underline text-xs font-medium">Modifier</a>
+                            <a href="{{ route('production.machines.edit', $m) }}" class="text-emerald-700 hover:text-emerald-900 hover:underline text-[12px] font-semibold">Modifier</a>
                             @endcan
                             @can('production.delete')
                             <form method="POST" action="{{ route('production.machines.destroy', $m) }}" class="inline ml-2" data-confirm="Supprimer cette machine ?">
                                 @csrf @method('DELETE')
-                                <button class="text-gray-400 hover:text-red-600 text-xs">Suppr.</button>
+                                <button class="text-gray-400 hover:text-red-600 text-[12px]">Suppr.</button>
                             </form>
                             @endcan
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="6" class="px-4 py-12 text-center text-gray-400">Aucune machine. Créez-en une.</td></tr>
+                    <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400 text-sm">Aucune machine. Créez-en une.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        @if($machines->hasPages())<div class="px-4 py-3 border-t border-gray-100">{{ $machines->links() }}</div>@endif
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+            <span>{{ $machines->total() }} machine(s)</span>
+            @if($machines->hasPages())<div>{{ $machines->links() }}</div>@endif
+        </div>
     </div>
 </div>
 @endsection

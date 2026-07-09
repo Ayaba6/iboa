@@ -6,8 +6,10 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
+use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,20 +20,40 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /** [PRODUCTION] Ordre de fabrication. */
 class ProductionOrder extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasAttachments;
 
     protected $fillable = [
         'company_id','fiscal_year_id','number','client_id','order_id','product_id','bill_of_material_id',
         'production_line_id','sheet_type','thickness','color','length','usable_width',
         'quantity_requested','quantity_produced','status','launched_at','finished_at','responsible_id','notes','created_by',
+        // [SAGE parité] en-tête + paramètres de production
+        'site_planification','site_production','numero_optimisation','prepa_fabrication','reference_of',
+        'designation','mode_lancement','priorite','date_fabrication_prevue','date_lancement','heure_lancement','observation',
+        'rendement_standard','taux_perte','depot_produit_fini_id','depot_rebut_id','controle_qualite_obligatoire',
         // §13.2 CDC — Validation financière avant lancement OF
         'financial_authorization','financial_authorized_at','financial_authorized_by','financial_notes','payment_mode','payment_rate',
+        // §13.10 CDC — Modification OF exceptionnelle, workflow 4 étapes
+        'modification_status','modification_reason',
+        'modification_requested_at','modification_requested_by',
+        'modification_chef_avis_at','modification_chef_avis_by','modification_chef_comment',
+        'modification_commercial_avis_at','modification_commercial_avis_by','modification_commercial_comment',
+        'modification_finance_avis_at','modification_finance_avis_by','modification_finance_comment',
+        'modification_dg_approved_at','modification_dg_approved_by','modification_dg_comment',
     ];
     protected $casts = [
         'thickness'=>'decimal:2','length'=>'decimal:2','usable_width'=>'decimal:1',
         'quantity_requested'=>'decimal:2','quantity_produced'=>'decimal:2','launched_at'=>'date','finished_at'=>'date',
         'financial_authorized_at'=>'datetime','payment_rate'=>'decimal:2',
+        'modification_requested_at'=>'datetime','modification_chef_avis_at'=>'datetime',
+        'modification_commercial_avis_at'=>'datetime','modification_finance_avis_at'=>'datetime',
+        'modification_dg_approved_at'=>'datetime',
+        'date_fabrication_prevue'=>'date','date_lancement'=>'date',
+        'rendement_standard'=>'decimal:4','taux_perte'=>'decimal:4',
+        'controle_qualite_obligatoire'=>'boolean',
     ];
+
+    public function depotProduitFini(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_produit_fini_id'); }
+    public function depotRebut(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_rebut_id'); }
 
     public function company(): BelongsTo { return $this->belongsTo(Company::class); }
     public function client(): BelongsTo { return $this->belongsTo(Client::class); }
@@ -48,14 +70,31 @@ class ProductionOrder extends Model
     public function cost(): HasOne { return $this->hasOne(ProductionCost::class); }
     public function reservations(): HasMany { return $this->hasMany(\App\Models\StockReservation::class); }
     public function timeLogs(): HasMany { return $this->hasMany(ProductionTimeLog::class); }
+
+    // §13.10 CDC — acteurs du circuit de modification exceptionnelle
+    public function modificationRequestedBy(): BelongsTo  { return $this->belongsTo(User::class, 'modification_requested_by'); }
+    public function modificationChefAvisBy(): BelongsTo    { return $this->belongsTo(User::class, 'modification_chef_avis_by'); }
+    public function modificationCommercialAvisBy(): BelongsTo { return $this->belongsTo(User::class, 'modification_commercial_avis_by'); }
+    public function modificationFinanceAvisBy(): BelongsTo { return $this->belongsTo(User::class, 'modification_finance_avis_by'); }
+    public function modificationDgApprovedBy(): BelongsTo  { return $this->belongsTo(User::class, 'modification_dg_approved_by'); }
     public function operations(): HasMany { return $this->hasMany(ProductionOrderOperation::class)->orderBy('sequence'); }
     public function batches(): HasMany { return $this->hasMany(ProductionBatch::class); }
 
     public function isEditable(): bool { return in_array($this->status, ['brouillon','matiere_allouee','lance'], true); }
     public function isInProgress(): bool { return in_array($this->status, ['en_cours','termine_partiellement'], true); }
+
+    /**
+     * [§13.10 CDC] Un OF en_cours/termine_partiellement n'est éditable que si le
+     * circuit de modification exceptionnelle (chef→commercial→finance→DG) a été
+     * intégralement validé pour la demande en cours.
+     */
+    public function isEditableViaModification(): bool
+    {
+        return $this->isInProgress() && $this->modification_status === 'approuvee';
+    }
     public function totalMeters(): float { return (float) $this->lines->sum('total_meters'); }
-    public function statusLabel(): string { return match($this->status){'brouillon'=>'Brouillon','matiere_allouee'=>'Matière allouée','lance'=>'Lancé','en_cours'=>'En cours','termine_partiellement'=>'Terminé partiellement','termine'=>'Terminé','annule'=>'Annulé',default=>$this->status}; }
-    public function statusColor(): string { return match($this->status){'brouillon'=>'gray','matiere_allouee'=>'amber','lance'=>'blue','en_cours'=>'sky','termine_partiellement'=>'teal','termine'=>'green','annule'=>'red',default=>'gray'}; }
+    public function statusLabel(): string { return match($this->status){'brouillon'=>'Brouillon','matiere_allouee'=>'Matière allouée','attente_chef'=>'En attente Chef Atelier','attente_responsable'=>'En attente Responsable Prod.','lance'=>'Lancé','en_cours'=>'En cours','termine_partiellement'=>'Terminé partiellement','termine'=>'Terminé','annule'=>'Annulé',default=>$this->status}; }
+    public function statusColor(): string { return match($this->status){'brouillon'=>'gray','matiere_allouee'=>'amber','attente_chef'=>'orange','attente_responsable'=>'yellow','lance'=>'blue','en_cours'=>'sky','termine_partiellement'=>'teal','termine'=>'green','annule'=>'red',default=>'gray'}; }
 
     protected static function newFactory()
     {

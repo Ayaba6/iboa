@@ -27,7 +27,7 @@ function makeOf(string $status = 'brouillon'): ProductionOrder
 
     return ProductionOrder::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
-        'number' => 'OF-' . uniqid(), 'status' => $status, 'quantity_requested' => 10,
+        'number' => 'OF-' . uniqid(), 'status' => $status, 'quantity_requested' => 10, 'controle_qualite_obligatoire' => false,
     ]);
 }
 
@@ -59,6 +59,8 @@ it('transitions en_cours → terminé partiellement → terminé', function () {
     expect($of->fresh()->status)->toBe('termine_partiellement');
     expect($of->fresh()->isInProgress())->toBeTrue(); // peut encore produire
 
+    // Une quantité produite réelle est requise pour clôturer (garde cohérence stock).
+    $of->update(['quantity_produced' => 10]);
     $svc->finish($of);
     expect($of->fresh()->status)->toBe('termine');
 });

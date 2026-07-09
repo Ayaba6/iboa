@@ -27,7 +27,10 @@ class ReservationService
             throw ValidationException::withMessages(['product' => 'Aucun produit fini défini sur l\'OF.']);
         }
 
-        $qty = (float) ($order->quantity_produced ?: $order->quantity_requested);
+        // On réserve strictement le produit fini RÉELLEMENT fabriqué (en stock).
+        // Pas de repli sur quantity_requested : réserver une quantité non produite
+        // créerait une réservation sans stock en face (dispo négative).
+        $qty = (float) $order->quantity_produced;
         if ($qty <= 0) {
             throw ValidationException::withMessages(['quantity' => 'Quantité produite nulle — rien à réserver.']);
         }
