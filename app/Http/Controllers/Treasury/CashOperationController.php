@@ -55,10 +55,53 @@ class CashOperationController extends Controller
             'operation_date'  => ['required', 'date'],
             'category'        => ['nullable', 'string', 'max:100'],
             'label'           => ['nullable', 'string', 'max:255'],
+            // [PARITÉ SAGE X3] Champs descriptifs
+            'site'               => ['nullable', 'string', 'max:40'],
+            'operation_type'     => ['nullable', 'string', 'max:40'],
+            'reference'          => ['nullable', 'string', 'max:100'],
+            'requester'          => ['nullable', 'string', 'max:100'],
+            'cashier_name'       => ['nullable', 'string', 'max:100'],
+            'currency_code'      => ['nullable', 'string', 'size:3'],
+            'exchange_rate'      => ['nullable', 'numeric', 'min:0'],
+            'fees'               => ['nullable', 'integer', 'min:0'],
+            'value_date'         => ['nullable', 'date'],
+            'general_account'    => ['nullable', 'string', 'max:20'],
+            'counterpart_account' => ['nullable', 'string', 'max:20'],
+            'cost_center'        => ['nullable', 'string', 'max:30'],
+            'analytic_section'   => ['nullable', 'string', 'max:30'],
+            'payment_method'     => ['nullable', 'string', 'max:40'],
+            'comment'            => ['nullable', 'string', 'max:500'],
+            'lines'              => ['nullable', 'array'],
+            'documents'          => ['nullable', 'array'],
+            'documents.*'        => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
         ]);
 
         try {
             $operation = $this->service->create($data);
+            // [PARITÉ SAGE X3] Métadonnées descriptives (post-création — le mouvement
+            // et l'écriture comptable sont déjà générés par le service à partir de amount/direction).
+            $extras = collect($data)->only([
+                'site','operation_type','reference','requester','cashier_name','currency_code',
+                'exchange_rate','fees','value_date','general_account','counterpart_account',
+                'cost_center','analytic_section','payment_method','comment','lines',
+            ])->filter(fn($v) => $v !== null)->all();
+            $extras['net_amount'] = (int) $data['amount'] - max(0, (int) ($data['fees'] ?? 0));
+            if ($extras) $operation->update($extras);
+
+            foreach ((array) $request->file('documents', []) as $file) {
+                $path = $file->store('attachments/cash_operation/'.$operation->id, 'local');
+                $operation->attachments()->create([
+                    'disk' => 'local', 'path' => $path, 'filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(), 'size' => $file->getSize(),
+                    'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+                ]);
+            }
+
+            if ($request->boolean('save_and_new')) {
+                return redirect()
+                    ->route('tresorerie.operations.create', ['direction' => $operation->direction])
+                    ->with('success', "Opération {$operation->number} enregistrée. Nouvelle saisie.");
+            }
             return redirect()
                 ->route('tresorerie.operations.index')
                 ->with('success', "Opération {$operation->number} ({$operation->directionLabel()}) enregistrée.");

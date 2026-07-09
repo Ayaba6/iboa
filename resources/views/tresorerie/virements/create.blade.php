@@ -30,12 +30,12 @@
      }">
 
     <div class="mb-5">
-        <h1 class="text-xl font-bold text-gray-900">Nouveau virement interne</h1>
+        <h1 class="text-[17px] font-bold text-gray-900">Nouveau virement interne</h1>
         <p class="text-sm text-gray-500 mt-0.5">Déplacer des fonds entre deux comptes de trésorerie</p>
     </div>
 
     <form method="POST" action="{{ route('tresorerie.virements.store') }}"
-          class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
+          class="bg-white rounded-[4px] border border-gray-300 shadow-sm p-6 space-y-3">
         @csrf
 
         {{-- Source / Destination --}}
@@ -43,7 +43,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Compte source <span class="text-red-500">*</span></label>
                 <select name="from_cash_account_id" x-model="from" required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-300">
+                        class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm focus:ring-1 focus:ring-emerald-300">
                     <option value="">— Sélectionner —</option>
                     @foreach($cashAccounts as $ca)
                         <option value="{{ $ca->id }}">{{ $ca->name }} ({{ ucfirst($ca->type) }})</option>
@@ -56,7 +56,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Compte destination <span class="text-red-500">*</span></label>
                 <select name="to_cash_account_id" x-model="to" required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-300">
+                        class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm focus:ring-1 focus:ring-emerald-300">
                     <option value="">— Sélectionner —</option>
                     @foreach($cashAccounts as $ca)
                         <option value="{{ $ca->id }}">{{ $ca->name }} ({{ ucfirst($ca->type) }})</option>
@@ -75,25 +75,25 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Montant (FCFA) <span class="text-red-500">*</span></label>
                 <input type="number" name="amount" x-model.number="amount" min="1" step="1" required
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-right font-mono focus:ring-2 focus:ring-indigo-300"
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm text-right font-mono focus:ring-1 focus:ring-emerald-300"
                        :class="insufficient ? 'border-red-400' : ''">
                 <p class="text-xs text-red-600 mt-1" x-show="insufficient" x-cloak>Solde insuffisant sur le compte source.</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Date <span class="text-red-500">*</span></label>
                 <input type="date" name="transfer_date" value="{{ old('transfer_date', date('Y-m-d')) }}" required
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-300">
+                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm focus:ring-1 focus:ring-emerald-300">
             </div>
         </div>
 
         {{-- Aperçu soldes après --}}
-        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm" x-show="from && to && !sameAccount && amount > 0" x-cloak>
+        <div class="bg-[#eef5f0] border border-emerald-100 rounded-[4px] p-4 grid grid-cols-2 gap-3 text-sm" x-show="from && to && !sameAccount && amount > 0" x-cloak>
             <div>
-                <p class="text-xs text-indigo-500">Source après</p>
-                <p class="font-bold font-mono" :class="fromAfter < 0 ? 'text-red-600' : 'text-indigo-800'" x-text="fmt(fromAfter)"></p>
+                <p class="text-xs text-emerald-600">Source après</p>
+                <p class="font-bold font-mono" :class="fromAfter < 0 ? 'text-red-600' : 'text-emerald-900'" x-text="fmt(fromAfter)"></p>
             </div>
             <div>
-                <p class="text-xs text-indigo-500">Destination après</p>
+                <p class="text-xs text-emerald-600">Destination après</p>
                 <p class="font-bold font-mono text-emerald-700" x-text="fmt(toAfter)"></p>
             </div>
         </div>
@@ -102,19 +102,19 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Référence <span class="text-gray-400 font-normal">(optionnel)</span></label>
             <input type="text" name="reference" value="{{ old('reference') }}" maxlength="100" placeholder="N° bordereau, motif…"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-300">
+                   class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm focus:ring-1 focus:ring-emerald-300">
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
             <textarea name="notes" rows="2" maxlength="1000"
-                      class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-indigo-300">{{ old('notes') }}</textarea>
+                      class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm resize-none focus:ring-1 focus:ring-emerald-300">{{ old('notes') }}</textarea>
         </div>
 
         {{-- Actions --}}
         <div class="flex items-center justify-between pt-2 border-t border-gray-100">
             <a href="{{ route('tresorerie.virements.index') }}" class="text-sm text-gray-600 hover:text-gray-900">Annuler</a>
             <button type="submit" :disabled="blocked"
-                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m4 6H4m0 0l4 4m-4-4l4-4"/></svg>
                 Effectuer le virement
             </button>

@@ -10,29 +10,29 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $payment->number }}</h1>
+                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $payment->number }}</h1>
                 @switch($payment->status)
                     @case('confirme')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Confirmé</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-green-100 text-green-700">Confirmé</span>
                         @break
                     @case('en_attente')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">En attente</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-yellow-100 text-yellow-700">En attente</span>
                         @break
                     @case('rejete')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Rejeté</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-red-100 text-red-700">Rejeté</span>
                         @break
                     @case('annule')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Annulé</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-gray-100 text-gray-600">Annulé</span>
                         @break
                 @endswitch
                 @if($payment->is_acompte)
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Acompte</span>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-emerald-100 text-emerald-800">Acompte</span>
                 @endif
             </div>
             <p class="text-sm text-gray-500 mt-1">
@@ -44,7 +44,7 @@
             {{-- Reçu PDF --}}
             <a href="{{ route('tresorerie.encaissements.recu', $payment) }}"
                target="_blank"
-               class="inline-flex items-center gap-2 border border-green-300 text-green-700 hover:bg-green-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+               class="inline-flex items-center gap-2 border border-green-300 text-green-700 hover:bg-green-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px] transition-colors"
                title="Télécharger le reçu PDF">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -53,17 +53,17 @@
             </a>
             <div class="text-right">
                 <p class="text-xs text-gray-500">Montant reçu</p>
-                <p class="text-2xl font-bold text-green-700 tabular-nums">
+                <p class="text-[16px] font-bold text-green-700 tabular-nums">
                     {{ number_format($payment->amount, 0, ',', ' ') }} FCFA
                 </p>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {{-- Info card --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Détails du paiement</h2>
 
             <dl class="space-y-3">
@@ -85,12 +85,12 @@
                                 $pmClass = match($payment->paymentMethod->type) {
                                     'especes'      => 'bg-gray-100 text-gray-700',
                                     'virement'     => 'bg-blue-100 text-blue-700',
-                                    'cheque'       => 'bg-indigo-100 text-indigo-700',
+                                    'cheque'       => 'bg-emerald-100 text-emerald-800',
                                     'mobile_money' => 'bg-purple-100 text-purple-700',
                                     default        => 'bg-gray-100 text-gray-600',
                                 };
                             @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $pmClass }}">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $pmClass }}">
                                 {{ $payment->paymentMethod->name }}
                             </span>
                         @else
@@ -140,14 +140,14 @@
         </div>
 
         {{-- Allocations --}}
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Factures imputées</h2>
 
             @if($payment->allocations->count() > 0)
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                        <tr class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide border-b border-gray-200">
                             <th class="pb-2 text-left">Facture</th>
                             <th class="pb-2 text-left hidden md:table-cell">Date émission</th>
                             <th class="pb-2 text-right">Montant facture</th>
@@ -160,7 +160,7 @@
                             <td class="py-3 pr-4">
                                 @if($alloc->invoice)
                                     <a href="{{ route('ventes.factures.show', $alloc->invoice) }}"
-                                       class="font-mono font-semibold text-indigo-600 hover:text-indigo-800">
+                                       class="font-mono font-semibold text-emerald-700 hover:text-emerald-900">
                                         {{ $alloc->invoice->number }}
                                     </a>
                                 @else
@@ -196,7 +196,7 @@
                 $total       = $payment->amount;
                 $pct         = $total > 0 ? min(100, round($allocated / $total * 100)) : 0;
             @endphp
-            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+            <div class="mt-4 p-3 bg-gray-50 rounded-[4px]">
                 <div class="flex justify-between text-xs text-gray-500 mb-1">
                     <span>Imputation</span>
                     <span>{{ $pct }}%</span>
@@ -233,9 +233,9 @@
             ->get(['id','number','issued_at','due_at','total_ttc','remaining_amount','status']);
     @endphp
     @if($unpaidInvoices->count())
-    <div class="bg-white rounded-xl border border-orange-200 overflow-hidden"
+    <div class="bg-white rounded-[4px] border border-orange-200 overflow-hidden"
          x-data="{ open: true }">
-        <div class="px-4 py-3 bg-orange-50 border-b border-orange-200 flex items-center justify-between">
+        <div class="px-3 py-1.5 bg-orange-50 border-b border-orange-200 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -258,7 +258,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                            <tr class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide border-b border-gray-200">
                                 <th class="pb-2 text-left">Facture</th>
                                 <th class="pb-2 text-center hidden md:table-cell">Échéance</th>
                                 <th class="pb-2 text-right">Reste dû</th>
@@ -270,7 +270,7 @@
                             <tr class="hover:bg-gray-50 cursor-pointer"
                                 @click="selectInvoice({{ $inv->id }}, {{ (int)$inv->remaining_amount }})">
                                 <td class="py-2.5 pr-4">
-                                    <span class="font-mono font-semibold text-indigo-600">{{ $inv->number }}</span>
+                                    <span class="font-mono font-semibold text-emerald-700">{{ $inv->number }}</span>
                                     @php
                                         $statusColors = ['emise'=>'gray','envoyee'=>'blue','partiellement_payee'=>'amber','en_retard'=>'red'];
                                         $statusLabels = ['emise'=>'Émise','envoyee'=>'Envoyée','partiellement_payee'=>'Partielle','en_retard'=>'En retard'];
@@ -290,7 +290,7 @@
                                     <input type="radio" name="_invoice_radio" :value="{{ $inv->id }}"
                                            :checked="selectedInvoiceId === {{ $inv->id }}"
                                            @click.stop="selectInvoice({{ $inv->id }}, {{ (int)$inv->remaining_amount }})"
-                                           class="text-orange-500 focus:ring-orange-400">
+                                           class="text-orange-500 focus:ring-emerald-400">
                                 </td>
                             </tr>
                             @endforeach
@@ -310,14 +310,14 @@
                                :max="maxAlloc"
                                :min="1"
                                placeholder="Montant…"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400 tabular-nums">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500 tabular-nums">
                         <p class="text-[10px] text-gray-400 mt-1">
                             Max. disponible : <span class="font-medium tabular-nums" x-text="maxAlloc.toLocaleString('fr-FR')"></span> FCFA
                         </p>
                     </div>
                     <button type="submit"
                             :disabled="!selectedInvoiceId || allocAmount <= 0"
-                            class="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                            class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>

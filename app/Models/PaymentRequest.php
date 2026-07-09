@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,11 +15,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class PaymentRequest extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasAttachments;
 
     protected $fillable = [
         'company_id', 'supplier_id', 'payment_method_id', 'supplier_invoice_id',
-        'number', 'object', 'beneficiary', 'amount', 'due_date', 'priority',
+        'number', 'internal_reference', 'object', 'beneficiary', 'amount', 'due_date', 'priority',
+        'site', 'service', 'request_type', 'amount_ht', 'tax_amount', 'misc_fees', 'net_amount',
+        'bank_account', 'cost_center', 'analytic_section',
         'status', 'required_role', 'supplier_payment_id', 'notes',
         'requested_by', 'submitted_at', 'validated_by', 'validated_at',
         'rejected_by', 'rejected_at', 'rejection_reason',
@@ -26,6 +29,10 @@ class PaymentRequest extends Model
 
     protected $casts = [
         'amount'       => 'integer',
+        'amount_ht'    => 'integer',
+        'tax_amount'   => 'integer',
+        'misc_fees'    => 'integer',
+        'net_amount'   => 'integer',
         'due_date'     => 'date',
         'submitted_at' => 'datetime',
         'validated_at' => 'datetime',

@@ -8,18 +8,18 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Comptes de trésorerie</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Comptes de trésorerie</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $accounts->count() }} compte(s) actif(s)</p>
         </div>
         <div class="flex gap-3">
             @can('cash_accounts.manage')
             <a href="{{ route('tresorerie.caisses.create') }}"
-               class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+               class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -27,14 +27,14 @@
             </a>
             @endcan
             <a href="{{ route('tresorerie.encaissements.index') }}"
-               class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+               class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
                 </svg>
                 Encaissements
             </a>
             <a href="{{ route('tresorerie.decaissements.index') }}"
-               class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+               class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
                 </svg>
@@ -49,23 +49,23 @@
         $byType = $accounts->groupBy('type');
     @endphp
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-            <p class="text-xs font-medium text-indigo-600 uppercase tracking-wider">Total trésorerie</p>
-            <p class="text-2xl font-bold text-indigo-900 tabular-nums mt-1">
+        <div class="bg-[#eef5f0] border border-emerald-200 rounded-[4px] p-4">
+            <p class="text-xs font-medium text-emerald-700 uppercase tracking-wider">Total trésorerie</p>
+            <p class="text-[16px] font-bold text-emerald-900 tabular-nums mt-1">
                 {{ number_format($totalBalance, 0, ',', ' ') }} FCFA
             </p>
-            <p class="text-xs text-indigo-500 mt-1">{{ $accounts->count() }} compte(s)</p>
+            <p class="text-xs text-emerald-600 mt-1">{{ $accounts->count() }} compte(s)</p>
         </div>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4">
             <p class="text-xs font-medium text-blue-600 uppercase tracking-wider">Banque</p>
-            <p class="text-xl font-bold text-blue-900 tabular-nums mt-1">
+            <p class="text-[17px] font-bold text-blue-900 tabular-nums mt-1">
                 {{ number_format($byType->get('banque', collect())->sum('current_balance'), 0, ',', ' ') }} FCFA
             </p>
             <p class="text-xs text-blue-500 mt-1">{{ $byType->get('banque', collect())->count() }} compte(s)</p>
         </div>
-        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] p-4">
             <p class="text-xs font-medium text-emerald-600 uppercase tracking-wider">Caisse + Mobile Money</p>
-            <p class="text-xl font-bold text-emerald-900 tabular-nums mt-1">
+            <p class="text-[17px] font-bold text-emerald-900 tabular-nums mt-1">
                 @php
                     $caisseTotal = $byType->get('caisse', collect())->sum('current_balance')
                                  + $byType->get('mobile_money', collect())->sum('current_balance');
@@ -80,7 +80,7 @@
 
     {{-- Accounts grid --}}
     @if($accounts->isEmpty())
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-16 text-center">
             <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
@@ -100,12 +100,12 @@
                     // Last transaction date
                     $lastTx = $account->transactions()->latest('transaction_date')->first();
                 @endphp
-                <div class="bg-white rounded-xl border {{ $borderClass }} p-5 hover:shadow-md transition-shadow flex flex-col gap-3">
+                <div class="bg-white rounded-[4px] border {{ $borderClass }} p-5 hover:shadow-md transition-shadow flex flex-col gap-3">
 
                     {{-- Top row --}}
                     <div class="flex items-start justify-between">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 {{ $iconBg }} rounded-lg flex items-center justify-center flex-shrink-0">
+                            <div class="w-10 h-10 {{ $iconBg }} rounded-[4px] flex items-center justify-center flex-shrink-0">
                                 @if($account->type === 'banque')
                                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
@@ -125,7 +125,7 @@
                                 <p class="text-xs text-gray-400 font-mono">{{ $account->code }}</p>
                             </div>
                         </div>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $badgeBg }} {{ $badgeText }} flex-shrink-0">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $badgeBg }} {{ $badgeText }} flex-shrink-0">
                             {{ $account->typeBadge() }}
                         </span>
                     </div>
@@ -133,7 +133,7 @@
                     {{-- Balance --}}
                     <div>
                         <p class="text-xs text-gray-400 mb-0.5">Solde actuel</p>
-                        <p class="text-2xl font-bold {{ $balanceClass }} tabular-nums">
+                        <p class="text-[16px] font-bold {{ $balanceClass }} tabular-nums">
                             {{ number_format($account->current_balance, 0, ',', ' ') }}
                             <span class="text-base font-normal text-gray-400">FCFA</span>
                         </p>
@@ -150,7 +150,7 @@
 
                     {{-- Action --}}
                     <a href="{{ route('tresorerie.caisses.show', $account) }}"
-                       class="mt-auto w-full text-center border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-600 hover:text-indigo-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                       class="mt-auto w-full text-center border border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 text-gray-600 hover:text-emerald-800 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                         Voir les transactions
                     </a>
                 </div>

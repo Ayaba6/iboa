@@ -10,21 +10,21 @@
 @endsection
 
 @section('content')
-<div class="max-w-2xl mx-auto space-y-5">
+<div class="max-w-2xl mx-auto space-y-3">
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-xl font-bold text-gray-900 font-mono">{{ $virement->number }}</h1>
+            <h1 class="text-[17px] font-bold text-gray-900 font-mono">{{ $virement->number }}</h1>
             <p class="text-sm text-gray-500">{{ $virement->transfer_date?->format('d/m/Y') }}</p>
         </div>
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium
             {{ $virement->status === 'valide' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">
             {{ ucfirst($virement->status) }}
         </span>
     </div>
 
     {{-- Flux --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="flex items-center justify-between gap-4">
             <div class="flex-1 text-center">
                 <p class="text-xs text-gray-400 uppercase tracking-wide">Source</p>
@@ -32,8 +32,8 @@
                 <p class="text-xs text-gray-500">{{ ucfirst($virement->fromAccount?->type ?? '') }}</p>
             </div>
             <div class="flex flex-col items-center">
-                <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                <p class="font-bold font-mono text-indigo-700 mt-1">{{ number_format($virement->amount, 0, ',', ' ') }} F</p>
+                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                <p class="font-bold font-mono text-emerald-800 mt-1">{{ number_format($virement->amount, 0, ',', ' ') }} F</p>
             </div>
             <div class="flex-1 text-center">
                 <p class="text-xs text-gray-400 uppercase tracking-wide">Destination</p>
@@ -44,7 +44,7 @@
     </div>
 
     {{-- Détails --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3 text-sm">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-6 space-y-3 text-sm">
         @if($virement->reference)
         <div class="flex justify-between"><span class="text-gray-500">Référence</span><span class="text-gray-900">{{ $virement->reference }}</span></div>
         @endif
@@ -53,7 +53,7 @@
         @if($virement->journalEntry)
         <div class="flex justify-between">
             <span class="text-gray-500">Écriture comptable</span>
-            <a href="{{ route('comptabilite.journaux.show', $virement->journalEntry) }}" class="text-indigo-600 hover:underline font-mono">{{ $virement->journalEntry->number }}</a>
+            <a href="{{ route('comptabilite.journaux.show', $virement->journalEntry) }}" class="text-emerald-700 hover:underline font-mono">{{ $virement->journalEntry->number }}</a>
         </div>
         @endif
         @if($virement->notes)
@@ -67,7 +67,7 @@
     {{-- Annulation --}}
     @can('treasury.write')
     @if($virement->isCancellable())
-    <div x-data="{ open: false }" class="bg-white rounded-2xl border border-red-200 shadow-sm overflow-hidden">
+    <div x-data="{ open: false }" class="bg-white rounded-[4px] border border-red-200 shadow-sm overflow-hidden">
         <button type="button" @click="open = !open"
                 class="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <span>Annuler ce virement</span>
@@ -80,8 +80,8 @@
                   data-confirm-title="Annuler le virement">
                 @csrf
                 <textarea name="motif" rows="2" required minlength="5" maxlength="500" placeholder="Motif de l'annulation (obligatoire)…"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-red-300"></textarea>
-                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Confirmer l'annulation</button>
+                          class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm mb-3 focus:ring-1 focus:ring-red-300"></textarea>
+                <button type="submit" class="px-3 py-1.5 bg-red-600 text-white rounded-[4px] text-sm font-medium hover:bg-red-700">Confirmer l'annulation</button>
             </form>
         </div>
     </div>

@@ -10,25 +10,25 @@
 @endsection
 
 @section('content')
-<div class="space-y-5" x-data="{ showCancelModal: false, cancelReason: '', get canSubmit() { return this.cancelReason.trim().length >= 5; } }">
+<div class="space-y-3" x-data="{ showCancelModal: false, cancelReason: '', get canSubmit() { return this.cancelReason.trim().length >= 5; } }">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $payment->number }}</h1>
+                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $payment->number }}</h1>
                 @switch($payment->status)
                     @case('confirme')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Confirmé</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-green-100 text-green-700">Confirmé</span>
                         @break
                     @case('en_attente')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">En attente</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-yellow-100 text-yellow-700">En attente</span>
                         @break
                     @case('rejete')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Rejeté</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-red-100 text-red-700">Rejeté</span>
                         @break
                     @case('annule')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Annulé</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-medium bg-gray-100 text-gray-600">Annulé</span>
                         @break
                 @endswitch
             </div>
@@ -41,7 +41,7 @@
             {{-- Reçu PDF --}}
             <a href="{{ route('tresorerie.decaissements.recu', $payment) }}"
                target="_blank"
-               class="inline-flex items-center gap-2 border border-amber-300 text-amber-700 hover:bg-amber-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+               class="inline-flex items-center gap-2 border border-amber-300 text-amber-700 hover:bg-amber-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px] transition-colors"
                title="Télécharger le reçu PDF">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -51,7 +51,7 @@
             {{-- [TRESO] Bouton Annuler : seulement sur décaissement validé (contre-passation) --}}
             @if($payment->status !== 'annule' && $payment->validation_status === 'valide')
             <button type="button" @click="showCancelModal = true; cancelReason = ''"
-                    class="inline-flex items-center gap-2 border border-red-300 text-red-600 hover:bg-red-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+                    class="inline-flex items-center gap-2 border border-red-300 text-red-600 hover:bg-red-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px] transition-colors"
                     title="Annuler ce décaissement (contre-passation comptable + restauration facture)">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -61,7 +61,7 @@
             @endif
             <div class="text-right">
                 <p class="text-xs text-gray-500">Montant payé</p>
-                <p class="text-2xl font-bold text-red-700 tabular-nums">
+                <p class="text-[16px] font-bold text-red-700 tabular-nums">
                     {{ number_format($payment->amount, 0, ',', ' ') }} FCFA
                 </p>
             </div>
@@ -70,7 +70,7 @@
 
     {{-- [TRESO-WORKFLOW] Bandeau validation par seuil --}}
     @if($payment->validation_status === 'en_attente_validation')
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+    <div class="bg-amber-50 border border-amber-200 rounded-[4px] p-4">
         <div class="flex items-start gap-3">
             <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <div class="flex-1">
@@ -88,14 +88,14 @@
                           data-confirm-label="Valider"
                           data-confirm-danger="false">
                         @csrf
-                        <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">Valider</button>
+                        <button type="submit" class="px-3 py-1.5 bg-emerald-600 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-700">Valider</button>
                     </form>
-                    <button type="button" @click="rejectOpen = !rejectOpen" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50">Rejeter</button>
+                    <button type="button" @click="rejectOpen = !rejectOpen" class="px-3 py-1.5 border border-red-300 text-red-600 rounded-[4px] text-sm font-medium hover:bg-red-50">Rejeter</button>
                     <form x-show="rejectOpen" x-cloak action="{{ route('tresorerie.decaissements.reject', $payment) }}" method="POST" class="w-full mt-2 flex gap-2">
                         @csrf
                         <input type="text" name="motif" required minlength="5" maxlength="500" placeholder="Motif du rejet (obligatoire)…"
-                               class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-300">
-                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 whitespace-nowrap">Confirmer le rejet</button>
+                               class="flex-1 border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-red-300">
+                        <button type="submit" class="px-3 py-1.5 bg-red-600 text-white rounded-[4px] text-sm font-medium hover:bg-red-700 whitespace-nowrap">Confirmer le rejet</button>
                     </form>
                 </div>
                 @else
@@ -107,16 +107,16 @@
     @endif
 
     @if($payment->validation_status === 'rejete')
-    <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-sm">
+    <div class="bg-red-50 border border-red-200 rounded-[4px] p-4 text-sm">
         <p class="font-semibold text-red-800">Décaissement rejeté</p>
         @if($payment->rejection_reason)<p class="text-red-700 mt-1">Motif : {{ $payment->rejection_reason }}</p>@endif
     </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {{-- Info card --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Détails du paiement</h2>
 
             <dl class="space-y-3">
@@ -136,12 +136,12 @@
                                 $pmClass = match($payment->paymentMethod->type) {
                                     'especes'      => 'bg-gray-100 text-gray-700',
                                     'virement'     => 'bg-blue-100 text-blue-700',
-                                    'cheque'       => 'bg-indigo-100 text-indigo-700',
+                                    'cheque'       => 'bg-emerald-100 text-emerald-800',
                                     'mobile_money' => 'bg-purple-100 text-purple-700',
                                     default        => 'bg-gray-100 text-gray-600',
                                 };
                             @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $pmClass }}">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $pmClass }}">
                                 {{ $payment->paymentMethod->name }}
                             </span>
                         @else
@@ -191,14 +191,14 @@
         </div>
 
         {{-- Allocations --}}
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Factures fournisseur imputées</h2>
 
             @if($payment->allocations->count() > 0)
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                        <tr class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide border-b border-gray-200">
                             <th class="pb-2 text-left">Facture</th>
                             <th class="pb-2 text-left hidden md:table-cell">N° fournisseur</th>
                             <th class="pb-2 text-left hidden md:table-cell">Date réception</th>
@@ -250,7 +250,7 @@
                 $total     = $payment->amount;
                 $pct       = $total > 0 ? min(100, round($allocated / $total * 100)) : 0;
             @endphp
-            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+            <div class="mt-4 p-3 bg-gray-50 rounded-[4px]">
                 <div class="flex justify-between text-xs text-gray-500 mb-1">
                     <span>Imputation</span>
                     <span>{{ $pct }}%</span>
@@ -292,8 +292,8 @@
     <div x-show="showCancelModal" x-cloak
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
          @keydown.escape.window="showCancelModal = false">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md" @click.outside="showCancelModal = false">
-            <div class="px-6 py-4 border-b border-gray-200">
+        <div class="bg-white rounded-[4px] shadow-2xl w-full max-w-md" @click.outside="showCancelModal = false">
+            <div class="px-3 py-1.5 border-b border-gray-200">
                 <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
                     <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -304,7 +304,7 @@
             <form action="{{ route('tresorerie.decaissements.cancel', $payment) }}" method="POST" data-turbo="false">
                 @csrf
                 <div class="px-6 py-5 space-y-3">
-                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                    <div class="bg-amber-50 border border-amber-200 rounded-[4px] p-3 text-xs text-amber-800">
                         <strong>⚠ Conséquences :</strong>
                         <ul class="mt-1 list-disc list-inside space-y-0.5">
                             <li>Contre-passation comptable automatique (nouvelle écriture inverse)</li>
@@ -319,17 +319,17 @@
                         </label>
                         <textarea name="reason" x-model="cancelReason" rows="3" required minlength="5" maxlength="500"
                                   placeholder="Ex : Erreur de saisie, paiement non effectué, double comptabilisation…"
-                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"></textarea>
+                                  class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 resize-none"></textarea>
                         <p class="text-[10px] text-gray-400 mt-1">Conservé dans l'historique d'audit comptable</p>
                     </div>
                 </div>
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
                     <button type="button" @click="showCancelModal = false"
-                            class="border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-white">
+                            class="border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px] hover:bg-white">
                         Fermer
                     </button>
                     <button type="submit" :disabled="!canSubmit"
-                            class="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                            class="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                         Confirmer l'annulation
                     </button>
                 </div>

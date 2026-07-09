@@ -50,16 +50,50 @@ class CashAccountController extends Controller
             'opening_balance'   => ['required', 'integer'],
             'min_balance'       => ['nullable', 'integer', 'min:0'],
             'is_default'        => ['boolean'],
+            // [PARITÉ SAGE X3] Champs descriptifs
+            'account_group'        => ['nullable', 'string', 'max:60'],
+            'category'             => ['nullable', 'string', 'max:40'],
+            'general_account'      => ['nullable', 'string', 'max:20'],
+            'site'                 => ['nullable', 'string', 'max:40'],
+            'manager_name'         => ['nullable', 'string', 'max:100'],
+            'description'          => ['nullable', 'string', 'max:500'],
+            'country_code'         => ['nullable', 'string', 'size:2'],
+            'bank_code'            => ['nullable', 'string', 'max:20'],
+            'branch_code'          => ['nullable', 'string', 'max:20'],
+            'rib_key'              => ['nullable', 'string', 'max:4'],
+            'overdraft_limit'      => ['nullable', 'integer', 'min:0'],
+            'overdraft_currency'   => ['nullable', 'string', 'size:3'],
+            'transaction_ceiling'  => ['nullable', 'integer', 'min:0'],
+            'operation_ceiling'    => ['nullable', 'integer', 'min:0'],
+            'entry_generation'     => ['nullable', 'in:automatique,manuelle'],
+            'include_in_forecast'  => ['boolean'],
+            'is_regularization'    => ['boolean'],
+            'opened_at'            => ['nullable', 'date'],
+            'closes_at'            => ['nullable', 'date', 'after_or_equal:opened_at'],
+            'statement_format'     => ['nullable', 'string', 'max:20'],
+            'statement_frequency'  => ['nullable', 'string', 'max:20'],
+            'last_statement_at'    => ['nullable', 'date'],
+            'forecast_horizon_days' => ['nullable', 'integer', 'min:1', 'max:730'],
+            'forecast_currency'    => ['nullable', 'string', 'size:3'],
             'notes'             => ['nullable', 'string', 'max:500'],
         ]);
 
         $company = currentCompany();
         $data['company_id']      = $company->id;
         $data['current_balance'] = (int) $data['opening_balance'];
-        $data['is_default']      = $request->boolean('is_default');
-        $data['is_active']       = true;
+        $data['is_default']          = $request->boolean('is_default');
+        $data['is_active']           = true;
+        $data['include_in_forecast'] = $request->boolean('include_in_forecast', true);
+        $data['is_regularization']   = $request->boolean('is_regularization');
 
         $account = CashAccount::create($data);
+
+        // [SAGE X3] « Enregistrer et créer » : rebascule sur un formulaire vierge.
+        if ($request->boolean('save_and_new')) {
+            return redirect()
+                ->route('tresorerie.caisses.create')
+                ->with('success', 'Compte ' . $account->name . ' créé. Nouvelle saisie.');
+        }
 
         return redirect()
             ->route('tresorerie.caisses.show', $account)
@@ -96,11 +130,38 @@ class CashAccountController extends Controller
             'min_balance'       => ['nullable', 'integer', 'min:0'],
             'is_default'        => ['boolean'],
             'is_active'         => ['boolean'],
+            // [PARITÉ SAGE X3] Champs descriptifs
+            'account_group'        => ['nullable', 'string', 'max:60'],
+            'category'             => ['nullable', 'string', 'max:40'],
+            'general_account'      => ['nullable', 'string', 'max:20'],
+            'site'                 => ['nullable', 'string', 'max:40'],
+            'manager_name'         => ['nullable', 'string', 'max:100'],
+            'description'          => ['nullable', 'string', 'max:500'],
+            'country_code'         => ['nullable', 'string', 'size:2'],
+            'bank_code'            => ['nullable', 'string', 'max:20'],
+            'branch_code'          => ['nullable', 'string', 'max:20'],
+            'rib_key'              => ['nullable', 'string', 'max:4'],
+            'overdraft_limit'      => ['nullable', 'integer', 'min:0'],
+            'overdraft_currency'   => ['nullable', 'string', 'size:3'],
+            'transaction_ceiling'  => ['nullable', 'integer', 'min:0'],
+            'operation_ceiling'    => ['nullable', 'integer', 'min:0'],
+            'entry_generation'     => ['nullable', 'in:automatique,manuelle'],
+            'include_in_forecast'  => ['boolean'],
+            'is_regularization'    => ['boolean'],
+            'opened_at'            => ['nullable', 'date'],
+            'closes_at'            => ['nullable', 'date', 'after_or_equal:opened_at'],
+            'statement_format'     => ['nullable', 'string', 'max:20'],
+            'statement_frequency'  => ['nullable', 'string', 'max:20'],
+            'last_statement_at'    => ['nullable', 'date'],
+            'forecast_horizon_days' => ['nullable', 'integer', 'min:1', 'max:730'],
+            'forecast_currency'    => ['nullable', 'string', 'size:3'],
             'notes'             => ['nullable', 'string', 'max:500'],
         ]);
 
-        $data['is_default'] = $request->boolean('is_default');
-        $data['is_active']  = $request->boolean('is_active');
+        $data['is_default']          = $request->boolean('is_default');
+        $data['is_active']           = $request->boolean('is_active');
+        $data['include_in_forecast'] = $request->boolean('include_in_forecast', true);
+        $data['is_regularization']   = $request->boolean('is_regularization');
 
         $caisse->update($data);
 

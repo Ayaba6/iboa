@@ -8,14 +8,14 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">Alertes trésorerie</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Alertes trésorerie</h1>
         <p class="text-sm text-gray-500 mt-0.5">Soldes faibles, échéances proches, impayés</p>
     </div>
 
     {{-- Soldes faibles --}}
-    <div class="bg-white rounded-xl border {{ $lowBalance->isNotEmpty() ? 'border-red-200' : 'border-gray-200' }} overflow-hidden">
+    <div class="bg-white rounded-[4px] border {{ $lowBalance->isNotEmpty() ? 'border-red-200' : 'border-gray-200' }} overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
             <span class="w-2 h-2 rounded-full {{ $lowBalance->isNotEmpty() ? 'bg-red-500 animate-pulse' : 'bg-gray-300' }}"></span>
             <h2 class="text-sm font-semibold text-gray-700">Soldes faibles ({{ $lowBalance->count() }})</h2>
@@ -34,14 +34,14 @@
     </div>
 
     {{-- Impayés clients --}}
-    <div class="bg-white rounded-xl border {{ $impayes->isNotEmpty() ? 'border-orange-200' : 'border-gray-200' }} overflow-hidden">
+    <div class="bg-white rounded-[4px] border {{ $impayes->isNotEmpty() ? 'border-orange-200' : 'border-gray-200' }} overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
             <span class="w-2 h-2 rounded-full {{ $impayes->isNotEmpty() ? 'bg-orange-500' : 'bg-gray-300' }}"></span>
             <h2 class="text-sm font-semibold text-gray-700">Impayés clients ({{ $impayes->count() }})</h2>
         </div>
         @forelse($impayes as $i)
         <div class="px-5 py-2.5 border-b border-gray-50 flex items-center justify-between text-sm">
-            <span><span class="font-mono text-indigo-600">{{ $i->number }}</span> · {{ $i->tiers }}</span>
+            <span><span class="font-mono text-emerald-700">{{ $i->number }}</span> · {{ $i->tiers }}</span>
             <span class="text-right"><span class="text-red-600 font-mono font-semibold">{{ number_format($i->remaining_amount, 0, ',', ' ') }}</span> <span class="text-xs text-gray-400">éch. {{ \Carbon\Carbon::parse($i->due_at)->format('d/m/Y') }}</span></span>
         </div>
         @empty
@@ -49,13 +49,13 @@
         @endforelse
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {{-- Échéances clients --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100"><h2 class="text-sm font-semibold text-gray-700">Échéances clients (7j) — {{ $clientsDue->count() }}</h2></div>
             @forelse($clientsDue as $c)
             <div class="px-5 py-2.5 border-b border-gray-50 flex items-center justify-between text-sm">
-                <span><span class="font-mono text-indigo-600">{{ $c->number }}</span> · {{ $c->tiers }}</span>
+                <span><span class="font-mono text-emerald-700">{{ $c->number }}</span> · {{ $c->tiers }}</span>
                 <span class="text-right"><span class="font-mono text-emerald-700">{{ number_format($c->remaining_amount, 0, ',', ' ') }}</span> <span class="text-xs text-gray-400">{{ \Carbon\Carbon::parse($c->due_at)->format('d/m') }}</span></span>
             </div>
             @empty
@@ -63,11 +63,11 @@
             @endforelse
         </div>
         {{-- Échéances fournisseurs --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100"><h2 class="text-sm font-semibold text-gray-700">Échéances fournisseurs (7j) — {{ $suppliersDue->count() }}</h2></div>
             @forelse($suppliersDue as $s)
             <div class="px-5 py-2.5 border-b border-gray-50 flex items-center justify-between text-sm">
-                <span><span class="font-mono text-indigo-600">{{ $s->number }}</span> · {{ $s->tiers }}</span>
+                <span><span class="font-mono text-emerald-700">{{ $s->number }}</span> · {{ $s->tiers }}</span>
                 <span class="text-right"><span class="font-mono text-red-600">{{ number_format($s->remaining, 0, ',', ' ') }}</span> <span class="text-xs text-gray-400">{{ \Carbon\Carbon::parse($s->due_at)->format('d/m') }}</span></span>
             </div>
             @empty
