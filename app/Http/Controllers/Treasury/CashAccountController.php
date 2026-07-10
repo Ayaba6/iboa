@@ -21,6 +21,7 @@ class CashAccountController extends Controller
     public function index(): View
     {
         $accounts = CashAccount::with('paymentMethod')
+            ->withMax('transactions as last_transaction_date', 'transaction_date')
             ->where('is_active', true)
             ->orderBy('type')->orderBy('name')
             ->get();

@@ -145,12 +145,13 @@
             <span class="absolute inset-x-0 top-0 h-1 {{ $bar }}"></span>
             <div class="flex items-start justify-between">
                 <div class="min-w-0">
-                    <p class="text-xs font-medium text-gray-500 truncate">{{ $k['label'] }}</p>
-                    <p class="mt-2 text-[16px] font-bold tracking-tight tabular-nums text-gray-900">{{ $k['value'] }}</p>
-                    <p class="mt-1 text-xs text-gray-400">{{ $k['sub'] }} <span class="text-gray-300">FCFA</span></p>
+                    {{-- pas de truncate : le libellé passe sur 2 lignes plutôt que « Encaissemen… » --}}
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide leading-tight">{{ $k['label'] }}</p>
+                    <p class="mt-1.5 text-[16px] font-bold tracking-tight tabular-nums text-gray-900">{{ $k['value'] }}</p>
+                    <p class="mt-0.5 text-xs text-gray-400">{{ $k['sub'] }} <span class="text-gray-300">FCFA</span></p>
                 </div>
-                <span class="inline-flex w-10 h-10 items-center justify-center rounded-[4px] bg-gradient-to-br {{ $grad }} text-white shadow-sm shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $k['icon'] }}"/></svg>
+                <span class="inline-flex w-8 h-8 items-center justify-center rounded-[4px] bg-gradient-to-br {{ $grad }} text-white shadow-sm shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $k['icon'] }}"/></svg>
                 </span>
             </div>
         </{{ $k['href'] ? 'a' : 'div' }}>
@@ -158,43 +159,28 @@
 
     </div>
 
-    {{-- ══ Bandeau alertes secondaires ═════════════════════════════════════════ --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    {{-- ══ Bandeau alertes secondaires (KPI denses X3) ═════════════════════════ --}}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
 
         <a href="{{ route('tresorerie.echeancier-clients') }}"
-           class="flex items-center gap-4 rounded-[4px] border p-4 transition hover:shadow-md {{ $creancesEnRetard->cnt > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100' }}">
-            <span class="inline-flex w-11 h-11 items-center justify-center rounded-[4px] {{ $creancesEnRetard->cnt > 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/></svg>
-            </span>
-            <div class="min-w-0">
-                <p class="text-xs font-medium text-gray-500">Créances en retard</p>
-                <p class="text-[16px] font-bold tabular-nums {{ $creancesEnRetard->cnt > 0 ? 'text-red-700' : 'text-gray-900' }}">{{ $fmt($creancesEnRetard->total) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
-                <p class="text-xs text-gray-400">{{ $creancesEnRetard->cnt }} facture(s) échue(s)</p>
-            </div>
+           class="bg-white rounded-[4px] border px-3 py-2 transition hover:bg-red-50/40 {{ $creancesEnRetard->cnt > 0 ? 'border-red-300' : 'border-gray-300' }}">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Créances en retard</p>
+            <p class="mt-0.5 text-[17px] font-bold tabular-nums leading-none {{ $creancesEnRetard->cnt > 0 ? 'text-red-700' : 'text-gray-400' }}">{{ $fmt($creancesEnRetard->total) }} F</p>
+            <p class="mt-0.5 text-[11px] text-gray-400">{{ $creancesEnRetard->cnt }} facture(s) échue(s)</p>
         </a>
 
         <a href="{{ route('tresorerie.effets.index') }}"
-           class="flex items-center gap-4 rounded-[4px] border p-4 transition hover:shadow-md {{ $effetsEnAttente->cnt > 0 ? 'bg-violet-50 border-violet-200' : 'bg-white border-gray-100' }}">
-            <span class="inline-flex w-11 h-11 items-center justify-center rounded-[4px] {{ $effetsEnAttente->cnt > 0 ? 'bg-violet-100 text-violet-600' : 'bg-gray-100 text-gray-400' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/></svg>
-            </span>
-            <div class="min-w-0">
-                <p class="text-xs font-medium text-gray-500">Effets en attente</p>
-                <p class="text-[16px] font-bold tabular-nums {{ $effetsEnAttente->cnt > 0 ? 'text-violet-700' : 'text-gray-900' }}">{{ $fmt($effetsEnAttente->total) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
-                <p class="text-xs text-gray-400">{{ $effetsEnAttente->cnt }} effet(s) à encaisser</p>
-            </div>
+           class="bg-white rounded-[4px] border px-3 py-2 transition hover:bg-violet-50/40 {{ $effetsEnAttente->cnt > 0 ? 'border-violet-300' : 'border-gray-300' }}">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Effets en attente</p>
+            <p class="mt-0.5 text-[17px] font-bold tabular-nums leading-none {{ $effetsEnAttente->cnt > 0 ? 'text-violet-700' : 'text-gray-400' }}">{{ $fmt($effetsEnAttente->total) }} F</p>
+            <p class="mt-0.5 text-[11px] text-gray-400">{{ $effetsEnAttente->cnt }} effet(s) à encaisser</p>
         </a>
 
-        <div class="flex items-center gap-4 rounded-[4px] border border-gray-100 bg-white p-4">
-            <span class="inline-flex w-11 h-11 items-center justify-center rounded-[4px] bg-emerald-100 text-emerald-700">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            </span>
-            <div class="min-w-0">
-                <p class="text-xs font-medium text-gray-500">Taux d'encaissement</p>
-                <p class="text-[16px] font-bold tabular-nums text-gray-900">{{ $tauxRecouv }} %</p>
-                <div class="mt-1 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-                    <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-700" style="width: {{ min(100, $tauxRecouv) }}%"></div>
-                </div>
+        <div class="bg-white rounded-[4px] border border-emerald-200 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Taux d'encaissement</p>
+            <p class="mt-0.5 text-[17px] font-bold tabular-nums leading-none text-emerald-800">{{ $tauxRecouv }} %</p>
+            <div class="mt-1.5 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-700" style="width: {{ min(100, $tauxRecouv) }}%"></div>
             </div>
         </div>
 
@@ -249,83 +235,85 @@
     {{-- ══ Échéances + derniers encaissements ══════════════════════════════════ --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {{-- Échéances 7j --}}
-        <div class="rounded-[4px] bg-white border border-gray-300 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-900">Échéances dans les 7 jours</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Factures arrivant à terme</p>
-                </div>
+        {{-- Échéances 7j — table dense X3 --}}
+        <div class="rounded-[4px] bg-white border border-gray-300 overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-[#eef5f0]">
+                <span class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Échéances dans les 7 jours</span>
                 <a href="{{ route('tresorerie.echeancier-clients') }}" class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">Voir tout →</a>
             </div>
             @if($echeancesProches->isEmpty())
-                <div class="text-center py-10">
-                    <span class="inline-flex w-12 h-12 items-center justify-center rounded-[4px] bg-emerald-100 text-emerald-600 mb-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    </span>
-                    <p class="text-sm text-gray-500">Aucune échéance dans les 7 prochains jours.</p>
-                </div>
+                <p class="px-4 py-8 text-center text-gray-400 text-[13px]">Aucune échéance dans les 7 prochains jours ✓</p>
             @else
-                <div class="divide-y divide-gray-50">
-                    @foreach($echeancesProches as $ech)
-                    @php
-                        $due = \Carbon\Carbon::parse($ech->due_at);
-                        $daysLeft = (int) now()->startOfDay()->diffInDays($due->startOfDay(), false);
-                        $isLate = $daysLeft < 0; $isToday = $daysLeft === 0;
-                    @endphp
-                    <div class="flex items-center gap-3 py-2.5">
-                        <span class="inline-flex w-9 h-9 items-center justify-center rounded-[4px] text-xs font-bold flex-shrink-0
-                            @if($isLate) bg-red-100 text-red-700
-                            @elseif($isToday) bg-amber-100 text-amber-700
-                            @elseif($daysLeft <= 3) bg-orange-100 text-orange-700
-                            @else bg-gray-100 text-gray-500 @endif">
-                            @if($isLate) -{{ abs($daysLeft) }}j @elseif($isToday) 0j @else J{{ $daysLeft }} @endif
-                        </span>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-semibold text-gray-900 truncate">{{ $ech->client_name }}</p>
-                            <p class="text-xs text-gray-400">{{ $ech->number }} · {{ $due->format('d/m/Y') }}</p>
-                        </div>
-                        <span class="text-sm font-bold tabular-nums text-gray-900 flex-shrink-0">{{ $fmt($ech->remaining_amount) }}</span>
-                    </div>
-                    @endforeach
-                </div>
+                <table class="w-full text-[14px] border-collapse">
+                    <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
+                        <tr>
+                            <th class="px-3 py-1.5 text-left w-14">Éch.</th>
+                            <th class="px-3 py-1.5 text-left">Client</th>
+                            <th class="px-3 py-1.5 text-left">Facture</th>
+                            <th class="px-3 py-1.5 text-right">Restant dû</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($echeancesProches as $ech)
+                        @php
+                            $due = \Carbon\Carbon::parse($ech->due_at);
+                            $daysLeft = (int) now()->startOfDay()->diffInDays($due->startOfDay(), false);
+                            $isLate = $daysLeft < 0; $isToday = $daysLeft === 0;
+                        @endphp
+                        <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                            <td class="px-3 py-1">
+                                <span class="inline-flex px-2 py-0.5 rounded-[3px] text-[10.5px] font-bold
+                                    @if($isLate) bg-red-100 text-red-700
+                                    @elseif($isToday) bg-amber-100 text-amber-700
+                                    @elseif($daysLeft <= 3) bg-orange-100 text-orange-700
+                                    @else bg-gray-100 text-gray-500 @endif">
+                                    @if($isLate) -{{ abs($daysLeft) }}j @elseif($isToday) 0j @else J{{ $daysLeft }} @endif
+                                </span>
+                            </td>
+                            <td class="px-3 py-1 font-medium text-gray-900">{{ $ech->client_name }}</td>
+                            <td class="px-3 py-1 text-gray-500 font-mono text-[12px]">{{ $ech->number }} <span class="text-gray-400">· {{ $due->format('d/m') }}</span></td>
+                            <td class="px-3 py-1 text-right font-bold tabular-nums text-gray-900">{{ $fmt($ech->remaining_amount) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             @endif
         </div>
 
-        {{-- Derniers encaissements --}}
-        <div class="rounded-[4px] bg-white border border-gray-300 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-900">Derniers encaissements</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">5 opérations les plus récentes</p>
-                </div>
+        {{-- Derniers encaissements — table dense X3 --}}
+        <div class="rounded-[4px] bg-white border border-gray-300 overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-[#eef5f0]">
+                <span class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Derniers encaissements</span>
                 <a href="{{ route('tresorerie.encaissements.index') }}" class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">Voir tout →</a>
             </div>
             @if($derniersEncaissements->isEmpty())
-                <div class="text-center py-10">
-                    <span class="inline-flex w-12 h-12 items-center justify-center rounded-[4px] bg-gray-100 text-gray-400 mb-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-                    </span>
-                    <p class="text-sm text-gray-500">Aucun encaissement enregistré.</p>
-                    <a href="{{ route('tresorerie.encaissements.create') }}" class="inline-flex items-center gap-1.5 mt-3 rounded-[4px] bg-emerald-700 text-white text-xs font-semibold px-3 py-2 hover:bg-emerald-800 transition">
+                <div class="text-center py-8">
+                    <p class="text-[13px] text-gray-400">Aucun encaissement enregistré.</p>
+                    <a href="{{ route('tresorerie.encaissements.create') }}" class="inline-flex items-center gap-1.5 mt-2 rounded-[4px] bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 hover:bg-emerald-800 transition">
                         Enregistrer un encaissement
                     </a>
                 </div>
             @else
-                <div class="divide-y divide-gray-50">
-                    @foreach($derniersEncaissements as $enc)
-                    <div class="flex items-center gap-3 py-2.5">
-                        <span class="inline-flex w-9 h-9 rounded-[4px] bg-emerald-100 text-emerald-600 items-center justify-center flex-shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-                        </span>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-semibold text-gray-900 truncate">{{ $enc->client_name }}</p>
-                            <p class="text-xs text-gray-400">{{ $enc->payment_method_name }} · {{ \Carbon\Carbon::parse($enc->payment_date)->format('d/m/Y') }}</p>
-                        </div>
-                        <span class="text-sm font-bold tabular-nums text-emerald-600 flex-shrink-0">+{{ $fmt($enc->amount) }}</span>
-                    </div>
-                    @endforeach
-                </div>
+                <table class="w-full text-[14px] border-collapse">
+                    <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
+                        <tr>
+                            <th class="px-3 py-1.5 text-left">Client</th>
+                            <th class="px-3 py-1.5 text-left">Mode</th>
+                            <th class="px-3 py-1.5 text-left">Date</th>
+                            <th class="px-3 py-1.5 text-right">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($derniersEncaissements as $enc)
+                        <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                            <td class="px-3 py-1 font-medium text-gray-900">{{ $enc->client_name }}</td>
+                            <td class="px-3 py-1 text-gray-600">{{ $enc->payment_method_name }}</td>
+                            <td class="px-3 py-1 text-gray-500 tabular-nums">{{ \Carbon\Carbon::parse($enc->payment_date)->format('d/m/Y') }}</td>
+                            <td class="px-3 py-1 text-right font-bold tabular-nums text-emerald-700">+{{ $fmt($enc->amount) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             @endif
         </div>
 

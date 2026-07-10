@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,12 +15,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class CashClosure extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasAttachments;
 
     protected $fillable = [
         'company_id',
         'cash_account_id',
         'number',
+        // [Parité SAGE X3]
+        'site', 'cashier_name', 'supervisor_name', 'currency_code',
         'closure_date',
         'theoretical_balance',
         'counted_balance',

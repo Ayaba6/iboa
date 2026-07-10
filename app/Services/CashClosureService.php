@@ -39,6 +39,11 @@ class CashClosureService
                 'counted_balance'     => $counted,
                 'difference'          => $counted - $theoretical,
                 'denominations'       => $data['denominations'] ?? null,
+                // [Parité SAGE X3]
+                'site'                => $data['site'] ?? null,
+                'cashier_name'        => $data['cashier_name'] ?? Auth::user()?->name,
+                'supervisor_name'     => $data['supervisor_name'] ?? null,
+                'currency_code'       => $data['currency_code'] ?? 'XOF',
                 'difference_reason'   => $data['difference_reason'] ?? null,
                 'notes'               => $data['notes'] ?? null,
                 'status'              => 'brouillon',

@@ -201,6 +201,7 @@
                             <th class="px-3 py-1.5 text-right">Crédit</th>
                             <th class="px-3 py-1.5 text-left">Centre de coût</th>
                             <th class="px-3 py-1.5 text-left">Section analytique</th>
+                            <th class="px-3 py-1.5 text-left">Référence</th>
                             <th class="px-3 py-1.5 text-left">Observation</th>
                             <th class="px-3 py-1.5 w-8"></th>
                         </tr>
@@ -215,18 +216,19 @@
                                 <td class="px-2 py-1"><input type="number" min="0" :name="`lines[${i}][credit]`" x-model.number="l.credit" class="w-24 h-7 border border-gray-300 rounded-[3px] px-1.5 text-[13px] text-right tabular-nums focus:outline-none focus:ring-1 focus:ring-emerald-400"></td>
                                 <td class="px-2 py-1"><input type="text" :name="`lines[${i}][cost_center]`" x-model="l.cost_center" class="w-20 h-7 border border-gray-300 rounded-[3px] px-1.5 text-[13px] font-mono focus:outline-none focus:ring-1 focus:ring-emerald-400"></td>
                                 <td class="px-2 py-1"><input type="text" :name="`lines[${i}][analytic]`" x-model="l.analytic" class="w-20 h-7 border border-gray-300 rounded-[3px] px-1.5 text-[13px] font-mono focus:outline-none focus:ring-1 focus:ring-emerald-400"></td>
+                                <td class="px-2 py-1"><input type="text" :name="`lines[${i}][reference]`" x-model="l.reference" class="w-28 h-7 border border-gray-300 rounded-[3px] px-1.5 text-[13px] font-mono focus:outline-none focus:ring-1 focus:ring-emerald-400"></td>
                                 <td class="px-2 py-1"><input type="text" :name="`lines[${i}][observation]`" x-model="l.observation" class="w-full h-7 border border-gray-300 rounded-[3px] px-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-400"></td>
                                 <td class="px-2 py-1 text-center"><button type="button" @click="lines.splice(i,1)" class="text-gray-400 hover:text-red-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M6 7V4a1 1 0 011-1h10a1 1 0 011 1v3"/></svg></button></td>
                             </tr>
                         </template>
-                        <tr x-show="lines.length === 0"><td colspan="9" class="px-4 py-6 text-center text-gray-400 text-[13px]">Aucune ligne — cliquez sur + pour ajouter une imputation.</td></tr>
+                        <tr x-show="lines.length === 0"><td colspan="10" class="px-4 py-6 text-center text-gray-400 text-[13px]">Aucune ligne — cliquez sur + pour ajouter une imputation.</td></tr>
                     </tbody>
                     <tfoot class="border-t border-gray-300 bg-[#f7faf8] text-[13px] font-bold">
                         <tr>
                             <td colspan="3" class="px-3 py-2 text-right text-gray-700">Total</td>
                             <td class="px-3 py-2 text-right tabular-nums" :class="totalDebit !== totalCredit ? 'text-red-600' : 'text-gray-800'" x-text="new Intl.NumberFormat('fr-FR').format(totalDebit)"></td>
                             <td class="px-3 py-2 text-right tabular-nums" :class="totalDebit !== totalCredit ? 'text-red-600' : 'text-gray-800'" x-text="new Intl.NumberFormat('fr-FR').format(totalCredit)"></td>
-                            <td colspan="4" class="px-3 py-2 text-[12px] font-normal" :class="totalDebit === totalCredit ? 'text-emerald-600' : 'text-red-600'" x-text="totalDebit === totalCredit ? 'Équilibré' : 'Déséquilibré (débit ≠ crédit)'"></td>
+                            <td colspan="5" class="px-3 py-2 text-[12px] font-normal" :class="totalDebit === totalCredit ? 'text-emerald-600' : 'text-red-600'" x-text="totalDebit === totalCredit ? 'Équilibré' : 'Déséquilibré (débit ≠ crédit)'"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -241,8 +243,12 @@
                 <div class="grid grid-cols-12 gap-x-3 gap-y-3">
                     <div class="col-span-3"><label class="{{ $lbl }}">Demandeur <span class="text-red-500">*</span></label><input type="text" value="{{ auth()->user()->name }}" class="{{ $inpRo }}" readonly></div>
                     <div class="col-span-3"><label class="{{ $lbl }}">Validateur</label><input type="text" value="—" class="{{ $inpRo }}" readonly></div>
+                    <div class="col-span-3"><label class="{{ $lbl }}">DAF</label><input type="text" value="—" class="{{ $inpRo }}" readonly></div>
+                    <div class="col-span-3"><label class="{{ $lbl }}">DG</label><input type="text" value="—" class="{{ $inpRo }}" readonly></div>
                     <div class="col-span-3"><label class="{{ $lbl }}">Date demande</label><input type="text" value="{{ now()->format('d/m/Y H:i') }}" class="{{ $inpRo }} tabular-nums" readonly></div>
                     <div class="col-span-3"><label class="{{ $lbl }}">Date validation</label><input type="text" value="—" class="{{ $inpRo }}" readonly></div>
+                    <div class="col-span-3"><label class="{{ $lbl }}">Date DAF</label><input type="text" value="—" class="{{ $inpRo }}" readonly></div>
+                    <div class="col-span-3"><label class="{{ $lbl }}">Date DG</label><input type="text" value="—" class="{{ $inpRo }}" readonly></div>
                     <div class="col-span-12"><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="2" class="w-full px-2 py-1.5 border border-gray-400 rounded-[3px] text-[14px] text-gray-900 bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400 resize-none" placeholder="Opération conforme — …">{{ old('notes') }}</textarea></div>
                 </div>
             </section>
@@ -252,6 +258,8 @@
                 <div class="grid grid-cols-12 gap-x-3 gap-y-3">
                     <div class="col-span-6"><label class="{{ $lbl }}">Créé le</label><input type="text" value="{{ now()->format('d/m/Y H:i') }}" class="{{ $inpRo }} tabular-nums" readonly></div>
                     <div class="col-span-6"><label class="{{ $lbl }}">Créé par</label><input type="text" value="{{ auth()->user()->name }}" class="{{ $inpRo }}" readonly></div>
+                    <div class="col-span-6"><label class="{{ $lbl }}">Modifié le</label><input type="text" value="—" class="{{ $inpRo }} tabular-nums" readonly></div>
+                    <div class="col-span-6"><label class="{{ $lbl }}">Modifié par</label><input type="text" value="—" class="{{ $inpRo }}" readonly></div>
                     <div class="col-span-6"><label class="{{ $lbl }}">Dernier statut</label><input type="text" value="Saisie" class="{{ $inpRo }}" readonly></div>
                     <div class="col-span-6"><label class="{{ $lbl }}">N° version</label><input type="text" value="1" class="{{ $inpRo }} tabular-nums" readonly></div>
                     <div class="col-span-12" x-ref="sec_pieces">
@@ -281,7 +289,7 @@ function opForm(amount, fees) {
         submitting: false,
         get totalDebit()  { return this.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0); },
         get totalCredit() { return this.lines.reduce((s, l) => s + (Number(l.credit) || 0), 0); },
-        addLine() { this.lines.push({ account: '', label: '', debit: 0, credit: 0, cost_center: '', analytic: '', observation: '' }); },
+        addLine() { this.lines.push({ account: '', label: '', debit: 0, credit: 0, cost_center: '', analytic: '', reference: '', observation: '' }); },
     };
 }
 </script>
