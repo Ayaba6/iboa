@@ -110,7 +110,10 @@ div.dt-paging .dt-paging-button.disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Tables : scroll horizontal automatique ─────────────────────── */
 .tbl-rx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.tbl-rx table { min-width: 520px; }
+/* min-width:100% (et non 520px fixe) : la table remplit toujours son conteneur,
+   et déborde en scroll horizontal seulement si son contenu l'exige. Un 520px
+   fixe laissait les tables larges flotter à ~60% avec un vide à droite. */
+.tbl-rx table { min-width: 100%; }
 
 /* ── Notifications dropdown : ne pas dépasser l'écran ───────────── */
 @media (max-width: 479px) {
