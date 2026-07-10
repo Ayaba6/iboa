@@ -25,8 +25,10 @@ class JournalEntry extends Model
         'entry_date',
         'value_date',
         'reference',
+        'partner_name',
         'description',
         'status',
+        'is_simulation',
         'total_debit',
         'total_credit',
         'created_by',
@@ -40,6 +42,7 @@ class JournalEntry extends Model
 
     protected $casts = [
         'entry_date'   => 'date',
+        'is_simulation' => 'boolean',
         'value_date'   => 'date',
         'validated_at' => 'datetime',
         'total_debit'  => 'integer',

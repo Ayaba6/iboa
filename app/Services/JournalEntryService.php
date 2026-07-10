@@ -95,6 +95,11 @@ class JournalEntryService
                 throw new \RuntimeException('Seules les écritures en brouillon peuvent être validées.');
             }
 
+            // [Maquette X3] Une écriture de simulation n'impacte jamais les soldes.
+            if ($entry->is_simulation) {
+                throw new \RuntimeException('Écriture de simulation — décochez le flag Simulation avant validation.');
+            }
+
             // [FIX-JOURNAL-01] Refuse to validate against a closed or archived fiscal year.
             if ($entry->fiscal_year_id) {
                 $fy = \App\Models\FiscalYear::find($entry->fiscal_year_id);
@@ -234,6 +239,9 @@ class JournalEntryService
                 'credit'             => (int) ($line['credit'] ?? 0),
                 'due_date'           => $line['due_date'] ?? null,
                 'reconciliation_ref' => $line['reconciliation_ref'] ?? null,
+                'partner_name'       => $line['partner_name'] ?? null,
+                'cost_center'        => $line['cost_center'] ?? null,
+                'tax_code'           => $line['tax_code'] ?? null,
                 'sort_order'         => $i,
             ]);
         }
