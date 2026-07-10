@@ -11,12 +11,30 @@ class StoreClientPaymentRequest extends FormRequest
         return true;
     }
 
+    /**
+     * [PARITÉ SAGE X3] `net_amount` = montant reçu − frais bancaires (informatif).
+     * N'affecte NI l'allocation aux factures NI l'écriture comptable (calculées
+     * sur `amount`). Recalculé côté serveur pour éviter toute incohérence front.
+     */
+    protected function prepareForValidation(): void
+    {
+        $amount = (int) $this->input('amount', 0);
+        $fees   = (int) $this->input('bank_fees', 0);
+        $this->merge([
+            'bank_fees'  => max(0, $fees),
+            'net_amount' => max(0, $amount - max(0, $fees)),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
             'client_id'                          => 'required|exists:clients,id',
             'payment_method_id'                  => 'nullable|exists:payment_methods,id',
-            'cash_account_id'                    => 'nullable|exists:cash_accounts,id',
+            // [RELATION MÉTIER] Tout encaissement entre dans UNE caisse/banque —
+            // sans elle, la transaction de caisse et l'imputation comptable (571/521)
+            // ne peuvent pas être rattachées au bon compte.
+            'cash_account_id'                    => 'required|exists:cash_accounts,id',
             'amount'                             => 'required|numeric|min:1',
             'payment_date'                       => 'required|date',
             'reference'                          => 'nullable|string|max:100',
@@ -27,6 +45,22 @@ class StoreClientPaymentRequest extends FormRequest
             'allocations'                        => 'nullable|array',
             'allocations.*.invoice_id'           => 'required_with:allocations.*|exists:invoices,id',
             'allocations.*.allocated_amount'     => 'required_with:allocations.*|numeric|min:0',
+            // [PARITÉ SAGE X3] Champs descriptifs (métadonnées, sans impact monétaire)
+            'bank_fees'                          => 'nullable|integer|min:0',
+            'net_amount'                         => 'nullable|integer|min:0',
+            'value_date'                         => 'nullable|date',
+            'piece_number'                       => 'nullable|string|max:60',
+            'bank_reference'                     => 'nullable|string|max:100',
+            'treasury_journal'                   => 'nullable|string|max:20',
+            'payment_condition'                  => 'nullable|string|max:60',
+            'cost_center'                        => 'nullable|string|max:30',
+            'analytic_section'                   => 'nullable|string|max:30',
+            'project'                            => 'nullable|string|max:60',
+            'salesperson'                        => 'nullable|string|max:100',
+            'site'                               => 'nullable|string|max:40',
+            'observations'                       => 'nullable|string|max:1000',
+            'documents'                          => 'nullable|array',
+            'documents.*'                        => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:5120',
         ];
     }
 

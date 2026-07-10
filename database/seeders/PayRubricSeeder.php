@@ -333,11 +333,31 @@ class PayRubricSeeder extends Seeder
             ],
         ];
 
+        // Comptes SYSCOHADA par rubrique (évite le risque GL — rubriques sans compte).
+        $accounts = [
+            '661' => ['SAL_BASE', 'SAL_COMP', 'HS_25', 'HS_50', 'HS_NUIT', 'PRIME_ANCIE', 'PRIME_EXCEPT', 'PRIME_PERF', 'PRIME_RESP', 'RET_ABS', 'BRUT'],
+            '663' => ['IND_DEPLAC', 'IND_LOGEMENT', 'IND_REPAS', 'PRIME_TRANSP'],
+            '664' => ['AT_MP', 'CNSS_PAT'],
+            '431' => ['CNSS_SAL'],
+            '447' => ['IUTS'],
+            '421' => ['AVANCE', 'PRET', 'RET_PRET'],
+            '428' => ['AUTRES_RET'],
+            '422' => ['NET_PAYE'],
+        ];
+        $codeToAccount = [];
+        foreach ($accounts as $acct => $codes) {
+            foreach ($codes as $c) {
+                $codeToAccount[$c] = $acct;
+            }
+        }
+
         $created = 0;
         foreach (array_merge($rubrics, $additional) as $data) {
             // Défaut is_iuts_base = is_taxable si non fourni (compatibilité)
             $data['is_iuts_base'] ??= $data['is_taxable'];
             $data['company_id'] = $company->id;
+            // Compte comptable SYSCOHADA si non explicitement fourni.
+            $data['account_code'] ??= $codeToAccount[$data['code']] ?? null;
 
             PayRubric::updateOrCreate(
                 ['company_id' => $company->id, 'code' => $data['code']],

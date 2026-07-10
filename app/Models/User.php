@@ -22,6 +22,7 @@ class User extends Authenticatable
         'avatar',
         'job_title',
         'is_active',
+        'notify_by_email',
         'company_id',
     ];
 
@@ -36,6 +37,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at'     => 'datetime',
             'is_active'         => 'boolean',
+            'notify_by_email'   => 'boolean',
             'password'          => 'hashed',
         ];
     }

@@ -12,21 +12,10 @@
 @endsection
 
 @section('content')
-<div class="space-y-4">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ $product->name }}</h1>
-            <p class="text-sm text-gray-500 mt-0.5">
-                Réf. <code class="font-mono bg-gray-100 px-1.5 py-0.5 rounded">{{ $product->reference }}</code>
-                — modifier la fiche article
-            </p>
-        </div>
-        <a href="{{ route('products.show', $product) }}"
-           class="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-sm font-medium px-4 py-2 rounded-lg">
-            ← Annuler
-        </a>
+<div class="flex items-start gap-4">
+    @include('products._selector')
+    <div class="flex-1 min-w-0 max-w-6xl">
+        @include('products._form')
     </div>
-
-    @include('products._form')
 </div>
 @endsection

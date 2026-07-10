@@ -10,13 +10,13 @@
 @section('content')
 @php $fmt = fn($n) => number_format((float) $n, 0, ',', ' '); @endphp
 
-<div class="max-w-4xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">Seuils d'approbation des bons de commande</h1>
+<div class="max-w-4xl mx-auto space-y-3">
+    <h1 class="text-[16px] font-bold text-gray-900">Seuils d'approbation des bons de commande</h1>
 
-    @if(session('success'))<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-3 text-sm">{{ session('success') }}</div>@endif
-    @if(session('error'))<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 text-sm">{{ session('error') }}</div>@endif
+    @if(session('success'))<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[4px] px-3 py-1.5 text-sm">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="bg-red-50 border border-red-200 text-red-800 rounded-[4px] px-3 py-1.5 text-sm">{{ session('error') }}</div>@endif
 
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+    <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4 text-sm text-blue-800">
         <p class="font-medium mb-1">💡 Fonctionnement</p>
         <ul class="list-disc list-inside text-xs space-y-0.5 text-blue-700">
             <li>Quand un PO est soumis à approbation, le système trouve la <strong>règle</strong> dont la tranche <code>[min_amount, max_amount[</code> couvre le total TTC.</li>
@@ -26,28 +26,28 @@
         </ul>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100"><h2 class="text-sm font-semibold text-gray-700">Règles actives</h2></div>
         <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+            <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                 <tr>
-                    <th class="px-4 py-2 text-left">Nom</th>
-                    <th class="px-4 py-2 text-right">Min</th>
-                    <th class="px-4 py-2 text-right">Max</th>
-                    <th class="px-4 py-2 text-left">Rôle requis</th>
-                    <th class="px-4 py-2 text-left">Permission requise</th>
-                    <th class="px-4 py-2"></th>
+                    <th class="px-3 py-1.5 text-left">Nom</th>
+                    <th class="px-3 py-1.5 text-right">Min</th>
+                    <th class="px-3 py-1.5 text-right">Max</th>
+                    <th class="px-3 py-1.5 text-left">Rôle requis</th>
+                    <th class="px-3 py-1.5 text-left">Permission requise</th>
+                    <th class="px-3 py-1.5"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @forelse($thresholds as $t)
                 <tr>
-                    <td class="px-4 py-2">{{ $t->name }}</td>
-                    <td class="px-4 py-2 text-right tabular-nums">{{ $fmt($t->min_amount) }}</td>
-                    <td class="px-4 py-2 text-right tabular-nums">{{ $t->max_amount ? $fmt($t->max_amount) : '∞' }}</td>
-                    <td class="px-4 py-2 text-xs"><code>{{ $t->required_role ?? '—' }}</code></td>
-                    <td class="px-4 py-2 text-xs"><code>{{ $t->required_permission ?? '—' }}</code></td>
-                    <td class="px-4 py-2 text-right">
+                    <td class="px-3 py-1.5">{{ $t->name }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($t->min_amount) }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums">{{ $t->max_amount ? $fmt($t->max_amount) : '∞' }}</td>
+                    <td class="px-3 py-1.5 text-xs"><code>{{ $t->required_role ?? '—' }}</code></td>
+                    <td class="px-3 py-1.5 text-xs"><code>{{ $t->required_permission ?? '—' }}</code></td>
+                    <td class="px-3 py-1.5 text-right">
                         <form action="{{ route('achats.approval.thresholds.destroy', $t) }}" method="POST" onsubmit="return confirm('Supprimer cette règle ?')">
                             @csrf @method('DELETE')
                             <button type="submit" class="text-xs text-red-600 hover:underline">Supprimer</button>
@@ -61,32 +61,32 @@
         </table>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <h2 class="text-base font-semibold text-gray-800 mb-3">Ajouter une règle</h2>
         <form action="{{ route('achats.approval.thresholds.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-5 gap-3">
             @csrf
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Nom <span class="text-red-500">*</span></label>
-                <input type="text" name="name" required maxlength="100" placeholder="Ex. : Manager" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <input type="text" name="name" required maxlength="100" placeholder="Ex. : Manager" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Montant min <span class="text-red-500">*</span></label>
-                <input type="number" name="min_amount" required min="0" step="0.01" value="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right">
+                <input type="number" name="min_amount" required min="0" step="0.01" value="0" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Montant max</label>
-                <input type="number" name="max_amount" min="0" step="0.01" placeholder="vide = ∞" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-right">
+                <input type="number" name="max_amount" min="0" step="0.01" placeholder="vide = ∞" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">Rôle requis</label>
-                <input type="text" name="required_role" maxlength="100" placeholder="ex: manager" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <input type="text" name="required_role" maxlength="100" placeholder="ex: manager" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-700 mb-1">OU permission</label>
-                <input type="text" name="required_permission" maxlength="100" placeholder="ex: purchase_orders.validate" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <input type="text" name="required_permission" maxlength="100" placeholder="ex: purchase_orders.validate" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
             </div>
             <div class="md:col-span-5 flex justify-end">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg">Ajouter la règle</button>
+                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px]">Ajouter la règle</button>
             </div>
         </form>
     </div>

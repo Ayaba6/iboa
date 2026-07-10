@@ -22,6 +22,94 @@ class FiscalYearController extends Controller
         return view('settings.fiscal-years', compact('years'));
     }
 
+    // [Maquette Exercices fiscaux] fiche de création complète
+    public function create(): View
+    {
+        return view('settings.fiscal-years-form', $this->formData(null));
+    }
+
+    // [Maquette Exercices fiscaux] fiche de modification avec périodes calculées
+    public function edit(FiscalYear $fiscalYear): View
+    {
+        return view('settings.fiscal-years-form', $this->formData($fiscalYear));
+    }
+
+    private function formData(?FiscalYear $fiscalYear): array
+    {
+        return [
+            'fiscalYear'    => $fiscalYear,
+            'users'         => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'currencies'    => \App\Models\Currency::orderBy('code')->get(['id', 'code', 'name']),
+            'previousYears' => FiscalYear::when($fiscalYear, fn ($q) => $q->where('id', '!=', $fiscalYear->id))
+                                   ->orderByDesc('starts_at')->get(['id', 'code', 'label']),
+            'periods'       => $fiscalYear ? $this->buildPeriods($fiscalYear) : collect(),
+        ];
+    }
+
+    /**
+     * [Maquette] Périodes mensuelles dérivées de l'exercice, croisées avec les
+     * verrouillages comptables (accounting_period_locks) et les déclarations TVA.
+     */
+    private function buildPeriods(FiscalYear $fy): \Illuminate\Support\Collection
+    {
+        $locks = \App\Models\AccountingPeriodLock::query()
+            ->get(['year', 'month'])
+            ->mapWithKeys(fn ($l) => [$l->year . '-' . str_pad((string) $l->month, 2, '0', STR_PAD_LEFT) => true]);
+        $declared = DB::table('vat_declarations')
+            ->whereNotIn('status', ['brouillon', 'annulee'])
+            ->get(['period_start', 'period_end']);
+
+        $periods = collect();
+        $cursor = $fy->starts_at->copy()->startOfMonth();
+        $end = $fy->ends_at->copy()->endOfMonth();
+        $n = 1;
+        while ($cursor <= $end && $n <= 24) {
+            $pStart = $cursor->copy()->max($fy->starts_at);
+            $pEnd = $cursor->copy()->endOfMonth()->min($fy->ends_at);
+            $periods->push((object) [
+                'number'    => $n,
+                'label'     => ucfirst($cursor->translatedFormat('F Y')),
+                'starts_at' => $pStart,
+                'ends_at'   => $pEnd,
+                'is_locked' => $locks->has($cursor->format('Y-m')),
+                'vat_done'  => $declared->contains(fn ($d) => $d->period_start <= $pEnd->toDateString() && $d->period_end >= $pStart->toDateString()),
+            ]);
+            $cursor->addMonth();
+            $n++;
+        }
+
+        return $periods;
+    }
+
+    // [Maquette] champs additionnels communs création/modification
+    private function maquetteData(Request $request): array
+    {
+        $data = $request->validate([
+            'code'               => ['nullable', 'string', 'max:20'],
+            'actual_close_date'  => ['nullable', 'date'],
+            'periodicity'        => ['nullable', 'in:mensuelle,trimestrielle,annuelle'],
+            'exercise_type'      => ['nullable', 'in:normal,premier,cloture'],
+            'responsible_id'     => ['nullable', 'exists:users,id'],
+            'fiscal_regime'      => ['nullable', 'string', 'max:50'],
+            'base_currency'      => ['nullable', 'string', 'max:10'],
+            'previous_reference' => ['nullable', 'string', 'max:30'],
+            'next_reference'     => ['nullable', 'string', 'max:30'],
+            'comment'            => ['nullable', 'string', 'max:500'],
+            'internal_notes'     => ['nullable', 'string', 'max:500'],
+            'allow_entries_after_provisional_close' => ['boolean'],
+            'monthly_close_required'    => ['boolean'],
+            'auto_centralization'       => ['boolean'],
+            'analytics_active'          => ['boolean'],
+            'vat_lock_after_validation' => ['boolean'],
+            'tolerated_days'            => ['nullable', 'integer', 'min:0', 'max:60'],
+            'last_monthly_close'        => ['nullable', 'date'],
+        ]);
+        foreach (['allow_entries_after_provisional_close', 'monthly_close_required', 'auto_centralization', 'analytics_active', 'vat_lock_after_validation'] as $b) {
+            $data[$b] = $request->boolean($b);
+        }
+        return $data;
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -30,12 +118,13 @@ class FiscalYearController extends Controller
             'ends_at'    => ['required', 'date', 'after:starts_at'],
             'is_current' => ['boolean'],
         ]);
+        $extra = $this->maquetteData($request);
 
-        DB::transaction(function () use ($data, $request) {
+        DB::transaction(function () use ($data, $extra, $request) {
             if ($request->boolean('is_current')) {
                 FiscalYear::where('is_current', true)->update(['is_current' => false]);
             }
-            $fy = FiscalYear::create([
+            $fy = FiscalYear::create($extra + [
                 'label'      => $data['label'],
                 'starts_at'  => $data['starts_at'],
                 'ends_at'    => $data['ends_at'],
@@ -52,7 +141,7 @@ class FiscalYearController extends Controller
             }
         });
 
-        return back()->with('success', "Exercice « {$data['label']} » créé.");
+        return redirect()->route('settings.fiscal-years.index')->with('success', "Exercice « {$data['label']} » créé.");
     }
 
     public function update(Request $request, FiscalYear $fiscalYear): RedirectResponse
@@ -62,12 +151,13 @@ class FiscalYearController extends Controller
             'starts_at' => ['required', 'date'],
             'ends_at'   => ['required', 'date', 'after:starts_at'],
         ]);
+        $extra = $this->maquetteData($request);
 
         if ($fiscalYear->status !== 'ouvert') {
             return back()->with('error', 'Seul un exercice ouvert peut être modifié.');
         }
 
-        $fiscalYear->update($data);
+        $fiscalYear->update($extra + $data);
         return back()->with('success', "Exercice mis à jour.");
     }
 

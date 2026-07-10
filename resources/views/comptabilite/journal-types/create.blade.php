@@ -12,8 +12,8 @@
 @endsection
 
 @section('content')
-<div class="max-w-3xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-gray-900">Nouveau code journal</h1>
+<div class="max-w-3xl mx-auto space-y-3">
+    <h1 class="text-[16px] font-bold text-gray-900">Nouveau code journal</h1>
     @include('comptabilite.journal-types._form')
 </div>
 @endsection

@@ -33,10 +33,24 @@ class ClientRepository extends BaseRepository
         return Client::with(['contacts', 'addresses', 'assignedCommercial', 'interactions.user'])->findOrFail($id);
     }
 
+    /**
+     * Prochain code client libre au format CLI-#####.
+     * Basé sur le plus grand numéro existant (pas le dernier créé) + boucle
+     * anti-collision — robuste face aux trous de séquence et codes manuels.
+     */
     public function generateCode(): string
     {
-        $last = Client::withTrashed()->orderByDesc('id')->value('code');
-        $num  = $last ? ((int) preg_replace('/\D/', '', $last)) + 1 : 1;
-        return 'CLI-' . str_pad($num, 5, '0', STR_PAD_LEFT);
+        $maxNum = (int) Client::withTrashed()
+            ->where('code', 'like', 'CLI-%')
+            ->pluck('code')
+            ->map(fn ($code) => (int) substr($code, 4))
+            ->max();
+
+        do {
+            $maxNum++;
+            $code = 'CLI-' . str_pad((string) $maxNum, 5, '0', STR_PAD_LEFT);
+        } while (Client::withTrashed()->where('code', $code)->exists());
+
+        return $code;
     }
 }

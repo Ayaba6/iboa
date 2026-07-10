@@ -10,23 +10,23 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Analyse des marges</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Analyse des marges</h1>
             <p class="text-sm text-gray-500 mt-0.5">Rentabilité par produit</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ request()->fullUrlWithQuery(['export' => 'excel']) }}"
-               class="inline-flex items-center gap-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+               class="inline-flex items-center gap-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
                 </svg>
                 Export Excel
             </a>
             <a href="{{ route('reports.margins-pdf', request()->query()) }}"
-               class="inline-flex items-center gap-2 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+               class="inline-flex items-center gap-2 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
@@ -36,21 +36,21 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
                 <input type="date" name="from" value="{{ $from }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
                 <input type="date" name="to" value="{{ $to }}"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Famille</label>
-                <select name="family_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400 bg-white">
+                <select name="family_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="">— Toutes —</option>
                     @foreach($families as $f)
                         <option value="{{ $f->id }}" {{ $familyId == $f->id ? 'selected' : '' }}>{{ $f->name }}</option>
@@ -59,7 +59,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Trier par</label>
-                <select name="sort_by" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400 bg-white">
+                <select name="sort_by" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="marge_brute" {{ $sortBy === 'marge_brute' ? 'selected' : '' }}>Marge brute</option>
                     <option value="ca_ht"       {{ $sortBy === 'ca_ht'       ? 'selected' : '' }}>CA HT</option>
                     <option value="qty_vendue"  {{ $sortBy === 'qty_vendue'  ? 'selected' : '' }}>Quantité vendue</option>
@@ -67,29 +67,29 @@
             </div>
         </div>
         <div class="mt-3 flex gap-2">
-            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">Appliquer</button>
-            <a href="{{ route('reports.margins') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors">Réinitialiser</a>
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">Appliquer</button>
+            <a href="{{ route('reports.margins') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">Réinitialiser</a>
         </div>
     </form>
 
     {{-- KPIs --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2 shadow-sm">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest">CA HT total</p>
-            <p class="text-xl font-bold text-gray-900 mt-1">{{ number_format($totalCaHt, 0, ',', ' ') }}</p>
+            <p class="text-[17px] font-bold text-gray-900 mt-1">{{ number_format($totalCaHt, 0, ',', ' ') }}</p>
             <p class="text-xs text-gray-400 mt-0.5">FCFA</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2 shadow-sm">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Coût total</p>
-            <p class="text-xl font-bold text-gray-900 mt-1">{{ number_format($totalCout, 0, ',', ' ') }}</p>
+            <p class="text-[17px] font-bold text-gray-900 mt-1">{{ number_format($totalCout, 0, ',', ' ') }}</p>
             <p class="text-xs text-gray-400 mt-0.5">FCFA</p>
         </div>
-        <div class="bg-emerald-50 rounded-xl border border-emerald-100 p-4 shadow-sm">
+        <div class="bg-emerald-50 rounded-[4px] border border-emerald-100 p-4 shadow-sm">
             <p class="text-xs font-semibold text-emerald-600 uppercase tracking-widest">Marge brute</p>
-            <p class="text-xl font-bold text-emerald-800 mt-1">{{ number_format($totalMarge, 0, ',', ' ') }}</p>
+            <p class="text-[17px] font-bold text-emerald-800 mt-1">{{ number_format($totalMarge, 0, ',', ' ') }}</p>
             <p class="text-xs text-emerald-500 mt-0.5">FCFA</p>
         </div>
-        <div class="bg-emerald-600 rounded-xl p-4 shadow-sm shadow-emerald-200">
+        <div class="bg-emerald-600 rounded-[4px] p-4 shadow-sm shadow-emerald-200">
             <p class="text-xs font-semibold text-emerald-200 uppercase tracking-widest">Taux de marge</p>
             <p class="text-3xl font-extrabold text-white mt-1">{{ $tauxMoyen }}%</p>
             <p class="text-xs text-emerald-300 mt-0.5">Taux moyen</p>
@@ -98,14 +98,14 @@
 
     {{-- Chart top 10 --}}
     @if($top10->isNotEmpty())
-    <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5 shadow-sm">
         <h2 class="text-sm font-bold text-gray-800 mb-4">Top 10 produits par marge brute</h2>
         <div id="chart-margins-top10"></div>
     </div>
     @endif
 
     {{-- Tableau --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 class="text-sm font-bold text-gray-800">Détail par produit ({{ $products->count() }} produits)</h2>
         </div>

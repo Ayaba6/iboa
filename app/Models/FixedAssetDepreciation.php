@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Traits\HasCompanyScope;
 
 /**
  * Ligne du plan d'amortissement.
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class FixedAssetDepreciation extends Model
 {
+    use HasCompanyScope;
+
     protected $table = 'fixed_asset_depreciations';
 
     protected $fillable = [

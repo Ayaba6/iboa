@@ -47,16 +47,24 @@ class SecurityHeaders
         // CSP : adapté dev (Vite hot-reload) vs prod
         $isDev = app()->environment('local');
 
+        // [DEV-VITE] Quand `npm run dev` tourne, Laravel sert les assets depuis
+        // le dev server Vite (http://[::1]:4000 ou localhost) — il faut donc
+        // l'autoriser dans script-src ET style-src (pas seulement connect-src),
+        // en couvrant l'hôte IPv6 [::1] que Firefox distingue de localhost.
+        $viteDev = $isDev
+            ? ' http://localhost:* http://127.0.0.1:* http://[::1]:* ws://localhost:* ws://127.0.0.1:* ws://[::1]:*'
+            : '';
+
         $csp = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.datatables.net https://cdnjs.cloudflare.com https://code.jquery.com",
-            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://cdn.datatables.net",
-            "img-src 'self' data: blob:",
-            "font-src 'self' data: https://fonts.bunny.net",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.datatables.net https://cdnjs.cloudflare.com https://code.jquery.com{$viteDev}",
+            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://cdn.datatables.net{$viteDev}",
+            "img-src 'self' data: blob:{$viteDev}",
+            "font-src 'self' data: https://fonts.bunny.net{$viteDev}",
             // connect-src : ajoute les CDN aussi car le navigateur fetch les sourcemaps (.js.map)
             // via cette directive et pas via script-src.
             "connect-src 'self' https://cdn.datatables.net https://cdnjs.cloudflare.com https://code.jquery.com"
-                . ($isDev ? ' ws: http://localhost:* http://127.0.0.1:*' : ''),
+                . ($isDev ? ' ws:' : '') . $viteDev,
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",

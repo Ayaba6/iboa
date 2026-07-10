@@ -41,7 +41,7 @@
 
     {{-- Production warning --}}
     <div x-show="mode === 'production'" x-transition
-         class="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+         class="bg-amber-50 border border-amber-300 rounded-[4px] p-4 flex items-start gap-3">
         <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
         </svg>
@@ -58,20 +58,20 @@
         @if($integration->exists) @method('PUT') @endif
 
         {{-- ── Informations générales ──────────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-6 space-y-4">
             <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informations générales</h2>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Nom <span class="text-red-500">*</span></label>
                 <input type="text" name="name" value="{{ old('name', $integration->name) }}"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="Ex: Orange Money Burkina Faso" required>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Type <span class="text-red-500">*</span></label>
-                    <select name="type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white" required>
+                    <select name="type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 bg-white" required>
                         <option value="">— Sélectionner —</option>
                         @foreach($types as $value => $label)
                             <option value="{{ $value }}" {{ old('type', $integration->type) == $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -80,7 +80,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Fournisseur <span class="text-red-500">*</span></label>
-                    <select name="provider" x-model="provider" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white" required>
+                    <select name="provider" x-model="provider" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 bg-white" required>
                         <option value="">— Sélectionner —</option>
                         @foreach($providers as $value => $label)
                             <option value="{{ $value }}" {{ old('provider', $integration->provider) == $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -104,20 +104,20 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">URL de base (production)</label>
                     <input type="url" name="base_url" value="{{ old('base_url', $integration->base_url) }}"
                         :placeholder="prodUrl || 'https://api.provider.com/v1'"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">URL de base (sandbox)</label>
                     <input type="url" name="sandbox_base_url" value="{{ old('sandbox_base_url', $integration->sandbox_base_url) }}"
                         :placeholder="sandboxUrl || 'https://sandbox.provider.com/v1'"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Mode <span class="text-red-500">*</span></label>
-                    <select name="mode" x-model="mode" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                    <select name="mode" x-model="mode" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 bg-white">
                         <option value="sandbox">🧪 Sandbox (test)</option>
                         <option value="production">🚀 Production</option>
                     </select>
@@ -126,7 +126,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (secondes)</label>
                     <input type="number" name="timeout_seconds" value="{{ old('timeout_seconds', $integration->timeout_seconds ?? 30) }}"
                         min="5" max="120"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
                 </div>
             </div>
 
@@ -141,7 +141,7 @@
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="hidden" name="notify_on_error" value="0">
                     <input type="checkbox" name="notify_on_error" value="1"
-                        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-emerald-500"
                         {{ old('notify_on_error', $integration->notify_on_error ?? true) ? 'checked' : '' }}>
                     <span class="text-sm font-medium text-gray-700">Alertes admin en cas d'erreur</span>
                 </label>
@@ -149,7 +149,7 @@
         </div>
 
         {{-- ── Identifiants API (chiffrés) ─────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-6 space-y-4">
             <div class="flex items-start justify-between">
                 <div>
                     <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Identifiants API</h2>
@@ -184,7 +184,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">{{ $label }}</label>
                     <div class="relative" x-data="{ show: false }">
                         <input :type="show ? 'text' : 'password'" name="{{ $field }}" autocomplete="off"
-                            class="w-full border border-gray-300 rounded-lg pl-3 pr-9 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-mono"
+                            class="w-full border border-gray-300 rounded-lg pl-3 pr-9 py-2 text-sm focus:ring-2 focus:ring-emerald-500 font-mono"
                             placeholder="{{ $integration->exists ? '(conservé si vide)' : '' }}">
                         <button type="button" @click="show = !show"
                             class="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
@@ -198,7 +198,7 @@
         </div>
 
         {{-- ── Configuration avancée (JSON) ────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <button type="button" @click="showAdvanced = !showAdvanced"
                 class="w-full flex items-center justify-between px-6 py-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                 <span>Configuration avancée (JSON libre)</span>
@@ -215,7 +215,7 @@
                 </p>
                 <textarea name="extra_config_raw" rows="5" x-ref="jsonField"
                     @blur="validateJson($el)"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 transition-colors"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 transition-colors"
                     placeholder='{"sender_id": "IBOA", "merchant_id": "12345"}'>{{ old('extra_config_raw', $integration->extra_config ? json_encode($integration->extra_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '') }}</textarea>
             </div>
         </div>
@@ -237,7 +237,7 @@
                 @endif
             </div>
             <button type="submit"
-                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2 rounded-lg flex items-center gap-2">
+                class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold px-6 py-2 rounded-lg flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 {{ $integration->exists ? 'Enregistrer les modifications' : 'Créer l\'intégration' }}
             </button>

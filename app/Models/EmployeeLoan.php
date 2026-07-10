@@ -5,12 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\HasCompanyScope;
 
 /**
  * [RH-PRO] Prêt salarié — remboursement mensuel sur plusieurs périodes.
  */
 class EmployeeLoan extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'employee_id', 'loan_number',
         'amount', 'monthly_deduction', 'remaining_balance', 'nb_months',

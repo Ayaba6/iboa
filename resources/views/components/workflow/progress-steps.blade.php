@@ -54,20 +54,20 @@
 
             {{-- Ligne de connexion gauche --}}
             @if($i > 0)
-            <div class="absolute left-0 right-1/2 h-0.5 {{ $lineHeight }} {{ $done || $active ? 'bg-indigo-500' : 'bg-gray-200' }}"
+            <div class="absolute left-0 right-1/2 h-0.5 {{ $lineHeight }} {{ $done || $active ? 'bg-emerald-600' : 'bg-gray-200' }}"
                  style="top: {{ $size === 'sm' ? '14px' : '18px' }}; z-index: 0;"></div>
             @endif
 
             {{-- Ligne de connexion droite --}}
             @if(!$isLast)
-            <div class="absolute left-1/2 right-0 h-0.5 {{ $done ? 'bg-indigo-500' : 'bg-gray-200' }}"
+            <div class="absolute left-1/2 right-0 h-0.5 {{ $done ? 'bg-emerald-600' : 'bg-gray-200' }}"
                  style="top: {{ $size === 'sm' ? '14px' : '18px' }}; z-index: 0;"></div>
             @endif
 
             {{-- Cercle / icône --}}
             <div class="relative z-10 {{ $circleSize }} rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ring-2
-                @if($done)    bg-indigo-600 ring-indigo-600 text-white
-                @elseif($active) bg-white ring-indigo-600 text-indigo-700 shadow-md
+                @if($done)    bg-emerald-700 ring-indigo-600 text-white
+                @elseif($active) bg-white ring-indigo-600 text-emerald-800 shadow-md
                 @else         bg-white ring-gray-200 text-gray-400
                 @endif">
                 @if($done)
@@ -85,7 +85,7 @@
             {{-- Label --}}
             <div class="mt-1.5 text-center px-1">
                 <span class="{{ $labelSize }} font-medium leading-tight
-                    @if($active) text-indigo-700
+                    @if($active) text-emerald-800
                     @elseif($done) text-gray-600
                     @else text-gray-400
                     @endif">

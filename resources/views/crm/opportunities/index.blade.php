@@ -8,12 +8,12 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Pipeline commercial</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Pipeline commercial</h1>
             <p class="text-sm text-gray-500 mt-0.5">
                 Pipeline actif : <strong>{{ number_format($totalPipeline, 0, ',', ' ') }} FCFA</strong>
                 · Gagné : <strong class="text-emerald-600">{{ number_format($totalWon, 0, ',', ' ') }} FCFA</strong>
@@ -23,14 +23,14 @@
             <form method="GET" class="flex items-center gap-2">
                 <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                        placeholder="Rechercher..."
-                       class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 w-48">
-                <button type="submit" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Filtrer</button>
+                       class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 w-48">
+                <button type="submit" class="px-3 py-2 bg-white border border-gray-300 rounded-[4px] text-sm text-gray-600 hover:bg-gray-50">Filtrer</button>
                 @if(array_filter($filters ?? []))
-                <a href="{{ route('crm.opportunities.index') }}" class="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg text-sm hover:bg-gray-50">✕</a>
+                <a href="{{ route('crm.opportunities.index') }}" class="px-3 py-2 border border-gray-300 text-gray-500 rounded-[4px] text-sm hover:bg-gray-50">✕</a>
                 @endif
             </form>
             <a href="{{ route('crm.opportunities.create') }}"
-               class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+               class="inline-flex items-center gap-2 px-3 py-2.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -51,7 +51,7 @@
              @drop.prevent="dragOver = false; handleDrop($event, '{{ $stage }}')">
 
             {{-- Entête colonne --}}
-            <div class="flex items-center justify-between px-3 py-2.5 rounded-xl mb-2
+            <div class="flex items-center justify-between px-3 py-2.5 rounded-[4px] mb-2
                         bg-{{ $cfg['color'] }}-50 border border-{{ $cfg['color'] }}-100"
                  :class="{ 'ring-2 ring-{{ $cfg['color'] }}-400 ring-offset-1': dragOver }">
                 <div class="flex items-center gap-2">
@@ -67,13 +67,13 @@
             {{-- Cartes --}}
             <div class="flex-1 space-y-2.5" data-drop-zone>
                 @foreach($opps as $opp)
-                <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+                <div class="bg-white rounded-[4px] border border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
                      draggable="true"
                      @dragstart="$event.dataTransfer.setData('oppId', {{ $opp->id }}); $event.dataTransfer.setData('fromStage', '{{ $stage }}')"
                      id="opp-{{ $opp->id }}">
                     <div class="flex items-start justify-between gap-2 mb-2">
                         <a href="{{ route('crm.opportunities.show', $opp) }}"
-                           class="text-sm font-semibold text-gray-900 hover:text-indigo-600 leading-tight flex-1">{{ $opp->title }}</a>
+                           class="text-sm font-semibold text-gray-900 hover:text-emerald-700 leading-tight flex-1">{{ $opp->title }}</a>
                         <a href="{{ route('crm.opportunities.edit', $opp) }}"
                            class="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,13 +114,13 @@
                 @endforeach
 
                 {{-- Placeholder drop --}}
-                <div class="h-8 rounded-xl border-2 border-dashed border-gray-200 opacity-0 transition-opacity"
+                <div class="h-8 rounded-[4px] border-2 border-dashed border-gray-200 opacity-0 transition-opacity"
                      :class="{ 'opacity-100': dragOver }"></div>
             </div>
 
             {{-- Ajouter dans ce stage --}}
             <a href="{{ route('crm.opportunities.create', ['stage' => $stage]) }}"
-               class="mt-2 flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+               class="mt-2 flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-[4px] transition-colors">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>

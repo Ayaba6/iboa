@@ -8,7 +8,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 fade-up" style="animation-delay:.28s">
 
     {{-- Cashflow groupé --}}
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-start justify-between mb-4">
             <div>
                 <h2 class="text-base font-bold text-gray-900">Flux de trésorerie</h2>
@@ -27,14 +27,14 @@
     </div>
 
     {{-- Activité récente — timeline --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5 flex flex-col">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h2 class="text-base font-bold text-gray-900">Activité récente</h2>
                 <p class="text-xs text-gray-400 mt-0.5">Dernières actions</p>
             </div>
             @can('audit.view')
-            <a href="{{ route('audit.index') }}" class="text-xs font-semibold text-indigo-500 hover:text-indigo-700 whitespace-nowrap">
+            <a href="{{ route('audit.index') }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-800 whitespace-nowrap">
                 Tout voir →
             </a>
             @endcan
@@ -53,7 +53,7 @@
                     'created'   => ['dot'=>'bg-emerald-400','badge'=>'bg-emerald-50 text-emerald-700','label'=>'Créé'],
                     'updated'   => ['dot'=>'bg-blue-400',   'badge'=>'bg-blue-50 text-blue-700',   'label'=>'Modifié'],
                     'deleted'   => ['dot'=>'bg-red-400',    'badge'=>'bg-red-50 text-red-600',     'label'=>'Supprimé'],
-                    'login'     => ['dot'=>'bg-indigo-400', 'badge'=>'bg-indigo-50 text-indigo-700','label'=>'Connexion'],
+                    'login'     => ['dot'=>'bg-emerald-500', 'badge'=>'bg-[#eef5f0] text-emerald-800','label'=>'Connexion'],
                     'validated' => ['dot'=>'bg-violet-400', 'badge'=>'bg-violet-50 text-violet-700','label'=>'Validé'],
                 ];
                 $c     = $cs[$act->action] ?? ['dot'=>'bg-gray-300','badge'=>'bg-gray-50 text-gray-500','label'=>ucfirst($act->action??'—')];

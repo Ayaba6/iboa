@@ -11,16 +11,16 @@
 
 @section('content')
 <div class="space-y-1 mb-5">
-    <h1 class="text-2xl font-bold text-gray-900">Nouvel avoir</h1>
+    <h1 class="text-[16px] font-bold text-gray-900">Nouvel avoir</h1>
     @if($invoice)
-    <p class="text-sm text-gray-500">Avoir sur la facture <span class="font-mono font-semibold text-indigo-600">{{ $invoice->number }}</span> — {{ $invoice->client?->name }}</p>
+    <p class="text-sm text-gray-500">Avoir sur la facture <span class="font-mono font-semibold text-emerald-700">{{ $invoice->number }}</span> — {{ $invoice->client?->name }}</p>
     @endif
 </div>
 
 <x-validation-errors />
 
 @if(!$invoice)
-<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
+<div class="bg-amber-50 border border-amber-200 rounded-[4px] p-4 mb-4 text-sm text-amber-800">
     Aucune facture sélectionnée. Accédez à cette page depuis la fiche d'une facture.
     <a href="{{ route('ventes.factures.index') }}" class="underline font-medium ml-1">Voir les factures</a>
 </div>
@@ -46,53 +46,53 @@ window._creditNoteFormData = {
     @csrf
     <input type="hidden" name="invoice_id" value="{{ $invoice->id }}">
 
-    <div x-data="creditNoteForm()" class="space-y-5">
+    <div x-data="creditNoteForm()" class="space-y-3">
 
         {{-- En-tête --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
             <h2 class="text-base font-semibold text-gray-900">Informations</h2>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Date d'émission <span class="text-red-500">*</span></label>
                     <input type="date" name="issued_at" value="{{ old('issued_at', now()->format('Y-m-d')) }}" required
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
                     @error('issued_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Motif de l'avoir</label>
                     <input type="text" name="reason" value="{{ old('reason') }}"
                            placeholder="Ex: Retour marchandise, erreur de facturation..."
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
                     @error('reason')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div class="sm:col-span-3">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Notes internes</label>
                     <textarea name="notes" rows="2"
-                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">{{ old('notes') }}</textarea>
+                              class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-purple-500 focus:border-purple-500">{{ old('notes') }}</textarea>
                 </div>
             </div>
         </div>
 
         {{-- Lignes --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 class="text-base font-semibold text-gray-900">Lignes de l'avoir</h2>
                 <button type="button" @click="prefillFromInvoice()"
-                        class="text-xs text-purple-600 hover:text-purple-800 font-medium border border-purple-200 hover:bg-purple-50 px-3 py-1.5 rounded-lg transition-colors">
+                        class="text-xs text-purple-600 hover:text-purple-800 font-medium border border-purple-200 hover:bg-purple-50 px-3 py-1.5 rounded-[4px] transition-colors">
                     Reprendre toutes les lignes de la facture
                 </button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-[#eef5f0] border-b border-gray-300">
                         <tr>
-                            <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase w-8">#</th>
-                            <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
-                            <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase w-20">Qté</th>
-                            <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase w-28">Prix Unit.</th>
-                            <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase w-20">TVA%</th>
-                            <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase w-28">Total HT</th>
-                            <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase w-28">Total TTC</th>
+                            <th class="px-3 py-2.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-8">#</th>
+                            <th class="px-3 py-2.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Description</th>
+                            <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-20">Qté</th>
+                            <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-28">Prix Unit.</th>
+                            <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-20">TVA%</th>
+                            <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-28">Total HT</th>
+                            <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-28">Total TTC</th>
                             <th class="px-3 py-2.5 w-10"></th>
                         </tr>
                     </thead>
@@ -149,7 +149,7 @@ window._creditNoteFormData = {
 
         {{-- Totaux --}}
         <div class="flex justify-end">
-            <div class="w-full sm:w-72 bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+            <div class="w-full sm:w-72 bg-white rounded-[4px] border border-gray-300 p-5 space-y-3">
                 <div class="flex justify-between text-sm text-gray-600">
                     <span>Sous-total HT</span>
                     <span class="tabular-nums font-medium" x-text="fmt(subtotalHt)"></span>
@@ -168,8 +168,8 @@ window._creditNoteFormData = {
         {{-- Boutons --}}
         <div class="flex items-center justify-end gap-3">
             <a href="{{ $invoice ? route('ventes.factures.show', $invoice) : route('ventes.avoirs.index') }}"
-               class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">Annuler</a>
-            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+               class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">Annuler</a>
+            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
                 Créer l'avoir
             </button>
         </div>

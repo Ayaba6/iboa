@@ -2,6 +2,7 @@
 
 use App\Models\Company;
 use App\Models\FiscalYear;
+use App\Models\Product;
 use App\Modules\Production\Models\ProductionOrder;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
@@ -30,7 +31,15 @@ function poAdmin(): User
 
 function makeOrder(array $overrides = []): ProductionOrder
 {
+    // [Audit création OF] article à lancer obligatoire (flux Fabriqué) ; un
+    // article fabricable exige une nomenclature au lancement → BOM liée.
+    $pf  = Product::factory()->create(['is_manufacturable' => true]);
+    $bom = \App\Modules\Production\Models\BillOfMaterial::create([
+        'company_id' => Company::first()->id, 'product_id' => $pf->id, 'name' => 'BOM ' . $pf->id, 'is_active' => true,
+    ]);
+
     test()->post(route('production.orders.store'), array_merge([
+        'product_id' => $pf->id, 'bill_of_material_id' => $bom->id,
         'sheet_type' => 'bac', 'thickness' => 0.40, 'color' => 'Rouge',
         'lines' => [
             ['label' => 'Bac 6m', 'length' => 6, 'quantity' => 10],
@@ -65,9 +74,24 @@ it('runs the full workflow brouillon -> termine', function () {
     $this->post(route('production.orders.start', $order))->assertRedirect();
     expect($order->fresh()->status)->toBe('en_cours');
 
+    // Production réelle déclarée avant clôture (= quantité demandée → pas d'écart).
+    // QC obligatoire couvert par ProductionClosureGuardsTest — hors sujet ici.
+    $order->update(['quantity_produced' => $order->quantity_requested, 'controle_qualite_obligatoire' => false]);
     $this->post(route('production.orders.finish', $order))->assertRedirect();
     expect($order->fresh()->status)->toBe('termine');
     expect($order->fresh()->finished_at)->not->toBeNull();
+});
+
+it('blocks finishing an OF with zero produced quantity', function () {
+    $this->actingAs(poAdmin());
+    $order = makeOrder();
+
+    $this->post(route('production.orders.launch', $order))->assertRedirect();
+    $this->post(route('production.orders.start', $order))->assertRedirect();
+
+    // Aucune production déclarée (quantity_produced = 0) → clôture refusée.
+    $this->post(route('production.orders.finish', $order))->assertSessionHasErrors('quantity_produced');
+    expect($order->fresh()->status)->toBe('en_cours');
 });
 
 it('rejects an invalid transition (finish a draft)', function () {

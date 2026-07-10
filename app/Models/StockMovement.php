@@ -86,6 +86,43 @@ class StockMovement extends Model
         return $this->morphTo('referenceable', 'reference_type', 'reference_id');
     }
 
+    /**
+     * Libellé métier du mouvement (§6) combinant le type et le document source :
+     * réception fournisseur, consommation production, entrée chute/avarié,
+     * livraison client, transfert inter-dépôt, ajustement inventaire, etc.
+     */
+    public function reasonLabel(): string
+    {
+        $ref = $this->reference_type ? class_basename($this->reference_type) : null;
+
+        return match (true) {
+            $this->type === 'entree' && $ref === 'Reception'        => 'Réception fournisseur',
+            $this->type === 'entree' && $ref === 'ProductionOrder'  => $this->productionEntryLabel(),
+            $this->type === 'entree'                                => 'Entrée stock',
+            $this->type === 'sortie' && $ref === 'ProductionOrder'  => 'Consommation production',
+            $this->type === 'sortie' && $ref === 'DeliveryNote'     => 'Livraison client',
+            $this->type === 'sortie'                                => 'Sortie stock',
+            $this->type === 'transfert'                             => 'Transfert inter-dépôt',
+            $this->type === 'retour_client'                         => 'Retour client',
+            $this->type === 'retour_fournisseur'                    => 'Retour fournisseur',
+            $this->type === 'inventaire'                            => 'Ajustement inventaire',
+            $this->type === 'ajustement'                            => 'Ajustement',
+            default                                                 => ucfirst((string) $this->type),
+        };
+    }
+
+    /** Affine une entrée production : produit fini, chute ou avarié (selon la famille). */
+    private function productionEntryLabel(): string
+    {
+        $code = optional($this->product?->family)->code;
+
+        return match ($code) {
+            'CHUT'  => 'Entrée chute',
+            'AVAR'  => 'Entrée avarié',
+            default => 'Entrée produit fini',
+        };
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

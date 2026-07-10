@@ -36,6 +36,11 @@ class InvoiceService
 
     public function create(array $data): Invoice
     {
+        // [Parametrage Vente] client bloque = aucun document commercial
+        \App\Services\ClientService::assertSellable(
+            !empty($data['client_id']) ? \App\Models\Client::find($data['client_id']) : null
+        );
+
         return DB::transaction(function () use ($data) {
             $items = $data['items'] ?? [];
             unset($data['items']);
@@ -412,10 +417,24 @@ class InvoiceService
         // validation → marges historiques exactes, indépendantes du CMP futur.
         $this->snapshotItemCosts($invoice);
 
-        // Post to GL synchronously — must be in the same transaction
-        $this->accountingService->postClientInvoice($invoice);
+        // Post to GL synchronously — must be in the same transaction.
+        // [Sync ERP] journalisée + idempotente (jamais deux écritures pour la même
+        // facture) + relançable via sync_logs.
+        app(\App\Services\Sync\SyncOrchestrator::class)->run(
+            sourceModule: 'ventes',
+            targetModule: 'comptabilite',
+            eventName: 'invoice.validated',
+            action: 'post_gl_entry',
+            source: $invoice,
+            callback: fn () => $this->accountingService->postClientInvoice($invoice),
+            handlerClass: \App\Services\Sync\Handlers\ReplayInvoiceAccountingSync::class,
+        );
         // [COMPTA-STOCK] Sortie de stock automatique
         $this->accountingService->postSaleStockMovement($invoice);
+
+        // [SYNC] Maintenir le montant facturé de la commande source en temps
+        // réel (sinon il n'était rattrapé que par sync:modules quotidien).
+        \App\Models\Order::resyncInvoicedAmount($invoice->order_id);
 
         // Fire event — queued listener sends email after commit
         event(new InvoiceValidated($invoice));

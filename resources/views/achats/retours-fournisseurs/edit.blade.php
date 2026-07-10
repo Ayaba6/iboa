@@ -12,13 +12,13 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-6"
+<div class="max-w-5xl mx-auto space-y-3"
      x-data="supplierReturnEditForm()"
      x-init="init()">
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Modifier le retour</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Modifier le retour</h1>
             <p class="text-sm text-gray-500 mt-0.5 font-mono">{{ $return->number }}</p>
         </div>
         <a href="{{ route('achats.retours-fournisseurs.show', $return) }}"
@@ -31,7 +31,7 @@
     </div>
 
     @if($errors->any())
-    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-[4px] px-3 py-1.5 text-sm">
         <ul class="list-disc list-inside space-y-1">
             @foreach($errors->all() as $error)
                 <li>{{ $error }}</li>
@@ -44,10 +44,10 @@
         @csrf
         @method('PUT')
 
-        <div class="space-y-5">
+        <div class="space-y-3">
 
             {{-- General info --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <h2 class="text-base font-semibold text-gray-800 mb-4">Informations générales</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -56,7 +56,7 @@
                             Fournisseur <span class="text-red-500">*</span>
                         </label>
                         <select name="supplier_id"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 @error('supplier_id') border-red-500 @enderror"
+                                class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 @error('supplier_id') border-red-500 @enderror"
                                 required>
                             <option value="">Sélectionner un fournisseur</option>
                             @foreach($suppliers as $supplier)
@@ -75,7 +75,7 @@
                         </label>
                         <input type="date" name="returned_at"
                                value="{{ old('returned_at', $return->returned_at?->format('Y-m-d')) }}"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 @error('returned_at') border-red-500 @enderror"
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 @error('returned_at') border-red-500 @enderror"
                                required>
                         @error('returned_at')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                     </div>
@@ -85,20 +85,20 @@
                         <input type="text" name="reason"
                                value="{{ old('reason', $return->reason) }}"
                                placeholder="Produit défectueux, erreur de commande..."
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                     </div>
 
                     <div class="md:col-span-2 lg:col-span-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                         <textarea name="notes" rows="2"
-                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                  class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                                   placeholder="Informations complémentaires...">{{ old('notes', $return->notes) }}</textarea>
                     </div>
                 </div>
             </div>
 
             {{-- Lines --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-5">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-semibold text-gray-800">Articles retournés</h2>
                     <button type="button" @click="addLine()"
@@ -197,11 +197,11 @@
             {{-- Actions --}}
             <div class="flex justify-end gap-3">
                 <a href="{{ route('achats.retours-fournisseurs.show', $return) }}"
-                   class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                   class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
                     Annuler
                 </a>
                 <button type="submit"
-                        class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors">
+                        class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-6 py-1.5 rounded-[4px] transition-colors">
                     Enregistrer les modifications
                 </button>
             </div>

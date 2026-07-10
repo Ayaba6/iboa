@@ -15,13 +15,19 @@ class BillOfMaterialController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:production.view')->only(['index', 'show']);
-        $this->middleware('permission:production.create')->except(['index', 'show']);
+        $this->middleware('permission:production.create');
+        
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $boms = BillOfMaterial::with('product')->withCount('lines')->orderBy('name')->paginate(25);
+        $boms = BillOfMaterial::with('product')->withCount('lines')
+            ->when($request->input('q'), fn ($q, $v) => $q->where(fn ($w) =>
+                $w->where('name', 'like', "%$v%")
+                  ->orWhere('sheet_type', 'like', "%$v%")
+                  ->orWhereHas('product', fn ($p) => $p->where('name', 'like', "%$v%")->orWhere('reference', 'like', "%$v%"))))
+            ->when($request->filled('active'), fn ($q) => $q->where('is_active', $request->boolean('active')))
+            ->orderBy('name')->paginate(25)->withQueryString();
 
         return view('production.bom.index', compact('boms'));
     }
@@ -89,6 +95,14 @@ class BillOfMaterialController extends Controller
                 'unit_id'            => $row['unit_id'] ?? null,
                 'waste_rate'         => $row['waste_rate'] ?? 0,
                 'sort_order'         => $i,
+                // [SAGE parité]
+                'sequence'           => $row['sequence'] ?? (($i + 1) * 10),
+                'groupe'             => $row['groupe'] ?? null,
+                'type_composant'     => $row['type_composant'] ?? null,
+                'coef'               => $row['coef'] ?? 1,
+                'depot_sortie_id'    => $row['depot_sortie_id'] ?? null,
+                'lot_obligatoire'    => ! empty($row['lot_obligatoire']),
+                'statut'             => $row['statut'] ?? 'actif',
             ]);
         }
     }
@@ -96,15 +110,16 @@ class BillOfMaterialController extends Controller
     private function formData(BillOfMaterial $bom): array
     {
         return [
-            'bom'      => $bom,
-            'products' => Product::orderBy('name')->get(['id', 'name', 'reference']),
-            'units'    => Unit::where('is_active', true)->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'bom'        => $bom,
+            'products'   => Product::orderBy('name')->get(['id', 'name', 'reference']),
+            'units'      => Unit::where('is_active', true)->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
         ];
     }
 
     private function validateData(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'product_id'            => ['nullable', 'integer', 'exists:products,id'],
             'name'                  => ['required', 'string', 'max:150'],
             'sheet_type'            => ['nullable', 'string', 'max:60'],
@@ -115,11 +130,64 @@ class BillOfMaterialController extends Controller
             'consumption_per_meter' => ['nullable', 'numeric', 'min:0'],
             'machine_time_per_unit' => ['nullable', 'numeric', 'min:0'],
             'labor_per_unit'        => ['nullable', 'numeric', 'min:0'],
+            'packaging_per_unit'    => ['nullable', 'numeric', 'min:0'],
             'std_material_cost'     => ['nullable', 'integer', 'min:0'],
             'std_labor_cost'        => ['nullable', 'integer', 'min:0'],
             'std_machine_cost'      => ['nullable', 'integer', 'min:0'],
+            'std_energy_cost'       => ['nullable', 'integer', 'min:0'],
+            'std_maintenance_cost'  => ['nullable', 'integer', 'min:0'],
+            'std_packaging_cost'    => ['nullable', 'integer', 'min:0'],
             'std_overhead_cost'     => ['nullable', 'integer', 'min:0'],
             'is_active'             => ['boolean'],
-        ]) + ['is_active' => $request->boolean('is_active')];
+            // [SAGE parité] en-tête article composé
+            'site'                  => ['nullable', 'string', 'max:20'],
+            'alternative'           => ['nullable', 'string', 'max:5'],
+            'date_reference'        => ['nullable', 'date'],
+            'version_majeure'       => ['nullable', 'string', 'max:5'],
+            'version_mineure'       => ['nullable', 'string', 'max:5'],
+            'unite_gestion_id'      => ['nullable', 'integer', 'exists:units,id'],
+            'quantite_base'         => ['nullable', 'numeric', 'min:0'],
+            'statut'                => ['nullable', 'string', 'max:20'],
+            'date_debut_validite'   => ['nullable', 'date'],
+            'date_fin_validite'     => ['nullable', 'date'],
+            'rendement_standard'    => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'controle_qualite'      => ['boolean'],
+            // [Maquette Nomenclature]
+            'code'                  => ['nullable', 'string', 'max:30'],
+            'type_nomenclature'     => ['nullable', 'string', 'max:30'],
+            'depot_production_id'   => ['nullable', 'integer', 'exists:warehouses,id'],
+            'valuation_method'      => ['nullable', 'string', 'max:20'],
+            'priorite'              => ['nullable', 'string', 'max:15'],
+        ]);
+
+        // [FIX BOM] Les champs numériques laissés VIDES par l'utilisateur (les placeholders
+        // « 3,00 », « 97,00 »… ne sont que des exemples) arrivent ici en null. Or ces
+        // colonnes sont NOT NULL en base : un null explicite provoque « Column cannot
+        // be null » (500 brut). Un champ vide vaut sa valeur PAR DÉFAUT — identique en
+        // création comme en modification.
+        $defaults = [
+            'standard_waste_rate' => 0, 'consumption_per_meter' => 0, 'machine_time_per_unit' => 0,
+            'labor_per_unit' => 0, 'packaging_per_unit' => 0,
+            'std_material_cost' => 0, 'std_labor_cost' => 0, 'std_machine_cost' => 0,
+            'std_energy_cost' => 0, 'std_maintenance_cost' => 0, 'std_packaging_cost' => 0,
+            'std_overhead_cost' => 0,
+            'quantite_base' => 1, 'statut' => 'exploitation',
+        ];
+        foreach ($defaults as $key => $default) {
+            if (array_key_exists($key, $data) && $data[$key] === null) {
+                $data[$key] = $default;
+            }
+        }
+
+        return $data + [
+            'is_active'         => $request->boolean('is_active'),
+            'controle_qualite'  => $request->boolean('controle_qualite'),
+            'version_active'    => $request->boolean('version_active'),
+            'multi_niveaux'     => $request->boolean('multi_niveaux'),
+            'allow_sub_bom'     => $request->boolean('allow_sub_bom'),
+            'lot_management'    => $request->boolean('lot_management'),
+            'serial_tracking'   => $request->boolean('serial_tracking'),
+            'lock_modification' => $request->boolean('lock_modification'),
+        ];
     }
 }

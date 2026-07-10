@@ -8,99 +8,103 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+@php
+    $th = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
 
-    <div class="flex items-center justify-between">
+    $roleLabels = [
+        'super_admin'            => 'Super Administrateur',
+        'directeur'              => 'Directeur Général (DG)',
+        'daf'                    => 'DAF — Dir. Administratif & Financier',
+        'commercial'             => 'Commercial',
+        'responsable_commercial' => 'Responsable Commercial',
+        'comptable'              => 'Comptable',
+        'acheteur'               => 'Acheteur / Approvisionneur',
+        'magasinier'             => 'Magasinier',
+        'responsable_stock'      => 'Responsable Stock',
+        'caissier'               => 'Caissier',
+        'chef_production'        => 'Chef de Production',
+        'directeur_usine'        => 'Directeur d\'Usine',
+        'operateur_production'   => 'Opérateur de Production',
+        'responsable_qualite'    => 'Responsable Qualité',
+        'technicien_maintenance' => 'Technicien Maintenance',
+        'lecture_seule'          => 'Lecture seule',
+        'drh'                    => 'Directeur RH',
+        'rh_manager'             => 'Gestionnaire RH',
+        'rh_agent'               => 'Agent RH',
+        'employe'                => 'Employé',
+    ];
+    $roleCategories = [
+        'super_admin' => 'Direction', 'directeur' => 'Direction', 'daf' => 'Direction',
+        'commercial' => 'Ventes', 'responsable_commercial' => 'Ventes',
+        'comptable' => 'Finance & Trésorerie', 'caissier' => 'Finance & Trésorerie',
+        'acheteur' => 'Achats',
+        'magasinier' => 'Stock & Logistique', 'responsable_stock' => 'Stock & Logistique',
+        'chef_production' => 'Production', 'directeur_usine' => 'Production', 'operateur_production' => 'Production',
+        'responsable_qualite' => 'Qualité', 'technicien_maintenance' => 'Maintenance',
+        'drh' => 'Ressources humaines', 'rh_manager' => 'Ressources humaines',
+        'rh_agent' => 'Ressources humaines', 'employe' => 'Ressources humaines',
+        'lecture_seule' => 'Divers',
+    ];
+    $categoryOrder = ['Direction', 'Ventes', 'Achats', 'Stock & Logistique', 'Production', 'Qualité', 'Maintenance', 'Finance & Trésorerie', 'Ressources humaines', 'Divers'];
+    $grouped = $roles->groupBy(fn ($r) => $roleCategories[$r->name] ?? 'Divers')
+                     ->sortBy(fn ($g, $cat) => array_search($cat, $categoryOrder) === false ? 99 : array_search($cat, $categoryOrder));
+    $totalUsers = $roles->sum('users_count');
+@endphp
+<div class="space-y-4">
+
+    {{-- Bandeau SAGE --}}
+    <div class="bg-gradient-to-b from-[#eef5f0] to-white border border-gray-300 rounded-[4px] px-3 py-2.5 flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Rôles & Permissions</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $roles->count() }} rôle(s) configurés</p>
+            <h1 class="text-[17px] font-bold text-emerald-900">Rôles & Permissions</h1>
+            <p class="text-[11.5px] text-gray-500">{{ $roles->count() }} rôles — {{ $totalUsers }} affectation(s) utilisateur</p>
         </div>
+        <a href="{{ route('users.index') }}" class="text-[13px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-full transition-colors">Gérer les utilisateurs</a>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        @foreach($roles as $role)
-        @php
-            $roleColors = [
-                // Rôles système
-                'super_admin'            => ['bg' => 'bg-purple-50',  'border' => 'border-purple-200',  'badge' => 'bg-purple-100 text-purple-700',  'icon' => 'text-purple-500'],
-                'directeur'              => ['bg' => 'bg-blue-50',    'border' => 'border-blue-200',    'badge' => 'bg-blue-100 text-blue-700',      'icon' => 'text-blue-500'],
-                'commercial'             => ['bg' => 'bg-green-50',   'border' => 'border-green-200',   'badge' => 'bg-green-100 text-green-700',    'icon' => 'text-green-500'],
-                'responsable_commercial' => ['bg' => 'bg-emerald-50', 'border' => 'border-emerald-200', 'badge' => 'bg-emerald-100 text-emerald-700','icon' => 'text-emerald-500'],
-                'comptable'              => ['bg' => 'bg-amber-50',   'border' => 'border-amber-200',   'badge' => 'bg-amber-100 text-amber-700',    'icon' => 'text-amber-500'],
-                'magasinier'             => ['bg' => 'bg-teal-50',    'border' => 'border-teal-200',    'badge' => 'bg-teal-100 text-teal-700',      'icon' => 'text-teal-500'],
-                'responsable_stock'      => ['bg' => 'bg-cyan-50',    'border' => 'border-cyan-200',    'badge' => 'bg-cyan-100 text-cyan-700',      'icon' => 'text-cyan-500'],
-                'caissier'               => ['bg' => 'bg-orange-50',  'border' => 'border-orange-200',  'badge' => 'bg-orange-100 text-orange-700',  'icon' => 'text-orange-500'],
-                'lecture_seule'          => ['bg' => 'bg-gray-50',    'border' => 'border-gray-200',    'badge' => 'bg-gray-100 text-gray-600',      'icon' => 'text-gray-400'],
-                // Rôles RH
-                'drh'                    => ['bg' => 'bg-rose-50',    'border' => 'border-rose-200',    'badge' => 'bg-rose-100 text-rose-700',      'icon' => 'text-rose-500'],
-                'rh_manager'             => ['bg' => 'bg-pink-50',    'border' => 'border-pink-200',    'badge' => 'bg-pink-100 text-pink-700',      'icon' => 'text-pink-500'],
-                'rh_agent'               => ['bg' => 'bg-fuchsia-50', 'border' => 'border-fuchsia-200', 'badge' => 'bg-fuchsia-100 text-fuchsia-700','icon' => 'text-fuchsia-500'],
-                'employe'                => ['bg' => 'bg-violet-50',  'border' => 'border-violet-200',  'badge' => 'bg-violet-100 text-violet-700',  'icon' => 'text-violet-500'],
-            ];
-            $c = $roleColors[$role->name] ?? ['bg' => 'bg-gray-50', 'border' => 'border-gray-200', 'badge' => 'bg-gray-100 text-gray-700', 'icon' => 'text-gray-500'];
-            $roleLabels = [
-                'super_admin'            => 'Super Administrateur',
-                'directeur'              => 'Directeur',
-                'commercial'             => 'Commercial',
-                'responsable_commercial' => 'Resp. Commercial',
-                'comptable'              => 'Comptable',
-                'magasinier'             => 'Magasinier',
-                'responsable_stock'      => 'Resp. Stock',
-                'caissier'               => 'Caissier',
-                'lecture_seule'          => 'Lecture seule',
-                'drh'                    => 'Directeur RH',
-                'rh_manager'             => 'Gestionnaire RH',
-                'rh_agent'               => 'Agent RH',
-                'employe'                => 'Employé',
-            ];
-            $isRhRole = in_array($role->name, ['drh','rh_manager','rh_agent','employe']);
-        @endphp
-        <div class="bg-white rounded-xl border {{ $c['border'] }} p-5 space-y-4">
-            <div class="flex items-start justify-between">
-                <div class="flex flex-col gap-1">
-                    @if($isRhRole)
-                    <span class="inline-flex items-center gap-1 text-xs font-medium text-rose-500 mb-0.5">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        Module RH
-                    </span>
-                    @endif
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold {{ $c['badge'] }}">
-                        {{ $roleLabels[$role->name] ?? ucfirst(str_replace('_', ' ', $role->name)) }}
-                    </span>
-                </div>
-                <a href="{{ route('roles.edit', $role) }}"
-                   class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Modifier les permissions">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                </a>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="text-center p-3 {{ $c['bg'] }} rounded-lg">
-                    <p class="text-2xl font-bold text-gray-900">{{ $role->permissions_count }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5">permissions</p>
-                </div>
-                <div class="text-center p-3 bg-gray-50 rounded-lg">
-                    <p class="text-2xl font-bold text-gray-900">{{ $role->users_count }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5">utilisateur(s)</p>
-                </div>
-            </div>
-
-            <div class="flex gap-2">
-                <a href="{{ route('roles.show', $role) }}"
-                   class="flex-1 text-center text-sm text-gray-600 hover:text-indigo-600 border border-gray-200 hover:border-indigo-300 rounded-lg py-2 transition-colors">
-                    Voir le détail
-                </a>
-                <a href="{{ route('roles.edit', $role) }}"
-                   class="flex-1 text-center text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg py-2 transition-colors">
-                    Gérer
-                </a>
-            </div>
-        </div>
-        @endforeach
+    {{-- Table SAGE groupée par catégorie --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <table class="w-full text-[12.5px]">
+            <thead><tr class="bg-[#eef5f0] border-b border-gray-300">
+                <th class="{{ $th }} text-left w-[34%]">Rôle</th>
+                <th class="{{ $th }} text-left">Code technique</th>
+                <th class="{{ $th }} text-right w-28">Permissions</th>
+                <th class="{{ $th }} text-right w-28">Utilisateurs</th>
+                <th class="{{ $th }} text-right w-44">Actions</th>
+            </tr></thead>
+            <tbody>
+                @foreach($grouped as $category => $categoryRoles)
+                <tr class="bg-gray-50 border-b border-gray-200">
+                    <td colspan="5" class="px-3 py-1 text-[11px] font-bold text-gray-600 uppercase tracking-wider">{{ $category }}</td>
+                </tr>
+                @foreach($categoryRoles as $role)
+                <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50">
+                    <td class="px-3 py-1.5">
+                        <a href="{{ route('roles.show', $role) }}" class="font-semibold text-emerald-800 hover:underline">{{ $roleLabels[$role->name] ?? ucfirst(str_replace('_', ' ', $role->name)) }}</a>
+                        @if($role->name === 'super_admin')
+                        <span class="ml-1.5 inline-flex px-1.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-purple-100 text-purple-700 align-middle">accès total</span>
+                        @endif
+                    </td>
+                    <td class="px-3 py-1.5 font-mono text-[12px] text-gray-500">{{ $role->name }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums {{ $role->permissions_count ? 'text-gray-800' : 'text-gray-400' }}">{{ $role->name === 'super_admin' ? 'toutes' : $role->permissions_count }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums">
+                        <span class="{{ $role->users_count ? 'font-semibold text-gray-800' : 'text-gray-400' }}">{{ $role->users_count }}</span>
+                    </td>
+                    <td class="px-3 py-1.5 text-right whitespace-nowrap">
+                        <a href="{{ route('roles.show', $role) }}" class="text-[12px] font-medium text-gray-500 hover:text-emerald-700 hover:underline">Détail</a>
+                        <span class="text-gray-300 mx-1">|</span>
+                        <a href="{{ route('roles.edit', $role) }}" class="text-[12px] font-semibold text-emerald-700 hover:underline">Gérer les permissions</a>
+                    </td>
+                </tr>
+                @endforeach
+                @endforeach
+            </tbody>
+        </table>
     </div>
+
+    <p class="text-[11.5px] text-gray-400 flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Les rôles définissent les permissions d'accès aux modules. L'affectation d'un rôle à un utilisateur se fait depuis la fiche utilisateur.
+    </p>
 
 </div>
 @endsection

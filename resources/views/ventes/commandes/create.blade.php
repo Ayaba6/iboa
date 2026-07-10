@@ -10,16 +10,13 @@
 @endsection
 
 @section('content')
-<div class="mb-5">
-    <h1 class="text-2xl font-bold text-gray-900">Nouvelle commande</h1>
-    <p class="text-sm text-gray-500 mt-0.5">Créez une commande client et gérez les lignes d'articles</p>
+<div class="max-w-6xl">
+    <x-validation-errors />
+
+    <form method="POST" action="{{ route('ventes.commandes.store') }}" enctype="multipart/form-data">
+        @csrf
+        <x-form-guard />
+        @include('ventes.commandes._form')
+    </form>
 </div>
-
-<x-validation-errors />
-
-<form method="POST" action="{{ route('ventes.commandes.store') }}">
-    @csrf
-    <x-form-guard />
-    @include('ventes.commandes._form')
-</form>
 @endsection

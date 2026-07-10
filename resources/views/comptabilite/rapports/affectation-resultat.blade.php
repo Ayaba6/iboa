@@ -10,34 +10,34 @@
 @endsection
 
 @section('content')
-<div x-data="affectationApp()" class="space-y-5 max-w-4xl mx-auto">
+<div x-data="affectationApp()" class="space-y-3 max-w-4xl mx-auto">
 
     {{-- ── En-tête ──────────────────────────────────────────────────────────── --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Affectation du résultat</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Affectation du résultat</h1>
             <p class="text-sm text-gray-400 mt-0.5">
                 Génère une OD de clôture vers compte 13 — norme SYSCOHADA
             </p>
         </div>
         <a href="{{ route('comptabilite.bilan', request()->only('fiscal_year_id')) }}"
-           class="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg">
+           class="text-sm text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-[4px]">
             ← Retour au bilan
         </a>
     </div>
 
     @if(session('error'))
-    <div class="bg-red-50 border border-red-200 text-red-800 text-sm rounded-xl px-4 py-3">
+    <div class="bg-red-50 border border-red-200 text-red-800 text-sm rounded-[4px] px-3 py-1.5">
         {{ session('error') }}
     </div>
     @endif
 
     {{-- ── Sélecteur d'exercice ─────────────────────────────────────────────── --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex gap-3 items-end">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5 flex gap-3 items-end">
         <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Exercice</label>
             <select name="fiscal_year_id" onchange="this.form.submit()"
-                    class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
+                    class="border border-gray-300 rounded-[4px] px-3 py-1.5 text-sm">
                 <option value="">— Soldes cumulés —</option>
                 @foreach($fiscalYears as $fy)
                 <option value="{{ $fy->id }}" {{ $selectedFy?->id == $fy->id ? 'selected' : '' }}>
@@ -49,7 +49,7 @@
     </form>
 
     {{-- ── Résultat net ─────────────────────────────────────────────────────── --}}
-    <div class="rounded-2xl border-2 p-6 text-center {{ $netResult >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50' }}">
+    <div class="rounded-[4px] border-2 p-6 text-center {{ $netResult >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50' }}">
         <p class="text-sm font-medium {{ $netResult >= 0 ? 'text-emerald-600' : 'text-red-500' }} mb-1">
             {{ $netResult >= 0 ? '📈 Bénéfice net de l\'exercice' : '📉 Perte nette de l\'exercice' }}
             @if($selectedFy) — {{ $selectedFy->label }} @endif
@@ -67,13 +67,13 @@
     </div>
 
     @if($netResult === 0)
-    <div class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-8 text-center text-gray-500">
+    <div class="bg-gray-50 border border-gray-300 rounded-[4px] px-4 py-8 text-center text-gray-500">
         <p class="text-lg font-semibold">Résultat nul — aucune affectation nécessaire.</p>
     </div>
     @else
 
     {{-- ── Explication SYSCOHADA ────────────────────────────────────────────── --}}
-    <div class="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-800 space-y-1">
+    <div class="bg-blue-50 border border-blue-200 rounded-[4px] px-3 py-1.5 text-xs text-blue-800 space-y-1">
         <p class="font-semibold">Écriture générée (OD brouillon) :</p>
         @if($netResult < 0)
         <p>
@@ -98,12 +98,12 @@
         @if($selectedFy)
         <input type="hidden" name="fiscal_year_id" value="{{ $selectedFy->id }}">
         @else
-        <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+        <div class="bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-1.5 text-sm text-amber-800">
             ⚠️ Veuillez sélectionner un exercice comptable pour créer l'affectation.
         </div>
         @endif
 
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
 
             {{-- Header --}}
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -117,7 +117,7 @@
                         <span x-show="isBalanced">✓ Équilibré</span>
                     </span>
                     <button type="button" @click="addLigne()"
-                            class="text-xs bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-lg font-medium">
+                            class="text-xs bg-violet-100 hover:bg-violet-200 text-violet-700 px-2.5 py-1 rounded-[4px] font-medium">
                         + Ligne
                     </button>
                 </div>
@@ -130,7 +130,7 @@
                         <div class="w-44">
                             <label class="block text-xs text-gray-500 mb-1">Compte</label>
                             <select :name="`lignes[${i}][account_id]`" x-model="ligne.account_id"
-                                    class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-violet-400">
+                                    class="w-full border border-gray-200 rounded-[4px] px-2 py-1.5 text-xs focus:ring-1 focus:ring-violet-400">
                                 <option value="">Choisir…</option>
                                 @foreach($comptes as $c)
                                 <option value="{{ $c->id }}">{{ $c->code }} — {{ Str::limit($c->name, 30) }}</option>
@@ -142,13 +142,13 @@
                             <label class="block text-xs text-gray-500 mb-1">Libellé</label>
                             <input type="text" :name="`lignes[${i}][label]`" x-model="ligne.label"
                                    placeholder="Libellé de l'affectation"
-                                   class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-violet-400">
+                                   class="w-full border border-gray-200 rounded-[4px] px-2 py-1.5 text-xs focus:ring-1 focus:ring-violet-400">
                         </div>
                         <div class="w-40">
                             <label class="block text-xs text-gray-500 mb-1">Montant (FCFA)</label>
                             <input type="number" :name="`lignes[${i}][montant]`" x-model.number="ligne.montant"
                                    min="0" step="1" placeholder="0"
-                                   class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-violet-400 text-right tabular-nums">
+                                   class="w-full border border-gray-200 rounded-[4px] px-2 py-1.5 text-xs focus:ring-1 focus:ring-violet-400 text-right tabular-nums">
                         </div>
                         <div class="flex-shrink-0 pt-5">
                             <button type="button" @click="removeLigne(i)" x-show="lignes.length > 1"
@@ -167,16 +167,16 @@
                 <div class="flex gap-2 flex-wrap">
                     @if($netResult > 0)
                     <button type="button" @click="addSuggestion('reserveLegale')"
-                            class="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg">
+                            class="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-[4px]">
                         + Réserve légale (10%)
                     </button>
                     <button type="button" @click="addSuggestion('ran')"
-                            class="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg">
+                            class="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-[4px]">
                         + Report à nouveau (solde)
                     </button>
                     @else
                     <button type="button" @click="addSuggestion('ran')"
-                            class="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg">
+                            class="text-xs bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded-[4px]">
                         + Report à nouveau (perte totale)
                     </button>
                     @endif
@@ -185,23 +185,23 @@
         </div>
 
         {{-- Date + submit --}}
-        <div class="bg-white rounded-xl border border-gray-200 px-5 py-4 flex items-end gap-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-5 py-4 flex items-end gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Date de l'écriture</label>
                 <input type="date" name="date_affectation"
                        value="{{ $selectedFy ? $selectedFy->ends_at->format('Y-m-d') : now()->format('Y-m-d') }}"
-                       class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-violet-500 focus:border-violet-500">
+                       class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-violet-500 focus:border-violet-500">
             </div>
             <div class="flex-1"></div>
             <div class="flex gap-3">
                 <a href="{{ route('comptabilite.bilan') }}"
-                   class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg">
+                   class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-[4px]">
                     Annuler
                 </a>
                 <button type="submit"
                         :disabled="!isBalanced || !{{ $selectedFy ? 'true' : 'false' }}"
-                        class="px-5 py-2 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700
-                               disabled:opacity-40 disabled:cursor-not-allowed rounded-lg">
+                        class="px-5 py-2 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800
+                               disabled:opacity-40 disabled:cursor-not-allowed rounded-[4px]">
                     Créer l'OD d'affectation
                 </button>
             </div>

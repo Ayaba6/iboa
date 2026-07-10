@@ -15,9 +15,9 @@
 @php $currentPerms = $role->permissions->pluck('id')->toArray(); @endphp
 
 <div class="space-y-1 mb-5">
-    <h1 class="text-2xl font-bold text-gray-900">
+    <h1 class="text-[16px] font-bold text-gray-900">
         Permissions &mdash;
-        <span class="text-indigo-600">{{ ucfirst(str_replace('_',' ',$role->name)) }}</span>
+        <span class="text-emerald-700">{{ ucfirst(str_replace('_',' ',$role->name)) }}</span>
     </h1>
     <p class="text-sm text-gray-500">Cochez les permissions à accorder à ce rôle.</p>
 </div>
@@ -27,7 +27,7 @@
 
     <div class="space-y-4">
         @foreach($grouped as $module => $permissions)
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden"
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden"
              x-data="{ allChecked: {{ $permissions->every(fn($p) => in_array($p->id, $currentPerms)) ? 'true' : 'false' }} }">
 
             {{-- Module header avec toggle tout --}}
@@ -37,7 +37,7 @@
                     <input type="checkbox"
                            x-model="allChecked"
                            @change="$el.closest('.bg-white').querySelectorAll('input[type=checkbox][name]').forEach(cb => cb.checked = allChecked)"
-                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                           class="rounded border-gray-300 text-emerald-700 focus:ring-emerald-500">
                     Tout cocher / décocher
                 </label>
             </div>
@@ -57,9 +57,9 @@
                         'edit'     => ['label' => 'Modifier',       'color' => 'text-blue-700',   'dot' => 'bg-blue-500'],
                         'delete'   => ['label' => 'Supprimer',      'color' => 'text-red-700',    'dot' => 'bg-red-500'],
                         'validate' => ['label' => 'Valider',        'color' => 'text-purple-700', 'dot' => 'bg-purple-500'],
-                        'manage'   => ['label' => 'Gérer',          'color' => 'text-indigo-700', 'dot' => 'bg-indigo-500'],
+                        'manage'   => ['label' => 'Gérer',          'color' => 'text-emerald-800', 'dot' => 'bg-emerald-600'],
                         'adjust'   => ['label' => 'Ajuster',        'color' => 'text-orange-700', 'dot' => 'bg-orange-500'],
-                        'transfer' => ['label' => 'Transférer',     'color' => 'text-teal-700',   'dot' => 'bg-teal-500'],
+                        'transfer' => ['label' => 'Transférer',     'color' => 'text-emerald-800',   'dot' => 'bg-emerald-600'],
                         'send'     => ['label' => 'Envoyer',        'color' => 'text-sky-700',    'dot' => 'bg-sky-500'],
                         'export'   => ['label' => 'Exporter',       'color' => 'text-amber-700',  'dot' => 'bg-amber-500'],
                         'approve'  => ['label' => 'Approuver',      'color' => 'text-emerald-700','dot' => 'bg-emerald-500'],
@@ -76,12 +76,12 @@
                     $style = $actionLabels[$action] ?? ['label' => ucfirst($action), 'color' => 'text-gray-600', 'dot' => 'bg-gray-400'];
                     $subLabel = $subModule ? ($subModuleLabels[$subModule] ?? $subModule) : null;
                 @endphp
-                <label class="flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors
-                    {{ in_array($perm->id, $currentPerms) ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-50' }}
-                    has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200">
+                <label class="flex items-center gap-2.5 p-2.5 rounded-[4px] border cursor-pointer transition-colors
+                    {{ in_array($perm->id, $currentPerms) ? 'bg-[#eef5f0] border-emerald-200' : 'bg-white border-gray-200 hover:bg-gray-50' }}
+                    has-[:checked]:bg-[#eef5f0] has-[:checked]:border-emerald-200">
                     <input type="checkbox" name="permissions[]" value="{{ $perm->id }}"
                            {{ in_array($perm->id, $currentPerms) ? 'checked' : '' }}
-                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0">
+                           class="rounded border-gray-300 text-emerald-700 focus:ring-emerald-500 flex-shrink-0">
                     <div class="min-w-0">
                         <div class="flex items-center gap-1.5 flex-wrap">
                             <span class="w-1.5 h-1.5 rounded-full {{ $style['dot'] }} flex-shrink-0"></span>
@@ -102,11 +102,11 @@
     {{-- Boutons --}}
     <div class="mt-5 flex items-center justify-end gap-3">
         <a href="{{ route('roles.show', $role) }}"
-           class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+           class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
             Annuler
         </a>
         <button type="submit"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
             Enregistrer les permissions
         </button>
     </div>

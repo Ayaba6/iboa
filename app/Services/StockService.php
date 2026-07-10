@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\StockAlertTriggered;
+use App\Models\InventorySession;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\StockLot;
@@ -79,6 +80,19 @@ class StockService
             }
             if (empty($data['warehouse_id'])) {
                 throw new \InvalidArgumentException('Mouvement de stock : warehouse_id est requis.');
+            }
+
+            // [CDC §8.5] Bloque tout mouvement sur un dépôt en cours d'inventaire —
+            // sinon le comptage physique et le stock théorique divergent pendant la
+            // session. InventoryService::validate() n'appelle jamais recordMovement()
+            // (il manipule ProductStock directement), donc la clôture n'est pas affectée.
+            $hasOpenInventory = InventorySession::where('warehouse_id', $data['warehouse_id'])
+                ->where('status', 'en_cours')
+                ->exists();
+            if ($hasOpenInventory) {
+                throw new \RuntimeException(
+                    "Mouvement bloqué : un inventaire est en cours sur ce dépôt. Validez ou annulez la session avant tout mouvement de stock."
+                );
             }
 
             $type     = $data['type'];
@@ -164,7 +178,11 @@ class StockService
 
             } elseif (in_array($type, $outboundTypes)) {
                 // -- Validate available quantity
-                $this->assertSufficientStock($stock, $qty);
+                // [PRODUCTION] allow_negative : consommation de composants BOM sur un
+                // article autorisant le stock négatif — la sortie n'est pas bloquée.
+                if (empty($data['allow_negative'])) {
+                    $this->assertSufficientStock($stock, $qty);
+                }
 
                 // -- FIFO / LIFO: consume lots and derive weighted unit cost
                 if (in_array($valuationMethod, ['fifo', 'lifo'])) {
@@ -205,7 +223,7 @@ class StockService
             // ---------------------------------------------------------------
             // 4. Remove dest_warehouse_id before creating movement (not a DB column)
             // ---------------------------------------------------------------
-            unset($data['dest_warehouse_id']);
+            unset($data['dest_warehouse_id'], $data['allow_negative']);
 
             // ---------------------------------------------------------------
             // 5. Create the movement record

@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Traits\HasCompanyScope;
 
 class SalaryAdvance extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'employee_id', 'amount', 'advance_date', 'reason',
         'status', 'approved_by', 'approved_at', 'recovered_in_run_id',

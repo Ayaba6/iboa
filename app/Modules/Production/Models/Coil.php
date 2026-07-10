@@ -21,16 +21,25 @@ class Coil extends Model
         'company_id','product_id','supplier_id','reception_id','reference','lot_number','color','thickness','width',
         'initial_weight','remaining_weight','estimated_length','purchase_price','cost_per_kg',
         'received_at','status','notes','created_by',
+        // [Maquette Bobine] réception + caractéristiques + gestion
+        'supplier_reference','warehouse_id','site','bl_number','origine','devise',
+        'nuance','gross_weight','inner_diameter','outer_diameter','coating','surface_finish',
+        'tolerance_thickness','barcode','brand','serial_number',
+        'valuation_method','is_stock_managed','lot_tracking','allow_negative_stock',
     ];
     protected $casts = [
         'thickness'=>'decimal:2','width'=>'decimal:1','initial_weight'=>'decimal:2','remaining_weight'=>'decimal:2',
         'estimated_length'=>'decimal:2','purchase_price'=>'integer','cost_per_kg'=>'decimal:2','received_at'=>'date',
+        'gross_weight'=>'decimal:3','inner_diameter'=>'decimal:2','outer_diameter'=>'decimal:2',
+        'tolerance_thickness'=>'decimal:3',
+        'is_stock_managed'=>'boolean','lot_tracking'=>'boolean','allow_negative_stock'=>'boolean',
     ];
 
     public function company(): BelongsTo { return $this->belongsTo(Company::class); }
     public function product(): BelongsTo { return $this->belongsTo(Product::class); }
     public function supplier(): BelongsTo { return $this->belongsTo(Supplier::class); }
     public function reception(): BelongsTo { return $this->belongsTo(\App\Models\Reception::class); }
+    public function warehouse(): BelongsTo { return $this->belongsTo(\App\Models\Warehouse::class); }
     public function consumptions(): HasMany { return $this->hasMany(ProductionConsumption::class); }
 
     public function isAvailable(): bool { return $this->status === 'disponible' && (float) $this->remaining_weight > 0; }

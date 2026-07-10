@@ -16,27 +16,47 @@ class RoleController extends Controller
     private function groupedPermissions(): array
     {
         $groups = [
-            'Tableau de bord' => 'dashboard',
-            'Produits'      => 'products',
-            'Clients'       => 'clients',
-            'Fournisseurs'  => 'suppliers',
-            'Devis'         => 'quotes',
-            'Commandes ventes' => 'orders',
-            'Factures ventes'  => 'invoices',
-            'Avoirs'           => 'credit_notes',
-            'Bons de livraison' => 'deliveries',
-            'Commandes achats'  => 'purchase_orders',
-            'Réceptions'        => 'receptions',
+            // Référentiels
+            'Produits'              => 'products',
+            'Clients'               => 'clients',
+            'Fournisseurs'          => 'suppliers',
+            // Ventes
+            'CRM'                   => 'crm',
+            'Devis'                 => 'quotes',
+            'Commandes ventes'      => 'orders',
+            'Factures ventes'       => 'invoices',
+            'Avoirs'                => 'credit_notes',
+            'Bons de livraison'     => 'deliveries',
+            'Workflow ventes'       => 'sales',
+            // Achats
+            'Demandes d\'achat'     => 'purchase_requests',
+            'Commandes achats'      => 'purchase_orders',
+            'Réceptions'            => 'receptions',
             'Factures fournisseurs' => 'supplier_invoices',
-            'Stocks'        => 'stocks',
-            'Inventaires'   => 'inventory',
-            'Paiements'     => 'payments',
-            'Trésorerie'    => 'cash_accounts',
-            'Rapports'      => 'reports',
-            // ── Module RH / Paie ─────────────────────────────────────────────
+            'Retours fournisseurs'  => 'supplier_returns',
+            // Stocks
+            'Stocks'                => 'stocks',
+            'Inventaires'           => 'inventory',
+            // Production (§9 CDC)
+            'Production'            => 'production',
+            // Qualité (§10 CDC)
+            'Qualité'               => 'quality',
+            // Maintenance (§13.8 CDC)
+            'Maintenance'           => 'maintenance',
+            // Finance
+            'Paiements'             => 'payments',
+            'Trésorerie'            => 'cash_accounts',
+            'Trésorerie (écriture)' => 'treasury',
+            'Comptabilité SYSCOHADA'=> 'accounting',
+            // Analytique (§12 CDC)
+            'Comptabilité analytique' => 'analytic',
+            // Rapports
+            'Rapports'              => 'reports',
+            // RH / Paie
             'Ressources Humaines'   => 'rh',
-            // ─────────────────────────────────────────────────────────────────
-            'Administration' => null, // catch-all pour users, roles, settings, company, audit
+            // Intégrations & Admin
+            'Intégrations'          => 'integrations',
+            'Administration'        => null, // catch-all : users, roles, settings, company, audit
         ];
 
         $allPermissions = Permission::orderBy('name')->get();

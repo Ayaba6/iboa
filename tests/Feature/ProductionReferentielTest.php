@@ -3,6 +3,7 @@
 use App\Modules\Production\Models\BillOfMaterial;
 use App\Modules\Production\Models\Coil;
 use App\Models\Company;
+use App\Models\Supplier;
 use App\Modules\Production\Models\ProductionLine;
 use App\Modules\Production\Models\ProductionMachine;
 use App\Models\User;
@@ -55,8 +56,15 @@ it('creates a machine', function () {
 it('receives a coil and computes cost per kg', function () {
     $this->actingAs(prodAdmin());
 
+    $supplier = Supplier::create([
+        'code' => 'FOUR-PR', 'type' => 'entreprise', 'name' => 'Fournisseur PR',
+        'is_active' => true, 'country' => 'Burkina Faso', 'balance' => 0,
+    ]);
+
     $this->post(route('production.coils.store'), [
         'reference' => 'BOB-001', 'initial_weight' => 2000, 'purchase_price' => 1000000,
+        'supplier_id' => $supplier->id, 'lot_number' => 'LOT-PR-001',
+        'color' => 'RAL 9006', 'thickness' => 0.5, 'width' => 1000,
     ])->assertRedirect(route('production.coils.index'));
 
     $coil = Coil::where('reference', 'BOB-001')->first();

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\CreditNote;
+use App\Models\SalesRep;
 
 class Client extends Model
 {
@@ -19,11 +20,18 @@ class Client extends Model
 
     protected $table = 'clients';
 
-    // Types
-    const TYPE_ENTREPRISE  = 'entreprise';
-    const TYPE_PARTICULIER = 'particulier';
+    // Types (CDC §client — segmentation commerciale)
+    const TYPE_ENTREPRISE   = 'entreprise';
+    const TYPE_PARTICULIER  = 'particulier';
+    const TYPE_DISTRIBUTEUR = 'distributeur';
+    const TYPE_MINIER       = 'minier';
+
+    // Modes de règlement
+    const PAYMENT_CASH   = 'cash';
+    const PAYMENT_CREDIT = 'credit';
 
     protected $fillable = [
+        'site_id',
         'code',
         'type',
         'name',
@@ -34,36 +42,88 @@ class Client extends Model
         'mobile',
         'email',
         'website',
+        'boite_postale',
         'address',
+        'address_line2',
+        'postal_code',
         'city',
+        'quartier',
+        'region',
+        'gps_lat',
+        'gps_lng',
         'country',
         'ifu',
+        'numero_contribuable',
         'rccm',
         'tax_regime',
         'tax_division',
         'category',
+        'groupe_client',
+        'secteur_activite',
+        'currency',
+        'language',
         'assigned_to',
         'tax_rate_id',
         // Exonération TVA
         'is_tax_exempt',
         'tax_exemption_reason',
         'tax_exemption_number',
+        'soumis_tva',
+        // Statuts
+        'is_livrable',
+        'is_facturable',
+        'blocage_commande',
+        // Paramètres commerciaux
         'credit_limit',
+        'encours_autorise',
+        'compte_collectif',
+        'canal',
+        'zone_commerciale',
+        'famille_tarifaire',
+        'payment_mode',
         'payment_days',
         'payment_terms',
         'default_discount',
+        // Livraison
+        'depot_livraison_id',
+        'mode_livraison',
+        'transporteur',
+        'delai_livraison',
+        'adresse_livraison_defaut',
+        // Comptabilité / Finance
+        'compte_tiers',
+        'condition_paiement',
+        'echeance',
+        'banque',
+        'rib_iban',
+        'numero_compte',
+        'swift',
         'balance',
         'is_active',
+        'is_blocked',
+        'blocked_reason',
         'notes',
+        'sales_rep_id',
     ];
 
     protected $casts = [
         'credit_limit'     => 'integer',
+        'encours_autorise' => 'decimal:2',
         'default_discount' => 'decimal:2',
         'balance'          => 'integer',
         'is_active'        => 'boolean',
         'is_tax_exempt'    => 'boolean',
+        'soumis_tva'       => 'boolean',
+        'is_livrable'      => 'boolean',
+        'is_facturable'    => 'boolean',
+        'blocage_commande' => 'boolean',
+        'gps_lat'          => 'decimal:6',
+        'gps_lng'          => 'decimal:6',
+        'delai_livraison'  => 'integer',
     ];
+
+    public function site(): BelongsTo { return $this->belongsTo(Warehouse::class, 'site_id'); }
+    public function depotLivraison(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_livraison_id'); }
 
     // -------------------------------------------------------------------------
     // Relationships
@@ -92,6 +152,11 @@ class Client extends Model
     public function assignedCommercial(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function salesRep(): BelongsTo
+    {
+        return $this->belongsTo(SalesRep::class);
     }
 
     public function taxRate(): BelongsTo
@@ -135,7 +200,28 @@ class Client extends Model
 
     public function scopeClients(Builder $query): Builder
     {
-        return $query->whereIn('type', [self::TYPE_ENTREPRISE, self::TYPE_PARTICULIER]);
+        return $query->whereIn('type', [self::TYPE_ENTREPRISE, self::TYPE_PARTICULIER, self::TYPE_DISTRIBUTEUR, self::TYPE_MINIER]);
+    }
+
+    public function isCash(): bool
+    {
+        return $this->payment_mode === self::PAYMENT_CASH;
+    }
+
+    public function isCredit(): bool
+    {
+        return $this->payment_mode === self::PAYMENT_CREDIT || !$this->payment_mode;
+    }
+
+    public static function typeLabel(string $type): string
+    {
+        return match ($type) {
+            'entreprise'   => 'Entreprise',
+            'particulier'  => 'Particulier',
+            'distributeur' => 'Distributeur',
+            'minier'       => 'Minier',
+            default        => ucfirst($type),
+        };
     }
 
     // -------------------------------------------------------------------------

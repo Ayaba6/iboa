@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class PurchaseOrder extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasAttachments;
 
     protected $table = 'purchase_orders';
 
@@ -22,6 +23,7 @@ class PurchaseOrder extends Model
         'supplier_id',
         'fiscal_year_id',
         'number',
+        'reference',
         'status',
         'ordered_at',
         'expected_at',
@@ -31,7 +33,14 @@ class PurchaseOrder extends Model
         'total_tax',
         'total_ttc',
         'notes',
+        'terms',
+        'footer_note',
         'delivery_address',
+        'depot_reception_id',
+        // [Maquette Commande fournisseur]
+        'supplier_contact_id', 'buyer_id', 'price_mode', 'net_prices', 'price_list',
+        'payment_terms', 'payment_method', 'project_reference',
+        'carrier', 'vehicle_number', 'delivery_location', 'incoterm', 'priority', 'total_weight_kg',
         'created_by',
         'validated_by',
         'validated_at',
@@ -44,6 +53,8 @@ class PurchaseOrder extends Model
     ];
 
     protected $casts = [
+        'net_prices'      => 'boolean',
+        'total_weight_kg' => 'decimal:2',
         'ordered_at'   => 'date',
         'expected_at'  => 'date',
         'validated_at' => 'datetime',
@@ -74,6 +85,11 @@ class PurchaseOrder extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function depotReception(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'depot_reception_id');
     }
 
     public function fiscalYear(): BelongsTo

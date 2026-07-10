@@ -25,7 +25,7 @@
          x-transition:leave-end="opacity-0"></div>
 
     {{-- Panel --}}
-    <div class="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200/80"
+    <div class="relative w-full max-w-xl bg-white rounded-[4px] shadow-2xl overflow-hidden border border-gray-200/80"
          style="max-height:70vh; box-shadow:0 32px 64px -16px rgba(15,23,42,.35),0 0 0 1px rgba(255,255,255,.5);"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95 -translate-y-4"
@@ -39,7 +39,7 @@
             <svg class="w-5 h-5 text-gray-400 flex-shrink-0" x-show="!loading" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
             </svg>
-            <svg class="w-5 h-5 text-indigo-500 flex-shrink-0 animate-spin" x-show="loading" fill="none" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-emerald-600 flex-shrink-0 animate-spin" x-show="loading" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
@@ -66,9 +66,9 @@
                     <p class="px-4 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Résultats</p>
                     <template x-for="(item, i) in results" :key="item.url + item.label">
                         <a :href="item.url"
-                           @click="trackVisit(item); close()"
+                           @click="close()"
                            @mouseenter="activeIndex = i"
-                           :class="activeIndex === i ? 'bg-indigo-50' : 'hover:bg-gray-50'"
+                           :class="activeIndex === i ? 'bg-[#eef5f0]' : 'hover:bg-gray-50'"
                            class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors">
                             <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
                                   :style="colorStyle(item.color)">
@@ -101,7 +101,7 @@
                             <a :href="action.url"
                                @click="close()"
                                @mouseenter="activeIndex = i"
-                               :class="activeIndex === i ? 'bg-indigo-50' : 'hover:bg-gray-50'"
+                               :class="activeIndex === i ? 'bg-[#eef5f0]' : 'hover:bg-gray-50'"
                                class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors">
                                 <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm"
                                       :style="colorStyle(action.color)">
@@ -118,29 +118,6 @@
                         </template>
                     </div>
 
-                    {{-- Recently Visited --}}
-                    <template x-if="recentVisits.length > 0">
-                        <div class="py-2 border-t border-gray-100">
-                            <p class="px-4 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Récemment visités</p>
-                            <template x-for="(item, i) in recentVisits" :key="item.url">
-                                <a :href="item.url"
-                                   @click="close()"
-                                   @mouseenter="activeIndex = quickActions.length + i"
-                                   :class="activeIndex === quickActions.length + i ? 'bg-indigo-50' : 'hover:bg-gray-50'"
-                                   class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors">
-                                    <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-sm"
-                                          x-text="item.icon || '📄'"></span>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 truncate" x-text="item.label"></p>
-                                        <p class="text-xs text-gray-400 truncate" x-text="item.sub || ''"></p>
-                                    </div>
-                                    <svg class="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                </a>
-                            </template>
-                        </div>
-                    </template>
                 </div>
             </template>
         </div>

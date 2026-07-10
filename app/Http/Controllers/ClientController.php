@@ -23,10 +23,12 @@ class ClientController extends Controller
 
         // ── Indicateurs globaux (tous les clients de la société) ──
         $summary = [
-            'total'      => Client::count(),
-            'active'     => Client::where('is_active', true)->count(),
-            'entreprise' => Client::where('type', 'entreprise')->count(),
-            'particulier'=> Client::where('type', 'particulier')->count(),
+            'total'        => Client::count(),
+            'active'       => Client::where('is_active', true)->count(),
+            'entreprise'   => Client::where('type', 'entreprise')->count(),
+            'particulier'  => Client::where('type', 'particulier')->count(),
+            'distributeur' => Client::where('type', 'distributeur')->count(),
+            'minier'       => Client::where('type', 'minier')->count(),
         ];
 
         return view('clients.index', compact('clients', 'filters', 'summary'));
@@ -35,16 +37,42 @@ class ClientController extends Controller
     public function create()
     {
         $this->authorize('create', Client::class);
-        $taxRates = TaxRate::where('is_active', true)->orderByDesc('is_default')->orderBy('rate')->get();
-        return view('clients.create', compact('taxRates'));
+        return view('clients.create', $this->formRefs());
     }
 
     public function store(StoreClientRequest $request)
     {
         $this->authorize('create', Client::class);
         $client = $this->service->create($request->validated());
+        $this->uploadDocuments($client, $request);
         return redirect()->route('clients.show', $client)
             ->with('success', 'Client créé avec succès.');
+    }
+
+    /** Données de référence partagées create/edit (fiche SAGE). */
+    private function formRefs(): array
+    {
+        return [
+            'taxRates'   => TaxRate::where('is_active', true)->orderByDesc('is_default')->orderBy('rate')->get(),
+            'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+            'salesReps'  => \App\Models\SalesRep::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+        ];
+    }
+
+    /** Enregistre les pièces jointes (documents) du client. */
+    private function uploadDocuments(Client $client, \Illuminate\Http\Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/client/'.$client->id, 'local');
+            $client->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(Client $client)
@@ -77,15 +105,15 @@ class ClientController extends Controller
     public function edit(Client $client)
     {
         $this->authorize('update', $client);
-        $client->load(['contacts', 'addresses', 'taxRates']);
-        $taxRates = TaxRate::where('is_active', true)->orderByDesc('is_default')->orderBy('rate')->get();
-        return view('clients.edit', compact('client', 'taxRates'));
+        $client->load(['contacts', 'addresses', 'taxRates', 'attachments']);
+        return view('clients.edit', array_merge(['client' => $client], $this->formRefs()));
     }
 
     public function update(UpdateClientRequest $request, Client $client)
     {
         $this->authorize('update', $client);
         $this->service->update($client, $request->validated());
+        $this->uploadDocuments($client, $request);
         return redirect()->route('clients.show', $client)
             ->with('success', 'Client mis à jour.');
     }

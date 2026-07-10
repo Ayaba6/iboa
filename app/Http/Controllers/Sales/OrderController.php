@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\TaxRate;
+use App\Services\BonPreparationService;
 use App\Services\CommercialWorkflowService;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class OrderController extends Controller
     public function __construct(
         private OrderService                $service,
         private CommercialWorkflowService   $workflow,
+        private BonPreparationService       $bonPrepService,
     ) {}
 
     public function index(Request $request)
@@ -56,18 +58,65 @@ class OrderController extends Controller
         $selectedClient   = $request->query('client_id');
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $warehouses       = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_sale']);
+        $currencies       = ['XOF', 'XAF', 'EUR', 'USD'];
 
-        return view('ventes.commandes.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente'));
+        return view('ventes.commandes.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente', 'warehouses', 'currencies') + $this->maquetteFormData());
+    }
+
+    /** [Maquette Commande client] Données complémentaires du formulaire. */
+    private function maquetteFormData(): array
+    {
+        return [
+            'contacts'  => \App\Models\ClientContact::orderBy('last_name')->get(['id', 'client_id', 'civility', 'first_name', 'last_name']),
+            'salesReps' => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'quotes'    => \App\Models\Quote::orderByDesc('id')->limit(100)->get(['id', 'number', 'issued_at']),
+        ];
+    }
+
+    /** [Maquette Commande client] Lignes d'un devis (JSON) pour « Ajouter depuis devis ». */
+    public function quoteItems(Request $request)
+    {
+        $quote = \App\Models\Quote::with('items.product.taxRate')->findOrFail($request->integer('quote_id'));
+
+        return response()->json($quote->items->map(fn ($it) => [
+            'product_id'       => $it->product_id,
+            'description'      => $it->description ?: $it->product?->name,
+            'quantity'         => (float) $it->quantity,
+            'unit_price'       => (float) $it->unit_price,
+            'discount_percent' => (float) ($it->discount_percent ?? 0),
+            'tax_rate_value'   => (float) ($it->tax_rate_value ?? $it->product?->taxRate?->rate ?? 0),
+        ])->values());
     }
 
     public function store(StoreOrderRequest $request)
     {
         $this->authorize('create', Order::class);
-        $order = $this->service->create($request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+
+        $order = $this->service->create($data);
+        $this->uploadDocuments($order, $request);
 
         return redirect()
             ->route('ventes.commandes.show', $order)
             ->with('success', 'Commande ' . $order->number . ' créée avec succès.');
+    }
+
+    /** Enregistre les pièces jointes (documents) de la commande. */
+    private function uploadDocuments(Order $order, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/order/'.$order->id, 'local');
+            $order->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(Order $commande)
@@ -90,14 +139,21 @@ class OrderController extends Controller
         $products         = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $warehouses       = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_sale']);
+        $currencies       = ['XOF', 'XAF', 'EUR', 'USD'];
+        $order->load('attachments');
 
-        return view('ventes.commandes.edit', compact('order', 'clients', 'products', 'clientExemptions', 'taxRatesVente'));
+        return view('ventes.commandes.edit', compact('order', 'clients', 'products', 'clientExemptions', 'taxRatesVente', 'warehouses', 'currencies') + $this->maquetteFormData());
     }
 
     public function update(UpdateOrderRequest $request, Order $commande)
     {
         $this->authorize('update', $commande);
-        $this->service->update($commande, $request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+
+        $this->service->update($commande, $data);
+        $this->uploadDocuments($commande, $request);
 
         return redirect()
             ->route('ventes.commandes.show', $commande)
@@ -163,6 +219,16 @@ class OrderController extends Controller
     public function createDeliveryNote(Order $commande)
     {
         $this->authorize('update', $commande);
+
+        // [CDC §13.7] Préparation → contrôle chargement → BL : tant que le bon
+        // de préparation n'est pas « chargé », la livraison est verrouillée.
+        if (! $commande->isReadyForDelivery()) {
+            $bp = $commande->activeBonPreparation();
+            return back()->with('error',
+                "Bon de préparation {$bp->number} ({$bp->status_label}) : le chargement doit être terminé avant de créer le bon de livraison (§13.7)."
+            );
+        }
+
         try {
             $dn = $this->service->createDeliveryNote($commande);
             return redirect()
@@ -192,8 +258,10 @@ class OrderController extends Controller
         try {
             $this->workflow->validateOrder($commande, $request->motif);
             return back()->with('success', "Commande {$commande->number} validée.");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->withErrors(['commande' => $e->getMessage()])->with('error', $e->getMessage());
         }
     }
 
@@ -216,6 +284,56 @@ class OrderController extends Controller
         try {
             $this->workflow->cancel($commande, $request->motif);
             return back()->with('success', "Commande {$commande->number} annulée.");
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * [CDC §réouverture] POST ventes/commandes/{order}/reopen
+     * Réouvre une commande annulée — réservé aux responsables hiérarchiques.
+     */
+    public function reopen(Request $request, Order $commande)
+    {
+        $this->authorize('reopen', $commande);
+        if ($commande->status !== 'annule') {
+            return back()->with('error', 'Seules les commandes annulées peuvent être réouvertes.');
+        }
+        $commande->update(['status' => 'brouillon', 'rejection_reason' => null]);
+        return back()->with('success', "Commande {$commande->number} réouverte — de retour en brouillon.");
+    }
+
+    /**
+     * [CDC §cash] POST ventes/commandes/{order}/register-payment
+     * Caissier enregistre le paiement comptant → crée le bon de préparation.
+     */
+    public function registerPayment(Request $request, Order $commande)
+    {
+        $request->validate([
+            'payment_amount'    => ['required', 'integer', 'min:1'],
+            'payment_reference' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $client = $commande->client ?? \App\Models\Client::find($commande->client_id);
+        if (!$client || !$client->isCash()) {
+            return back()->with('error', 'Cette action est réservée aux commandes de clients au comptant.');
+        }
+        if (!in_array($commande->status, ['confirme', 'en_preparation'])) {
+            return back()->with('error', 'La commande doit être confirmée avant d\'enregistrer un paiement.');
+        }
+        if ($commande->hasBonPreparation()) {
+            return back()->with('error', 'Un bon de préparation existe déjà pour cette commande.');
+        }
+
+        try {
+            $bp = $this->bonPrepService->createForCashOrder(
+                $commande,
+                (int) $request->payment_amount,
+                $request->payment_reference,
+            );
+            return redirect()
+                ->route('ventes.bons-preparation.show', $bp)
+                ->with('success', "Paiement enregistré — bon de préparation {$bp->number} créé.");
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

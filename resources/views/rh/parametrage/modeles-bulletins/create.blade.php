@@ -10,7 +10,7 @@
 @section('content')
 <div class="max-w-4xl mx-auto">
     <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Nouveau modèle de bulletin</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Nouveau modèle de bulletin</h1>
         <p class="text-sm text-gray-500 mt-1">Configurez la mise en page et les sections à afficher dans les bulletins PDF.</p>
     </div>
 

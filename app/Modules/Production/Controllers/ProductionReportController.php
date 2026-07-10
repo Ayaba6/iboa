@@ -27,6 +27,7 @@ class ProductionReportController extends Controller
         'rendement'    => 'Rendement par OF',
         'pertes'       => 'Pertes & chutes',
         'couts'        => 'Coût de revient',
+        'cout_produit' => 'Coût standard / réel par produit',
         'client'       => 'Production par client',
         'machine'      => 'Production par machine',
         'operateur'    => 'Pertes par opérateur',
@@ -76,6 +77,7 @@ class ProductionReportController extends Controller
             'rendement'    => $this->rendement($f, $t),
             'pertes'       => $this->pertes($f, $t),
             'couts'        => $this->couts($f, $t),
+            'cout_produit' => $this->coutProduit($f, $t),
             'client'       => $this->client($f, $t),
             'machine'      => $this->machine($f, $t),
             'operateur'    => $this->operateur($f, $t),
@@ -266,16 +268,80 @@ class ProductionReportController extends Controller
 
         $data = $rows->map(fn ($r) => [
             $r->productionOrder?->number ?? '—',
-            (int) $r->material_cost, (int) $r->labor_cost, (int) $r->machine_cost, (int) $r->overhead_cost,
-            (int) $r->total_cost, round((float) $r->cost_per_meter, 2), (int) $r->margin,
+            (int) $r->material_cost, (int) $r->labor_cost, (int) $r->machine_cost,
+            (int) $r->energy_cost, (int) $r->maintenance_cost, (int) $r->packaging_cost,
+            (int) $r->overhead_cost, (int) $r->total_cost,
+            (int) $r->standard_total, $r->variance !== null ? (int) $r->variance : '—',
+            (int) $r->margin,
         ])->all();
 
         return [
-            'title'   => 'Coût de revient',
-            'headers' => ['OF', 'Matière', 'MO', 'Machine', 'Indirect', 'Total', 'Coût/m', 'Marge'],
+            'title'   => 'Coût de revient (matière · MO · machine · énergie · maintenance · emballage)',
+            'headers' => ['OF', 'Matière', 'MO', 'Machine', 'Énergie', 'Maint.', 'Emball.', 'Indirect', 'Total réel', 'Standard', 'Écart', 'Marge'],
             'rows'    => $data,
-            'numeric' => [1, 2, 3, 4, 5, 6, 7],
-            'totals'  => ['TOTAL', (int) $rows->sum('material_cost'), (int) $rows->sum('labor_cost'), (int) $rows->sum('machine_cost'), (int) $rows->sum('overhead_cost'), (int) $rows->sum('total_cost'), '', (int) $rows->sum('margin')],
+            'numeric' => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            'totals'  => [
+                'TOTAL',
+                (int) $rows->sum('material_cost'), (int) $rows->sum('labor_cost'), (int) $rows->sum('machine_cost'),
+                (int) $rows->sum('energy_cost'), (int) $rows->sum('maintenance_cost'), (int) $rows->sum('packaging_cost'),
+                (int) $rows->sum('overhead_cost'), (int) $rows->sum('total_cost'),
+                (int) $rows->sum('standard_total'), (int) $rows->sum('variance'),
+                (int) $rows->sum('margin'),
+            ],
+        ];
+    }
+
+    /**
+     * [CDC §Coût de revient industriel] Comparaison coût standard / coût réel
+     * PAR PRODUIT : coût réel unitaire moyen des OF de la période vs coût
+     * standard produit (products.cout_standard) — écart en valeur et en %.
+     */
+    private function coutProduit(Carbon $f, Carbon $t): array
+    {
+        $rows = ProductionCost::query()
+            ->join('production_orders as po', 'po.id', '=', 'production_costs.production_order_id')
+            ->join('products as p', 'p.id', '=', 'po.product_id')
+            ->whereBetween('po.updated_at', [$f, $t])
+            ->selectRaw('
+                p.code_article,
+                p.name,
+                p.cout_standard,
+                COUNT(production_costs.id)                              as nb_of,
+                SUM(GREATEST(po.quantity_produced, 0))                  as qty,
+                SUM(production_costs.total_cost)                        as real_total,
+                SUM(production_costs.standard_total)                    as std_total
+            ')
+            ->groupBy('p.id', 'p.code_article', 'p.name', 'p.cout_standard')
+            ->orderBy('p.name')
+            ->get();
+
+        $data = $rows->map(function ($r) {
+            $qty      = (float) $r->qty;
+            $realUnit = $qty > 0 ? round((float) $r->real_total / $qty, 2) : 0;
+            $stdUnit  = (float) $r->cout_standard > 0
+                ? round((float) $r->cout_standard, 2)
+                : ($qty > 0 ? round((float) $r->std_total / $qty, 2) : 0);
+            $ecart    = $stdUnit > 0 ? round($realUnit - $stdUnit, 2) : 0;
+            $ecartPct = $stdUnit > 0 ? round($ecart / $stdUnit * 100, 1) : 0;
+
+            return [
+                $r->code_article ?? '—',
+                $r->name,
+                (int) $r->nb_of,
+                round($qty, 2),
+                $stdUnit,
+                $realUnit,
+                $ecart,
+                $ecartPct,
+            ];
+        })->all();
+
+        return [
+            'title'   => 'Coût standard / réel par produit',
+            'headers' => ['Code article', 'Produit', 'OF', 'Qté produite', 'Coût std/u', 'Coût réel/u', 'Écart/u', 'Écart %'],
+            'rows'    => $data,
+            'numeric' => [2, 3, 4, 5, 6, 7],
+            'totals'  => null,
         ];
     }
 

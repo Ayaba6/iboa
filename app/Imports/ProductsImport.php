@@ -7,7 +7,6 @@ use App\Models\ProductFamily;
 use App\Models\TaxRate;
 use App\Models\Unit;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
@@ -26,8 +25,6 @@ class ProductsImport implements ToCollection, WithHeadingRow, SkipsOnError
 
     public function collection(Collection $rows): void
     {
-        $companyId = Auth::user()->company_id ?? 1;
-
         foreach ($rows as $row) {
             $ref  = trim($row['reference'] ?? '');
             $name = trim($row['nom']       ?? '');
@@ -37,11 +34,12 @@ class ProductsImport implements ToCollection, WithHeadingRow, SkipsOnError
                 continue;
             }
 
+            // Produits et familles sont GLOBAUX (pas de colonne company_id).
             $family = null;
             if (!empty($row['famille'])) {
                 $family = ProductFamily::firstOrCreate(
-                    ['name' => trim($row['famille']), 'company_id' => $companyId],
-                    ['code' => strtoupper(substr(trim($row['famille']), 0, 6))]
+                    ['name' => trim($row['famille'])],
+                    ['code' => strtoupper(substr(trim($row['famille']), 0, 6)), 'is_active' => true]
                 );
             }
 
@@ -57,7 +55,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, SkipsOnError
             }
 
             Product::updateOrCreate(
-                ['reference' => $ref ?: null, 'company_id' => $companyId],
+                ['reference' => $ref ?: null],
                 [
                     'name'            => $name,
                     'family_id'       => $family?->id,

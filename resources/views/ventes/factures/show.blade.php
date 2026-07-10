@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div class="space-y-6"
+<div class="space-y-3"
      x-data="{
         showCancelModal: false,
         cancelReason: '',
@@ -27,10 +27,10 @@
     ])
 
     {{-- Header --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $invoice->number }}</h1>
+                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $invoice->number }}</h1>
                 @php
                     $statusBadges = [
                         'brouillon'           => 'badge-gray',
@@ -42,7 +42,8 @@
                         'annulee'             => 'badge-red',
                     ];
                     $statusLabels = [
-                        'brouillon'           => 'Brouillon',
+                        'brouillon'             => 'Brouillon',
+                        'en_attente_validation' => 'En attente de validation',
                         'emise'               => 'Émise',
                         'envoyee'             => 'Envoyée',
                         'partiellement_payee' => 'Partiellement payée',
@@ -98,7 +99,7 @@
                     <form action="{{ route('ventes.factures.submit', $invoice) }}" method="POST"
                           onsubmit="return confirm('Soumettre cette facture à la validation interne ?')">
                         @csrf
-                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3 3L22 4"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
@@ -111,7 +112,7 @@
 
                 {{-- ── EN ATTENTE DE VALIDATION ────────────────────────────────────────── --}}
                 @if($invoice->status === 'en_attente_validation')
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
                         <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -121,7 +122,7 @@
                     <form action="{{ route('ventes.factures.validate-internal', $invoice) }}" method="POST"
                           onsubmit="return confirm('Valider cette facture ? Elle sera émise et ne pourra plus être modifiée.')">
                         @csrf
-                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm">
+                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
@@ -134,16 +135,16 @@
                         @csrf
                         <input type="hidden" name="motif" x-model="motif">
                         <button type="button" @click="open = true"
-                                class="inline-flex items-center gap-2 px-3 py-2 border border-orange-200 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors">
+                                class="inline-flex items-center gap-2 px-3 py-2 border border-orange-200 text-orange-600 rounded-[4px] text-sm font-medium hover:bg-orange-50 transition-colors">
                             Refuser
                         </button>
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-                            <div class="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md mx-4">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif de refus</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Motif obligatoire (5 caractères min.)…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire (5 caractères min.)…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="btn btn-secondary">Annuler</button>
-                                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">Confirmer le refus</button>
+                                    <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-600 text-white rounded-[4px] text-sm font-semibold hover:bg-orange-700 transition-colors">Confirmer le refus</button>
                                 </div>
                             </div>
                         </div>
@@ -156,16 +157,16 @@
                         @csrf
                         <input type="hidden" name="motif" x-model="motif">
                         <button type="button" @click="open = true"
-                                class="inline-flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+                                class="inline-flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-[4px] text-sm font-medium hover:bg-red-50 transition-colors">
                             Annuler
                         </button>
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-                            <div class="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md mx-4">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif d'annulation</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="btn btn-secondary">Fermer</button>
-                                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">Confirmer l'annulation</button>
+                                    <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-[4px] text-sm font-semibold hover:bg-red-700 transition-colors">Confirmer l'annulation</button>
                                 </div>
                             </div>
                         </div>
@@ -202,7 +203,7 @@
                 @endphp
                 @if($canEncaisser)
                 <a href="{{ route('tresorerie.encaissements.create', ['client_id' => $invoice->client_id, 'invoice_id' => $invoice->id]) }}"
-                   class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+                   class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
@@ -214,7 +215,7 @@
                 <button type="button" disabled
                         title="{{ $disabledReason }}"
                         aria-disabled="true"
-                        class="inline-flex items-center gap-2 px-3 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed opacity-70 select-none">
+                        class="inline-flex items-center gap-2 px-3 py-2 bg-gray-300 text-gray-500 rounded-[4px] text-sm font-medium cursor-not-allowed opacity-70 select-none">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/>
                     </svg>
@@ -259,7 +260,7 @@
                 {{-- [UX-1] Annuler avec motif (contre-passation) --}}
                 @if(in_array($invoice->status, ['emise', 'envoyee', 'en_retard']) && $invoice->paid_amount == 0)
                 <button type="button" @click="showCancelModal = true; cancelReason = ''"
-                        class="inline-flex items-center gap-2 px-3 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors"
+                        class="inline-flex items-center gap-2 px-3 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-[4px] text-sm font-medium transition-colors"
                         title="Annuler la facture avec contre-passation comptable">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -279,7 +280,7 @@
 
         {{-- [INVOICE-LOCKED-GUARD] Bandeau explicite quand la facture est verrouillée --}}
         @if($invoice->status === 'payee' || (int) $invoice->remaining_amount === 0)
-        <div class="mt-4 bg-gray-100 border-l-4 border-gray-800 rounded-lg p-3 flex items-start gap-3">
+        <div class="mt-4 bg-gray-100 border-l-4 border-gray-800 rounded-[4px] p-3 flex items-start gap-3">
             <svg class="w-5 h-5 text-gray-800 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
             <div class="text-sm text-gray-800">
                 <p class="font-semibold">Facture verrouillée — entièrement réglée</p>
@@ -298,7 +299,7 @@
         $statusLabelsLh = [
             'brouillon'           => ['label' => 'Brouillon',            'class' => 'bg-gray-100 text-gray-700'],
             'emise'               => ['label' => 'Émise',                'class' => 'bg-blue-100 text-blue-700'],
-            'envoyee'             => ['label' => 'Envoyée',              'class' => 'bg-indigo-100 text-indigo-700'],
+            'envoyee'             => ['label' => 'Envoyée',              'class' => 'bg-emerald-100 text-emerald-800'],
             'partiellement_payee' => ['label' => 'Part. payée',          'class' => 'bg-orange-100 text-orange-700'],
             'payee'               => ['label' => 'Payée',                'class' => 'bg-green-100 text-green-700'],
             'en_retard'           => ['label' => 'En retard',            'class' => 'bg-red-100 text-red-700'],
@@ -318,7 +319,7 @@
 
     {{-- 2 colonnes: info + totaux --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
             <h2 class="text-base font-semibold text-gray-900">Informations</h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
@@ -386,7 +387,7 @@
         </div>
 
         {{-- Totaux --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3 h-fit">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-3 h-fit">
             <h2 class="text-base font-semibold text-gray-900">Récapitulatif</h2>
             <div class="flex justify-between text-sm text-gray-600">
                 <span>Montant HT</span>
@@ -418,9 +419,9 @@
             @endif
 
             {{-- Net à payer --}}
-            <div class="border-t-2 border-indigo-200 pt-3 flex justify-between">
+            <div class="border-t-2 border-emerald-200 pt-3 flex justify-between">
                 <span class="text-base font-bold text-gray-900">NET À PAYER</span>
-                <span class="text-base font-bold text-indigo-700 tabular-nums">{{ number_format($invoice->net_to_pay ?: $invoice->total_ttc, 0, ',', ' ') }} FCFA</span>
+                <span class="text-base font-bold text-emerald-800 tabular-nums">{{ number_format($invoice->net_to_pay ?: $invoice->total_ttc, 0, ',', ' ') }} FCFA</span>
             </div>
 
             @if($invoice->paid_amount > 0)
@@ -439,35 +440,35 @@
     </div>
 
     {{-- Lignes --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200">
             <h2 class="text-base font-semibold text-gray-900">Lignes de facture</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Qté</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Prix Unit.</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Remise%</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">TVA%</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total HT</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total TTC</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">#</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Description</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Qté</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Prix Unit.</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Remise%</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">TVA%</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total HT</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total TTC</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($invoice->items as $item)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-gray-400 text-xs">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-3 text-gray-900">{{ $item->description }}</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-gray-600 tabular-nums hidden md:table-cell">{{ ($item->discount_percent ?? 0) > 0 ? number_format($item->discount_percent, 2, ',', ' ').'%' : '—' }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-gray-900 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-gray-400 text-xs">{{ $loop->iteration }}</td>
+                        <td class="px-3 py-1.5 text-gray-900">{{ $item->description }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums hidden md:table-cell">{{ ($item->discount_percent ?? 0) > 0 ? number_format($item->discount_percent, 2, ',', ' ').'%' : '—' }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-900 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
                     </tr>
                     @empty
                     <tr>
@@ -484,7 +485,7 @@
     @php
         $totalPaye = $invoice->payments->sum(fn($p) => $p->pivot->amount ?? 0);
     @endphp
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
                 Paiements reçus
@@ -498,31 +499,31 @@
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">N° encaissement</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Mode</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Montant alloué</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Référence</th>
-                        <th class="px-4 py-3"></th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">N° encaissement</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Date</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Mode</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Montant alloué</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Référence</th>
+                        <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($invoice->payments as $pmt)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <span class="font-mono font-semibold text-green-700 text-xs">{{ $pmt->number }}</span>
                         </td>
-                        <td class="px-4 py-3 text-gray-700">{{ $pmt->payment_date?->format('d/m/Y') ?? '—' }}</td>
-                        <td class="px-4 py-3 text-gray-600 hidden md:table-cell">{{ $pmt->paymentMethod?->name ?? '—' }}</td>
-                        <td class="px-4 py-3 text-right font-semibold tabular-nums text-green-600">
+                        <td class="px-3 py-1.5 text-gray-700">{{ $pmt->payment_date?->format('d/m/Y') ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-gray-600 hidden md:table-cell">{{ $pmt->paymentMethod?->name ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-right font-semibold tabular-nums text-green-600">
                             {{ number_format($pmt->pivot->amount ?? $pmt->amount, 0, ',', ' ') }} FCFA
                         </td>
-                        <td class="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell">
+                        <td class="px-3 py-1.5 text-gray-400 text-xs hidden lg:table-cell">
                             {{ $pmt->reference ?: '—' }}
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-1.5 text-right">
                             <a href="{{ route('tresorerie.encaissements.show', $pmt) }}"
                                class="text-xs text-blue-600 hover:text-blue-800 font-medium">
                                 Voir →
@@ -533,12 +534,12 @@
                 </tbody>
                 <tfoot class="bg-gray-50">
                     <tr>
-                        <td colspan="3" class="px-4 py-2.5 text-xs font-semibold text-gray-600 text-right hidden md:table-cell">Total encaissé :</td>
-                        <td colspan="3" class="px-4 py-2.5 text-xs font-semibold text-gray-600 text-right md:hidden">Total :</td>
-                        <td class="px-4 py-2.5 text-right font-bold tabular-nums text-green-700">
+                        <td colspan="3" class="px-3 py-2.5 text-xs font-semibold text-gray-600 text-right hidden md:table-cell">Total encaissé :</td>
+                        <td colspan="3" class="px-3 py-2.5 text-xs font-semibold text-gray-600 text-right md:hidden">Total :</td>
+                        <td class="px-3 py-2.5 text-right font-bold tabular-nums text-green-700">
                             {{ number_format($totalPaye, 0, ',', ' ') }} FCFA
                         </td>
-                        <td colspan="2" class="px-4 py-2.5">
+                        <td colspan="2" class="px-3 py-2.5">
                             @if($invoice->remaining_amount > 0)
                                 <span class="text-xs font-medium text-red-600">
                                     Reste : {{ number_format($invoice->remaining_amount, 0, ',', ' ') }} FCFA
@@ -559,23 +560,23 @@
 
     {{-- Avoirs liés --}}
     @if($invoice->creditNotes->isNotEmpty())
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 class="text-base font-semibold text-gray-900">Avoirs liés</h2>
             <a href="{{ route('ventes.avoirs.create', ['invoice_id' => $invoice->id]) }}"
-               class="text-xs text-purple-600 hover:text-purple-800 font-medium border border-purple-200 hover:bg-purple-50 px-3 py-1.5 rounded-lg transition-colors">
+               class="text-xs text-purple-600 hover:text-purple-800 font-medium border border-purple-200 hover:bg-purple-50 px-3 py-1.5 rounded-[4px] transition-colors">
                 + Nouvel avoir
             </a>
         </div>
         <table class="w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-gray-50">
+            <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Numéro</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Motif</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Montant TTC</th>
-                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Statut</th>
-                    <th class="px-4 py-3"></th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Numéro</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Date</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Motif</th>
+                    <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Montant TTC</th>
+                    <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                    <th class="px-3 py-1.5"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -585,18 +586,18 @@
                     $cnLabels = ['brouillon' => 'Brouillon', 'valide' => 'Validé', 'applique' => 'Appliqué', 'annule' => 'Annulé'];
                 @endphp
                 <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 font-mono font-semibold text-purple-700">
+                    <td class="px-3 py-1.5 font-mono font-semibold text-purple-700">
                         <a href="{{ route('ventes.avoirs.show', $cn) }}" class="hover:text-purple-900">{{ $cn->number }}</a>
                     </td>
-                    <td class="px-4 py-3 text-gray-600">{{ $cn->issued_at?->format('d/m/Y') ?? '—' }}</td>
-                    <td class="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{{ $cn->reason ?? '—' }}</td>
-                    <td class="px-4 py-3 text-right tabular-nums text-purple-700 font-semibold">{{ number_format($cn->total_ttc, 0, ',', ' ') }} FCFA</td>
-                    <td class="px-4 py-3 text-center">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $cnBadges[$cn->status] ?? 'bg-gray-100 text-gray-600' }}">
+                    <td class="px-3 py-1.5 text-gray-600">{{ $cn->issued_at?->format('d/m/Y') ?? '—' }}</td>
+                    <td class="px-3 py-1.5 text-gray-500 text-xs hidden md:table-cell">{{ $cn->reason ?? '—' }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums text-purple-700 font-semibold">{{ number_format($cn->total_ttc, 0, ',', ' ') }} FCFA</td>
+                    <td class="px-3 py-1.5 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $cnBadges[$cn->status] ?? 'bg-gray-100 text-gray-600' }}">
                             {{ $cnLabels[$cn->status] ?? $cn->status }}
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-3 py-1.5 text-center">
                         <a href="{{ route('ventes.avoirs.show', $cn) }}" class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded" title="Voir">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         </a>
@@ -610,7 +611,7 @@
 
     {{-- [UX-4] Historique d'audit --}}
     @if(isset($audits) && $audits->isNotEmpty())
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -627,7 +628,7 @@
                     'created'        => 'bg-blue-100 text-blue-700',
                     'updated'        => 'bg-gray-100 text-gray-700',
                     'validated'      => 'bg-emerald-100 text-emerald-700',
-                    'sent'           => 'bg-indigo-100 text-indigo-700',
+                    'sent'           => 'bg-emerald-100 text-emerald-800',
                     'cancelled'      => 'bg-red-100 text-red-700',
                     'paid'           => 'bg-green-100 text-green-700',
                     'partially_paid' => 'bg-amber-100 text-amber-700',
@@ -651,7 +652,7 @@
                 $label = $actionLabels[$audit->action] ?? $audit->action;
             @endphp
             <div class="px-5 py-3 flex items-start gap-3 hover:bg-gray-50/50">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $cls }} flex-shrink-0">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-semibold {{ $cls }} flex-shrink-0">
                     {{ $label }}
                 </span>
                 <div class="flex-1 min-w-0">
@@ -692,8 +693,8 @@
     <div x-show="showCancelModal" x-cloak
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
          @keydown.escape.window="showCancelModal = false">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md" @click.outside="showCancelModal = false">
-            <div class="px-6 py-4 border-b border-gray-200">
+        <div class="bg-white rounded-[4px] shadow-2xl w-full max-w-md" @click.outside="showCancelModal = false">
+            <div class="px-3 py-1.5 border-b border-gray-200">
                 <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
                     <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -704,7 +705,7 @@
             <form action="{{ route('ventes.factures.cancel', $invoice) }}" method="POST" data-turbo="false">
                 @csrf
                 <div class="px-6 py-5 space-y-3">
-                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                    <div class="bg-amber-50 border border-amber-200 rounded-[4px] p-3 text-xs text-amber-800">
                         <strong>⚠ Conséquences :</strong>
                         <ul class="mt-1 list-disc list-inside space-y-0.5">
                             <li>Contre-passation comptable automatique</li>
@@ -719,17 +720,17 @@
                         </label>
                         <textarea name="reason" x-model="cancelReason" rows="3" required minlength="5" maxlength="500"
                                   placeholder="Ex : Erreur de saisie client / Annulation commerciale demandée / …"
-                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"></textarea>
+                                  class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500 resize-none"></textarea>
                         <p class="text-[10px] text-gray-400 mt-1">Conservé dans l'historique d'audit comptable</p>
                     </div>
                 </div>
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
                     <button type="button" @click="showCancelModal = false"
-                            class="border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-white">
+                            class="border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px] hover:bg-white">
                         Fermer
                     </button>
                     <button type="submit" :disabled="!canSubmitCancel"
-                            class="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                            class="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                         Confirmer l'annulation
                     </button>
                 </div>
@@ -741,18 +742,18 @@
     {{-- ── Échéancier client ──────────────────────────────────────────────────── --}}
     @if(!in_array($invoice->status, ['brouillon','annulee','payee']))
     @php $schedules = $invoice->paymentSchedules; @endphp
-    <div class="bg-white rounded-xl border border-indigo-200 overflow-hidden"
+    <div class="bg-white rounded-[4px] border border-emerald-200 overflow-hidden"
          x-data="{ tab: '{{ $schedules->count() ? 'view' : 'create' }}', mode: 'percent', rows: [{ percent: 100, days_after: 0, label: '' }], customRows: [{ due_date: '', amount: '', label: '' }] }">
 
         {{-- Header --}}
-        <div class="px-4 py-3 bg-indigo-50 border-b border-indigo-200 flex items-center justify-between">
+        <div class="px-3 py-1.5 bg-[#eef5f0] border-b border-emerald-200 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
-                <h2 class="text-sm font-bold text-indigo-700">Échéancier de paiement</h2>
+                <h2 class="text-sm font-bold text-emerald-800">Échéancier de paiement</h2>
                 @if($schedules->count())
-                <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+                <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">
                     {{ $schedules->count() }} échéance(s)
                 </span>
                 @endif
@@ -760,7 +761,7 @@
             <div class="flex items-center gap-2">
                 @if($schedules->count())
                 <button @click="tab = (tab === 'view' ? 'create' : 'view')"
-                        class="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline">
+                        class="text-xs text-emerald-700 hover:text-emerald-900 font-medium underline">
                     <span x-text="tab === 'view' ? 'Modifier' : 'Voir les échéances'"></span>
                 </button>
                 @endif
@@ -771,14 +772,14 @@
         @if($schedules->count())
         <div x-show="tab === 'view'">
             <table class="w-full text-sm">
-                <thead class="bg-indigo-700 text-white">
+                <thead class="bg-emerald-800 text-white">
                     <tr>
-                        <th class="px-4 py-2.5 text-left font-semibold">Libellé</th>
-                        <th class="px-4 py-2.5 text-center font-semibold">Échéance</th>
-                        <th class="px-4 py-2.5 text-right font-semibold">Montant</th>
-                        <th class="px-4 py-2.5 text-right font-semibold">Payé</th>
-                        <th class="px-4 py-2.5 text-right font-semibold">Reste</th>
-                        <th class="px-4 py-2.5 text-center font-semibold">Statut</th>
+                        <th class="px-3 py-2.5 text-left font-semibold">Libellé</th>
+                        <th class="px-3 py-2.5 text-center font-semibold">Échéance</th>
+                        <th class="px-3 py-2.5 text-right font-semibold">Montant</th>
+                        <th class="px-3 py-2.5 text-right font-semibold">Payé</th>
+                        <th class="px-3 py-2.5 text-right font-semibold">Reste</th>
+                        <th class="px-3 py-2.5 text-center font-semibold">Statut</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-indigo-50">
@@ -789,11 +790,11 @@
                         $sc2 = $schColors[$sch->status] ?? 'gray';
                         $isLate = $sch->isOverdue();
                     @endphp
-                    <tr class="hover:bg-indigo-50 {{ $isLate ? 'bg-rose-50' : '' }}">
-                        <td class="px-4 py-2.5 text-gray-700">
+                    <tr class="hover:bg-emerald-50 {{ $isLate ? 'bg-rose-50' : '' }}">
+                        <td class="px-3 py-2.5 text-gray-700">
                             {{ $sch->label ?: ('Échéance '.$sch->installment_number) }}
                         </td>
-                        <td class="px-4 py-2.5 text-center {{ $isLate ? 'text-rose-700 font-semibold' : 'text-gray-700' }}">
+                        <td class="px-3 py-2.5 text-center {{ $isLate ? 'text-rose-700 font-semibold' : 'text-gray-700' }}">
                             {{ $sch->due_date->format('d/m/Y') }}
                             @if($isLate)
                             <span class="ml-1 text-xs text-rose-600 font-bold">
@@ -801,31 +802,31 @@
                             </span>
                             @endif
                         </td>
-                        <td class="px-4 py-2.5 text-right tabular-nums text-gray-700">{{ number_format($sch->amount, 0, ',', ' ') }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums text-green-700">{{ number_format($sch->paid_amount, 0, ',', ' ') }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums font-bold {{ $sch->remainingAmount() > 0 ? 'text-orange-600' : 'text-gray-400' }}">
+                        <td class="px-3 py-2.5 text-right tabular-nums text-gray-700">{{ number_format($sch->amount, 0, ',', ' ') }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums text-green-700">{{ number_format($sch->paid_amount, 0, ',', ' ') }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums font-bold {{ $sch->remainingAmount() > 0 ? 'text-orange-600' : 'text-gray-400' }}">
                             {{ number_format($sch->remainingAmount(), 0, ',', ' ') }}
                         </td>
-                        <td class="px-4 py-2.5 text-center">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-{{ $sc2 }}-100 text-{{ $sc2 }}-700">
+                        <td class="px-3 py-2.5 text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $sc2 }}-100 text-{{ $sc2 }}-700">
                                 {{ $schLabels[$sch->status] ?? $sch->status }}
                             </span>
                         </td>
                     </tr>
                     @endforeach
                 </tbody>
-                <tfoot class="bg-indigo-50">
+                <tfoot class="bg-[#eef5f0]">
                     <tr>
-                        <td colspan="2" class="px-4 py-2.5 text-sm font-semibold text-indigo-800 text-right">Totaux</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums font-bold text-indigo-800">{{ number_format($schedules->sum('amount'), 0, ',', ' ') }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums font-bold text-green-700">{{ number_format($schedules->sum('paid_amount'), 0, ',', ' ') }}</td>
-                        <td class="px-4 py-2.5 text-right tabular-nums font-bold text-orange-600">{{ number_format($schedules->sum(fn($s) => $s->remainingAmount()), 0, ',', ' ') }}</td>
+                        <td colspan="2" class="px-3 py-2.5 text-sm font-semibold text-emerald-900 text-right">Totaux</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums font-bold text-emerald-900">{{ number_format($schedules->sum('amount'), 0, ',', ' ') }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums font-bold text-green-700">{{ number_format($schedules->sum('paid_amount'), 0, ',', ' ') }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums font-bold text-orange-600">{{ number_format($schedules->sum(fn($s) => $s->remainingAmount()), 0, ',', ' ') }}</td>
                         <td></td>
                     </tr>
                 </tfoot>
             </table>
             {{-- Delete all --}}
-            <div class="px-4 py-3 border-t border-indigo-100 flex justify-end">
+            <div class="px-3 py-1.5 border-t border-emerald-100 flex justify-end">
                 <form action="{{ route('ventes.factures.schedules.destroy-all', $invoice) }}" method="POST"
                       onsubmit="return confirm('Supprimer tout l\'échéancier ?')">
                     @csrf @method('DELETE')
@@ -845,14 +846,14 @@
         <div x-show="tab === 'create'" class="p-4 space-y-4">
 
             {{-- Mode toggle --}}
-            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-[4px] w-fit">
                 <button type="button" @click="mode = 'percent'"
-                        :class="mode === 'percent' ? 'bg-white shadow text-indigo-700 font-semibold' : 'text-gray-500 hover:text-gray-700'"
+                        :class="mode === 'percent' ? 'bg-white shadow text-emerald-800 font-semibold' : 'text-gray-500 hover:text-gray-700'"
                         class="px-3 py-1.5 rounded-md text-sm transition-all">
                     Par tranches (%)
                 </button>
                 <button type="button" @click="mode = 'custom'"
-                        :class="mode === 'custom' ? 'bg-white shadow text-indigo-700 font-semibold' : 'text-gray-500 hover:text-gray-700'"
+                        :class="mode === 'custom' ? 'bg-white shadow text-emerald-800 font-semibold' : 'text-gray-500 hover:text-gray-700'"
                         class="px-3 py-1.5 rounded-md text-sm transition-all">
                     Dates & montants
                 </button>
@@ -868,16 +869,16 @@
                                 <input type="number" :name="'installments['+i+'][percent]'"
                                        x-model="row.percent" min="1" max="100" step="0.01"
                                        placeholder="%" required
-                                       class="w-20 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm text-center focus:ring-2 focus:ring-indigo-400">
+                                       class="w-20 border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm text-center focus:ring-1 focus:ring-emerald-400">
                                 <span class="text-gray-400 text-sm">%</span>
                                 <input type="number" :name="'installments['+i+'][days_after]'"
                                        x-model="row.days_after" min="0"
                                        placeholder="jours après"
-                                       class="w-28 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400">
+                                       class="w-28 border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-emerald-400">
                                 <span class="text-gray-400 text-xs whitespace-nowrap">j. après émission</span>
                                 <input type="text" :name="'installments['+i+'][label]'"
                                        x-model="row.label" placeholder="Libellé (optionnel)"
-                                       class="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400">
+                                       class="flex-1 border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-emerald-400">
                                 <button type="button" @click="rows.splice(i,1)" x-show="rows.length > 1"
                                         class="text-red-400 hover:text-red-600">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -891,7 +892,7 @@
                     <div class="flex items-center justify-between pt-1">
                         <div class="flex items-center gap-3">
                             <button type="button" @click="rows.push({ percent: 0, days_after: 30, label: '' })"
-                                    class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                                    class="text-sm text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -904,7 +905,7 @@
                             </span>
                         </div>
                         <button type="submit"
-                                class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                                class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
@@ -928,14 +929,14 @@
                             <div class="flex items-center gap-2">
                                 <input type="date" :name="'rows['+i+'][due_date]'"
                                        x-model="row.due_date" required
-                                       class="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400">
+                                       class="border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-emerald-400">
                                 <input type="number" :name="'rows['+i+'][amount]'"
                                        x-model="row.amount" min="1" required
                                        placeholder="Montant FCFA"
-                                       class="w-40 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm tabular-nums focus:ring-2 focus:ring-indigo-400">
+                                       class="w-40 border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm tabular-nums focus:ring-1 focus:ring-emerald-400">
                                 <input type="text" :name="'rows['+i+'][label]'"
                                        x-model="row.label" placeholder="Libellé"
-                                       class="flex-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400">
+                                       class="flex-1 border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-emerald-400">
                                 <button type="button" @click="customRows.splice(i,1)" x-show="customRows.length > 1"
                                         class="text-red-400 hover:text-red-600">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -949,7 +950,7 @@
                     <div class="flex items-center justify-between pt-1">
                         <div class="flex items-center gap-3">
                             <button type="button" @click="customRows.push({ due_date: '', amount: '', label: '' })"
-                                    class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                                    class="text-sm text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -961,7 +962,7 @@
                             </span>
                         </div>
                         <button type="submit"
-                                class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                                class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
@@ -1005,7 +1006,7 @@
     <x-document.related :links="$relatedLinks" />
 
     {{-- ── Workflow validation interne ─────────────────────────────────────── --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg class="size-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
@@ -1014,16 +1015,11 @@
             <x-workflow.status-badge :status="$invoice->status" :label="$invoice->status_label" />
         </div>
         @if($invoice->rejection_reason)
-            <div class="mb-4 rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
+            <div class="mb-4 rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
                 <strong>Motif de refus :</strong> {{ $invoice->rejection_reason }}
             </div>
         @endif
-        <x-workflow.action-buttons :document="$invoice"
-            submitRoute="ventes.factures.submit"
-            validateRoute="ventes.factures.validate-internal"
-            rejectRoute="ventes.factures.reject-internal"
-            cancelRoute="ventes.factures.cancel-internal"
-            :routeParam="$invoice->id" />
+        {{-- Les actions de workflow sont dans la barre du header — ici : historique seul. --}}
         <x-workflow.history :document="$invoice" />
     </div>
 

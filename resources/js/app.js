@@ -315,129 +315,79 @@ Alpine.store('darkMode', {
     },
 });
 
-// ── Recently visited — tracked via localStorage ────────────────────────────────
-// Enregistre la page courante à chaque navigation Turbo
-document.addEventListener('turbo:load', function () {
+// ── Recherche globale SAGE X3 (barre du header) ─────────────────────────────
+// Saisie directe dans la barre, dropdown ancré dessous : fonctions (menus) +
+// données (factures, clients…) groupées par catégorie. Ctrl+K focus la barre.
+Alpine.data('sageSearch', function () {
+    let functions = [];
     try {
-        const title   = document.title.split('—').slice(-1)[0]?.trim() || document.title;
-        const url     = window.location.pathname;
-        const skip    = ['login', 'register', 'logout', 'password'];
-        if (skip.some(s => url.includes(s))) return;
-
-        // Détecter le module pour l'icône
-        const icons = {
-            '/factures': '🧾', '/devis': '📋', '/commandes': '🛒',
-            '/clients': '🏢', '/fournisseurs': '🏭', '/produits': '📦',
-            '/crm': '👤', '/stocks': '📊', '/tresorerie': '💰',
-            '/comptabilite': '📒', '/rh': '👥', '/reports': '📈',
-        };
-        const icon = Object.entries(icons).find(([k]) => url.includes(k))?.[1] || '📄';
-
-        let visits = JSON.parse(localStorage.getItem('erp_recent_visits') || '[]');
-        visits = visits.filter(v => v.url !== url);
-        visits.unshift({ url, label: title, icon });
-        if (visits.length > 10) visits.pop();
-        localStorage.setItem('erp_recent_visits', JSON.stringify(visits));
-    } catch(e) {}
-});
-
-// ── Command Palette (Ctrl+K / Cmd+K) ─────────────────────────────────────────
-// Enregistré ici, AVANT Alpine.start(), pour garantir que le composant est
-// disponible dès que Alpine initialise le DOM (y compris après navigations Turbo).
-// Les quickActions sont rendues côté serveur dans un <script type="application/json"
-// id="cp-quick-actions"> par _command-palette.blade.php.
-// À chaque navigation Turbo, Turbo remplace le body → nouvel élément #cp-quick-actions
-// → Alpine ré-instancie le composant → factory re-lit le JSON → actions à jour. ✓
-Alpine.data('commandPalette', function () {
-    let quickActions = [];
-    try {
-        const el = document.getElementById('cp-quick-actions');
-        if (el) quickActions = JSON.parse(el.textContent || '[]');
+        const el = document.getElementById('sage-search-functions');
+        if (el) functions = JSON.parse(el.textContent || '[]');
     } catch (e) {}
 
     return {
-        open:         false,
-        query:        '',
-        results:      [],
-        loading:      false,
-        activeIndex:  0,
-        recentVisits: [],
-        quickActions: quickActions,
+        q: '',
+        open: false,
+        loading: false,
+        results: [],
+        functions,
+        activeIndex: 0,
 
-        init() {
-            this.recentVisits = JSON.parse(localStorage.getItem('erp_recent_visits') || '[]').slice(0, 5);
+        // fonctions filtrées par la frappe (accents ignorés)
+        get matchedFunctions() {
+            const n = this.norm(this.q);
+            if (n.length < 1) return this.functions.slice(0, 8);
+            return this.functions.filter(f => this.norm(f.label).includes(n)).slice(0, 6);
+        },
+        // données groupées par type pour affichage façon X3
+        get grouped() {
+            const g = {};
+            this.results.forEach(r => { (g[r.type] = g[r.type] || []).push(r); });
+            return g;
+        },
+        // liste plate pour la navigation clavier : fonctions puis données
+        get flat() {
+            return [...this.matchedFunctions, ...this.results];
         },
 
-        toggle()  { this.open ? this.close() : this.open_(); },
-        open_() {
-            this.open        = true;
-            this.query       = '';
-            this.results     = [];
-            this.activeIndex = 0;
-            this.recentVisits = JSON.parse(localStorage.getItem('erp_recent_visits') || '[]').slice(0, 5);
-            this.$nextTick(() => this.$refs.searchInput?.focus());
+        norm(v) {
+            return String(v).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
         },
-        close() {
-            this.open    = false;
-            this.query   = '';
-            this.results = [];
+
+        onFocus() { this.open = true; },
+        close() { this.open = false; },
+        focusBar() {
+            this.$refs.sageInput?.focus();
+            this.open = true;
         },
 
         async search() {
-            if (this.query.length < 2) { this.results = []; return; }
-            this.loading     = true;
             this.activeIndex = 0;
+            if (this.q.length < 2) { this.results = []; return; }
+            this.loading = true;
             try {
-                // URL lue depuis data-search-url sur le div racine pour éviter le hardcode
-                const searchUrl = this.$el.dataset.searchUrl || '/search';
-                const r = await fetch(searchUrl + '?q=' + encodeURIComponent(this.query), {
+                const url = this.$el.dataset.searchUrl || '/search';
+                const r = await fetch(url + '?q=' + encodeURIComponent(this.q), {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 });
                 if (!r.ok) return;
                 const d = await r.json();
                 this.results = d.results ?? [];
+                this.open = true;
             } catch (e) {
-                /* réseau indisponible — on ignore silencieusement */
             } finally {
                 this.loading = false;
             }
         },
 
-        moveDown() {
-            const max = this.query.length >= 2
-                ? this.results.length - 1
-                : this.quickActions.length + this.recentVisits.length - 1;
-            if (this.activeIndex < max) this.activeIndex++;
-        },
-        moveUp() {
-            if (this.activeIndex > 0) this.activeIndex--;
-        },
+        moveDown() { if (this.activeIndex < this.flat.length - 1) this.activeIndex++; },
+        moveUp()   { if (this.activeIndex > 0) this.activeIndex--; },
         selectActive() {
-            let item;
-            if (this.query.length >= 2) {
-                item = this.results[this.activeIndex];
-                if (item) { this.trackVisit(item); window.location.href = item.url; }
-            } else {
-                const all = [...this.quickActions, ...this.recentVisits];
-                item = all[this.activeIndex];
-                if (item) window.location.href = item.url;
-            }
-            this.close();
+            const item = this.flat[this.activeIndex];
+            if (item?.url) { this.close(); window.location.href = item.url; }
         },
-
-        trackVisit(item) {
-            if (!item?.url || !item?.label) return;
-            let visits = JSON.parse(localStorage.getItem('erp_recent_visits') || '[]');
-            visits = visits.filter(v => v.url !== item.url);
-            visits.unshift({ url: item.url, label: item.label, sub: item.sublabel || item.type, icon: this.typeIcon(item.type) });
-            if (visits.length > 10) visits.pop();
-            localStorage.setItem('erp_recent_visits', JSON.stringify(visits));
-        },
-
-        typeIcon(type) {
-            const icons = { Facture:'🧾', Devis:'📋', Client:'🏢', Fournisseur:'🏭', Produit:'📦', CRM:'👤', Stock:'📦', Trésorerie:'💰' };
-            return icons[type] || '📄';
-        },
+        isActive(item) { return this.flat[this.activeIndex] === item; },
+        setActive(item) { const i = this.flat.indexOf(item); if (i >= 0) this.activeIndex = i; },
 
         colorStyle(color) {
             const styles = {
@@ -455,6 +405,7 @@ Alpine.data('commandPalette', function () {
         },
     };
 });
+
 
 Alpine.start();
 

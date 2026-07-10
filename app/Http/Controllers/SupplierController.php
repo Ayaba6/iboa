@@ -29,17 +29,43 @@ class SupplierController extends Controller
     public function create()
     {
         $this->authorize('create', Supplier::class);
-        return view('suppliers.create');
+        return view('suppliers.create', $this->formRefs());
     }
 
     public function store(StoreSupplierRequest $request)
     {
         $this->authorize('create', Supplier::class);
         $supplier = $this->service->create($request->validated());
+        $this->uploadDocuments($supplier, $request);
 
         return redirect()
             ->route('suppliers.show', $supplier)
             ->with('success', 'Fournisseur créé avec succès.');
+    }
+
+    /** Données de référence partagées create/edit (fiche SAGE). */
+    private function formRefs(): array
+    {
+        return [
+            'taxRates'   => \App\Models\TaxRate::where('is_active', true)->orderByDesc('is_default')->orderBy('rate')->get(),
+            'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+        ];
+    }
+
+    /** Enregistre les pièces jointes (documents) du fournisseur. */
+    private function uploadDocuments(Supplier $supplier, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/supplier/'.$supplier->id, 'local');
+            $supplier->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(Supplier $supplier)
@@ -53,15 +79,16 @@ class SupplierController extends Controller
     public function edit(Supplier $supplier)
     {
         $this->authorize('update', $supplier);
-        $supplier->load(['contacts', 'addresses']);
+        $supplier->load(['contacts', 'addresses', 'attachments']);
 
-        return view('suppliers.edit', compact('supplier'));
+        return view('suppliers.edit', array_merge(['supplier' => $supplier], $this->formRefs()));
     }
 
     public function update(UpdateSupplierRequest $request, Supplier $supplier)
     {
         $this->authorize('update', $supplier);
         $this->service->update($supplier, $request->validated());
+        $this->uploadDocuments($supplier, $request);
 
         return redirect()
             ->route('suppliers.show', $supplier)

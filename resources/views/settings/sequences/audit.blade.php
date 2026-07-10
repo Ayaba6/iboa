@@ -10,29 +10,29 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Historique des modifications</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Historique des modifications</h1>
             <p class="text-sm text-gray-500 mt-0.5">
                 Séquence <strong>{{ $label }}</strong> — toutes les opérations sont tracées (audit immuable).
             </p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('settings.sequences.edit', $sequence) }}"
-               class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+               class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
                 ✏ Modifier
             </a>
             <a href="{{ route('settings.sequences.index') }}"
-               class="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-sm font-medium px-4 py-2 rounded-lg">
+               class="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-[4px]">
                 ← Retour
             </a>
         </div>
     </div>
 
     {{-- Statut courant --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
         <div>
             <div class="text-xs text-gray-500 uppercase tracking-wider">Compteur</div>
             <div class="font-mono font-bold text-gray-900 text-lg tabular-nums">{{ number_format($sequence->last_number) }}</div>
@@ -63,31 +63,31 @@
     </div>
 
     {{-- Audit table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="tbl-rx">
         <table class="w-full text-sm">
-            <thead class="bg-gray-50 border-b border-gray-100">
+            <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Utilisateur</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Avant</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Après</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Motif</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Date</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Utilisateur</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Action</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Avant</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Après</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Motif</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($audits as $a)
                 <tr class="hover:bg-gray-50/50 align-top">
-                    <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
+                    <td class="px-3 py-1.5 whitespace-nowrap text-xs text-gray-600">
                         {{ $a->created_at->format('d/m/Y H:i:s') }}
                     </td>
-                    <td class="px-4 py-3 text-gray-700 text-sm">{{ $a->user?->name ?? '—' }}</td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-1.5 text-gray-700 text-sm">{{ $a->user?->name ?? '—' }}</td>
+                    <td class="px-3 py-1.5">
                         @php
                             $colors = [
                                 'create'=>'bg-blue-100 text-blue-700',
-                                'update_format'=>'bg-indigo-100 text-indigo-700',
+                                'update_format'=>'bg-emerald-100 text-emerald-800',
                                 'set_counter'=>'bg-orange-100 text-orange-700',
                                 'reset_counter'=>'bg-red-100 text-red-700',
                                 'lock'=>'bg-gray-200 text-gray-700',
@@ -100,21 +100,21 @@
                             {{ $a->action_label }}
                         </span>
                     </td>
-                    <td class="px-4 py-3 text-xs font-mono text-gray-600">
+                    <td class="px-3 py-1.5 text-xs font-mono text-gray-600">
                         @if($a->before)
                             <pre class="whitespace-pre-wrap max-w-xs">{{ json_encode($a->before, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
                         @else
                             —
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-xs font-mono text-gray-600">
+                    <td class="px-3 py-1.5 text-xs font-mono text-gray-600">
                         @if($a->after)
                             <pre class="whitespace-pre-wrap max-w-xs">{{ json_encode($a->after, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</pre>
                         @else
                             —
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-gray-600 text-xs italic">{{ $a->reason ?: '—' }}</td>
+                    <td class="px-3 py-1.5 text-gray-600 text-xs italic">{{ $a->reason ?: '—' }}</td>
                 </tr>
                 @empty
                 <tr>

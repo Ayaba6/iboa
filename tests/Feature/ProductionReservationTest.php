@@ -34,6 +34,16 @@ it('reserves finished product and bumps reserved_quantity', function(){
     expect((float)$stock->quantity - (float)$stock->reserved_quantity)->toEqual(70.0);
 });
 
+it('blocks reservation when nothing was produced (no fallback to requested)', function(){
+    $this->actingAs(resAdmin());
+    $o=resOrder();
+    // OF terminé mais quantité produite 0 : on ne réserve pas la demande (30).
+    $o->update(['quantity_produced'=>0]);
+    expect(fn()=>app(ReservationService::class)->reserveForOrder($o))->toThrow(\Illuminate\Validation\ValidationException::class);
+    expect(StockReservation::count())->toBe(0);
+    expect((float)ProductStock::where('product_id',$o->product_id)->first()->reserved_quantity)->toEqual(0.0);
+});
+
 it('blocks reservation on non-finished OF', function(){
     $this->actingAs(resAdmin());
     $o=resOrder(); $o->update(['status'=>'en_cours']);

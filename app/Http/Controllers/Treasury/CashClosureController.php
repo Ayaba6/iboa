@@ -55,10 +55,41 @@ class CashClosureController extends Controller
             'counted_balance'   => ['required', 'integer', 'min:0'],
             'difference_reason' => ['nullable', 'string', 'max:1000'],
             'notes'             => ['nullable', 'string', 'max:1000'],
+            // [Parité SAGE X3] entête + billetage
+            'site'            => ['nullable', 'string', 'max:40'],
+            'cashier_name'    => ['nullable', 'string', 'max:100'],
+            'supervisor_name' => ['nullable', 'string', 'max:100'],
+            'currency_code'   => ['nullable', 'string', 'size:3'],
+            'denominations'   => ['nullable', 'array'],
+            'denominations.*' => ['nullable', 'integer', 'min:0'],
+            'documents'       => ['nullable', 'array'],
+            'documents.*'     => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
         ]);
+
+        // Billetage : ne conserver que les coupures réellement comptées.
+        if (isset($data['denominations'])) {
+            $data['denominations'] = array_filter($data['denominations'], fn ($q) => (int) $q > 0) ?: null;
+        }
+        unset($data['documents']);
 
         try {
             $closure = $this->service->create($data);
+
+            foreach ((array) $request->file('documents', []) as $file) {
+                $path = $file->store('attachments/cashclosure/' . $closure->id, 'local');
+                $closure->attachments()->create([
+                    'disk' => 'local', 'path' => $path,
+                    'filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(), 'size' => $file->getSize(),
+                    'uploaded_by' => auth()->id(),
+                ]);
+            }
+
+            if ($request->boolean('save_and_new')) {
+                return redirect()->route('tresorerie.clotures.create')
+                    ->with('success', "Clôture {$closure->number} enregistrée — nouvelle clôture.");
+            }
+
             return redirect()
                 ->route('tresorerie.clotures.show', $closure)
                 ->with('success', "Clôture {$closure->number} enregistrée (brouillon). Validez-la pour comptabiliser l'écart.");

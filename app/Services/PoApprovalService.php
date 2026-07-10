@@ -51,6 +51,22 @@ class PoApprovalService
             'approved_at'               => null,
             'rejection_reason'          => null,
         ]);
+
+        // [CDC §16.4] Notifie exactement le rôle requis par le seuil applicable —
+        // jamais une diffusion large à tous les approbateurs potentiels.
+        if ($rule->required_role) {
+            \App\Notifications\ValidationStepNotification::sendToRoles(
+                [$rule->required_role],
+                title: 'Bon de commande à approuver',
+                message: "PO {$po->number} soumis — montant "
+                    . number_format((float) $po->total_ttc, 0, ',', ' ') . " FCFA, règle « {$rule->name} ».",
+                url: route('achats.commandes.show', $po),
+                modelType: 'PurchaseOrder',
+                modelId: $po->id,
+                type: 'po_submitted_approval',
+            );
+        }
+
         return $po->fresh();
     }
 

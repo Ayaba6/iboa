@@ -74,23 +74,68 @@ class QuoteController extends Controller
 
         $clients        = Client::active()->orderBy('name')
             ->get(['id', 'name', 'trade_name', 'phone', 'mobile', 'email', 'address', 'city', 'default_discount', 'payment_terms', 'payment_days', 'is_tax_exempt']);
-        $products       = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
+        $products       = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->withSum('productStocks as reserved_qty', 'reserved_quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
         $selectedClient = $request->query('client_id');
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
 
-        return view('ventes.devis.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente'));
+        return view('ventes.devis.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
+    }
+
+    /** [Maquette Nouveau devis] Données complémentaires du formulaire. */
+    private function maquetteFormData(): array
+    {
+        return [
+            'contacts'   => \App\Models\ClientContact::orderBy('last_name')->get(['id', 'client_id', 'civility', 'first_name', 'last_name']),
+            'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+            'salesReps'  => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'orders'     => \App\Models\Order::orderByDesc('id')->limit(100)->get(['id', 'reference', 'number', 'issued_at']),
+        ];
+    }
+
+    /** [Maquette Nouveau devis] Lignes d'une commande (JSON) pour « Ajouter depuis commande ». */
+    public function orderItems(Request $request)
+    {
+        $order = \App\Models\Order::with('items.product.taxRate')->findOrFail($request->integer('order_id'));
+
+        return response()->json($order->items->map(fn ($it) => [
+            'product_id'       => $it->product_id,
+            'description'      => $it->description ?: $it->product?->name,
+            'quantity'         => (float) $it->quantity,
+            'unit_price'       => (float) $it->unit_price,
+            'discount_percent' => (float) ($it->discount_percent ?? 0),
+            'tax_rate_value'   => (float) ($it->tax_rate_value ?? $it->product?->taxRate?->rate ?? 0),
+        ])->values());
     }
 
     public function store(StoreQuoteRequest $request)
     {
         $this->authorize('create', Quote::class);
 
-        $quote = $this->service->create($request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+        $quote = $this->service->create($data);
+        $this->uploadDocuments($quote, $request);
 
         return redirect()
             ->route('ventes.devis.show', $quote)
             ->with('success', 'Devis ' . $quote->number . ' créé avec succès.');
+    }
+
+    /** Enregistre les pièces jointes (documents) du devis. */
+    private function uploadDocuments(Quote $quote, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/quote/'.$quote->id, 'local');
+            $quote->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(Quote $devis)
@@ -105,18 +150,22 @@ class QuoteController extends Controller
     public function edit(Quote $devis)
     {
         $quote    = $this->service->repository->findWithDetails($devis->id);
+        $quote->load('attachments');
         $clients  = Client::active()->orderBy('name')
             ->get(['id', 'name', 'trade_name', 'phone', 'mobile', 'email', 'address', 'city', 'default_discount', 'payment_terms', 'payment_days', 'is_tax_exempt']);
         $products = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
 
-        return view('ventes.devis.edit', compact('quote', 'clients', 'products', 'clientExemptions', 'taxRatesVente'));
+        return view('ventes.devis.edit', compact('quote', 'clients', 'products', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
     }
 
     public function update(UpdateQuoteRequest $request, Quote $devis)
     {
-        $this->service->update($devis, $request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+        $this->service->update($devis, $data);
+        $this->uploadDocuments($devis, $request);
 
         return redirect()
             ->route('ventes.devis.show', $devis)
@@ -184,8 +233,10 @@ class QuoteController extends Controller
         try {
             $this->workflow->validateQuote($devis, $request->motif);
             return back()->with('success', "Devis {$devis->number} validé avec succès.");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->withErrors(['devis' => $e->getMessage()])->with('error', $e->getMessage());
         }
     }
 

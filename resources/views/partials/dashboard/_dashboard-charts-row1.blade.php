@@ -17,7 +17,7 @@ $caChartConfig = [
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 fade-up" style="animation-delay:.22s">
 
     {{-- CA — avec toggle 7j / 30j / 6m --}}
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+    <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5"
          x-data="caChartFromConfig({{ \Illuminate\Support\Js::from($caChartConfig) }})">
 
         <div class="flex items-start justify-between mb-5 gap-4">
@@ -40,9 +40,9 @@ $caChartConfig = [
 
         {{-- Summary mini-stats --}}
         <div class="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3 mb-5">
-            <div class="rounded-xl bg-indigo-50 px-3 py-2.5">
-                <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wide">Total période</p>
-                <p class="text-sm font-black text-indigo-700 tabular-nums mt-1" x-text="sumFormatted()">—</p>
+            <div class="rounded-xl bg-[#eef5f0] px-3 py-2.5">
+                <p class="text-xs font-semibold text-emerald-500 uppercase tracking-wide">Total période</p>
+                <p class="text-sm font-black text-emerald-800 tabular-nums mt-1" x-text="sumFormatted()">—</p>
             </div>
             <div class="rounded-xl bg-gray-50 px-3 py-2.5">
                 <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Pic</p>
@@ -58,7 +58,7 @@ $caChartConfig = [
     </div>
 
     {{-- Répartition trésorerie --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="mb-4">
             <h2 class="text-base font-bold text-gray-900">Trésorerie</h2>
             <p class="text-xs text-gray-400 mt-0.5">Soldes par compte</p>

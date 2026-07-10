@@ -189,6 +189,26 @@ class ClientPaymentController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        // [PARITÉ SAGE X3] Pièces jointes de l'encaissement (post-création, additif).
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/client_payment/'.$payment->id, 'local');
+            $payment->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
+
+        // [SAGE X3] « Enregistrer et créer » : rebascule sur un formulaire vierge.
+        if ($request->boolean('save_and_new')) {
+            return redirect()
+                ->route('tresorerie.encaissements.create')
+                ->with('success', 'Encaissement '.$payment->number.' enregistré. Nouvelle saisie.');
+        }
+
         return redirect()
             ->route('tresorerie.encaissements.show', $payment)
             ->with('success', 'Encaissement enregistré avec succès.');

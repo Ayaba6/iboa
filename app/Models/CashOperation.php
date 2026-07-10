@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class CashOperation extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasAttachments;
 
     protected $fillable = [
         'company_id',
@@ -28,11 +29,22 @@ class CashOperation extends Model
         'status',
         'journal_entry_id',
         'created_by',
+        // [PARITÉ SAGE X3]
+        'site', 'operation_type', 'reference', 'requester', 'cashier_name',
+        'currency_code', 'exchange_rate', 'fees', 'net_amount', 'value_date',
+        'general_account', 'counterpart_account', 'cost_center', 'analytic_section',
+        'payment_method', 'comment', 'lines',
     ];
 
     protected $casts = [
         'amount'         => 'integer',
         'operation_date' => 'date',
+        // [PARITÉ SAGE X3]
+        'value_date'     => 'date',
+        'fees'           => 'integer',
+        'net_amount'     => 'integer',
+        'exchange_rate'  => 'decimal:6',
+        'lines'          => 'array',
     ];
 
     // ── Relations ─────────────────────────────────────────────────────────────

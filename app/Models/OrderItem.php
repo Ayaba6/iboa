@@ -15,6 +15,8 @@ class OrderItem extends Model
         'description',
         'unit_id',
         'quantity',
+        'nb_toles',
+        'metrage_par_tole',
         'unit_price',
         'discount_percent',
         'tax_rate_id',

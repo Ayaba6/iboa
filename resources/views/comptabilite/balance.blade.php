@@ -10,19 +10,19 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Balance générale SYSCOHADA</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Balance générale SYSCOHADA</h1>
             @if($accounts->isNotEmpty())
                 <p class="text-sm text-gray-500 mt-0.5">{{ $accounts->count() }} compte(s) avec mouvements</p>
             @endif
         </div>
         <div class="flex items-center gap-3 self-start">
             <a href="{{ route('comptabilite.balance.pdf', request()->query()) }}"
-               class="inline-flex items-center gap-1.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+               class="inline-flex items-center gap-1.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
@@ -30,7 +30,7 @@
                 Exporter PDF
             </a>
             <a href="{{ route('comptabilite.balance.export', request()->query()) }}"
-               class="inline-flex items-center gap-1.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+               class="inline-flex items-center gap-1.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -48,10 +48,10 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <select name="class_id"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                    class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500">
                 <option value="">Toutes les classes</option>
                 @foreach($classes as $class)
                 <option value="{{ $class->id }}" {{ ($classId ?? '') == $class->id ? 'selected' : '' }}>
@@ -60,17 +60,17 @@
                 @endforeach
             </select>
             <input type="date" name="date_from" value="{{ $dateFrom ?? '' }}"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500">
             <input type="date" name="date_to" value="{{ $dateTo ?? '' }}"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500">
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Afficher
                 </button>
                 @if($classId || $dateFrom || $dateTo)
                 <a href="{{ route('comptabilite.balance') }}"
-                   class="flex items-center justify-center border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors"
+                   class="flex items-center justify-center border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors"
                    title="Réinitialiser">✕</a>
                 @endif
             </div>
@@ -79,7 +79,7 @@
 
     {{-- Period / context banner --}}
     @if($dateFrom || $dateTo)
-    <div class="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border border-violet-200 rounded-lg text-sm text-violet-800">
+    <div class="flex items-center gap-2 px-3 py-2.5 bg-violet-50 border border-violet-200 rounded-[4px] text-sm text-violet-800">
         <svg class="w-4 h-4 flex-shrink-0 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
@@ -98,7 +98,7 @@
         </span>
     </div>
     @else
-    <div class="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+    <div class="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-[4px] text-sm text-amber-800">
         <svg class="w-4 h-4 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
@@ -112,19 +112,19 @@
         $imbalance  = abs($totals['solde_debiteur'] - $totals['solde_crediteur']);
     @endphp
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
             <p class="text-xs text-gray-500 mb-1">Mvts Débit</p>
-            <p class="text-lg font-bold tabular-nums text-blue-700">
+            <p class="text-[16px] font-bold tabular-nums text-blue-700">
                 {{ number_format($totals['period_debit'], 0, ',', ' ') }}
             </p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
             <p class="text-xs text-gray-500 mb-1">Mvts Crédit</p>
-            <p class="text-lg font-bold tabular-nums text-red-700">
+            <p class="text-[16px] font-bold tabular-nums text-red-700">
                 {{ number_format($totals['period_credit'], 0, ',', ' ') }}
             </p>
         </div>
-        <div class="bg-white rounded-xl border {{ $isBalanced ? 'border-gray-200' : 'border-red-200 bg-red-50' }} p-4 text-center">
+        <div class="bg-white rounded-[4px] border {{ $isBalanced ? 'border-gray-200' : 'border-red-200 bg-red-50' }} p-4 text-center">
             <p class="text-xs text-gray-500 mb-1">Équilibre soldes</p>
             @if($isBalanced)
             <span class="inline-flex items-center gap-1 text-sm font-bold text-green-600">
@@ -142,14 +142,14 @@
             </span>
             @endif
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
             <p class="text-xs text-gray-500 mb-1">Comptes affichés</p>
-            <p class="text-lg font-bold text-gray-700">{{ $accounts->count() }}</p>
+            <p class="text-[16px] font-bold text-gray-700">{{ $accounts->count() }}</p>
         </div>
     </div>
 
     {{-- Balance table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
                 <thead>

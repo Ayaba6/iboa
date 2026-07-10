@@ -122,7 +122,7 @@
             ['label' => 'Tx en attente',   'value' => $stats['pending_tx'],  'warn' => $stats['pending_tx'] > 0],
         ]; @endphp
         @foreach($statsKpis as $k)
-        <div class="bg-white rounded-xl border {{ ($k['warn'] ?? false) ? 'border-amber-200' : 'border-gray-200' }} p-4 text-center">
+        <div class="bg-white rounded-[4px] border {{ ($k['warn'] ?? false) ? 'border-amber-200' : 'border-gray-200' }} p-4 text-center">
             <p class="text-xs font-medium text-gray-500 uppercase">{{ $k['label'] }}</p>
             <p class="text-xl font-bold {{ ($k['warn'] ?? false) ? 'text-amber-700' : 'text-gray-900' }} mt-1">{{ $k['value'] }}</p>
         </div>
@@ -131,7 +131,7 @@
 
     {{-- ── Webhook URL ──────────────────────────────────────────────────────── --}}
     @if($integration->hasWebhook())
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4" x-data="{ copied: false }">
+    <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4" x-data="{ copied: false }">
         <p class="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-2">URL Webhook — à configurer chez le fournisseur</p>
         <div class="flex items-center gap-2">
             <code class="flex-1 text-xs font-mono bg-white border border-blue-200 rounded-lg px-3 py-2 text-blue-900 break-all">{{ $integration->webhookUrl() }}</code>
@@ -163,7 +163,7 @@
 
         {{-- Tab: Logs --}}
         <div x-show="tab === 'logs'" class="mt-4">
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
                 <div class="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-700">Historique des appels API</h2>
                     <span class="text-xs text-gray-400">{{ $stats['total_calls'] }} total · {{ $stats['failed_calls'] }} échecs</span>
@@ -173,7 +173,7 @@
                 @else
                 <div class="overflow-x-auto">
                     <table class="w-full text-xs" x-data="{ expanded: null }">
-                        <thead class="bg-gray-50 border-b border-gray-100">
+                        <thead class="bg-[#eef5f0] border-b border-gray-300">
                             <tr>
                                 <th class="px-4 py-2 text-left font-medium text-gray-500">Méthode</th>
                                 <th class="px-4 py-2 text-left font-medium text-gray-500">Endpoint</th>
@@ -236,7 +236,7 @@
 
         {{-- Tab: Transactions --}}
         <div x-show="tab === 'transactions'" class="mt-4" x-cloak>
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
                 <div class="px-5 py-3 bg-gray-50 border-b border-gray-200">
                     <h2 class="text-sm font-semibold text-gray-700">Transactions</h2>
                 </div>
@@ -244,7 +244,7 @@
                     <div class="p-10 text-center text-sm text-gray-400">Aucune transaction enregistrée</div>
                 @else
                 <table class="w-full text-xs">
-                    <thead class="bg-gray-50 border-b border-gray-100">
+                    <thead class="bg-[#eef5f0] border-b border-gray-300">
                         <tr>
                             <th class="px-4 py-2 text-left font-medium text-gray-500">Réf interne</th>
                             <th class="px-4 py-2 text-left font-medium text-gray-500">Facture</th>
@@ -263,7 +263,7 @@
                             <td class="px-4 py-2 font-mono text-[10px] text-gray-700">{{ $tx->internal_reference }}</td>
                             <td class="px-4 py-2">
                                 @if($tx->invoice)
-                                <a href="{{ route('ventes.factures.show', $tx->invoice) }}" class="text-indigo-600 hover:underline font-medium">{{ $tx->invoice->number }}</a>
+                                <a href="{{ route('ventes.factures.show', $tx->invoice) }}" class="text-emerald-700 hover:underline font-medium">{{ $tx->invoice->number }}</a>
                                 @else <span class="text-gray-400">—</span>
                                 @endif
                             </td>
@@ -299,7 +299,7 @@
 
         {{-- Tab: Config --}}
         <div x-show="tab === 'config'" class="mt-4" x-cloak>
-            <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+            <div class="bg-white rounded-[4px] border border-gray-300 p-6 space-y-4">
                 <div class="flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-700">Configuration</h2>
                     <a href="{{ route('integrations.edit', $integration) }}" class="text-xs text-blue-600 hover:underline">Modifier</a>

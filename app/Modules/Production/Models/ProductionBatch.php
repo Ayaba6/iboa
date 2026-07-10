@@ -22,7 +22,7 @@ class ProductionBatch extends Model
     public function productionOrder(): BelongsTo { return $this->belongsTo(ProductionOrder::class); }
     public function product(): BelongsTo { return $this->belongsTo(Product::class); }
 
-    public function statusLabel(): string { return $this->status === 'cloture' ? 'Clôturé' : 'En cours'; }
+    public function statusLabel(): string { return match($this->status) { 'cloture' => 'Clôturé', 'conforme' => 'Conforme', default => 'En cours' }; }
 
     protected static function newFactory() { return \Database\Factories\ProductionBatchFactory::new(); }
 }

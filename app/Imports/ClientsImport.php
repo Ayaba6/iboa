@@ -4,7 +4,6 @@ namespace App\Imports;
 
 use App\Models\Client;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\SkipsOnError;
@@ -21,8 +20,6 @@ class ClientsImport implements ToCollection, WithHeadingRow, SkipsOnError
 
     public function collection(Collection $rows): void
     {
-        $companyId = Auth::user()->company_id ?? 1;
-
         foreach ($rows as $row) {
             $name = trim($row['nom'] ?? '');
 
@@ -31,8 +28,9 @@ class ClientsImport implements ToCollection, WithHeadingRow, SkipsOnError
                 continue;
             }
 
+            // Clients globaux (pas de colonne company_id ; le scope société gère le filtrage).
             Client::updateOrCreate(
-                ['code' => trim($row['code'] ?? ''), 'company_id' => $companyId],
+                ['code' => trim($row['code'] ?? '')],
                 [
                     'name'      => $name,
                     'email'     => trim($row['email']     ?? '') ?: null,

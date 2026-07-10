@@ -12,25 +12,25 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-6" x-data="transferForm()" x-init="init()">
+<div class="max-w-5xl mx-auto space-y-3" x-data="transferForm()" x-init="init()">
 
-    <h1 class="text-2xl font-bold text-gray-900">Modifier le transfert <span class="font-mono text-blue-700">{{ $transfer->number }}</span></h1>
+    <h1 class="text-[16px] font-bold text-gray-900">Modifier le transfert <span class="font-mono text-blue-700">{{ $transfer->number }}</span></h1>
 
     @if($errors->any())
-    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-[4px] px-3 py-1.5 text-sm">
         <ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
     </div>
     @endif
 
-    <form action="{{ route('stocks.transfers.update', $transfer) }}" method="POST" class="space-y-5">
+    <form action="{{ route('stocks.transfers.update', $transfer) }}" method="POST" class="space-y-3">
         @csrf @method('PUT')
 
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
             <h2 class="text-base font-semibold text-gray-800 mb-4">En-tête</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Dépôt source <span class="text-red-500">*</span></label>
-                    <select name="from_warehouse_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <select name="from_warehouse_id" required class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                         @foreach($warehouses as $w)
                         <option value="{{ $w->id }}" {{ old('from_warehouse_id', $transfer->from_warehouse_id)==$w->id?'selected':'' }}>{{ $w->name }}</option>
                         @endforeach
@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Dépôt destination <span class="text-red-500">*</span></label>
-                    <select name="to_warehouse_id" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <select name="to_warehouse_id" required class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                         @foreach($warehouses as $w)
                         <option value="{{ $w->id }}" {{ old('to_warehouse_id', $transfer->to_warehouse_id)==$w->id?'selected':'' }}>{{ $w->name }}</option>
                         @endforeach
@@ -46,16 +46,16 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">Date prévue <span class="text-red-500">*</span></label>
-                    <input type="date" name="transfer_date" required value="{{ old('transfer_date', $transfer->transfer_date?->format('Y-m-d')) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <input type="date" name="transfer_date" required value="{{ old('transfer_date', $transfer->transfer_date?->format('Y-m-d')) }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                 </div>
                 <div class="md:col-span-3">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Motif (optionnel)</label>
-                    <input type="text" name="reason" maxlength="255" value="{{ old('reason', $transfer->reason) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <input type="text" name="reason" maxlength="255" value="{{ old('reason', $transfer->reason) }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-base font-semibold text-gray-800">Articles à transférer</h2>
                 <button type="button" @click="addItem()" class="text-sm text-blue-600 hover:text-blue-700 font-medium">+ Ajouter</button>
@@ -90,8 +90,8 @@
         </div>
 
         <div class="flex justify-end gap-3">
-            <a href="{{ route('stocks.transfers.show', $transfer) }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg">Annuler</a>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg">Enregistrer</button>
+            <a href="{{ route('stocks.transfers.show', $transfer) }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px]">Annuler</a>
+            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-6 py-1.5 rounded-[4px]">Enregistrer</button>
         </div>
     </form>
 </div>
@@ -100,7 +100,7 @@
 <script>
 function transferForm() {
     return {
-        items: @json($transfer->items->map(fn($i)=>['product_id'=>$i->product_id,'quantity'=>(float)$i->quantity,'lot'=>$i->lot_number,'expiry'=>$i->expiry_date?->format('Y-m-d')])),
+        items: {{ \Illuminate\Support\Js::from($transfer->items->map(fn($i)=>['product_id'=>$i->product_id,'quantity'=>(float)$i->quantity,'lot'=>$i->lot_number,'expiry'=>$i->expiry_date?->format('Y-m-d')])) }},
         nextId: 0,
         init() { this.items = this.items.map(i => ({ id: this.nextId++, ...i })); while (this.items.length < 1) this.addItem(); },
         addItem() { this.items.push({ id: this.nextId++, product_id: '', quantity: 1, lot: '', expiry: '' }); },

@@ -35,18 +35,18 @@
         'unit_cost'            => (float) $i->unit_cost,
         'notes'                => $i->notes ?? '',
     ])->values()->toJson() }})"
-    class="space-y-5">
+    class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $session->number ?? '#'.$session->id }}</h1>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusConfig['class'] }}">
+                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $session->number ?? '#'.$session->id }}</h1>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $statusConfig['class'] }}">
                     {{ $statusConfig['label'] }}
                 </span>
                 @if($session->type)
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium bg-emerald-100 text-emerald-800">
                     {{ $session->typeLabel() }}
                 </span>
                 @endif
@@ -82,7 +82,7 @@
             {{-- Export dropdown --}}
             <div class="relative" x-data="{ open: false }" @keydown.escape="open = false" @click.outside="open = false">
                 <button type="button" @click="open = !open"
-                        class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+                        class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -94,11 +94,11 @@
                 </button>
 
                 <div x-show="open" x-transition
-                     class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1">
+                     class="absolute right-0 mt-1 w-44 bg-white border border-gray-300 rounded-[4px] shadow-lg z-20 py-1">
 
                     {{-- Excel --}}
                     <a href="{{ route('stocks.inventaires.export-excel', $session) }}"
-                       class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
+                       class="flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                         <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
@@ -108,7 +108,7 @@
 
                     {{-- PDF --}}
                     <a href="{{ route('stocks.inventaires.export-pdf', $session) }}"
-                       class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 transition-colors">
+                       class="flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 transition-colors">
                         <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
@@ -120,7 +120,7 @@
 
             @if($isEditable)
             <button type="button" @click="submitCount()"
-                    class="border border-teal-600 text-teal-700 hover:bg-teal-50 text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+                    class="border border-emerald-600 text-emerald-800 hover:bg-emerald-50 text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                 </svg>
@@ -133,7 +133,7 @@
                   onsubmit="return confirm('Valider définitivement cet inventaire ? Le stock sera mis à jour avec les quantités comptées.')">
                 @csrf
                 <button type="submit"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -146,21 +146,21 @@
 
     {{-- Summary bar --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <p class="text-2xl font-bold text-gray-900" x-text="totalItems"></p>
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+            <p class="text-[16px] font-bold text-gray-900" x-text="totalItems"></p>
             <p class="text-xs text-gray-500 mt-0.5">Articles total</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <p class="text-2xl font-bold text-teal-600" x-text="countedItems"></p>
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+            <p class="text-[16px] font-bold text-emerald-700" x-text="countedItems"></p>
             <p class="text-xs text-gray-500 mt-0.5">Articles comptés</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <p class="text-2xl font-bold text-emerald-600"
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+            <p class="text-[16px] font-bold text-emerald-600"
                x-text="'+' + positiveVariance.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></p>
             <p class="text-xs text-gray-500 mt-0.5">Écart positif total</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
-            <p class="text-2xl font-bold text-red-600"
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4 text-center">
+            <p class="text-[16px] font-bold text-red-600"
                x-text="negativeVariance.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></p>
             <p class="text-xs text-gray-500 mt-0.5">Écart négatif total</p>
         </div>
@@ -183,46 +183,46 @@
 
     {{-- Progress bar --}}
     @if($isEditable)
-    <div class="bg-white rounded-xl border border-gray-200 p-3">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-3">
         <div class="flex items-center justify-between text-xs text-gray-500 mb-1.5">
             <span>Progression du comptage</span>
             <span x-text="`${countedItems} / ${totalItems} articles`"></span>
         </div>
         <div class="w-full bg-gray-100 rounded-full h-2">
-            <div class="bg-teal-500 h-2 rounded-full transition-all duration-300"
+            <div class="bg-emerald-600 h-2 rounded-full transition-all duration-300"
                  :style="`width: ${totalItems > 0 ? Math.round((countedItems / totalItems) * 100) : 0}%`"></div>
         </div>
     </div>
     @endif
 
     {{-- Counting table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50 sticky top-0 z-10">
+                <thead class="bg-[#eef5f0] border-b border-gray-300 sticky top-0 z-10">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Produit</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Référence</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock théorique</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">Qté comptée</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Écart</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Valeur écart</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Notes</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Produit</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Référence</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Stock théorique</th>
+                        <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-40">Qté comptée</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Écart</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Valeur écart</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden xl:table-cell">Notes</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     <template x-for="(item, index) in items" :key="item.id">
                         <tr :class="rowClass(item)" class="transition-colors">
-                            <td class="px-4 py-3">
+                            <td class="px-3 py-1.5">
                                 <span class="font-medium text-gray-900" x-text="item.product_name"></span>
                             </td>
-                            <td class="px-4 py-3 hidden md:table-cell">
+                            <td class="px-3 py-1.5 hidden md:table-cell">
                                 <span class="font-mono text-xs text-gray-500" x-text="item.product_reference || '—'"></span>
                             </td>
-                            <td class="px-4 py-3 text-right tabular-nums text-gray-600">
+                            <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">
                                 <span x-text="formatQty(item.theoretical_quantity)"></span>
                             </td>
-                            <td class="px-4 py-3 text-center">
+                            <td class="px-3 py-1.5 text-center">
                                 @if($isEditable)
                                 <input
                                     type="number"
@@ -232,28 +232,28 @@
                                     min="0"
                                     step="0.01"
                                     :placeholder="formatQty(item.theoretical_quantity)"
-                                    class="w-32 border border-gray-300 rounded-lg px-2 py-1 text-sm text-center focus:ring-2 focus:ring-teal-500 focus:border-teal-500 tabular-nums">
+                                    class="w-32 border border-gray-300 rounded-[4px] px-2 py-1 text-sm text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 tabular-nums">
                                 @else
                                 <span class="tabular-nums"
                                       :class="item.counted_quantity !== null ? 'text-gray-900' : 'text-gray-400'"
                                       x-text="item.counted_quantity !== null ? formatQty(item.counted_quantity) : '—'"></span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-right tabular-nums">
+                            <td class="px-3 py-1.5 text-right tabular-nums">
                                 <span :class="varianceClass(item)"
                                       x-text="varianceText(item)"></span>
                             </td>
-                            <td class="px-4 py-3 text-right tabular-nums hidden lg:table-cell">
+                            <td class="px-3 py-1.5 text-right tabular-nums hidden lg:table-cell">
                                 <span :class="item.counted_quantity !== null && varianceVal(item) !== 0 ? (varianceVal(item) > 0 ? 'text-emerald-600' : 'text-red-600') : 'text-gray-400'"
                                       x-text="item.counted_quantity !== null ? (varianceVal(item) !== 0 ? Math.abs(varianceVal(item)).toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' FCFA' : '—') : '—'"></span>
                             </td>
-                            <td class="px-4 py-3 hidden xl:table-cell">
+                            <td class="px-3 py-1.5 hidden xl:table-cell">
                                 @if($isEditable)
                                 <input
                                     type="text"
                                     x-model="item.notes"
                                     maxlength="200"
-                                    class="w-full border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                                    class="w-full border border-gray-300 rounded-[4px] px-2 py-1 text-xs focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                                     placeholder="Note...">
                                 @else
                                 <span class="text-xs text-gray-500 italic" x-text="item.notes || '—'"></span>
@@ -279,7 +279,7 @@
                 <span x-text="countedItems"></span> / <span x-text="totalItems"></span> articles comptés
             </p>
             <button type="button" @click="submitCount()"
-                    class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2">
+                    class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-6 py-1.5 rounded-[4px] transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                 </svg>

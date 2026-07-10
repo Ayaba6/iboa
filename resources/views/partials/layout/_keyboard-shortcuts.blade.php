@@ -15,7 +15,7 @@
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"></div>
 
-    <div class="relative bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden"
+    <div class="relative bg-white rounded-[4px] shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">

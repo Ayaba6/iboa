@@ -11,11 +11,11 @@
 
 @section('content')
 <div class="space-y-1 mb-5">
-    <h1 class="text-2xl font-bold text-gray-900">Nouvel utilisateur</h1>
+    <h1 class="text-[16px] font-bold text-gray-900">Nouvel utilisateur</h1>
 </div>
 
 @if($errors->any())
-<div class="mb-4 bg-red-50 border border-red-200 rounded-xl p-4">
+<div class="mb-4 bg-red-50 border border-red-200 rounded-[4px] p-4">
     <ul class="text-sm text-red-700 space-y-1 list-disc list-inside">
         @foreach($errors->all() as $error)
             <li>{{ $error }}</li>
@@ -30,11 +30,11 @@
 
     <div class="mt-4 flex items-center justify-end gap-3">
         <a href="{{ route('users.index') }}"
-           class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+           class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
             Annuler
         </a>
         <button type="submit"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
             Créer l'utilisateur
         </button>
     </div>

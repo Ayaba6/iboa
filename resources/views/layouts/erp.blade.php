@@ -38,7 +38,7 @@
         {{-- ── Bannière de validation — affichée si le formulaire est resoumis avec erreurs ── --}}
         @if($errors->any())
         <div id="erp-validation-errors"
-             class="mx-4 lg:mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 text-sm shadow-sm animate-fade-in-down"
+             class="mx-4 lg:mx-6 mt-4 rounded-[4px] border border-red-200 bg-red-50 text-sm shadow-sm animate-fade-in-down"
              role="alert" aria-live="polite">
             <div class="flex items-start gap-3 p-4">
                 {{-- Icône --}}
@@ -114,7 +114,7 @@
 <x-confirm-modal />
 
 {{-- Command Palette (Ctrl+K / Cmd+K) --}}
-@include('partials.layout._command-palette')
+{{-- [SAGE X3] palette remplacée par la recherche du header (Ctrl+K focus la barre) --}}
 
 {{-- Keyboard Shortcuts Help (?) --}}
 @include('partials.layout._keyboard-shortcuts')

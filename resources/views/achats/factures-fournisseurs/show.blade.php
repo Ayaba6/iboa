@@ -10,33 +10,33 @@
 @endsection
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-3">
 
     {{-- ================================================================
          Header
     ================================================================ --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $invoice->number }}</h1>
+                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $invoice->number }}</h1>
                 @switch($invoice->status)
                     @case('recue')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">Reçue</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-semibold bg-gray-100 text-gray-700">Reçue</span>
                         @break
                     @case('validee')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Validée</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-semibold bg-blue-100 text-blue-700">Validée</span>
                         @break
                     @case('en_litige')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">En litige</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-semibold bg-yellow-100 text-yellow-700">En litige</span>
                         @break
                     @case('partiellement_payee')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Partiellement payée</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-semibold bg-amber-100 text-amber-700">Partiellement payée</span>
                         @break
                     @case('payee')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Payée</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-semibold bg-green-100 text-green-700">Payée</span>
                         @break
                     @case('annulee')
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Annulée</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-[3px] text-[11px] font-semibold bg-red-100 text-red-700">Annulée</span>
                         @break
                 @endswitch
                 @if($invoice->due_at && $invoice->due_at->isPast() && !in_array($invoice->status, ['payee', 'annulee']))
@@ -66,7 +66,7 @@
                 @endphp
                 @if($canPay)
                 <button type="button" @click="payModal = true"
-                        class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                        class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-[4px] text-sm font-medium hover:bg-green-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
@@ -75,7 +75,7 @@
                 @else
                 <button type="button" disabled aria-disabled="true"
                         title="{{ $payDisabledReason }}"
-                        class="inline-flex items-center gap-2 px-3 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed opacity-70 select-none">
+                        class="inline-flex items-center gap-2 px-3 py-2 bg-gray-300 text-gray-500 rounded-[4px] text-sm font-medium cursor-not-allowed opacity-70 select-none">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/>
                     </svg>
@@ -89,7 +89,7 @@
                 <div x-show="payModal" x-cloak
                      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div @click.outside="payModal = false"
-                         class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+                         class="bg-white rounded-[4px] shadow-xl w-full max-w-md p-6 space-y-4">
                         <h3 class="text-lg font-semibold text-gray-900">Enregistrer un paiement</h3>
                         <p class="text-sm text-gray-500">
                             Reste à payer :
@@ -101,16 +101,16 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Montant <span class="text-red-500">*</span></label>
                                 <input type="number" name="amount" min="1" max="{{ $invoice->remaining_amount }}"
                                        value="{{ $invoice->remaining_amount }}" required
-                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                       class="w-full rounded-[4px] border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Date de paiement <span class="text-red-500">*</span></label>
                                 <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" required
-                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                       class="w-full rounded-[4px] border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Mode de paiement</label>
-                                <select name="payment_method_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                <select name="payment_method_id" class="w-full rounded-[4px] border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                                     <option value="">— Sélectionner —</option>
                                     @foreach($paymentMethods as $pm)
                                     <option value="{{ $pm->id }}">{{ $pm->name }}</option>
@@ -120,7 +120,7 @@
                             @if($cashAccounts->isNotEmpty())
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Compte de trésorerie</label>
-                                <select name="cash_account_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                <select name="cash_account_id" class="w-full rounded-[4px] border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                                     <option value="">— Sélectionner —</option>
                                     @foreach($cashAccounts as $ca)
                                     <option value="{{ $ca->id }}">{{ $ca->name }}</option>
@@ -131,15 +131,15 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Référence</label>
                                 <input type="text" name="reference" placeholder="N° chèque, virement..."
-                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                       class="w-full rounded-[4px] border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                             </div>
                             <div class="flex justify-end gap-3 pt-2">
                                 <button type="button" @click="payModal = false"
-                                        class="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
+                                        class="px-3 py-1.5 rounded-[4px] border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
                                     Annuler
                                 </button>
                                 <button type="submit"
-                                        class="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">
+                                        class="px-3 py-1.5 rounded-[4px] bg-green-600 text-white text-sm font-medium hover:bg-green-700">
                                     Enregistrer
                                 </button>
                             </div>
@@ -154,7 +154,7 @@
                       onsubmit="return confirm('Valider cette facture fournisseur ?')">
                     @csrf
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                            class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
@@ -166,7 +166,7 @@
                 {{-- Modifier (recue seulement) --}}
                 @if(in_array($invoice->status, ['recue', 'brouillon']))
                 <a href="{{ route('achats.factures-fournisseurs.edit', $invoice) }}"
-                   class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+                   class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
@@ -180,7 +180,7 @@
                       onsubmit="return confirm('Supprimer définitivement cette facture fournisseur ?')">
                     @csrf @method('DELETE')
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+                            class="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-[4px] text-sm font-medium hover:bg-red-700 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -190,7 +190,7 @@
                 @endif
 
                 <a href="{{ route('achats.factures-fournisseurs.index') }}"
-                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
@@ -206,7 +206,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {{-- Left: Info card --}}
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
             <h2 class="text-base font-semibold text-gray-900">Informations</h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
@@ -264,7 +264,7 @@
         </div>
 
         {{-- Right: Totals card --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3 h-fit">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-3 h-fit">
             <h2 class="text-base font-semibold text-gray-900">Récapitulatif</h2>
             <div class="flex justify-between text-sm text-gray-600">
                 <span>Sous-total HT</span>
@@ -296,38 +296,38 @@
     {{-- ================================================================
          Items table
     ================================================================ --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200">
             <h2 class="text-base font-semibold text-gray-900">Lignes de la facture</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Qté</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Prix Unit.</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">TVA%</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total HT</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total TTC</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">#</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Description</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Qté</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Prix Unit.</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">TVA%</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total HT</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total TTC</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($invoice->items as $item)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-gray-400 text-xs">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-3 text-gray-900">
+                        <td class="px-3 py-1.5 text-gray-400 text-xs">{{ $loop->iteration }}</td>
+                        <td class="px-3 py-1.5 text-gray-900">
                             {{ $item->description }}
                             @if($item->product)
                             <p class="text-xs text-gray-400">{{ $item->product->reference }}</p>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-gray-900 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-900 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
                     </tr>
                     @empty
                     <tr>
@@ -343,28 +343,28 @@
          Payments
     ================================================================ --}}
     @if($invoice->payments && $invoice->payments->count())
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 class="text-base font-semibold text-gray-900">Paiements</h2>
             <span class="text-sm text-gray-500">{{ $invoice->payments->count() }} paiement(s)</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Mode</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Référence</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Montant</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Date</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Mode</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Référence</th>
+                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Montant</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($invoice->payments as $payment)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-gray-600">{{ $payment->payment_date?->format('d/m/Y') ?? '—' }}</td>
-                        <td class="px-4 py-3 text-gray-700 capitalize">{{ $payment->paymentMethod?->name ?? '—' }}</td>
-                        <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $payment->reference ?? '—' }}</td>
-                        <td class="px-4 py-3 text-right font-semibold tabular-nums text-green-700">{{ number_format($payment->amount, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-gray-600">{{ $payment->payment_date?->format('d/m/Y') ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-gray-700 capitalize">{{ $payment->paymentMethod?->name ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-gray-600 font-mono text-xs">{{ $payment->reference ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-right font-semibold tabular-nums text-green-700">{{ number_format($payment->amount, 0, ',', ' ') }} FCFA</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -374,7 +374,7 @@
     @endif
 
     {{-- Pièces jointes --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <x-attachments.manager model="SupplierInvoice" :id="$invoice->id" />
     </div>
 

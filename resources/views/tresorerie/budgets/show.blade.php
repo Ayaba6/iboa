@@ -14,40 +14,40 @@
     $mois = [1=>'Jan',2=>'Fév',3=>'Mar',4=>'Avr',5=>'Mai',6=>'Jun',7=>'Jul',8=>'Aoû',9=>'Sep',10=>'Oct',11=>'Nov',12=>'Déc'];
     $t = $comparison['totals'];
 @endphp
-<div class="space-y-5">
+<div class="space-y-3">
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-xl font-bold text-gray-900">{{ $budget->name }}</h1>
+            <h1 class="text-[17px] font-bold text-gray-900">{{ $budget->name }}</h1>
             <p class="text-sm text-gray-500">Exercice {{ $budget->year }}</p>
         </div>
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $budget->status === 'valide' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ ucfirst($budget->status) }}</span>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $budget->status === 'valide' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ ucfirst($budget->status) }}</span>
     </div>
 
     {{-- KPIs annuels --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-emerald-600 uppercase">Entrées prévues</p>
-            <p class="mt-1 text-lg font-bold tabular-nums text-emerald-700">{{ number_format($t['plan_in'], 0, ',', ' ') }}</p>
+            <p class="mt-1 text-[16px] font-bold tabular-nums text-emerald-700">{{ number_format($t['plan_in'], 0, ',', ' ') }}</p>
             <p class="text-xs text-gray-400">réalisé {{ number_format($t['real_in'], 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-red-600 uppercase">Sorties prévues</p>
-            <p class="mt-1 text-lg font-bold tabular-nums text-red-700">{{ number_format($t['plan_out'], 0, ',', ' ') }}</p>
+            <p class="mt-1 text-[16px] font-bold tabular-nums text-red-700">{{ number_format($t['plan_out'], 0, ',', ' ') }}</p>
             <p class="text-xs text-gray-400">réalisé {{ number_format($t['real_out'], 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-xl border-2 border-indigo-200 p-4">
-            <p class="text-xs text-indigo-600 uppercase">Solde net prévu</p>
-            <p class="mt-1 text-lg font-bold tabular-nums text-indigo-700">{{ number_format($t['plan_in'] - $t['plan_out'], 0, ',', ' ') }}</p>
+        <div class="bg-white rounded-[4px] border-2 border-emerald-200 p-4">
+            <p class="text-xs text-emerald-700 uppercase">Solde net prévu</p>
+            <p class="mt-1 text-[16px] font-bold tabular-nums text-emerald-800">{{ number_format($t['plan_in'] - $t['plan_out'], 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-xl border-2 border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border-2 border-gray-200 p-4">
             <p class="text-xs text-gray-600 uppercase">Solde net réalisé</p>
-            <p class="mt-1 text-lg font-bold tabular-nums {{ ($t['real_in']-$t['real_out']) < 0 ? 'text-red-700' : 'text-gray-900' }}">{{ number_format($t['real_in'] - $t['real_out'], 0, ',', ' ') }}</p>
+            <p class="mt-1 text-[16px] font-bold tabular-nums {{ ($t['real_in']-$t['real_out']) < 0 ? 'text-red-700' : 'text-gray-900' }}">{{ number_format($t['real_in'] - $t['real_out'], 0, ',', ' ') }}</p>
         </div>
     </div>
 
     {{-- Budget vs Réalisé mensuel --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100"><h2 class="text-sm font-semibold text-gray-700">Budget vs Réalisé — {{ $budget->year }}</h2></div>
         <div class="tbl-scroll">
             <table class="tbl w-full">
@@ -79,16 +79,16 @@
                     @endif
                     @endforeach
                 </tbody>
-                <tfoot class="bg-indigo-50 font-bold">
+                <tfoot class="bg-[#eef5f0] font-bold">
                     <tr>
-                        <td class="text-indigo-800 uppercase text-xs">Total</td>
+                        <td class="text-emerald-900 uppercase text-xs">Total</td>
                         <td class="text-right font-mono text-gray-600">{{ number_format($t['plan_in'],0,',',' ') }}</td>
                         <td class="text-right font-mono text-emerald-800">{{ number_format($t['real_in'],0,',',' ') }}</td>
                         <td class="text-right font-mono {{ ($t['real_in']-$t['plan_in'])>=0?'text-emerald-700':'text-red-700' }}">{{ ($t['real_in']-$t['plan_in']>0?'+':'').number_format($t['real_in']-$t['plan_in'],0,',',' ') }}</td>
                         <td class="text-right font-mono text-gray-600">{{ number_format($t['plan_out'],0,',',' ') }}</td>
                         <td class="text-right font-mono text-red-700">{{ number_format($t['real_out'],0,',',' ') }}</td>
                         <td class="text-right font-mono {{ ($t['real_out']-$t['plan_out'])<=0?'text-emerald-700':'text-red-700' }}">{{ ($t['real_out']-$t['plan_out']>0?'+':'').number_format($t['real_out']-$t['plan_out'],0,',',' ') }}</td>
-                        <td class="text-right font-mono text-indigo-900">{{ number_format($t['real_in']-$t['real_out'],0,',',' ') }}</td>
+                        <td class="text-right font-mono text-emerald-900">{{ number_format($t['real_in']-$t['real_out'],0,',',' ') }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -97,7 +97,7 @@
 
     {{-- Détail catégories budget --}}
     @if($byCategory->isNotEmpty())
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-4">
         <h2 class="text-sm font-semibold text-gray-700 mb-3">Détail prévisionnel par catégorie</h2>
         <div class="space-y-1.5">
             @foreach($byCategory as $cat => $lines)

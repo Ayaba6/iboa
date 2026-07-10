@@ -10,16 +10,16 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Livre journal</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Livre journal</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $entries->total() }} écriture(s) validée(s)</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('comptabilite.journaux.export-pdf', request()->query()) }}"
-               class="inline-flex items-center gap-1.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+               class="inline-flex items-center gap-1.5 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                 </svg>
@@ -29,11 +29,11 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, libellé..."
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
-            <select name="journal_type_id" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
+            <select name="journal_type_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                 <option value="">Tous les journaux</option>
                 @foreach($journalTypes as $jt)
                 <option value="{{ $jt->id }}" {{ ($filters['journal_type_id'] ?? '') == $jt->id ? 'selected' : '' }}>
@@ -42,11 +42,11 @@
                 @endforeach
             </select>
             <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
             <div class="flex gap-2">
                 <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}"
-                       class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
-                <button type="submit" class="bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-lg">
+                       class="flex-1 border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
+                <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white px-2.5 py-1.5 rounded-[4px]">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
@@ -56,7 +56,7 @@
     </form>
 
     @forelse($entries as $entry)
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         {{-- Entry header --}}
         <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-3">
@@ -84,7 +84,7 @@
             <tbody class="divide-y divide-gray-50">
                 @foreach($entry->lines as $line)
                 <tr class="{{ $line->debit > 0 ? '' : 'bg-gray-50/40' }}">
-                    <td class="px-4 py-2 w-full">
+                    <td class="px-3 py-1.5 w-full">
                         @if($line->debit > 0)
                             <span class="font-mono text-violet-600 font-semibold text-xs">{{ $line->account?->code }}</span>
                             <span class="text-gray-700 ml-2 text-xs">{{ $line->account?->name }}</span>
@@ -96,10 +96,10 @@
                             <span class="text-gray-400 text-xs ml-2">— {{ $line->label }}</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2 text-right tabular-nums text-xs font-semibold whitespace-nowrap {{ $line->debit > 0 ? 'text-gray-900' : 'text-gray-300' }}">
+                    <td class="px-3 py-1.5 text-right tabular-nums text-xs font-semibold whitespace-nowrap {{ $line->debit > 0 ? 'text-gray-900' : 'text-gray-300' }}">
                         {{ $line->debit > 0 ? number_format($line->debit, 0, ',', ' ') : '' }}
                     </td>
-                    <td class="px-4 py-2 text-right tabular-nums text-xs font-semibold whitespace-nowrap {{ $line->credit > 0 ? 'text-gray-900' : 'text-gray-300' }}">
+                    <td class="px-3 py-1.5 text-right tabular-nums text-xs font-semibold whitespace-nowrap {{ $line->credit > 0 ? 'text-gray-900' : 'text-gray-300' }}">
                         {{ $line->credit > 0 ? number_format($line->credit, 0, ',', ' ') : '' }}
                     </td>
                 </tr>
@@ -107,11 +107,11 @@
             </tbody>
             <tfoot class="border-t border-gray-200 bg-gray-50">
                 <tr>
-                    <td class="px-4 py-2 text-xs font-bold text-gray-400 uppercase w-full">Totaux</td>
-                    <td class="px-4 py-2 text-right tabular-nums font-bold text-gray-800 text-xs whitespace-nowrap">
+                    <td class="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase w-full">Totaux</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums font-bold text-gray-800 text-xs whitespace-nowrap">
                         {{ number_format($entry->total_debit, 0, ',', ' ') }}
                     </td>
-                    <td class="px-4 py-2 text-right tabular-nums font-bold text-gray-800 text-xs whitespace-nowrap">
+                    <td class="px-3 py-1.5 text-right tabular-nums font-bold text-gray-800 text-xs whitespace-nowrap">
                         {{ number_format($entry->total_credit, 0, ',', ' ') }}
                     </td>
                 </tr>
@@ -119,7 +119,7 @@
         </table>
     </div>
     @empty
-    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-12 text-center">
         <p class="text-gray-500">Aucune écriture validée pour cette période</p>
     </div>
     @endforelse
@@ -128,7 +128,7 @@
 
     {{-- Page totals --}}
     @if($entries->count() > 0)
-    <div class="bg-indigo-700 text-white rounded-xl px-5 py-3 flex justify-between items-center font-bold">
+    <div style="background:#065f46" class="text-white rounded-[4px] px-5 py-3 flex justify-between items-center font-bold">
         <span class="text-sm">TOTAUX PAGE ({{ $entries->count() }} écritures)</span>
         <div class="flex gap-8 text-sm">
             <span>Débit : {{ number_format($totalDebit, 0, ',', ' ') }} FCFA</span>

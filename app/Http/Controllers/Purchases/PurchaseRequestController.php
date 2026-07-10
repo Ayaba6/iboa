@@ -35,19 +35,39 @@ class PurchaseRequestController extends Controller
 
     public function create(): View
     {
-        $products = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
-        $units    = Unit::orderBy('name')->get(['id', 'name', 'abbreviation']);
+        $products   = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
+        $units      = Unit::orderBy('name')->get(['id', 'name', 'abbreviation']);
+        $warehouses = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']);
 
-        return view('achats.demandes-achat.create', compact('products', 'units'));
+        return view('achats.demandes-achat.create', compact('products', 'units', 'warehouses'));
     }
 
     public function store(StorePurchaseRequestRequest $request): RedirectResponse
     {
-        $pr = $this->service->create($request->validated());
+        $data = $request->validated();
+        unset($data['documents']);
+        $pr = $this->service->create($data);
+        $this->uploadDocuments($pr, $request);
 
         return redirect()
             ->route('achats.demandes-achat.show', $pr)
             ->with('success', 'Demande d\'achat ' . $pr->number . ' créée.');
+    }
+
+    /** Enregistre les pièces jointes de la demande d'achat. */
+    private function uploadDocuments(PurchaseRequest $pr, \Illuminate\Http\Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/purchase_request/'.$pr->id, 'local');
+            $pr->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(PurchaseRequest $demandesAchat): View
@@ -65,16 +85,21 @@ class PurchaseRequestController extends Controller
         }
 
         $pr       = $this->service->repository->findWithDetails($demandesAchat->id);
-        $products = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
-        $units    = Unit::orderBy('name')->get(['id', 'name', 'abbreviation']);
+        $pr->load('attachments');
+        $products   = Product::active()->orderBy('name')->get(['id', 'name', 'reference', 'purchase_price']);
+        $units      = Unit::orderBy('name')->get(['id', 'name', 'abbreviation']);
+        $warehouses = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']);
 
-        return view('achats.demandes-achat.edit', compact('pr', 'products', 'units'));
+        return view('achats.demandes-achat.edit', compact('pr', 'products', 'units', 'warehouses'));
     }
 
     public function update(UpdatePurchaseRequestRequest $request, PurchaseRequest $demandesAchat): RedirectResponse
     {
         try {
-            $this->service->update($demandesAchat, $request->validated());
+            $data = $request->validated();
+            unset($data['documents']);
+            $this->service->update($demandesAchat, $data);
+            $this->uploadDocuments($demandesAchat, $request);
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }

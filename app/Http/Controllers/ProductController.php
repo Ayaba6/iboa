@@ -39,6 +39,7 @@ class ProductController extends Controller
 
         $products  = $this->repository->search($request->all(), 20);
         $families  = ProductFamily::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $familiesFlat = ProductFamily::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']);
         $brands    = Brand::where('is_active', true)->orderBy('name')->get();
 
         $summary = [
@@ -48,7 +49,7 @@ class ProductController extends Controller
             'purchasable'=> Product::where('is_active', true)->where('is_purchasable', true)->count(),
         ];
 
-        return view('products.index', compact('products', 'families', 'brands', 'summary'));
+        return view('products.index', compact('products', 'families', 'familiesFlat', 'brands', 'summary'));
     }
 
     public function create(): View
@@ -56,16 +57,71 @@ class ProductController extends Controller
         $this->authorize('create', Product::class);
         [$families, $brands, $units, $taxRates, $suppliers, $accounts, $componentProducts] =
             $this->loadFormReferenceData();
-        return view('products.create', compact(
-            'families', 'brands', 'units', 'taxRates', 'suppliers', 'accounts', 'componentProducts'
-        ));
+        $warehouses        = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_production', 'can_sale', 'can_purchase', 'can_stock']);
+        $familiesFlat      = ProductFamily::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']);
+        $typeArticleOptions = Product::typeArticleOptions();
+        return view('products.create', array_merge(compact(
+            'families', 'brands', 'units', 'taxRates', 'suppliers', 'accounts', 'componentProducts',
+            'warehouses', 'familiesFlat', 'typeArticleOptions'
+        ), $this->sageReferenceData()));
     }
 
     public function store(StoreProductRequest $request): RedirectResponse
     {
         $this->authorize('create', Product::class);
-        $product = $this->service->create($request->validated(), $request->file('image'));
+        $data = $request->validated();
+        unset($data['depots'], $data['documents']);
+
+        $product = $this->service->create($data, $request->file('image'));
+        $this->syncDepots($product, $request);
+        $this->uploadDocuments($product, $request);
+
         return redirect()->route('products.show', $product)->with('success', 'Article créé avec succès.');
+    }
+
+    /** Données de référence SAGE partagées create/edit (centres de coût, machines, articles liés). */
+    private function sageReferenceData(): array
+    {
+        return [
+            'costCenters' => \App\Models\CostCenter::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
+            'machines'    => \App\Modules\Production\Models\ProductionMachine::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+            'linkables'   => Product::where('is_active', true)->orderBy('name')->get(['id', 'code_article', 'name']),
+            // [SAGE parité] Panneau gauche « sélection » : derniers articles.
+            'selectorProducts' => Product::with('family:id,code,name')
+                ->orderByDesc('id')->limit(20)
+                ->get(['id', 'code_article', 'reference', 'name', 'family_id']),
+        ];
+    }
+
+    /** Synchronise le pivot des dépôts autorisés (4 capacités par dépôt). */
+    private function syncDepots(Product $product, Request $request): void
+    {
+        $sync = [];
+        foreach ((array) $request->input('depots', []) as $warehouseId => $caps) {
+            $sync[(int) $warehouseId] = [
+                'can_production' => ! empty($caps['can_production']),
+                'can_sale'       => ! empty($caps['can_sale']),
+                'can_purchase'   => ! empty($caps['can_purchase']),
+                'can_stock'      => ! empty($caps['can_stock']),
+            ];
+        }
+        $product->warehouses()->sync($sync);
+    }
+
+    /** Enregistre les pièces jointes (documents) de l'article. */
+    private function uploadDocuments(Product $product, Request $request): void
+    {
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/product/'.$product->id, 'local');
+            $product->attachments()->create([
+                'disk'        => 'local',
+                'path'        => $path,
+                'filename'    => $file->getClientOriginalName(),
+                'mime_type'   => $file->getMimeType(),
+                'size'        => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     public function show(Product $product): View
@@ -93,11 +149,16 @@ class ProductController extends Controller
     {
         $this->authorize('update', $product);
         $product = $this->repository->findWithDetails($product->id);
+        $product->load(['warehouses', 'attachments']);
         [$families, $brands, $units, $taxRates, $suppliers, $accounts, $componentProducts] =
             $this->loadFormReferenceData($product->id);
-        return view('products.edit', compact(
-            'product', 'families', 'brands', 'units', 'taxRates', 'suppliers', 'accounts', 'componentProducts'
-        ));
+        $warehouses         = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_production', 'can_sale', 'can_purchase', 'can_stock']);
+        $familiesFlat       = ProductFamily::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']);
+        $typeArticleOptions = Product::typeArticleOptions();
+        return view('products.edit', array_merge(compact(
+            'product', 'families', 'brands', 'units', 'taxRates', 'suppliers', 'accounts', 'componentProducts',
+            'warehouses', 'familiesFlat', 'typeArticleOptions'
+        ), $this->sageReferenceData()));
     }
 
     /**
@@ -129,7 +190,13 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         $this->authorize('update', $product);
-        $this->service->update($product, $request->validated(), $request->file('image'));
+        $data = $request->validated();
+        unset($data['depots'], $data['documents']);
+
+        $this->service->update($product, $data, $request->file('image'));
+        $this->syncDepots($product, $request);
+        $this->uploadDocuments($product, $request);
+
         return redirect()->route('products.show', $product)->with('success', 'Article mis à jour.');
     }
 

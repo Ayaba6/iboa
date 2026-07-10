@@ -53,21 +53,31 @@ class SalesProductionService
 
         $lines = $order->items->filter(fn ($i) => $i->product_id)->map(function ($item) use ($order) {
             $ordered   = (float) $item->quantity;
+            // [FIX BUG-007] Cohérence commande ↔ BL : si la commande fixe un dépôt de
+            // livraison, la dispo se calcule sur CE dépôt (le BL y puisera). Sinon
+            // tous dépôts confondus (le BL résout alors le dépôt détenant le stock).
             $available = (float) ProductStock::where('product_id', $item->product_id)
+                            ->when($order->delivery_warehouse_id, fn ($q) => $q->where('warehouse_id', $order->delivery_warehouse_id))
                             ->selectRaw('COALESCE(SUM(quantity - reserved_quantity),0) a')->value('a');
             $reserved  = (float) StockReservation::where('order_id', $order->id)
                             ->where('product_id', $item->product_id)->where('status', 'reserved')->sum('quantity');
+            // [FIX widget] La quantité déjà livrée ne reste ni à réserver ni à produire.
+            // Sans ce retrait, une commande livrée à 100 % affichait encore « à produire ».
+            $delivered = (float) $item->delivered_quantity;
 
-            $netNeeded  = max(0, $ordered - $reserved);
+            $netNeeded  = max(0, $ordered - $delivered - $reserved);
             $reservable = min($netNeeded, max(0, $available));
             $toProduce  = max(0, $netNeeded - $available);
 
-            $decision = $toProduce <= 0 ? 'stock' : ($reservable <= 0 ? 'produce' : 'mixed');
+            $decision = $delivered >= $ordered
+                ? 'livre'
+                : ($toProduce <= 0 ? 'stock' : ($reservable <= 0 ? 'produce' : 'mixed'));
 
             return [
                 'product_id' => $item->product_id,
                 'product'    => $item->product?->name ?? $item->description,
                 'ordered'    => $ordered,
+                'delivered'  => round($delivered, 2),
                 'available'  => round($available, 2),
                 'reserved'   => round($reserved, 2),
                 'reservable' => round($reservable, 2),

@@ -59,6 +59,16 @@ it('analyses stock: mixed (partial stock, rest to produce)', function () {
     expect($l['decision'])->toBe('mixed');
 });
 
+it('analyses stock: fully delivered order no longer shows to-produce', function () {
+    $this->actingAs(v2Admin());
+    [$order] = v2OrderWithStock(3, 0);          // 3 commandés, plus rien en stock (déjà sorti)
+    $order->items()->first()->update(['delivered_quantity' => 3]); // livré à 100 %
+    $l = app(SalesProductionService::class)->stockAnalysis($order->fresh())['lines']->first();
+    expect($l['to_produce'])->toEqual(0.0);
+    expect($l['reservable'])->toEqual(0.0);
+    expect($l['decision'])->toBe('livre');
+});
+
 it('reserves available finished product from stock', function () {
     $this->actingAs(v2Admin());
     [$order, $product, $wh] = v2OrderWithStock(10, 30);
@@ -75,4 +85,24 @@ it('reserves via route and is re-runnable without over-reserving', function () {
     // second run: nothing left to reserve for this order (already 10)
     $this->post(route('production.sales.reserve-stock', $order))->assertSessionHas('error');
     expect((float) ProductStock::where('product_id', $product->id)->first()->reserved_quantity)->toEqual(10.0);
+});
+
+it('unifie les réservations : OrderService::reserveStock crée une ligne et ne double pas avec le bouton manuel', function () {
+    $this->actingAs(v2Admin());
+    [$order, $product] = v2OrderWithStock(3, 10);
+
+    // Chemin « confirmation » (listener) — écrit désormais une ligne stock_reservations.
+    app(\App\Services\OrderService::class)->reserveStock($order->fresh());
+    expect((float) ProductStock::where('product_id', $product->id)->first()->reserved_quantity)->toEqual(3.0);
+    expect(StockReservation::where('order_id', $order->id)->where('status', 'reserved')->count())->toBe(1);
+
+    // Bouton « Réserver » manuel — idempotent, aucune double réservation.
+    app(ReservationService::class)->reserveStockForOrder($order->fresh());
+    expect((float) ProductStock::where('product_id', $product->id)->first()->reserved_quantity)->toEqual(3.0);
+    expect(StockReservation::where('order_id', $order->id)->where('status', 'reserved')->sum('quantity'))->toEqual(3.0);
+
+    // Annulation — libère tout, aucune réservation fantôme.
+    app(\App\Services\OrderService::class)->cancel($order->fresh());
+    expect((float) ProductStock::where('product_id', $product->id)->first()->reserved_quantity)->toEqual(0.0);
+    expect(StockReservation::where('order_id', $order->id)->where('status', 'reserved')->count())->toBe(0);
 });

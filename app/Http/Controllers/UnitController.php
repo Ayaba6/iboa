@@ -27,34 +27,47 @@ class UnitController extends Controller
 
     public function create()
     {
-        return view('units.create');
+        $parentUnits = Unit::whereNull('parent_unit_id')->orderBy('name')->get(['id', 'name', 'abbreviation']);
+
+        return view('units.create', compact('parentUnits'));
     }
 
     public function store(StoreUnitRequest $request)
     {
-        $data = $request->validated();
-        $data['is_active']      = $request->boolean('is_active', true);
-        $data['decimal_places'] = $data['decimal_places'] ?? 2;
-
-        Unit::create($data);
+        Unit::create($this->prepare($request));
 
         return redirect()->route('units.index')->with('success', 'Unité de mesure créée avec succès.');
     }
 
     public function edit(Unit $unit)
     {
-        return view('units.edit', compact('unit'));
+        $parentUnits = Unit::whereNull('parent_unit_id')->where('id', '!=', $unit->id)
+            ->orderBy('name')->get(['id', 'name', 'abbreviation']);
+        // [Maquette Unité] conversions = unités rattachées à celle-ci
+        $conversions = $unit->childUnits()->orderBy('name')->get();
+
+        return view('units.edit', compact('unit', 'parentUnits', 'conversions'));
     }
 
     public function update(UpdateUnitRequest $request, Unit $unit)
     {
-        $data = $request->validated();
-        $data['is_active']      = $request->boolean('is_active', true);
-        $data['decimal_places'] = $data['decimal_places'] ?? 2;
-
-        $unit->update($data);
+        $unit->update($this->prepare($request));
 
         return redirect()->route('units.index')->with('success', 'Unité de mesure mise à jour.');
+    }
+
+    // [Maquette Unité] normalisation commune store/update
+    private function prepare(StoreUnitRequest|UpdateUnitRequest $request): array
+    {
+        $data = $request->validated();
+        $data['is_active']            = $request->boolean('is_active', true);
+        $data['is_default_inventory'] = $request->boolean('is_default_inventory');
+        $data['is_default_sales']     = $request->boolean('is_default_sales');
+        $data['decimal_places']       = $data['decimal_places'] ?? 2;
+        $data['conversion_factor']    = $data['conversion_factor'] ?? 1;
+        $data['rounding_mode']        = $data['rounding_mode'] ?? 'mathematique';
+
+        return $data;
     }
 
     public function destroy(Unit $unit)

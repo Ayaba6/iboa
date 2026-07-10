@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-3">
 
     {{-- ── Workflow bar ──────────────────────────────────────────────────────── --}}
     @include('partials._workflow-ventes', [
@@ -22,12 +22,15 @@
     {{-- ================================================================
          Header
     ================================================================ --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-2xl font-bold text-gray-900 font-mono">{{ $quote->number }}</h1>
-                <x-workflow.status-badge :status="$quote->status" :label="$quote->status_label" />
-                <span class="text-gray-500 text-sm">{{ $quote->client?->name }}</span>
+    <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2.5 bg-gradient-to-b from-gray-50 to-white">
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div class="min-w-0">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <h1 class="text-[17px] font-bold text-gray-900 font-mono">{{ $quote->number }}</h1>
+                    <x-workflow.status-badge :status="$quote->status" :label="$quote->status_label" />
+                </div>
+                <p class="text-[11px] font-bold text-gray-500 mt-1.5">Client</p>
+                <p class="text-[14px] text-gray-800">{{ $quote->client?->name ?? '—' }}</p>
             </div>
 
             {{-- ════════════════════════════════════════════════════════════════
@@ -36,10 +39,10 @@
                  le reste en outline gris/coloré pour réduire le bruit visuel.
                  ════════════════════════════════════════════════════════════════ --}}
             @php
-                $btnOutline = 'inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors';
-                $btnPrimary = 'inline-flex items-center gap-1.5 px-4 py-2 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors';
-                $btnDangerOutline = 'inline-flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors';
-                $btnWarnOutline = 'inline-flex items-center gap-1.5 px-3 py-2 border border-orange-200 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors';
+                $btnOutline = 'inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-gray-300 text-gray-700 rounded-[4px] text-[13px] font-semibold hover:bg-gray-50 transition-colors';
+                $btnPrimary = 'inline-flex items-center gap-1.5 px-4 py-1.5 text-white rounded-[4px] text-[13px] font-semibold transition-colors';
+                $btnDangerOutline = 'inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-red-300 text-red-600 rounded-[4px] text-[13px] font-semibold hover:bg-red-50 transition-colors';
+                $btnWarnOutline = 'inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-amber-300 text-amber-600 rounded-[4px] text-[13px] font-semibold hover:bg-orange-50 transition-colors';
             @endphp
 
             <div class="flex flex-wrap items-center gap-2">
@@ -90,7 +93,7 @@
                     <form action="{{ route('ventes.devis.submit', $quote) }}" method="POST"
                           onsubmit="return confirm('Soumettre ce devis à la validation interne ?')">
                         @csrf
-                        <button type="submit" class="{{ $btnPrimary }} bg-blue-600 hover:bg-blue-700">
+                        <button type="submit" class="{{ $btnPrimary }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3 3L22 4"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
@@ -116,7 +119,7 @@
                 {{-- ─────── EN ATTENTE DE VALIDATION ─────────────────────────────────────────── --}}
                 @if($quote->status === 'en_attente_validation')
                     {{-- Badge info --}}
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
                         <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -148,12 +151,12 @@
                         </button>
                         {{-- Modal motif refus --}}
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-                            <div class="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md mx-4" @click.outside="open = false">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4" @click.outside="open = false">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif de refus</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Expliquez le motif du refus (obligatoire)…" autofocus></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Expliquez le motif du refus (obligatoire)…" autofocus></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $btnOutline }}">Annuler</button>
-                                    <button type="submit" class="{{ $btnPrimary }} bg-orange-600 hover:bg-orange-700">Confirmer le refus</button>
+                                    <button type="submit" class="{{ $btnPrimary }} bg-emerald-700 hover:bg-emerald-800">Confirmer le refus</button>
                                 </div>
                             </div>
                         </div>
@@ -173,9 +176,9 @@
                             Annuler
                         </button>
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-                            <div class="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md mx-4" @click.outside="open = false">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4" @click.outside="open = false">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif d'annulation</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Expliquez le motif de l'annulation (obligatoire)…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Expliquez le motif de l'annulation (obligatoire)…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $btnOutline }}">Fermer</button>
                                     <button type="submit" class="{{ $btnPrimary }} bg-red-600 hover:bg-red-700">Confirmer l'annulation</button>
@@ -203,7 +206,7 @@
                         @endcan
                     @else
                         <a href="{{ route('ventes.commandes.show', $quote->converted_to_order_id) }}"
-                           class="{{ $btnPrimary }} bg-blue-600 hover:bg-blue-700">
+                           class="{{ $btnPrimary }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
@@ -219,9 +222,9 @@
                         <input type="hidden" name="motif" x-model="motif">
                         <button type="button" @click="open = true" class="{{ $btnDangerOutline }}">Annuler</button>
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-                            <div class="bg-white rounded-xl p-6 shadow-2xl w-full max-w-md mx-4">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif d'annulation</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $btnOutline }}">Fermer</button>
                                     <button type="submit" class="{{ $btnPrimary }} bg-red-600 hover:bg-red-700">Confirmer</button>
@@ -236,7 +239,7 @@
                 @if($quote->status === 'converti')
                     @if($quote->converted_to_order_id)
                         <a href="{{ route('ventes.commandes.show', $quote->converted_to_order_id) }}"
-                           class="{{ $btnPrimary }} bg-indigo-600 hover:bg-indigo-700">
+                           class="{{ $btnPrimary }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
                             </svg>
@@ -277,13 +280,13 @@
         $statusMapLh = [
             'brouillon'            => ['label' => 'Brouillon',               'class' => 'bg-gray-100 text-gray-700'],
             'en_attente_validation'=> ['label' => 'En attente de validation', 'class' => 'bg-yellow-100 text-yellow-700'],
-            'valide'               => ['label' => 'Validé',                  'class' => 'bg-green-100 text-green-700'],
+            'valide'               => ['label' => 'Validé',                  'class' => 'bg-emerald-100 text-emerald-700'],
             'envoye'               => ['label' => 'Envoyé',                  'class' => 'bg-blue-100 text-blue-700'],
-            'accepte'              => ['label' => 'Accepté',                 'class' => 'bg-green-100 text-green-700'],
+            'accepte'              => ['label' => 'Accepté',                 'class' => 'bg-emerald-100 text-emerald-700'],
             'refuse'               => ['label' => 'Refusé',                  'class' => 'bg-red-100 text-red-700'],
             'expire'               => ['label' => 'Expiré',                  'class' => 'bg-orange-100 text-orange-700'],
             'annule'               => ['label' => 'Annulé',                  'class' => 'bg-purple-100 text-purple-700'],
-            'converti'             => ['label' => 'Converti',                'class' => 'bg-indigo-100 text-indigo-700'],
+            'converti'             => ['label' => 'Converti',                'class' => 'bg-emerald-100 text-emerald-800'],
         ];
     @endphp
     @include('partials._doc-letterhead', [
@@ -298,13 +301,24 @@
     ])
 
     {{-- ================================================================
-         2-column: info + summary
+         Carte à onglets SAGE : Lignes / Informations / Documents / Suivi
     ================================================================ --}}
+    <div class="bg-white rounded-[4px] border border-gray-300" x-data="{ tab: 'lignes' }">
+        <nav class="flex items-stretch border-b border-gray-200 px-2 overflow-x-auto">
+            @foreach(['lignes'=>'Lignes','informations'=>'Informations','documents'=>'Documents','suivi'=>'Suivi'] as $tk => $tl)
+            <button type="button" @click="tab = '{{ $tk }}'"
+                    class="px-3 py-1.5 text-[13px] font-semibold border-b-2 transition-colors whitespace-nowrap"
+                    :class="tab === '{{ $tk }}' ? 'border-emerald-600 text-emerald-800' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $tl }}</button>
+            @endforeach
+        </nav>
+
+    {{-- ═══════════ INFORMATIONS ═══════════ --}}
+    <div x-show="tab === 'informations'" x-cloak class="p-4">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {{-- Left: Info card --}}
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-            <h2 class="text-base font-semibold text-gray-900">Informations</h2>
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
+            <h2 class="text-[13px] font-bold text-emerald-900 uppercase tracking-wide">Informations</h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                     <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Client</dt>
@@ -315,9 +329,9 @@
                     @if($quote->client)
                     <dd class="mt-1">
                         @if($quote->client->is_tax_exempt)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700" title="{{ $quote->client->tax_exemption_reason }}">Exonéré TVA</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-amber-100 text-amber-700" title="{{ $quote->client->tax_exemption_reason }}">Exonéré TVA</span>
                         @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Assujetti TVA</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-emerald-100 text-emerald-700">Assujetti TVA</span>
                         @endif
                         @if($quote->client->tax_regime)<span class="ml-1 text-xs text-gray-400">{{ $quote->client->tax_regime }}</span>@endif
                     </dd>
@@ -361,8 +375,8 @@
         </div>
 
         {{-- Right: Summary --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3 h-fit">
-            <h2 class="text-base font-semibold text-gray-900">Récapitulatif</h2>
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-3 h-fit">
+            <h2 class="text-[13px] font-bold text-emerald-900 uppercase tracking-wide">Récapitulatif</h2>
             <div class="flex justify-between text-sm text-gray-600">
                 <span>Sous-total HT</span>
                 <span class="font-medium tabular-nums">{{ number_format($quote->subtotal_ht, 0, ',', ' ') }} FCFA</span>
@@ -379,43 +393,44 @@
             @endif
             <div class="border-t border-gray-200 pt-3 flex justify-between">
                 <span class="text-base font-bold text-gray-900">Total TTC</span>
-                <span class="text-base font-bold text-blue-700 tabular-nums">{{ number_format($quote->total_ttc, 0, ',', ' ') }} FCFA</span>
+                <span class="text-base font-bold text-emerald-800 tabular-nums">{{ number_format($quote->total_ttc, 0, ',', ' ') }} FCFA</span>
             </div>
         </div>
     </div>
 
-    {{-- ================================================================
-         Items table
-    ================================================================ --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    </div>{{-- /tab informations --}}
+
+    {{-- ═══════════ LIGNES ═══════════ --}}
+    <div x-show="tab === 'lignes'" class="p-4">
+    <div class="border border-gray-200 rounded-[4px] overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200">
-            <h2 class="text-base font-semibold text-gray-900">Lignes du devis</h2>
+            <h2 class="text-[13px] font-bold text-emerald-900 uppercase tracking-wide">Lignes du devis</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Qté</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Prix Unit.</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Remise%</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">TVA%</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total HT</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total TTC</th>
+                        <th class="px-4 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">#</th>
+                        <th class="px-4 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Description</th>
+                        <th class="px-4 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Qté</th>
+                        <th class="px-4 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Prix Unit.</th>
+                        <th class="px-4 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Remise%</th>
+                        <th class="px-4 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">TVA%</th>
+                        <th class="px-4 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total HT</th>
+                        <th class="px-4 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total TTC</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($quote->items as $item)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-gray-400 text-xs">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-3 text-gray-900">{{ $item->description }}</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-gray-600 tabular-nums">{{ $item->discount_percent > 0 ? number_format($item->discount_percent, 2, ',', ' ').'%' : '—' }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
-                        <td class="px-4 py-3 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-4 py-3 text-right text-gray-900 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-gray-400 text-xs">{{ $loop->iteration }}</td>
+                        <td class="px-3 py-1.5 text-gray-900">{{ $item->description }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums">{{ $item->discount_percent > 0 ? number_format($item->discount_percent, 2, ',', ' ').'%' : '—' }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
+                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
+                        <td class="px-3 py-1.5 text-right text-gray-900 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
                     </tr>
                     @empty
                     <tr>
@@ -429,8 +444,12 @@
 
 
 
+    </div>{{-- /tab lignes --}}
+
+    {{-- ═══════════ SUIVI ═══════════ --}}
+    <div x-show="tab === 'suivi'" x-cloak class="p-4 space-y-4">
     {{-- ── Workflow : boutons d'action + historique de validation ─────────── --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <div class="border border-gray-200 rounded-[4px] p-5">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <svg class="size-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -443,7 +462,7 @@
 
         {{-- Alerte si refusé --}}
         @if($quote->rejection_reason)
-            <div class="mb-4 rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
+            <div class="mb-4 rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
                 <strong>Motif de refus :</strong> {{ $quote->rejection_reason }}
                 @if($quote->rejected_at)
                     <span class="text-orange-500 ml-1">({{ $quote->rejected_at->format('d/m/Y H:i') }})</span>
@@ -451,20 +470,17 @@
             </div>
         @endif
 
-        {{-- Boutons workflow --}}
-        <x-workflow.action-buttons
-            :document="$quote"
-            submitRoute="ventes.devis.submit"
-            validateRoute="ventes.devis.validate-internal"
-            rejectRoute="ventes.devis.reject-internal"
-            cancelRoute="ventes.devis.cancel-internal"
-            :routeParam="$quote->id"
-        />
-
-        {{-- Historique --}}
+        {{-- Les actions de workflow (soumettre/valider/refuser/annuler) sont dans
+             la barre d'actions du header — ce bloc ne montre que l'historique. --}}
         <x-workflow.history :document="$quote" />
     </div>
 
+    {{-- [TRACE] Historique d'activité --}}
+    <x-audit.timeline :model="\App\Models\Quote::class" :id="$quote->id" />
+    </div>{{-- /tab suivi --}}
+
+    {{-- ═══════════ DOCUMENTS ═══════════ --}}
+    <div x-show="tab === 'documents'" x-cloak class="p-4">
     {{-- Documents liés --}}
     @php
         $relatedLinks = [];
@@ -498,10 +514,12 @@
     @endphp
     @if(count($relatedLinks))
         <x-document.related :links="$relatedLinks" title="Documents liés à ce devis" />
+    @else
+        <p class="px-2 py-8 text-center text-gray-400 text-[13px]">Aucun document lié à ce devis.</p>
     @endif
+    </div>{{-- /tab documents --}}
 
-    {{-- [TRACE] Historique d'activité --}}
-    <x-audit.timeline :model="\App\Models\Quote::class" :id="$quote->id" />
+    </div>{{-- /carte onglets --}}
 
 </div>
 @endsection

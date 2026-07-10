@@ -8,23 +8,23 @@
 @endsection
 
 @section('content')
-<div x-data="lettrageApp()" class="space-y-5">
+<div x-data="lettrageApp()" class="space-y-3">
 
     {{-- ── En-tête ──────────────────────────────────────────────────────────── --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Lettrage des comptes tiers</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Lettrage des comptes tiers</h1>
             <p class="text-sm text-gray-400 mt-0.5">Appariement des factures et règlements — comptes de classe 4</p>
         </div>
         <div class="text-xs text-gray-400">Comptes de tiers (classe 4)</div>
     </div>
 
     {{-- ── Sélecteur de compte ──────────────────────────────────────────────── --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="flex gap-3 items-end">
             <div class="flex-1">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Sélectionner un compte tiers</label>
-                <select name="account_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500">
+                <select name="account_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
                     <option value="">Choisir un compte...</option>
                     @foreach($accounts as $account)
                     <option value="{{ $account->id }}" {{ ($selectedAccount?->id) == $account->id ? 'selected' : '' }}>
@@ -33,7 +33,7 @@
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
                 Charger
             </button>
         </div>
@@ -45,10 +45,10 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
         {{-- % Lettré + barre de progression --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500 mb-1">Taux de lettrage</p>
             <div class="flex items-end justify-between mb-2">
-                <p class="text-2xl font-bold {{ $stats['pct_lettered'] >= 80 ? 'text-emerald-600' : ($stats['pct_lettered'] >= 40 ? 'text-amber-600' : 'text-red-500') }}">
+                <p class="text-[16px] font-bold {{ $stats['pct_lettered'] >= 80 ? 'text-emerald-600' : ($stats['pct_lettered'] >= 40 ? 'text-amber-600' : 'text-red-500') }}">
                     {{ $stats['pct_lettered'] }}%
                 </p>
                 <p class="text-xs text-gray-400 pb-0.5">{{ $stats['lettered'] }}/{{ $stats['total'] }} lignes</p>
@@ -60,9 +60,9 @@
         </div>
 
         {{-- Solde résiduel --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500 mb-1">Solde résiduel non lettré</p>
-            <p class="text-xl font-bold tabular-nums {{ $stats['solde_residuel'] == 0 ? 'text-emerald-600' : 'text-orange-600' }}">
+            <p class="text-[17px] font-bold tabular-nums {{ $stats['solde_residuel'] == 0 ? 'text-emerald-600' : 'text-orange-600' }}">
                 {{ number_format(abs($stats['solde_residuel']), 0, ',', ' ') }}
                 <span class="text-sm font-normal text-gray-400">FCFA</span>
             </p>
@@ -75,9 +75,9 @@
         </div>
 
         {{-- Débit non lettré --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500 mb-1">Débit non lettré</p>
-            <p class="text-xl font-bold tabular-nums text-blue-600">
+            <p class="text-[17px] font-bold tabular-nums text-blue-600">
                 {{ number_format($stats['unlettered_debit'], 0, ',', ' ') }}
                 <span class="text-sm font-normal text-gray-400">FCFA</span>
             </p>
@@ -85,9 +85,9 @@
         </div>
 
         {{-- Crédit non lettré --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
             <p class="text-xs text-gray-500 mb-1">Crédit non lettré</p>
-            <p class="text-xl font-bold tabular-nums text-emerald-600">
+            <p class="text-[17px] font-bold tabular-nums text-emerald-600">
                 {{ number_format($stats['unlettered_credit'], 0, ',', ' ') }}
                 <span class="text-sm font-normal text-gray-400">FCFA</span>
             </p>
@@ -98,7 +98,7 @@
     {{-- ── Alerte paires exactes disponibles ──────────────────────────────── --}}
     @php $pairsCount = count($exactPairs) / 2; @endphp
     @if($pairsCount > 0)
-    <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3 text-sm">
+    <div class="bg-amber-50 border border-amber-200 rounded-[4px] px-3 py-1.5 flex items-center gap-3 text-sm">
         <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
@@ -106,7 +106,7 @@
             <strong>{{ $pairsCount }} paire(s) exacte(s) détectée(s)</strong> — les lignes marquées ⚡ ont une contrepartie au même montant. Cliquez sur le badge pour sélectionner la paire.
         </span>
         <button type="button" @click="selectAllPairs()"
-                class="ml-auto flex-shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors">
+                class="ml-auto flex-shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-[4px] transition-colors">
             Sélectionner toutes les paires
         </button>
     </div>
@@ -116,7 +116,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {{-- ── Lignes non lettrées ──────────────────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden flex flex-col">
 
             {{-- Header --}}
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
@@ -127,7 +127,7 @@
                 <div class="flex gap-2 items-center flex-wrap">
                     <span class="text-xs text-gray-500" x-text="`${selected.length} sélectionnée(s)`"></span>
                     <button type="button" @click="autoLettrage()"
-                            class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
+                            class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-[4px] transition-colors inline-flex items-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
@@ -136,7 +136,7 @@
                     <button type="button" @click="applyLettrage()"
                             :disabled="selected.length < 2 || !isBalanced"
                             :title="!isBalanced && selected.length >= 2 ? 'Débit ≠ Crédit — sélection déséquilibrée' : ''"
-                            class="text-xs bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-3 py-1.5 rounded-lg transition-colors">
+                            class="text-xs bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                         Lettrer la sélection
                     </button>
                 </div>
@@ -154,33 +154,33 @@
             </div>
 
             {{-- Filtres --}}
-            <div class="px-4 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
+            <div class="px-3 py-1.5 border-b border-gray-100 flex gap-2 flex-wrap">
                 <div class="relative flex-1 min-w-32">
                     <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                     <input type="text" x-model="search" placeholder="Rechercher…"
-                           class="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-violet-400 focus:border-violet-400">
+                           class="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-[4px] focus:ring-1 focus:ring-violet-400 focus:border-violet-400">
                 </div>
-                <div class="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                <div class="flex rounded-[4px] border border-gray-200 overflow-hidden text-xs">
                     <button type="button" @click="typeFilter='all'"
                             :class="typeFilter==='all' ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
                             class="px-3 py-1.5 font-medium transition-colors">Tout</button>
                     <button type="button" @click="typeFilter='debit'"
-                            :class="typeFilter==='debit' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                            :class="typeFilter==='debit' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
                             class="px-3 py-1.5 font-medium border-x border-gray-200 transition-colors">Débit</button>
                     <button type="button" @click="typeFilter='credit'"
                             :class="typeFilter==='credit' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
                             class="px-3 py-1.5 font-medium transition-colors">Crédit</button>
                 </div>
-                <select x-model="sortBy" class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-violet-400">
+                <select x-model="sortBy" class="text-xs border border-gray-200 rounded-[4px] px-2 py-1.5 focus:ring-1 focus:ring-violet-400">
                     <option value="date">Trier : Date</option>
                     <option value="amount_asc">Montant ↑</option>
                     <option value="amount_desc">Montant ↓</option>
                     <option value="label">Libellé</option>
                 </select>
                 <button type="button" x-show="selected.length > 0" @click="clearSelection()"
-                        class="text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                        class="text-xs text-gray-400 hover:text-red-500 px-2 py-1.5 rounded-[4px] hover:bg-red-50 transition-colors">
                     Désélectionner
                 </button>
             </div>
@@ -194,7 +194,7 @@
                     $isOverdue = $line->due_date && $line->due_date->isPast() && $line->credit == 0;
                 @endphp
                 <label
-                    class="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                    class="flex items-start gap-3 px-3 py-1.5 cursor-pointer hover:bg-gray-50 transition-colors"
                     :class="{
                         'bg-violet-50 border-l-2 border-violet-400': selected.includes({{ $line->id }}),
                         'bg-amber-50/60': !selected.includes({{ $line->id }}) && isPairHighlighted({{ $line->id }}),
@@ -275,7 +275,7 @@
         </div>
 
         {{-- ── Lignes lettrées ──────────────────────────────────────────────── --}}
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden flex flex-col">
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h2 class="font-semibold text-gray-800">
                     Lignes lettrées
@@ -297,7 +297,7 @@
                     $letteredAt   = $group->first()->lettered_at;
                     $letteredBy   = $group->first()->letteredBy?->name;
                 @endphp
-                <div class="px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div class="px-3 py-1.5 hover:bg-gray-50 transition-colors">
                     {{-- Groupe header --}}
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-2 flex-wrap">
@@ -377,7 +377,7 @@
          x-transition:leave="transition ease-in duration-150"
          x-transition:leave-end="opacity-0"
          :class="toastError ? 'bg-red-600' : 'bg-gray-900'"
-         class="fixed bottom-6 right-6 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2"
+         class="fixed bottom-6 right-6 text-white text-sm font-medium px-5 py-3 rounded-[4px] shadow-lg z-50 flex items-center gap-2"
          style="display:none">
         <span x-text="toast"></span>
     </div>

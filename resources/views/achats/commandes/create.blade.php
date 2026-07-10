@@ -10,13 +10,14 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-gray-900">Nouvelle commande fournisseur</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Nouvelle commande fournisseur</h1>
     </div>
 
-    <form method="POST" action="{{ route('achats.commandes.store') }}">
+    {{-- [FIX persistance intermittente] Soumission native (voir edit.blade.php). --}}
+    <form method="POST" action="{{ route('achats.commandes.store') }}" enctype="multipart/form-data" data-turbo="false">
         @csrf
         <x-form-guard />
         @include('achats.commandes._form')

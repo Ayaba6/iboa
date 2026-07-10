@@ -102,7 +102,8 @@ class ProductionOrderSeeder extends Seeder
                 continue;
             }
 
-            $production->launch($order);
+            // Données de démo : force le lancement même en rupture matière simulée.
+            $production->launch($order, true);
             $order->update(['launched_at' => $launchedAt]);
 
             if ($target === 'lance') {
@@ -119,7 +120,8 @@ class ProductionOrderSeeder extends Seeder
             $this->execute($order, $bom, $warehouse, $employees, $launchedAt, $consume, $stock, $costing);
 
             if ($target === 'termine') {
-                $production->finish($order);
+                // Démo : clôture forcée (production partielle simulée < demande).
+                $production->finish($order, true);
                 $order->update(['finished_at' => $launchedAt->copy()->addDays(random_int(1, 6))]);
             }
         }
@@ -160,7 +162,12 @@ class ProductionOrderSeeder extends Seeder
             'quantity'     => $qty,
             'unit_cost'    => (int) round((float) $bom->consumption_per_meter * 6 * (float) ($order->product->purchase_price ?: 500) / 100 + random_int(2_000, 4_000)),
         ]);
-        $out->update(['produced_at' => $launchedAt->copy()->addDays(random_int(1, 5))]);
+        // [CDC §13.3] Données démo : visa chef d'équipe posé pour permettre la clôture
+        $out->update([
+            'produced_at'  => $launchedAt->copy()->addDays(random_int(1, 5)),
+            'status'       => 'validee',
+            'validated_at' => $launchedAt->copy()->addDays(random_int(1, 5)),
+        ]);
 
         // Chutes (1 OF sur 2)
         if (random_int(0, 1)) {

@@ -70,11 +70,11 @@ export default {
         'w-[18px]', 'h-[18px]',
         'w-3.5', 'h-3.5',   // spinner autosubmit (resources/js/app.js)
 
-        // CRM kanban stages : sky, blue, violet, amber, emerald, red
-        { pattern: /^(bg|text|border|ring)-(sky|blue|violet|amber|emerald|red|indigo|gray|orange|teal|cyan)-(50|100|200|400|500|600|700|800)$/ },
+        // CRM kanban + Chaîne de Valeur : toutes les couleurs dynamiques
+        { pattern: /^(bg|text|border|ring)-(sky|blue|violet|amber|emerald|red|indigo|gray|orange|teal|cyan|lime|purple|rose|green)-(50|100|200|300|400|500|600|700|800)$/ },
 
         // [TRESO] Dégradés des chips KPI (tableau de bord trésorerie) — from/to dynamiques
-        { pattern: /^(from|to)-(sky|blue|violet|amber|emerald|red|indigo)-(400|500|600)$/ },
+        { pattern: /^(from|to)-(sky|blue|violet|amber|emerald|red|indigo|lime|purple|rose)-(400|500|600)$/ },
 
         // Badges statuts dynamiques
         'bg-blue-100',   'text-blue-700',

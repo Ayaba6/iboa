@@ -48,6 +48,7 @@ use App\Listeners\NotifyLowStock;
 use App\Listeners\NotifyCreditNoteValidated;
 use App\Listeners\NotifySupplierInvoiceValidated;
 use App\Listeners\ReserveStockOnOrderConfirmed;
+use App\Listeners\TriggerMtoProductionOnOrderConfirmed;
 use App\Listeners\SendInvoiceToClient;
 use App\Listeners\SyncClientBalanceOnInvoice;
 use App\Listeners\SyncSupplierBalanceOnInvoice;
@@ -109,6 +110,7 @@ class AppServiceProvider extends ServiceProvider
         // ── Event → Listener bindings ──────────────────────────────────────────
         // Commandes
         Event::listen(OrderConfirmed::class,            ReserveStockOnOrderConfirmed::class);
+        Event::listen(OrderConfirmed::class,            TriggerMtoProductionOnOrderConfirmed::class);
 
         // Ventes
         Event::listen(InvoiceValidated::class,          SendInvoiceToClient::class);
@@ -125,6 +127,14 @@ class AppServiceProvider extends ServiceProvider
 
         // Stock
         Event::listen(StockAlertTriggered::class,        NotifyLowStock::class);
+
+        // [Sync ERP] Les échecs de synchronisation détectés en transaction sont
+        // écrits APRÈS le rollback — sinon le log serait effacé avec la transaction.
+        Event::listen(\Illuminate\Database\Events\TransactionRolledBack::class, function () {
+            if (\Illuminate\Support\Facades\DB::transactionLevel() === 0) {
+                \App\Services\Sync\SyncLogger::flushDeferredFailures();
+            }
+        });
 
         // Note: GL posting (AccountingService) is called DIRECTLY inside each
         // service transaction — not via listeners — to guarantee atomicity.
@@ -164,6 +174,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(\App\Models\Employee::class,       EmployeePolicy::class);
         Gate::policy(\App\Models\PayrollRun::class,     PayrollRunPolicy::class);
         Gate::policy(\App\Models\SupplierPayment::class, SupplierPaymentPolicy::class);
+        Gate::policy(\App\Models\SalesRep::class, \App\Policies\SalesRepPolicy::class);
+        Gate::policy(\App\Models\Commission::class, \App\Policies\SalesRepPolicy::class);
 
         // [MED-4] Observers d'audit — trace dans audit_logs les opérations critiques.
         \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
@@ -173,6 +185,9 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\JournalEntry::observe(\App\Observers\JournalEntryObserver::class);
         \App\Models\ClientPayment::observe(\App\Observers\PaymentObserver::class);
         \App\Models\SupplierPayment::observe(\App\Observers\PaymentObserver::class);
+
+        // Calcul automatique des commissions sur encaissements clients
+        \App\Models\ClientPayment::observe(\App\Observers\CommissionObserver::class);
 
         // [AUDIT-ERP-D] Morph map pour StockMovement::referenceable()
         // Permet la résolution polymorphique sans utiliser le FQCN comme discriminant.

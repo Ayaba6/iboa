@@ -32,6 +32,8 @@ class SupplierReturn extends Model
         'total_tax',
         'total_ttc',
         'notes',
+        // [Maquette Retour fournisseur]
+        'return_type', 'warehouse_id', 'priority', 'project_reference',
         'created_by',
         'validated_by',
         'validated_at',

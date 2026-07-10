@@ -354,6 +354,40 @@ class DemoDataSeeder extends Seeder
         ]);
         if ($roleComptable && !$comptable->hasRole('comptable')) $comptable->assignRole($roleComptable);
 
+        // ── Utilisateurs CDC §15 (rôles production / RH / finance) ──────────
+        $newUsers = [
+            ['email' => 'daf@iboa.bf',                   'name' => 'Fatoumata Compaoré',   'role' => 'daf',                   'job' => 'DAF — Directrice Administrative et Financière'],
+            ['email' => 'directeur.usine@iboa.bf',       'name' => 'Ibrahim Ouédraogo',     'role' => 'directeur_usine',       'job' => "Directeur d'Usine"],
+            ['email' => 'acheteur@iboa.bf',              'name' => 'Rasmané Traoré',        'role' => 'acheteur',              'job' => 'Acheteur / Approvisionneur'],
+            ['email' => 'chef.production@iboa.bf',       'name' => 'Adama Zongo',           'role' => 'chef_production',       'job' => 'Chef de Production'],
+            ['email' => 'operateur@iboa.bf',             'name' => 'Kofi Sawadogo',         'role' => 'operateur_production',  'job' => 'Opérateur de Production'],
+            ['email' => 'qualite@iboa.bf',               'name' => 'Mariam Kaboré',         'role' => 'responsable_qualite',   'job' => 'Responsable Qualité'],
+            ['email' => 'maintenance@iboa.bf',           'name' => 'Noël Ouattara',         'role' => 'technicien_maintenance','job' => 'Technicien Maintenance'],
+            ['email' => 'drh@iboa.bf',                   'name' => 'Clarisse Bonkoungou',   'role' => 'drh',                   'job' => 'Directrice RH'],
+            ['email' => 'rh.manager@iboa.bf',            'name' => 'Boukary Nana',          'role' => 'rh_manager',            'job' => 'Gestionnaire RH'],
+            ['email' => 'rh.agent@iboa.bf',              'name' => 'Aïssata Ouédraogo',     'role' => 'rh_agent',              'job' => 'Agent RH'],
+            ['email' => 'employe@iboa.bf',               'name' => 'Jean-Pierre Kinda',     'role' => 'employe',               'job' => 'Employé'],
+            ['email' => 'resp.commercial@iboa.bf',       'name' => 'Sylvie Ilboudo',        'role' => 'responsable_commercial','job' => 'Responsable Commercial'],
+            ['email' => 'resp.stock@iboa.bf',            'name' => 'Wendyam Bassole',       'role' => 'responsable_stock',     'job' => 'Responsable Stock'],
+            ['email' => 'caissier@iboa.bf',              'name' => 'Inès Tapsoba',          'role' => 'caissier',              'job' => 'Caissière'],
+            ['email' => 'lecture@iboa.bf',               'name' => 'Auditeur Externe',      'role' => 'lecture_seule',         'job' => 'Lecture seule (audit)'],
+        ];
+
+        foreach ($newUsers as $u) {
+            $role = Role::where('name', $u['role'])->first();
+            if (! $role) continue;
+            $user = User::firstOrCreate(['email' => $u['email']], [
+                'name'       => $u['name'],
+                'password'   => Hash::make('password'),
+                'company_id' => $company->id,
+                'job_title'  => $u['job'],
+                'is_active'  => true,
+            ]);
+            if (! $user->hasRole($u['role'])) {
+                $user->assignRole($role);
+            }
+        }
+
         // =====================================================================
         // ACHATS
         // =====================================================================
@@ -705,6 +739,10 @@ class DemoDataSeeder extends Seeder
                 ['client_payment_id' => $payment1->id, 'invoice_id' => $invoice1->id],
                 ['amount' => 675000, 'allocated_at' => now()->subDays(5)]
             );
+            // Comptabilisation GL (DR trésorerie / CR clients) — idempotent.
+            if (! $payment1->journal_entry_id) {
+                app(\App\Services\AccountingService::class)->postClientPayment($payment1->fresh(['client', 'company']));
+            }
         }
 
         // ── Commande COM-2026-002 (ONATEL) — facture réglée ───────────────────
@@ -850,6 +888,10 @@ class DemoDataSeeder extends Seeder
                 ['client_payment_id' => $payment2->id, 'invoice_id' => $invoice2->id],
                 ['amount' => 1062000, 'allocated_at' => now()->subDays(3)]
             );
+            // Comptabilisation GL (DR trésorerie / CR clients) — idempotent.
+            if (! $payment2->journal_entry_id) {
+                app(\App\Services\AccountingService::class)->postClientPayment($payment2->fresh(['client', 'company']));
+            }
         }
 
         // ── Transactions de trésorerie demo ───────────────────────────────────

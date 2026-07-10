@@ -20,7 +20,12 @@ class CompanyController extends Controller
     public function edit(): View
     {
         $company = $this->service->getOrCreate();
-        return view('company.edit', compact('company'));
+        // [Maquette Paramétrage société] numérotation des documents (lecture seule ici)
+        $sequences = \App\Models\DocumentSequence::where('company_id', $company->id)
+            ->orderBy('document_type')->get();
+        $currencies = \App\Models\Currency::orderBy('code')->get(['id', 'code', 'name']);
+
+        return view('company.edit', compact('company', 'sequences', 'currencies'));
     }
 
     public function updateGeneral(UpdateGeneralRequest $request): RedirectResponse
@@ -50,10 +55,23 @@ class CompanyController extends Controller
         $company = $this->service->getOrCreate();
         $this->service->upsertDocumentSetting(
             $company,
-            $request->except(['signature_image', 'stamp_image']),
+            $request->except(['signature_image', 'stamp_image', 'pdf_header_file', 'pdf_footer_file']),
             $request->file('signature_image'),
             $request->file('stamp_image')
         );
+
+        // [Maquette Paramétrage société] en-tête / pied de page PDF stockés sur la société
+        $branding = [];
+        if ($request->hasFile('pdf_header_file')) {
+            $branding['pdf_header_path'] = $request->file('pdf_header_file')->store('company/branding', 'public');
+        }
+        if ($request->hasFile('pdf_footer_file')) {
+            $branding['pdf_footer_path'] = $request->file('pdf_footer_file')->store('company/branding', 'public');
+        }
+        if ($branding) {
+            $company->update($branding);
+        }
+
         return back()->with('success', 'Paramètres documents mis à jour.');
     }
 

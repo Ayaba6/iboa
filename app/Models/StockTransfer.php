@@ -31,12 +31,24 @@ class StockTransfer extends Model
         'shipped_at', 'received_at',
         'created_by', 'shipped_by', 'received_by', 'cancelled_by',
         'reason', 'notes',
+        // [Maquette X3]
+        'transfer_time', 'type', 'priority', 'currency_code', 'reference',
+        'source_document_date', 'responsible_id', 'carrier', 'transport_mode',
+        'vehicle', 'driver', 'planned_date', 'planned_time', 'transport_cost',
+        'grouping', 'packages_count', 'total_weight', 'total_volume',
+        'controlled_by', 'controlled_at', 'validated_by', 'validated_at', 'validation_status',
     ];
 
     protected $casts = [
         'transfer_date' => 'date',
         'shipped_at'    => 'datetime',
         'received_at'   => 'datetime',
+        'source_document_date' => 'date',
+        'planned_date'  => 'date',
+        'controlled_at' => 'datetime',
+        'validated_at'  => 'datetime',
+        'grouping'      => 'boolean',
+        'transport_cost'=> 'decimal:2',
     ];
 
     // ─────────────── Relations ───────────────

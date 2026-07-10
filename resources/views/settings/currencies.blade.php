@@ -27,16 +27,16 @@
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, this.form.thousands_separator || ' ');
         return parts.join(this.form.decimal_places > 0 ? (this.form.decimal_separator || ',') : '') + ' ' + (this.form.symbol || '?');
     }
-}" class="space-y-5">
+}" class="space-y-3">
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Devises</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Devises</h1>
             <p class="text-sm text-gray-500 mt-0.5">Configurez les devises utilisées dans l'application</p>
         </div>
         @can('settings.manage')
         <button @click="openCreate()"
-                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+                class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -45,17 +45,17 @@
         @endcan
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <table class="w-full divide-y divide-gray-100 text-sm">
-            <thead class="bg-gray-50">
+            <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Code</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Nom</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Symbole</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Format</th>
-                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Décimales</th>
-                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Par défaut</th>
-                    <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Statut</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Code</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Nom</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Symbole</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Format</th>
+                    <th class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Décimales</th>
+                    <th class="px-5 py-3 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Par défaut</th>
+                    <th class="px-5 py-3 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
                     <th class="px-5 py-3"></th>
                 </tr>
             </thead>
@@ -84,7 +84,7 @@
                         @endif
                     </td>
                     <td class="px-5 py-3 text-center">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $currency->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $currency->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' }}">
                             {{ $currency->is_active ? 'Active' : 'Inactive' }}
                         </span>
                     </td>
@@ -118,8 +118,8 @@
     {{-- Modal --}}
     <div x-show="modal === 'form'" x-transition
          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-5"
+        <div class="bg-white rounded-[4px] shadow-xl w-full max-w-lg p-6">
+            <h3 class="text-[16px] font-bold text-gray-900 mb-5"
                 x-text="editId ? 'Modifier la devise' : 'Nouvelle devise'"></h3>
 
             <form method="POST" data-turbo="false"
@@ -134,26 +134,26 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Code ISO <span class="text-red-500">*</span></label>
                         <input type="text" name="code" x-model="form.code" :readonly="editId" required maxlength="3"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500"
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono uppercase focus:ring-1 focus:ring-emerald-500"
                                placeholder="XOF">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Symbole <span class="text-red-500">*</span></label>
                         <input type="text" name="symbol" x-model="form.symbol" required maxlength="10"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500"
                                placeholder="FCFA">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Décimales</label>
                         <input type="number" name="decimal_places" x-model.number="form.decimal_places" min="0" max="4"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nom complet <span class="text-red-500">*</span></label>
                     <input type="text" name="name" x-model="form.name" required maxlength="80"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500"
                            placeholder="Franc CFA BCEAO">
                 </div>
 
@@ -161,7 +161,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Séparateur milliers</label>
                         <select name="thousands_separator" x-model="form.thousands_separator"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                                class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                             <option value=" ">Espace (1 234 567)</option>
                             <option value=".">Point (1.234.567)</option>
                             <option value=",">Virgule (1,234,567)</option>
@@ -171,7 +171,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Séparateur décimal</label>
                         <select name="decimal_separator" x-model="form.decimal_separator"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                                class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                             <option value=",">,  (1 234,56)</option>
                             <option value=".">. (1,234.56)</option>
                         </select>
@@ -179,7 +179,7 @@
                 </div>
 
                 {{-- Live preview --}}
-                <div class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                <div class="bg-gray-50 border border-gray-200 rounded-[4px] px-3 py-1.5">
                     <p class="text-xs text-gray-500 mb-1">Aperçu du format</p>
                     <p class="font-mono font-semibold text-gray-900 text-lg" x-text="preview()"></p>
                 </div>
@@ -188,14 +188,14 @@
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="hidden" name="is_active" value="0">
                         <input type="checkbox" name="is_active" value="1" x-model="form.is_active"
-                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                               class="rounded border-gray-300 text-blue-600 focus:ring-emerald-500">
                         <span class="text-sm font-medium text-gray-700">Active</span>
                     </label>
                     <template x-if="!editId">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="hidden" name="is_default" value="0">
                             <input type="checkbox" name="is_default" value="1" x-model="form.is_default"
-                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-emerald-500">
                             <span class="text-sm font-medium text-gray-700">Devise par défaut</span>
                         </label>
                     </template>
@@ -203,9 +203,9 @@
 
                 <div class="flex gap-3 justify-end pt-2">
                     <button type="button" @click="modal = ''"
-                            class="border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg">Annuler</button>
+                            class="border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px]">Annuler</button>
                     <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg"
+                            class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px]"
                             x-text="editId ? 'Enregistrer' : 'Créer'"></button>
                 </div>
             </form>

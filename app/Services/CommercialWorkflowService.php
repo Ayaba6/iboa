@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Events\OrderConfirmed;
+use App\Models\BonPreparation;
 use App\Models\CommercialValidation;
 use App\Models\Company;
 use App\Models\CreditNote;
@@ -9,6 +11,7 @@ use App\Models\DeliveryNote;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Quote;
+use App\Notifications\ValidationStepNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +27,7 @@ class CommercialWorkflowService
         private DeliveryNoteService $deliveryNoteService,
         private InvoiceService $invoiceService,
         private CreditNoteService $creditNoteService,
+        private BonPreparationService $bonPrepService,
     ) {}
 
     // ── Soumission ────────────────────────────────────────────────────────────
@@ -37,7 +41,81 @@ class CommercialWorkflowService
     public function submit(mixed $document, ?string $motif = null): void
     {
         $this->assertPermission('sales.submit');
+
+        // [CDC §dépassement-crédit] Commande dépassant la limite de crédit → bloquée,
+        // redirigée vers responsable hiérarchique pour autorisation.
+        if ($document instanceof Order) {
+            $client = $document->client ?? \App\Models\Client::find($document->client_id);
+            if ($client && $client->isOverCreditLimit()) {
+                // Notifie le responsable commercial pour déblocage manuel
+                ValidationStepNotification::sendToRoles(
+                    ['responsable_commercial', 'directeur'],
+                    title: 'Dépassement de crédit client',
+                    message: "Commande {$document->number} bloquée — client {$client->name} dépasse sa limite de crédit (" . number_format($client->credit_limit, 0, ',', ' ') . ' XOF).',
+                    url: route('ventes.commandes.show', $document),
+                    modelType: 'Order', modelId: $document->id,
+                    type: 'credit_limit_exceeded', icon: 'exclamation-triangle', color: 'red',
+                );
+                throw new \RuntimeException(
+                    "Commande bloquée : la limite de crédit du client {$client->name} est dépassée ({$client->credit_usage_percent}% utilisé). Contactez le responsable hiérarchique."
+                );
+            }
+        }
+
         $document->submit($motif);
+
+        // [CDC §13.1/§17] Document soumis → notifie exactement le rôle qui valide
+        // ce type de document, jamais un envoi large. Message enrichi :
+        // demandeur + client + montant pour décider sans ouvrir le document.
+        $demandeur = Auth::user()?->name ?? 'Utilisateur';
+        $client    = $document->client?->name ?? \App\Models\Client::find($document->client_id ?? 0)?->name;
+        $montant   = isset($document->total_ttc)
+            ? number_format((int) $document->total_ttc, 0, ',', ' ') . ' FCFA'
+            : null;
+        $contexte  = implode(' · ', array_filter([
+            $demandeur ? "par {$demandeur}" : null,
+            $client    ? "client {$client}" : null,
+            $montant,
+        ]));
+
+        match (true) {
+            $document instanceof Order => ValidationStepNotification::sendToRoles(
+                ['comptable', 'daf'],
+                title: 'Validation financière requise',
+                message: "Commande {$document->number} soumise {$contexte} — validation Finance en attente.",
+                url: route('ventes.commandes.show', $document),
+                modelType: 'Order', modelId: $document->id, type: 'order_submitted',
+            ),
+            $document instanceof Quote => ValidationStepNotification::sendToRoles(
+                ['responsable_commercial'],
+                title: 'Devis à valider',
+                message: "Devis {$document->number} soumis {$contexte} — validation requise.",
+                url: route('ventes.devis.show', $document),
+                modelType: 'Quote', modelId: $document->id, type: 'quote_submitted',
+            ),
+            $document instanceof DeliveryNote => ValidationStepNotification::sendToRoles(
+                ['responsable_commercial'],
+                title: 'Bon de livraison à valider',
+                message: "BL {$document->number} soumis {$contexte} — validation requise avant expédition.",
+                url: route('ventes.bons-livraison.show', $document),
+                modelType: 'DeliveryNote', modelId: $document->id, type: 'delivery_note_submitted',
+            ),
+            $document instanceof Invoice => ValidationStepNotification::sendToRoles(
+                ['comptable'],
+                title: 'Facture à valider',
+                message: "Facture {$document->number} soumise {$contexte} — validation comptable requise.",
+                url: route('ventes.factures.show', $document),
+                modelType: 'Invoice', modelId: $document->id, type: 'invoice_submitted',
+            ),
+            $document instanceof CreditNote => ValidationStepNotification::sendToRoles(
+                ['comptable'],
+                title: 'Avoir à valider',
+                message: "Avoir {$document->number} soumis {$contexte} — validation comptable requise.",
+                url: route('ventes.avoirs.show', $document),
+                modelType: 'CreditNote', modelId: $document->id, type: 'credit_note_submitted',
+            ),
+            default => null,
+        };
     }
 
     // ── Validation ────────────────────────────────────────────────────────────
@@ -52,10 +130,15 @@ class CommercialWorkflowService
         $this->assertPermission('sales.validate');
         $quote->assertCanValidate();
         $quote->validateDocument('valide', $motif);
+
+        $this->notifyCreatorOfValidation($quote, 'Devis validé', "Devis {$quote->number} validé — prêt à transmettre au client.", route('ventes.devis.show', $quote), 'Quote');
     }
 
     /**
-     * Valide une commande.
+     * Valide une commande (validation financière — en_attente_validation → confirme).
+     * Déclenche OrderConfirmed, identique au circuit direct OrderService::confirm() :
+     * réservation stock (ReserveStockOnOrderConfirmed) + auto-création OF pour les
+     * articles MTO (TriggerMtoProductionOnOrderConfirmed).
      *
      * @throws \RuntimeException
      */
@@ -63,7 +146,38 @@ class CommercialWorkflowService
     {
         $this->assertPermission('sales.validate');
         $order->assertCanValidate();
-        $order->validateDocument('confirme', $motif);
+
+        DB::transaction(function () use ($order, $motif) {
+            // [CONCURRENCE] Verrou + re-check statut frais : empêche la double validation.
+            $fresh = Order::lockForUpdate()->findOrFail($order->id);
+            if (! $fresh->isValidatable()) {
+                throw new \RuntimeException("Cette commande a déjà été traitée (statut : {$fresh->status}).");
+            }
+            $fresh->validateDocument('confirme', $motif);
+
+            event(new OrderConfirmed($fresh->fresh()));
+        });
+
+        // [CDC §13.1] Validation financière obtenue → Chef Production génère l'OF.
+        $fresh = $order->fresh();
+        ValidationStepNotification::sendToRoles(
+            ['chef_production', 'directeur_usine'],
+            title: 'Commande confirmée — OF à générer',
+            message: "Commande {$fresh->number} validée financièrement — ordre de fabrication à générer.",
+            url: route('ventes.commandes.show', $fresh),
+            modelType: 'Order',
+            modelId: $fresh->id,
+            type: 'order_validated',
+            icon: 'cog',
+            color: 'blue',
+        );
+
+        // [CDC §commande-crédit] Commande crédit validée par responsable → bon de préparation auto-créé.
+        // Le bon de préparation autorise le magasinier à procéder au chargement.
+        $client = $fresh->client ?? \App\Models\Client::find($fresh->client_id);
+        if ($client && $client->isCredit() && !$fresh->hasBonPreparation()) {
+            $this->bonPrepService->createForCreditOrder($fresh);
+        }
     }
 
     /**
@@ -92,6 +206,32 @@ class CommercialWorkflowService
             // [FIX-BL-STOCK] Créer les mouvements de sortie de stock après validation interne.
             $this->deliveryNoteService->applyStockOut($dn->fresh());
         });
+
+        $fresh = $dn->fresh(['order.invoices']);
+
+        // [CDC §bon-livraison] BL validé → génère automatiquement la facture
+        // (si la commande n'a pas déjà une facture active).
+        $order = $fresh->order;
+        if ($order && !$order->invoices()->whereIn('status', ['en_attente_validation', 'emise', 'envoyee', 'partiellement_payee', 'payee'])->exists()) {
+            try {
+                $this->invoiceService->createFromDeliveryNote($fresh);
+            } catch (\Throwable) {
+                // Ne bloque pas la validation BL si la création facture échoue
+                // (ex: BL partiel — InvoiceService gère ce cas)
+            }
+        }
+
+        // [CDC §13 Livraison] BL validé, stock sorti → notifie le commercial créateur,
+        // pas tout le rôle — c'est lui qui suit ce client.
+        if ($fresh->createdBy) {
+            $fresh->createdBy->notify(new ValidationStepNotification(
+                title: 'Livraison expédiée',
+                message: "BL {$fresh->number} validé — marchandise sortie de stock.",
+                url: route('ventes.bons-livraison.show', $fresh),
+                modelType: 'DeliveryNote', modelId: $fresh->id,
+                type: 'delivery_note_validated', icon: 'truck', color: 'green',
+            ));
+        }
     }
 
     /**
@@ -126,6 +266,9 @@ class CommercialWorkflowService
             // [FIX-FA-COMPTA] Appliquer les effets secondaires comptables/stock/événement.
             $this->invoiceService->applyValidationSideEffects($invoice->fresh(['client', 'company']));
         });
+
+        $fresh = $invoice->fresh();
+        $this->notifyCreatorOfValidation($fresh, 'Facture validée', "Facture {$fresh->number} validée — comptabilisée.", route('ventes.factures.show', $fresh), 'Invoice');
     }
 
     /**
@@ -151,6 +294,9 @@ class CommercialWorkflowService
             // [FIX-AVOIR-COMPTA] Appliquer les effets secondaires comptables/stock/événement.
             $this->creditNoteService->applyValidationSideEffects($cn->fresh(['client', 'company']));
         });
+
+        $fresh = $cn->fresh();
+        $this->notifyCreatorOfValidation($fresh, 'Avoir validé', "Avoir {$fresh->number} validé — comptabilisé.", route('ventes.avoirs.show', $fresh), 'CreditNote');
     }
 
     // ── Refus ─────────────────────────────────────────────────────────────────
@@ -188,6 +334,11 @@ class CommercialWorkflowService
         // [V4] Annulation d'une commande → libère les réservations de produit fini.
         if ($document instanceof \App\Models\Order) {
             app(\App\Modules\Production\Services\ReservationService::class)->releaseForOrder($document);
+        }
+
+        // [SYNC] Annulation d'une facture → recalcule le montant facturé de la commande.
+        if ($document instanceof Invoice) {
+            Order::resyncInvoicedAmount($document->order_id);
         }
     }
 
@@ -237,6 +388,23 @@ class CommercialWorkflowService
     }
 
     // ── Helpers privés ────────────────────────────────────────────────────────
+
+    /**
+     * [CDC §13/§17] Confirme au créateur du document que sa demande de
+     * validation a abouti — notification ciblée à la personne précise, pas
+     * à un rôle entier.
+     */
+    private function notifyCreatorOfValidation(mixed $document, string $title, string $message, string $url, string $modelType): void
+    {
+        $creator = $document->createdBy;
+        if (! $creator) {
+            return;
+        }
+        $creator->notify(new ValidationStepNotification(
+            $title, $message, $url, $modelType, $document->id,
+            type: 'document_validated', icon: 'check-circle', color: 'green',
+        ));
+    }
 
     /**
      * @throws \RuntimeException si l'utilisateur n'a pas la permission requise.

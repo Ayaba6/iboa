@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use App\Traits\HasCommercialWorkflow;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DeliveryNote extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasCommercialWorkflow;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasCommercialWorkflow, HasAttachments;
 
     const DOCUMENT_TYPE = 'delivery_note';
 
@@ -29,6 +30,12 @@ class DeliveryNote extends Model
         'warehouse_id',
         'delivery_address',
         'carrier',
+        'shipping_mode',
+        'incoterm',
+        'weight_kg',
+        'packages_count',
+        'expected_delivery_at',
+        'delivery_contact',
         'tracking_number',
         'notes',
         'created_by',
@@ -44,11 +51,14 @@ class DeliveryNote extends Model
     ];
 
     protected $casts = [
-        'issued_at'      => 'date',
-        'validated_at'   => 'datetime',
-        'submitted_at'   => 'datetime',
-        'rejected_at'    => 'datetime',
-        'total_quantity' => 'decimal:4',
+        'issued_at'            => 'date',
+        'validated_at'         => 'datetime',
+        'submitted_at'         => 'datetime',
+        'rejected_at'          => 'datetime',
+        'expected_delivery_at' => 'date',
+        'total_quantity'       => 'decimal:4',
+        'weight_kg'            => 'decimal:3',
+        'packages_count'       => 'integer',
     ];
 
     // -------------------------------------------------------------------------

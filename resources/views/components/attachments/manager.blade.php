@@ -14,9 +14,8 @@
     @if($showTitle)
     <div class="flex items-center justify-between">
         <h3 class="text-lg font-semibold text-gray-900">Pièces jointes</h3>
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-            <span x-text="attachments.length"></span> fichier<span x-show="attachments.length !== 1">s</span>
-        </span>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+              x-text="attachments.length === 0 ? 'Aucun fichier' : attachments.length + ' fichier' + (attachments.length !== 1 ? 's' : '')">Aucun fichier</span>
     </div>
     @endif
 

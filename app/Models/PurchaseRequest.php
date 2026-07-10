@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseRequest extends Model
 {
-    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope;
+    use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasAttachments;
 
     protected $table = 'purchase_requests';
 
@@ -29,6 +30,8 @@ class PurchaseRequest extends Model
         'notes',
         'rejection_reason',
         'total_estimated',
+        // [Maquette Demande d'achat]
+        'priority', 'project_reference', 'warehouse_id',
         'submitted_at',
         'approved_at',
         'created_by',

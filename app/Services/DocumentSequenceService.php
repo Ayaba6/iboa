@@ -56,6 +56,7 @@ class DocumentSequenceService
         'contentieux'         => 'litigation_cases',
         'demande_paiement'    => 'payment_requests',
         'ordre_fabrication'   => 'production_orders',
+        'bon_preparation'     => 'bon_preparations',
     ];
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -161,7 +162,13 @@ class DocumentSequenceService
             $yearPart = now()->format($yearFmt) . ($seq->year_separator ?? '-');
         }
 
-        return ($seq->prefix ?? '') . $yearPart . $padded . ($seq->suffix ?? '');
+        // [Maquette Numérotation] segment mois optionnel (ex: FAC-2026/07/0001)
+        $monthPart = '';
+        if ($seq->include_month ?? false) {
+            $monthPart = now()->format('m') . ($seq->year_separator ?? '-');
+        }
+
+        return ($seq->prefix ?? '') . $yearPart . $monthPart . $padded . ($seq->suffix ?? '');
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -431,6 +438,11 @@ class DocumentSequenceService
             'contentieux'         => ['prefix' => 'CTX-', 'padding' => 4],
             'demande_paiement'    => ['prefix' => 'DP-',  'padding' => 3],
             'ordre_fabrication'   => ['prefix' => 'OF-',  'padding' => 4],
+            'bon_preparation'     => ['prefix' => 'BP-',  'padding' => 4],
+            'mouvement_stock'     => ['prefix' => 'MVT-', 'padding' => 4],
+            'transfert_stock'     => ['prefix' => 'TRF-', 'padding' => 4],
+            'contrat'             => ['prefix' => 'CT-',  'padding' => 4],
+            'certificat_qualite'  => ['prefix' => 'CQ-',  'padding' => 4],
         ];
 
         $specific = $configs[$type] ?? ['prefix' => strtoupper(substr($type, 0, 3)) . '-', 'padding' => 3];

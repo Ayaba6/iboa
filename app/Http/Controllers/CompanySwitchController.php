@@ -18,7 +18,9 @@ class CompanySwitchController extends Controller
         $user = auth()->user();
 
         // Vérification d'autorisation
-        $canSwitch = $user->hasRole('super-admin')
+        // [FIX] Le rôle s'appelle « super_admin » (underscore) — l'ancien test
+        // « super-admin » ne matchait jamais et cassait le switch multi-société.
+        $canSwitch = $user->hasRole('super_admin')
             || $user->company_id === $company->id;
 
         abort_unless($canSwitch, 403, 'Accès refusé à cette société.');

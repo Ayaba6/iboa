@@ -10,444 +10,345 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+@php
+    // ── Classes SAGE X3 ──────────────────────────────────────────────────────
+    $card = 'bg-white border border-gray-300 rounded-[4px]';
+    $secH = 'px-4 py-1.5 border-b border-t border-gray-200 bg-[#eef5f0] text-[12px] font-bold text-emerald-900 uppercase tracking-wide';
+    $lbl  = 'block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5';
+    $val  = 'text-[13px] text-gray-800 font-medium';
 
-    {{-- Header --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+    // Rendu compact « libellé / valeur » (valeur échappée).
+    $row = function ($label, $value) use ($lbl, $val) {
+        $v = ($value === null || $value === '') ? '—' : e($value);
+        return '<div class="min-w-0"><span class="'.$lbl.'">'.e($label).'</span><span class="'.$val.' block truncate">'.$v.'</span></div>';
+    };
+    $oui = fn ($b) => $b ? 'Oui' : 'Non';
+    $f   = fn ($n) => $n !== null ? number_format((float) $n, 0, ',', ' ') : null;
+
+    $totalStock = $product->productStocks->sum('quantity');
+    $stockMin   = (float) ($product->stock_min ?? 0);
+    $margin     = $product->purchase_price > 0
+        ? round((($product->sale_price - $product->purchase_price) / $product->purchase_price) * 100, 1)
+        : null;
+    $stockAlert = $stockMin > 0 && $totalStock <= $stockMin;
+
+    $tabs = [
+        'general'    => 'Général',
+        'unites'     => 'Unités',
+        'stock'      => 'Stock',
+        'achat'      => 'Achat',
+        'vente'      => 'Vente',
+        'production' => 'Production',
+        'qualite'    => 'Qualité',
+        'compta'     => 'Compta',
+        'documents'  => 'Documents',
+    ];
+@endphp
+
+<div x-data="{ tab: 'general' }" class="space-y-3">
+
+    {{-- ═══ Bandeau titre (fiche SAGE) ═══════════════════════════════════════ --}}
+    <div class="{{ $card }} px-3 py-2.5 flex items-center gap-3">
         <div class="flex-shrink-0">
             @if($product->image)
-            <img src="{{ url(Storage::url($product->image)) }}" alt="" class="w-20 h-20 rounded-xl object-cover border border-gray-200">
+                <img src="{{ url(Storage::url($product->image)) }}" alt="" class="w-11 h-11 rounded-[4px] object-cover border border-gray-200">
             @else
-            <div class="w-20 h-20 bg-gray-100 rounded-xl flex items-center justify-center">
-                <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-            </div>
+                <div class="w-11 h-11 bg-gray-100 rounded-[4px] flex items-center justify-center">
+                    <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                </div>
             @endif
         </div>
         <div class="flex-1 min-w-0">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">{{ $product->name }}</h1>
-                    <p class="text-sm text-gray-400 font-mono mt-0.5">Réf : {{ $product->reference }}</p>
-                    @if($product->barcode)
-                    <p class="text-xs text-gray-400 font-mono">Code-barres : {{ $product->barcode }}</p>
-                    @endif
-                    <div class="flex flex-wrap gap-2 mt-2">
-                        @if($product->family)
-                        <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">{{ $product->family->name }}</span>
-                        @endif
-                        @if($product->brand)
-                        <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{{ $product->brand->name }}</span>
-                        @endif
-                        <span class="bg-purple-50 text-purple-700 text-xs px-2 py-0.5 rounded-full capitalize">{{ $product->type }}</span>
-                        @if($product->is_active)
-                        <span class="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full">Actif</span>
-                        @else
-                        <span class="bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded-full">Inactif</span>
-                        @endif
-                    </div>
-                </div>
-                <a href="{{ route('products.edit', $product) }}" class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                    Modifier
-                </a>
+            <div class="flex items-center gap-2">
+                <h1 class="text-[16px] font-bold text-gray-900 truncate">{{ $product->name }}</h1>
+                @if($product->is_active)
+                    <span class="bg-green-50 text-green-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">Actif</span>
+                @else
+                    <span class="bg-red-50 text-red-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">Inactif</span>
+                @endif
             </div>
-            @if($product->description)
-            <p class="text-sm text-gray-600 mt-3">{{ $product->description }}</p>
-            @endif
+            <div class="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-[11.5px] text-gray-400">
+                <span class="font-mono">Réf : {{ $product->reference }}</span>
+                @if($product->barcode)<span class="font-mono">CB : {{ $product->barcode }}</span>@endif
+                @if($product->family)<span class="text-blue-600">{{ $product->family->name }}</span>@endif
+                <span class="capitalize text-purple-600">{{ $product->type }}</span>
+            </div>
+        </div>
+        <a href="{{ route('products.edit', $product) }}"
+           class="flex-shrink-0 bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-semibold px-4 py-1.5 rounded-[4px] transition-colors">
+            Modifier
+        </a>
+    </div>
+
+    {{-- ═══ Bandeau KPI ═══════════════════════════════════════════════════════ --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div class="{{ $card }} px-3 py-2.5">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Prix d'achat</p>
+            <p class="text-[15px] font-bold text-gray-700 mt-0.5">{{ $f($product->purchase_price) }} <span class="text-[11px] font-normal text-gray-400">FCFA</span></p>
+            @if($margin !== null)<p class="text-[10.5px] mt-0.5 {{ $margin >= 0 ? 'text-emerald-600' : 'text-red-600' }} font-semibold">Marge {{ $margin >= 0 ? '+' : '' }}{{ $margin }}%</p>@endif
+        </div>
+        <div class="{{ $card }} px-3 py-2.5">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Prix de vente HT</p>
+            <p class="text-[15px] font-bold text-blue-700 mt-0.5">{{ $f($product->sale_price) }} <span class="text-[11px] font-normal text-gray-400">FCFA</span></p>
+        </div>
+        <div class="{{ $card }} px-3 py-2.5">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">TVA</p>
+            <p class="text-[15px] font-bold text-gray-700 mt-0.5">{{ $product->taxRate ? $product->taxRate->rate.' %' : '—' }}</p>
+        </div>
+        <div class="{{ $card }} px-3 py-2.5 {{ $stockAlert ? 'ring-1 ring-red-200' : '' }}">
+            <p class="text-[10px] font-bold {{ $stockAlert ? 'text-red-500' : 'text-gray-400' }} uppercase tracking-wide">Stock disponible {!! $stockAlert ? '⚠️' : '' !!}</p>
+            <p class="text-[15px] font-bold {{ $stockAlert ? 'text-red-700' : 'text-gray-700' }} mt-0.5">{{ number_format($totalStock, 2) }} <span class="text-[11px] font-normal text-gray-400">{{ $product->unit?->abbreviation ?? 'u' }}</span></p>
         </div>
     </div>
 
-    {{-- Prix + Stock KPIs --}}
-    @php
-        $totalStock  = $product->productStocks->sum('quantity');
-        $stockMin    = $product->stock_min ?? 0;
-        $stockMax    = $product->stock_max ?? 0;
-        $margin      = $product->purchase_price > 0
-            ? round((($product->sale_price - $product->purchase_price) / $product->purchase_price) * 100, 1)
-            : null;
-        $stockAlert  = $stockMin > 0 && $totalStock <= $stockMin;
-        $stockOk     = $stockMax > 0 && $totalStock >= $stockMin && $totalStock <= $stockMax;
-    @endphp
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Prix d'achat</p>
-            <p class="text-xl font-semibold text-gray-700">{{ number_format($product->purchase_price, 0, ',', ' ') }} <span class="text-sm font-normal text-gray-400">FCFA</span></p>
-            @if($margin !== null)
-            <p class="text-xs mt-1 {{ $margin >= 0 ? 'text-emerald-600' : 'text-red-600' }} font-medium">
-                Marge : {{ $margin >= 0 ? '+' : '' }}{{ $margin }}%
-            </p>
-            @endif
+    {{-- ═══ Fiche à onglets (lecture) ════════════════════════════════════════ --}}
+    <div class="{{ $card }} overflow-hidden">
+        {{-- Barre d'onglets --}}
+        <div class="flex items-stretch border-b border-gray-200 overflow-x-auto bg-gray-50/70">
+            @foreach($tabs as $key => $label)
+                <button type="button" @click="tab = '{{ $key }}'"
+                        :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                        class="px-3 py-1.5 text-[12.5px] font-semibold border-b-2 whitespace-nowrap transition-colors">{{ $label }}</button>
+            @endforeach
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Prix de vente HT</p>
-            <p class="text-xl font-bold text-blue-700">{{ number_format($product->sale_price, 0, ',', ' ') }} <span class="text-sm font-normal text-gray-400">FCFA</span></p>
-            @if($product->taxRate)
-            <p class="text-xs text-gray-400 mt-1">TVA {{ $product->taxRate->rate }}% incluse</p>
-            @endif
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">TVA</p>
-            @if($product->taxRate)
-            <p class="text-xl font-semibold text-gray-700">{{ $product->taxRate->rate }}<span class="text-sm font-normal text-gray-400">%</span></p>
-            <p class="text-xs text-gray-400 mt-1">{{ $product->taxRate->name }}</p>
-            @else
-            <p class="text-xl font-semibold text-gray-400">—</p>
-            @endif
-        </div>
-        <div class="bg-white rounded-xl border {{ $stockAlert ? 'border-red-200 bg-red-50' : 'border-gray-200' }} p-4">
-            <p class="text-xs font-medium {{ $stockAlert ? 'text-red-500' : 'text-gray-500' }} uppercase tracking-wider mb-1">
-                Stock disponible
-                @if($stockAlert) ⚠️ @endif
-            </p>
-            <p class="text-xl font-semibold {{ $stockAlert ? 'text-red-700' : 'text-gray-700' }}">
-                {{ number_format($totalStock, 2) }}
-                <span class="text-sm font-normal text-gray-400">{{ $product->unit?->abbreviation ?? 'u' }}</span>
-            </p>
-            @if($stockMax > 0)
-            @php $pct = min(100, $stockMax > 0 ? ($totalStock / $stockMax) * 100 : 0); @endphp
-            <div class="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div class="h-full rounded-full {{ $stockAlert ? 'bg-red-500' : ($pct > 75 ? 'bg-emerald-500' : 'bg-amber-400') }}"
-                     style="width: {{ $pct }}%"></div>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">Min {{ $stockMin }} / Max {{ $stockMax }}</p>
-            @elseif($stockMin > 0)
-            <p class="text-xs {{ $stockAlert ? 'text-red-500 font-medium' : 'text-gray-400' }} mt-1">Seuil min : {{ $stockMin }}</p>
-            @endif
-        </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {{-- ── Général ── --}}
+        <div x-show="tab === 'general'" class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+            {!! $row('Référence', $product->reference) !!}
+            {!! $row('Code article', $product->code_article) !!}
+            {!! $row('Désignation courte', $product->designation_courte ?? $product->designation_2) !!}
+            {!! $row('Type', ucfirst($product->type ?? '')) !!}
+            {!! $row('Type article', $product->type_article) !!}
+            {!! $row('Statut', $product->statut) !!}
+            {!! $row('Famille', $product->family?->name) !!}
+            {!! $row('Marque', $product->brand?->name) !!}
+            {!! $row('Canal client', $product->client_type_canal) !!}
+            {!! $row('Fournisseur par défaut', $product->defaultSupplier?->name) !!}
+            {!! $row('Réf. fournisseur', $product->supplier_reference) !!}
+            {!! $row('Délai livraison (j)', $product->delivery_delay_days) !!}
+            <div class="col-span-2 md:col-span-3"><span class="{{ $lbl }}">Description</span><span class="{{ $val }}">{{ $product->description ?: '—' }}</span></div>
+        </div>
 
-        {{-- Left column: details + stock --}}
-        <div class="lg:col-span-2 space-y-5">
+        {{-- ── Unités ── --}}
+        <div x-show="tab === 'unites'" x-cloak class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+            {!! $row('Unité de stock', $product->unit?->name) !!}
+            {!! $row("Unité d'achat", $product->purchaseUnit?->name) !!}
+            {!! $row('Coef UA → US', $product->ua_to_us_coef ? number_format((float) $product->ua_to_us_coef, 6, ',', ' ') : null) !!}
+            {!! $row('Unité de vente', $product->saleUnit?->name) !!}
+            {!! $row('Coef UV → US', $product->uv_to_us_coef ? number_format((float) $product->uv_to_us_coef, 6, ',', ' ') : null) !!}
+            {!! $row('Unité de poids', $product->weightUnit?->name) !!}
+            {!! $row('Poids brut / US', $product->gross_weight_per_us) !!}
+            {!! $row('Poids net / US', $product->net_weight_per_us) !!}
+            {!! $row('Densité', $product->density) !!}
+            {!! $row('Épaisseur / diamètre (mm)', $product->thickness) !!}
+            {!! $row('Métrage (m)', $product->linear_meters) !!}
+        </div>
 
-            {{-- Details --}}
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100">
-                    <h3 class="font-semibold text-gray-900">Informations</h3>
-                </div>
-                <div class="p-5 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Unité de mesure</p>
-                        <p class="font-medium text-gray-800">{{ $product->unit?->name ?? '—' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Méthode valorisation</p>
-                        <p class="font-medium text-gray-800 uppercase">{{ $product->valuation_method ?? '—' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Prix min vente</p>
-                        <p class="font-medium text-gray-800">{{ $product->min_sale_price ? number_format($product->min_sale_price, 0, ',', ' ').' FCFA' : '—' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Seuil réapprovisionnement</p>
-                        <p class="font-medium text-gray-800">{{ $product->reorder_point ?? '—' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Stock min / max</p>
-                        <p class="font-medium text-gray-800">{{ $product->stock_min ?? '—' }} / {{ $product->stock_max ?? '—' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Caractéristiques</p>
-                        <div class="flex flex-wrap gap-1 mt-0.5">
-                            @if($product->is_stockable) <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">Stockable</span> @endif
-                            @if($product->is_purchasable) <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">Achetable</span> @endif
-                            @if($product->is_sellable) <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">Vendable</span> @endif
-                            @if($product->has_serial_number) <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded">N° Série</span> @endif
-                            @if($product->has_lot_number) <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded">Lot</span> @endif
-                            @if($product->has_expiry_date) <span class="bg-orange-50 text-orange-700 text-xs px-2 py-0.5 rounded">Date expiry</span> @endif
-                        </div>
-                    </div>
-                </div>
+        {{-- ── Stock ── --}}
+        <div x-show="tab === 'stock'" x-cloak>
+            <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+                {!! $row('Méthode de valorisation', strtoupper($product->valuation_method ?? '')) !!}
+                {!! $row('Dépôt principal', $product->mainWarehouse?->name) !!}
+                {!! $row('Stock mini', $product->stock_min) !!}
+                {!! $row('Stock maxi', $product->stock_max) !!}
+                {!! $row('Point de réappro.', $product->reorder_point) !!}
+                {!! $row('Stock de sécurité', $product->stock_securite) !!}
+                {!! $row("Seuil d'alerte", $product->seuil_alerte) !!}
+                {!! $row('Stock négatif autorisé', $oui($product->allow_negative_stock)) !!}
+                {!! $row('Stockable', $oui($product->is_stockable)) !!}
             </div>
 
-            {{-- Stock par dépôt --}}
             @if($product->productStocks->isNotEmpty())
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100">
-                    <h3 class="font-semibold text-gray-900">Stock par dépôt</h3>
-                </div>
-                <table class="w-full divide-y divide-gray-100 text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Dépôt</th>
-                            <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Disponible</th>
-                            <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Réservé</th>
-                            <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Coût moyen</th>
-                        </tr>
-                    </thead>
+                <div class="{{ $secH }}">Stock par dépôt</div>
+                <table class="w-full text-[12.5px]">
+                    <thead><tr class="text-[10px] font-bold text-gray-500 uppercase">
+                        <th class="px-4 py-1.5 text-left">Dépôt</th>
+                        <th class="px-4 py-1.5 text-right">Disponible</th>
+                        <th class="px-4 py-1.5 text-right">Réservé</th>
+                        <th class="px-4 py-1.5 text-right">Coût moyen</th>
+                    </tr></thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($product->productStocks as $stock)
                         <tr>
-                            <td class="px-5 py-3 text-gray-900">{{ $stock->warehouse?->name ?? '—' }}</td>
-                            <td class="px-5 py-3 text-right font-medium text-gray-900">{{ number_format($stock->quantity, 2) }}</td>
-                            <td class="px-5 py-3 text-right text-gray-500">{{ number_format($stock->reserved_quantity, 2) }}</td>
-                            <td class="px-5 py-3 text-right text-gray-500">{{ number_format($stock->avg_cost, 0, ',', ' ') }} FCFA</td>
+                            <td class="px-4 py-1.5 text-gray-900">{{ $stock->warehouse?->name ?? '—' }}</td>
+                            <td class="px-4 py-1.5 text-right font-medium tabular-nums">{{ number_format($stock->quantity, 2) }}</td>
+                            <td class="px-4 py-1.5 text-right text-gray-500 tabular-nums">{{ number_format($stock->reserved_quantity, 2) }}</td>
+                            <td class="px-4 py-1.5 text-right text-gray-500 tabular-nums">{{ number_format($stock->avg_cost, 0, ',', ' ') }} FCFA</td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
-            </div>
             @endif
 
-            {{-- Composants (type composé) --}}
-            @if($product->type === 'compose' && $product->components->isNotEmpty())
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100">
-                    <h3 class="font-semibold text-gray-900">Composants</h3>
+            @if($recentMovements->isNotEmpty())
+                <div class="{{ $secH }} flex items-center justify-between">
+                    <span>Derniers mouvements</span>
+                    <a href="{{ route('stocks.movements', ['product_id' => $product->id]) }}" class="text-emerald-700 hover:text-emerald-800 normal-case tracking-normal text-[11px]">Voir tout →</a>
                 </div>
-                <table class="w-full divide-y divide-gray-100 text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Composant</th>
-                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Référence</th>
-                            <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Quantité</th>
+                <table class="w-full text-[12.5px]">
+                    <thead><tr class="text-[10px] font-bold text-gray-500 uppercase">
+                        <th class="px-4 py-1.5 text-left">Date</th>
+                        <th class="px-4 py-1.5 text-left">Type</th>
+                        <th class="px-4 py-1.5 text-left">Dépôt</th>
+                        <th class="px-4 py-1.5 text-right">Quantité</th>
+                        <th class="px-4 py-1.5 text-right hidden md:table-cell">Coût unit.</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($recentMovements as $mvt)
+                        @php
+                            $isIn = in_array($mvt->type, ['entree', 'retour_client']) || ($mvt->type === 'ajustement' && $mvt->quantity > 0);
+                            $typeLabels = ['entree' => 'Entrée', 'sortie' => 'Sortie', 'ajustement' => 'Ajustement', 'transfert' => 'Transfert', 'retour_client' => 'Retour client', 'retour_fournisseur' => 'Retour fourn.'];
+                        @endphp
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-1.5 text-gray-500">{{ \Carbon\Carbon::parse($mvt->occurred_at)->format('d/m/Y') }}</td>
+                            <td class="px-4 py-1.5"><span class="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full {{ $isIn ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700' }}">{{ $typeLabels[$mvt->type] ?? $mvt->type }}</span></td>
+                            <td class="px-4 py-1.5 text-gray-600">{{ $mvt->warehouse?->name ?? '—' }}</td>
+                            <td class="px-4 py-1.5 text-right font-semibold tabular-nums {{ $isIn ? 'text-green-700' : 'text-red-700' }}">{{ $isIn ? '+' : '' }}{{ number_format($mvt->quantity, 2) }}</td>
+                            <td class="px-4 py-1.5 text-right text-gray-500 tabular-nums hidden md:table-cell">{{ $mvt->unit_cost ? number_format($mvt->unit_cost, 0, ',', ' ').' FCFA' : '—' }}</td>
                         </tr>
-                    </thead>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </div>
+
+        {{-- ── Achat ── --}}
+        <div x-show="tab === 'achat'" x-cloak class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+            {!! $row("Prix d'achat", $f($product->purchase_price).' FCFA') !!}
+            {!! $row('Dernier prix achat', $product->last_purchase_price ? $f($product->last_purchase_price).' FCFA' : null) !!}
+            {!! $row('Coût moyen pondéré', $product->weighted_avg_cost ? $f($product->weighted_avg_cost).' FCFA' : null) !!}
+            {!! $row('Coût standard', $product->cout_standard ? $f($product->cout_standard).' FCFA' : null) !!}
+            {!! $row('TVA achat', $product->taxRateAchat ? $product->taxRateAchat->rate.' %' : null) !!}
+            {!! $row('Achetable', $oui($product->is_purchasable)) !!}
+        </div>
+
+        {{-- ── Vente ── --}}
+        <div x-show="tab === 'vente'" x-cloak>
+            <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+                {!! $row('Prix de vente HT', $f($product->sale_price).' FCFA') !!}
+                {!! $row('Prix de vente mini', $product->min_sale_price ? $f($product->min_sale_price).' FCFA' : null) !!}
+                {!! $row('Taux de marge cible', $product->margin_rate_target ? $product->margin_rate_target.' %' : null) !!}
+                {!! $row('TVA', $product->taxRate ? $product->taxRate->rate.' %' : null) !!}
+                {!! $row('Vendable', $oui($product->is_sellable)) !!}
+            </div>
+
+            <div class="{{ $secH }}">Tarifs spéciaux</div>
+            @if($product->productPriceTiers->isEmpty())
+                <div class="px-4 py-4 text-center text-gray-400 text-[12.5px]">Aucun tarif spécial</div>
+            @else
+                <table class="w-full text-[12.5px]">
+                    <thead><tr class="text-[10px] font-bold text-gray-500 uppercase">
+                        <th class="px-4 py-1.5 text-left">Libellé</th>
+                        <th class="px-4 py-1.5 text-left">Catégorie</th>
+                        <th class="px-4 py-1.5 text-right">Qté min.</th>
+                        <th class="px-4 py-1.5 text-right">Prix</th>
+                        <th class="px-4 py-1.5 text-right">Remise</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($product->productPriceTiers as $tier)
+                        <tr>
+                            <td class="px-4 py-1.5 text-gray-900">{{ $tier->label ?: 'Tarif #'.$tier->id }}</td>
+                            <td class="px-4 py-1.5 text-gray-500 capitalize">{{ $tier->client_category ?: '—' }}</td>
+                            <td class="px-4 py-1.5 text-right tabular-nums">{{ $tier->min_quantity ?? 1 }}</td>
+                            <td class="px-4 py-1.5 text-right font-semibold text-blue-700 tabular-nums">{{ number_format($tier->price, 0, ',', ' ') }} FCFA</td>
+                            <td class="px-4 py-1.5 text-right text-green-600 tabular-nums">{{ $tier->discount_percent ? '-'.$tier->discount_percent.'%' : '—' }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+
+            <div class="{{ $secH }}">Promotions</div>
+            @if(isset($promotions) && $promotions->isNotEmpty())
+                <table class="w-full text-[12.5px]">
+                    <thead><tr class="text-[10px] font-bold text-gray-500 uppercase">
+                        <th class="px-4 py-1.5 text-left">Nom</th>
+                        <th class="px-4 py-1.5 text-left">Période</th>
+                        <th class="px-4 py-1.5 text-right">Valeur</th>
+                        <th class="px-4 py-1.5 text-left">État</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($promotions as $promo)
+                        @php $today = \Carbon\Carbon::today(); $active = $promo->is_active && $promo->starts_at <= $today && $promo->ends_at >= $today; @endphp
+                        <tr>
+                            <td class="px-4 py-1.5 text-gray-900">{{ $promo->name }}</td>
+                            <td class="px-4 py-1.5 text-gray-500">{{ $promo->starts_at?->format('d/m/Y') ?? '—' }} → {{ $promo->ends_at?->format('d/m/Y') ?? '—' }}</td>
+                            <td class="px-4 py-1.5 text-right font-semibold tabular-nums">{{ $promo->type === 'pourcentage' ? '-'.number_format($promo->value, 0).'%' : '-'.number_format($promo->value, 0, ',', ' ').' FCFA' }}</td>
+                            <td class="px-4 py-1.5">@if($active)<span class="inline-flex items-center gap-1 bg-green-50 text-green-700 text-[10.5px] px-1.5 py-0.5 rounded-full"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Active</span>@else<span class="text-gray-400 text-[11px]">Inactive</span>@endif</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <div class="px-4 py-4 text-center text-gray-400 text-[12.5px]">Aucune promotion</div>
+            @endif
+        </div>
+
+        {{-- ── Production ── --}}
+        <div x-show="tab === 'production'" x-cloak>
+            <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+                {!! $row('Fabricable', $oui($product->is_manufacturable)) !!}
+                {!! $row('Mode de production', $product->production_mode) !!}
+                {!! $row('Semi-fini', $oui($product->is_semi_finished)) !!}
+                {!! $row('Profil', $product->profil) !!}
+                {!! $row('Couleur', $product->couleur) !!}
+                {!! $row('Largeur utile', $product->largeur_utile) !!}
+                {!! $row('Longueur standard', $product->longueur_standard) !!}
+                {!! $row('Rendement standard', $product->rendement_standard ? $product->rendement_standard.' %' : null) !!}
+                {!! $row('Taux de perte', $product->taux_perte ? $product->taux_perte.' %' : null) !!}
+                {!! $row('Machine par défaut', $product->machineDefaut?->name) !!}
+                {!! $row('Réf. nomenclature', $product->nomenclature_ref) !!}
+                {!! $row('Dépôt de production', $product->productionWarehouse?->name) !!}
+                {!! $row('Article avarié', $product->articleAvarie?->name) !!}
+                {!! $row('Article chute', $product->articleChute?->name) !!}
+            </div>
+
+            @if($product->type === 'compose' && $product->components->isNotEmpty())
+                <div class="{{ $secH }}">Composants</div>
+                <table class="w-full text-[12.5px]">
+                    <thead><tr class="text-[10px] font-bold text-gray-500 uppercase">
+                        <th class="px-4 py-1.5 text-left">Composant</th>
+                        <th class="px-4 py-1.5 text-left">Référence</th>
+                        <th class="px-4 py-1.5 text-right">Quantité</th>
+                    </tr></thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($product->components as $comp)
                         <tr>
-                            <td class="px-5 py-3 text-gray-900">
-                                <a href="{{ route('products.show', $comp->component) }}" class="hover:text-blue-600">
-                                    {{ $comp->component->name }}
-                                </a>
-                            </td>
-                            <td class="px-5 py-3 font-mono text-gray-500 text-xs">{{ $comp->component->reference }}</td>
-                            <td class="px-5 py-3 text-right font-medium text-gray-900">{{ number_format($comp->quantity, 2) }}</td>
+                            <td class="px-4 py-1.5"><a href="{{ route('products.show', $comp->component) }}" class="text-gray-900 hover:text-emerald-700">{{ $comp->component->name }}</a></td>
+                            <td class="px-4 py-1.5 font-mono text-gray-500 text-[11px]">{{ $comp->component->reference }}</td>
+                            <td class="px-4 py-1.5 text-right font-medium tabular-nums">{{ number_format($comp->quantity, 2) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
-            </div>
             @endif
-
         </div>
 
-        {{-- Right column: price tiers + promotions --}}
-        <div class="space-y-5">
-
-            {{-- Tarifs par client --}}
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" x-data="{ showForm: false }">
-                <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-900">Tarifs spéciaux</h3>
-                    <button @click="showForm = !showForm" type="button"
-                            class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Ajouter
-                    </button>
-                </div>
-
-                {{-- Add tier form --}}
-                <div x-show="showForm" x-cloak class="p-4 bg-gray-50 border-b border-gray-100">
-                    <form method="POST" action="{{ route('product-price-tiers.store') }}" class="space-y-3">
-                        @csrf
-                        <input type="hidden" name="product_id" value="{{ $product->id }}">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Libellé</label>
-                            <input type="text" name="label" placeholder="Ex: Tarif grossiste"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Prix (FCFA) <span class="text-red-500">*</span></label>
-                                <input type="number" name="price" min="0" required
-                                       class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 text-right">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Remise (%)</label>
-                                <input type="number" name="discount_percent" min="0" max="100" step="0.01"
-                                       class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 text-right">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Catégorie client</label>
-                            <select name="client_category"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500">
-                                <option value="">— Aucune —</option>
-                                <option value="gros">Gros</option>
-                                <option value="semi-gros">Semi-gros</option>
-                                <option value="detail">Détail</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Qté minimum</label>
-                            <input type="number" name="min_quantity" min="0" step="0.01" value="1"
-                                   class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 text-right">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Début</label>
-                                <input type="date" name="starts_at"
-                                       class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Fin</label>
-                                <input type="date" name="ends_at"
-                                       class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500">
-                            </div>
-                        </div>
-                        <div class="flex gap-2 pt-1">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-1.5 rounded-lg transition-colors">
-                                Enregistrer
-                            </button>
-                            <button @click="showForm = false" type="button" class="text-xs text-gray-500 hover:text-gray-700 px-4 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                                Annuler
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                @if($product->productPriceTiers->isEmpty())
-                <div class="px-5 py-8 text-center text-gray-400 text-sm">Aucun tarif spécial</div>
-                @else
-                <div class="divide-y divide-gray-100">
-                    @foreach($product->productPriceTiers as $tier)
-                    <div class="px-5 py-3 flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ $tier->label ?: 'Tarif #'.$tier->id }}</p>
-                            <p class="text-xs text-gray-500">
-                                @if($tier->client_category)
-                                <span class="capitalize">{{ $tier->client_category }}</span> ·
-                                @endif
-                                Qté ≥ {{ $tier->min_quantity ?? 1 }}
-                                @if($tier->starts_at || $tier->ends_at)
-                                · {{ $tier->starts_at?->format('d/m/Y') ?? '—' }} → {{ $tier->ends_at?->format('d/m/Y') ?? '—' }}
-                                @endif
-                            </p>
-                        </div>
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            <div class="text-right">
-                                <p class="text-sm font-bold text-blue-700">{{ number_format($tier->price, 0, ',', ' ') }} FCFA</p>
-                                @if($tier->discount_percent)
-                                <p class="text-xs text-green-600">-{{ $tier->discount_percent }}%</p>
-                                @endif
-                            </div>
-                            <form method="POST" action="{{ route('product-price-tiers.destroy', $tier) }}"
-                                  onsubmit="return confirm('Supprimer ce tarif ?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="text-red-400 hover:text-red-600 transition-colors p-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-                @endif
-            </div>
-
-            {{-- Promotions actives --}}
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-900">Promotions</h3>
-                    <a href="{{ route('promotions.create') }}?product_id={{ $product->id }}"
-                       class="inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Créer
-                    </a>
-                </div>
-                @if(isset($promotions) && $promotions->isNotEmpty())
-                <div class="divide-y divide-gray-100">
-                    @foreach($promotions as $promo)
-                    @php
-                        $today = \Carbon\Carbon::today();
-                        $promoActive = $promo->is_active && $promo->starts_at <= $today && $promo->ends_at >= $today;
-                    @endphp
-                    <div class="px-5 py-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium text-gray-900 truncate">{{ $promo->name }}</p>
-                                <p class="text-xs text-gray-500">
-                                    {{ $promo->starts_at?->format('d/m/Y') ?? '—' }} → {{ $promo->ends_at?->format('d/m/Y') ?? '—' }}
-                                </p>
-                            </div>
-                            <div class="flex items-center gap-2 flex-shrink-0">
-                                @if($promo->type === 'pourcentage')
-                                <span class="text-sm font-bold text-green-700">-{{ number_format($promo->value, 0) }}%</span>
-                                @elseif($promo->type === 'montant_fixe')
-                                <span class="text-sm font-bold text-blue-700">-{{ number_format($promo->value, 0, ',', ' ') }} FCFA</span>
-                                @else
-                                <span class="text-sm font-bold text-purple-700">{{ number_format($promo->value, 0, ',', ' ') }} FCFA</span>
-                                @endif
-                                @if($promoActive)
-                                <span class="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-1.5 py-0.5 rounded-full">
-                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Active
-                                </span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-                @else
-                <div class="px-5 py-8 text-center text-gray-400 text-sm">Aucune promotion</div>
-                @endif
-            </div>
-
+        {{-- ── Qualité ── --}}
+        <div x-show="tab === 'qualite'" x-cloak class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+            {!! $row('Contrôle qualité', $oui($product->controle_qualite)) !!}
+            {!! $row('Dépôt qualité', $product->qualityWarehouse?->name) !!}
+            {!! $row('N° de série', $oui($product->has_serial_number)) !!}
+            {!! $row('Gestion par lot', $oui($product->has_lot_number)) !!}
+            {!! $row("Date d'expiration", $oui($product->has_expiry_date)) !!}
         </div>
-    </div>
 
-    {{-- Derniers mouvements de stock --}}
-    @if($recentMovements->isNotEmpty())
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 class="font-semibold text-gray-900">Derniers mouvements de stock</h3>
-            <a href="{{ route('stocks.movements', ['product_id' => $product->id]) }}"
-               class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
-                Voir tout →
-            </a>
+        {{-- ── Compta ── --}}
+        <div x-show="tab === 'compta'" x-cloak class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+            {!! $row('Section analytique', $product->sectionAnalytique?->name ?? $product->sectionAnalytique?->code) !!}
+            {!! $row('Centre de coût', $product->costCenter?->name ?? $product->costCenter?->code) !!}
+            {!! $row('Compte de vente', $product->saleAccount?->code) !!}
+            {!! $row("Compte d'achat", $product->purchaseAccount?->code) !!}
+            {!! $row('Compte de stock', $product->stockAccount?->code) !!}
+            {!! $row('Compte variation stock', $product->variationStockAccount?->code) !!}
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full divide-y divide-gray-100 text-sm">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-5 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                        <th class="px-5 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
-                        <th class="px-5 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Dépôt</th>
-                        <th class="px-5 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Quantité</th>
-                        <th class="px-5 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Coût unit.</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    @foreach($recentMovements as $mvt)
-                    @php
-                        $isIn = in_array($mvt->type, ['entree', 'retour_client']) || ($mvt->type === 'ajustement' && $mvt->quantity > 0);
-                        $typeLabels = ['entree' => 'Entrée', 'sortie' => 'Sortie', 'ajustement' => 'Ajustement', 'transfert' => 'Transfert', 'retour_client' => 'Retour client', 'retour_fournisseur' => 'Retour fourn.'];
-                    @endphp
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-5 py-2.5 text-gray-500 text-xs">
-                            {{ \Carbon\Carbon::parse($mvt->occurred_at)->format('d/m/Y') }}
-                        </td>
-                        <td class="px-5 py-2.5">
-                            <span class="text-xs font-medium px-2 py-0.5 rounded-full {{ $isIn ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700' }}">
-                                {{ $typeLabels[$mvt->type] ?? $mvt->type }}
-                            </span>
-                        </td>
-                        <td class="px-5 py-2.5 text-gray-600 text-xs">{{ $mvt->warehouse?->name ?? '—' }}</td>
-                        <td class="px-5 py-2.5 text-right font-semibold tabular-nums {{ $isIn ? 'text-green-700' : 'text-red-700' }}">
-                            {{ $isIn ? '+' : '' }}{{ number_format($mvt->quantity, 2) }}
-                        </td>
-                        <td class="px-5 py-2.5 text-right text-gray-500 text-xs tabular-nums hidden md:table-cell">
-                            {{ $mvt->unit_cost ? number_format($mvt->unit_cost, 0, ',', ' ').' FCFA' : '—' }}
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-    @endif
 
-    {{-- Pièces jointes --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-5">
-        <x-attachments.manager model="Product" :id="$product->id" />
+        {{-- ── Documents ── --}}
+        <div x-show="tab === 'documents'" x-cloak class="p-6 text-center text-gray-400 text-[12.5px]">
+            Aucun document attaché.
+        </div>
     </div>
 
 </div>

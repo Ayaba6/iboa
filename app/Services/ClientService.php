@@ -92,4 +92,21 @@ class ClientService
         }
         return $client->delete();
     }
+
+    /**
+     * [Parametrage Vente] Refuse tout document commercial pour un client bloque.
+     * Appele en tete de creation devis / commande / facture.
+     */
+    public static function assertSellable(?\App\Models\Client $client): void
+    {
+        if (!$client) {
+            return;
+        }
+        if ($client->is_blocked) {
+            throw new \RuntimeException(
+                "Client {$client->name} bloque" . ($client->blocked_reason ? " : {$client->blocked_reason}" : '') .
+                " - aucun devis, commande ou facture ne peut etre cree."
+            );
+        }
+    }
 }

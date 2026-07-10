@@ -45,8 +45,29 @@ class PaymentRequestController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validateData($request);
+        // [PARITÉ SAGE X3] Net à payer = montant demandé + frais divers (informatif,
+        // recalculé serveur ; le workflow reste basé sur `amount`).
+        $data['net_amount'] = (int) $data['amount'] + max(0, (int) ($data['misc_fees'] ?? 0));
+        unset($data['documents']);
 
         $pr = $this->service->create($data);
+
+        // Pièces justificatives (post-création, additif).
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/payment_request/'.$pr->id, 'local');
+            $pr->attachments()->create([
+                'disk' => 'local', 'path' => $path,
+                'filename' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(), 'size' => $file->getSize(),
+                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
+
+        if ($request->boolean('save_and_new')) {
+            return redirect()->route('tresorerie.demandes.create')
+                ->with('success', "Demande {$pr->number} créée. Nouvelle saisie.");
+        }
+
         return redirect()->route('tresorerie.demandes.show', $pr)
             ->with('success', "Demande {$pr->number} créée (brouillon).");
     }
@@ -122,6 +143,19 @@ class PaymentRequestController extends Controller
             'due_date'            => ['nullable', 'date'],
             'priority'            => ['required', 'in:basse,normale,haute,urgente'],
             'notes'               => ['nullable', 'string', 'max:1000'],
+            // [PARITÉ SAGE X3] Champs descriptifs
+            'site'                => ['nullable', 'string', 'max:40'],
+            'service'             => ['nullable', 'string', 'max:60'],
+            'request_type'        => ['nullable', 'string', 'max:30'],
+            'internal_reference'  => ['nullable', 'string', 'max:100'],
+            'amount_ht'           => ['nullable', 'integer', 'min:0'],
+            'tax_amount'          => ['nullable', 'integer', 'min:0'],
+            'misc_fees'           => ['nullable', 'integer', 'min:0'],
+            'bank_account'        => ['nullable', 'string', 'max:50'],
+            'cost_center'         => ['nullable', 'string', 'max:30'],
+            'analytic_section'    => ['nullable', 'string', 'max:30'],
+            'documents'           => ['nullable', 'array'],
+            'documents.*'         => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
         ]);
     }
 }

@@ -3,8 +3,11 @@
 namespace App\Modules\Production\Services;
 
 use App\Modules\Production\Models\MachineMaintenance;
+use App\Modules\Production\Models\MaintenancePart;
 use App\Modules\Production\Models\ProductionMachine;
+use App\Services\StockService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -14,6 +17,48 @@ use Illuminate\Validation\ValidationException;
  */
 class MaintenanceService
 {
+    public function __construct(private StockService $stock) {}
+
+    /**
+     * [CDC §13.8] Enregistre une sortie de pièce de rechange pour une
+     * intervention — sortie de stock réelle (warehouse → product_stocks),
+     * traçable, au lieu d'un simple coût forfaitaire saisi à la main.
+     */
+    public function consumePart(MachineMaintenance $m, int $productId, float $quantity, int $warehouseId): MaintenancePart
+    {
+        if ($m->status === 'termine') {
+            throw ValidationException::withMessages(['status' => 'Intervention déjà clôturée — pièce non ajoutable.']);
+        }
+
+        return DB::transaction(function () use ($m, $productId, $quantity, $warehouseId) {
+            $unitCost = (float) (\App\Models\ProductStock::where('product_id', $productId)
+                ->where('warehouse_id', $warehouseId)->value('avg_cost') ?? 0);
+
+            $movement = $this->stock->recordMovement([
+                'product_id'     => $productId,
+                'warehouse_id'   => $warehouseId,
+                'type'           => 'sortie',
+                'quantity'       => $quantity,
+                'unit_cost'      => $unitCost,
+                'occurred_at'    => now(),
+                'reference_type' => 'maintenance',
+                'reference_id'   => $m->id,
+                'notes'          => 'Pièce consommée — intervention ' . ($m->title ?: '#' . $m->id),
+            ]);
+
+            return MaintenancePart::create([
+                'company_id'             => $m->company_id,
+                'machine_maintenance_id' => $m->id,
+                'product_id'             => $productId,
+                'warehouse_id'           => $warehouseId,
+                'quantity'               => $quantity,
+                'unit_cost'              => (int) round($unitCost),
+                'stock_movement_id'      => $movement->id,
+                'created_by'             => Auth::id(),
+            ]);
+        });
+    }
+
     /** Démarre une intervention → machine en maintenance. */
     public function start(MachineMaintenance $m): void
     {
@@ -22,7 +67,18 @@ class MaintenanceService
         }
         DB::transaction(function () use ($m) {
             $m->update(['status' => 'en_cours', 'started_at' => $m->started_at ?? now()]);
-            $m->machine?->update(['status' => 'maintenance']);
+            // [Sync ERP] transition d'état journalisée (non idempotente : une
+            // intervention rouverte doit pouvoir re-bloquer la machine).
+            app(\App\Services\Sync\SyncOrchestrator::class)->run(
+                sourceModule: 'maintenance',
+                targetModule: 'production',
+                eventName: 'maintenance.started',
+                action: 'set_machine_unavailable',
+                source: $m,
+                callback: fn () => $m->machine?->update(['status' => 'maintenance']),
+                payload: ['machine_id' => $m->machine_id],
+                idempotent: false,
+            );
         });
     }
 
@@ -44,7 +100,19 @@ class MaintenanceService
                 'downtime_minutes' => $downtime ?? 0,
                 'cost'             => $cost ?? $m->cost,
             ]);
-            $m->machine?->update(['status' => 'active']);
+            // [Sync ERP] transition d'état journalisée : machine relâchée,
+            // production relançable.
+            app(\App\Services\Sync\SyncOrchestrator::class)->run(
+                sourceModule: 'maintenance',
+                targetModule: 'production',
+                eventName: 'maintenance.closed',
+                action: 'restore_machine_available',
+                source: $m,
+                callback: fn () => $m->machine?->update(['status' => 'active']),
+                payload: ['machine_id' => $m->machine_id, 'downtime_minutes' => $downtime ?? 0],
+                idempotent: false,
+            );
+            \Illuminate\Support\Facades\DB::afterCommit(fn () => event(new \App\Events\MaintenanceInterventionClosed($m)));
         });
     }
 
@@ -54,23 +122,28 @@ class MaintenanceService
         $from = Carbon::now()->subDays($periodDays);
         $periodMinutes = $periodDays * 24 * 60;
 
-        $done = MachineMaintenance::where('machine_id', $machine->id)
+        $done = MachineMaintenance::with('parts')
+            ->where('machine_id', $machine->id)
             ->where('status', 'termine')
             ->where('ended_at', '>=', $from)->get();
 
         $downtime    = (float) $done->sum('downtime_minutes');
+        $preventive  = $done->where('type', 'preventive');
         $corrective  = $done->where('type', 'corrective');
         $failures    = $corrective->count();
         $corrDowntime = (float) $corrective->sum('downtime_minutes');
         $uptime      = max(0, $periodMinutes - $downtime);
 
         return [
-            'availability' => $periodMinutes > 0 ? round($uptime / $periodMinutes * 100, 1) : 100,
-            'downtime_h'   => round($downtime / 60, 1),
-            'failures'     => $failures,
-            'mtbf_h'       => $failures > 0 ? round($uptime / 60 / $failures, 1) : null,   // temps moyen entre pannes
-            'mttr_h'       => $failures > 0 ? round($corrDowntime / 60 / $failures, 1) : null, // temps moyen de réparation
-            'cost'         => (int) $done->sum('cost'),
+            'availability'   => $periodMinutes > 0 ? round($uptime / $periodMinutes * 100, 1) : 100,
+            'downtime_h'     => round($downtime / 60, 1),
+            'failures'       => $failures,
+            'preventive_count' => $preventive->count(),
+            'mtbf_h'         => $failures > 0 ? round($uptime / 60 / $failures, 1) : null,   // temps moyen entre pannes
+            'mttr_h'         => $failures > 0 ? round($corrDowntime / 60 / $failures, 1) : null, // temps moyen de réparation
+            // [CDC §13.8] coût total = saisie manuelle + pièces de rechange réellement consommées
+            'cost'           => (int) $done->sum(fn (MachineMaintenance $m) => $m->totalCost()),
+            'parts_cost'     => (int) $done->sum(fn (MachineMaintenance $m) => $m->parts->sum(fn ($p) => $p->quantity * $p->unit_cost)),
         ];
     }
 

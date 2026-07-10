@@ -54,8 +54,8 @@ function createEmployeeForm() {
         paymentMode:  '{{ old('payment_mode','virement') }}',
 
         /* ── Primes & indemnités ── */
-        allowanceTypes: {!! $allowanceTypes->map(fn($t) => ['id'=>$t->id,'name'=>$t->name,'code'=>$t->code,'taxable'=>(bool)$t->is_taxable])->values()->toJson() !!},
-        allowances: {!! collect(old('allowances',[]))->map(fn($r)=>['type_id'=>(int)($r['type_id']??0),'amount'=>(int)($r['amount']??0)])->filter(fn($r)=>$r['type_id']>0)->values()->toJson() !!},
+        allowanceTypes: {!! $allowanceTypes->map(fn($t) => ['id'=>$t->id,'name'=>$t->name,'code'=>$t->code,'taxable'=>(bool)$t->is_taxable])->values()->toJson(JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!},
+        allowances: {!! collect(old('allowances',[]))->map(fn($r)=>['type_id'=>(int)($r['type_id']??0),'amount'=>(int)($r['amount']??0)])->filter(fn($r)=>$r['type_id']>0)->values()->toJson(JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) !!},
         newTypeId: '',
         newAmount: 0,
         isAutoComputed(typeId) {
@@ -114,24 +114,20 @@ function createEmployeeForm() {
 </script>
 <div x-data="createEmployeeForm()" class="max-w-6xl mx-auto">
 
-{{-- ══ Header ══════════════════════════════════════════════════════════════════ --}}
-<div class="flex items-center justify-between mb-5">
-    <div>
-        <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
-                </svg>
-            </span>
-            Créer un employé
+{{-- ══ Bandeau SAGE ═══════════════════════════════════════════════════════════ --}}
+<div class="bg-white border border-gray-300 rounded-[4px] mb-4">
+    <div class="flex items-center justify-between px-3 py-1.5 bg-gradient-to-b from-gray-50 to-white">
+        <h1 class="text-[15px] font-bold text-gray-900">
+            Salarié : Création complète
+            <span class="font-mono text-emerald-700 ml-1">{{ $nextMatricule }}</span>
         </h1>
-        <p class="text-sm text-gray-500 mt-0.5 ml-10">Matricule attribué automatiquement · {{ $nextMatricule }}</p>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('employee-form').requestSubmit()"
+                    class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer</button>
+            <a href="{{ route('rh.employes.index') }}"
+               class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
+        </div>
     </div>
-    <a href="{{ route('rh.employes.index') }}"
-       class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        Annuler
-    </a>
 </div>
 
 <form method="POST" action="{{ route('rh.employes.store') }}" id="employee-form"
@@ -145,7 +141,7 @@ function createEmployeeForm() {
 <div class="flex-1 min-w-0">
 
     {{-- ── Navigation onglets ─────────────────────────────────────────────────── --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden mb-4">
         <div class="flex border-b border-gray-200">
             @php
             $tabDefs = [
@@ -158,7 +154,7 @@ function createEmployeeForm() {
             @foreach($tabDefs as $n => $def)
             <button type="button"
                     @click="tab = {{ $n }}"
-                    :class="tab === {{ $n }} ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+                    :class="tab === {{ $n }} ? 'border-b-2 border-emerald-600 text-emerald-800 bg-[#eef5f0]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
                     class="flex-1 flex flex-col items-center gap-0.5 px-3 py-3 text-xs font-medium transition-colors relative">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $def['icon'] }}"/>
@@ -166,7 +162,7 @@ function createEmployeeForm() {
                 <span class="hidden sm:block font-semibold">{{ $def['label'] }}</span>
                 <span class="hidden lg:block text-xs font-normal opacity-70">{{ $def['sub'] }}</span>
                 {{-- Numéro de badge --}}
-                <span :class="tab === {{ $n }} ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'"
+                <span :class="tab === {{ $n }} ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500'"
                       class="absolute top-2 right-2 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center">{{ $n }}</span>
             </button>
             @endforeach
@@ -179,22 +175,22 @@ function createEmployeeForm() {
     <div x-show="tab === 1" x-cloak class="space-y-4">
 
         {{-- Identité --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                <span class="w-5 h-0.5 bg-blue-500 rounded"></span> Identité
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+                <span class="w-5 h-0.5 bg-emerald-600 rounded"></span> Identité
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Matricule</label>
                     <input type="text" value="{{ $nextMatricule }}" readonly
-                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400 font-mono cursor-not-allowed">
+                           class="w-full border border-gray-200 rounded-[4px] px-3 py-2 text-sm bg-gray-50 text-gray-400 font-mono cursor-not-allowed">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nom <span class="text-red-500">*</span></label>
                     <input type="text" name="last_name" value="{{ old('last_name') }}"
                            x-model="lastName" required autocomplete="off"
                            placeholder="Ex : KABORÉ"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase"
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 uppercase"
                            style="text-transform:uppercase">
                 </div>
                 <div>
@@ -202,13 +198,13 @@ function createEmployeeForm() {
                     <input type="text" name="first_name" value="{{ old('first_name') }}"
                            x-model="firstName" required autocomplete="off"
                            placeholder="Ex : Adama"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Sexe <span class="text-red-500">*</span></label>
                     <select name="gender" required
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                            class="w-full border border-gray-300 rounded-[4px] px-3 py-2.5 text-sm focus:ring-1 focus:ring-emerald-500 bg-white">
                         <option value="M" {{ old('gender','M') === 'M' ? 'selected' : '' }}>🧑 Masculin</option>
                         <option value="F" {{ old('gender') === 'F' ? 'selected' : '' }}>👩 Féminin</option>
                     </select>
@@ -217,36 +213,36 @@ function createEmployeeForm() {
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Date de naissance</label>
                     <input type="date" name="birth_date" value="{{ old('birth_date') }}"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Lieu de naissance</label>
                     <input type="text" name="birth_place" value="{{ old('birth_place') }}"
                            placeholder="Ex : Ouagadougou"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nationalité</label>
                     <input type="text" name="nationality" value="{{ old('nationality', 'Burkinabè') }}"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">N° CNIB / CIN</label>
                     <input type="text" name="cin_number" value="{{ old('cin_number') }}"
                            placeholder="Ex : B1234567"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">N° CNSS</label>
                     <input type="text" name="cnss_number" value="{{ old('cnss_number') }}"
                            placeholder="Ex : 12345678"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Niveau d'études</label>
-                    <select name="education_level" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                    <select name="education_level" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                         <option value="">— Non renseigné —</option>
                         @foreach(['Sans diplôme','CEP','BEPC','BAC','BTS / DUT','Licence','Master / DEA','Doctorat','Formation professionnelle'] as $niv)
                         <option value="{{ $niv }}" @selected(old('education_level') === $niv)>{{ $niv }}</option>
@@ -257,32 +253,32 @@ function createEmployeeForm() {
                     <label class="block text-xs font-medium text-gray-600 mb-1">Téléphone</label>
                     <input type="text" name="phone" value="{{ old('phone') }}"
                            placeholder="Ex : +226 70 00 00 00"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Email professionnel</label>
                     <input type="email" name="email" value="{{ old('email') }}"
                            placeholder="prenom.nom@entreprise.bf"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Ville</label>
                     <input type="text" name="city" value="{{ old('city', 'Ouagadougou') }}"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-medium text-gray-600 mb-1">Adresse</label>
                     <input type="text" name="address" value="{{ old('address') }}"
                            placeholder="Secteur, quartier, rue..."
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
             </div>
         </div>
 
         {{-- Situation familiale + NB_PARTS --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
                 <span class="w-5 h-0.5 bg-emerald-500 rounded"></span>
                 Situation familiale
                 <span class="text-gray-400 font-normal normal-case">— Quotient IUTS</span>
@@ -291,7 +287,7 @@ function createEmployeeForm() {
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Statut matrimonial <span class="text-red-500">*</span></label>
                     <select name="family_status" x-model="familyStatus"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                            class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                         <option value="celibataire" @selected(old('family_status','celibataire')==='celibataire')>Célibataire</option>
                         <option value="marie"       @selected(old('family_status')==='marie')>Marié(e)</option>
                         <option value="veuf"        @selected(old('family_status')==='veuf')>Veuf / Veuve</option>
@@ -302,18 +298,18 @@ function createEmployeeForm() {
                     <label class="block text-xs font-medium text-gray-600 mb-1">Enfants à charge <span class="text-red-500">*</span></label>
                     <div class="flex items-center gap-2">
                         <button type="button" @click="if(nbChildren>0) nbChildren--"
-                                class="w-8 h-9 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 text-lg font-bold">−</button>
+                                class="w-8 h-9 flex items-center justify-center border border-gray-300 rounded-[4px] text-gray-600 hover:bg-gray-100 text-[16px] font-bold">−</button>
                         <input type="number" name="nb_children" x-model="nbChildren"
                                min="0" max="20" step="1"
-                               class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center font-semibold focus:ring-2 focus:ring-blue-500">
+                               class="flex-1 border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-center font-semibold focus:ring-1 focus:ring-emerald-500">
                         <button type="button" @click="if(nbChildren<20) nbChildren++"
-                                class="w-8 h-9 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 text-lg font-bold">+</button>
+                                class="w-8 h-9 flex items-center justify-center border border-gray-300 rounded-[4px] text-gray-600 hover:bg-gray-100 text-[16px] font-bold">+</button>
                     </div>
                 </div>
                 {{-- NB_PARTS calculé --}}
-                <div class="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3 text-center">
+                <div class="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-[4px] p-3 text-center">
                     <p class="text-xs text-emerald-600 font-medium mb-0.5">Quotient familial (NB_PARTS)</p>
-                    <p class="text-3xl font-bold text-emerald-700" x-text="nbParts"></p>
+                    <p class="text-[19px] font-bold text-emerald-700" x-text="nbParts"></p>
                     <p class="text-xs text-emerald-500 mt-0.5">
                         <span x-show="familyStatus === 'marie'">Marié + </span>
                         <span x-show="familyStatus !== 'marie'">Célibataire + </span>
@@ -325,8 +321,8 @@ function createEmployeeForm() {
         </div>
 
         {{-- Contact d'urgence --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
                 <span class="w-5 h-0.5 bg-orange-400 rounded"></span> Contact d'urgence
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -334,20 +330,20 @@ function createEmployeeForm() {
                     <label class="block text-xs font-medium text-gray-600 mb-1">Nom du contact</label>
                     <input type="text" name="emergency_contact_name" value="{{ old('emergency_contact_name') }}"
                            placeholder="Nom et prénom"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Téléphone d'urgence</label>
                     <input type="text" name="emergency_contact_phone" value="{{ old('emergency_contact_phone') }}"
                            placeholder="+226 70 00 00 00"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
             </div>
         </div>
 
         <div class="flex justify-end">
             <button type="button" @click="tab = 2"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-[4px] text-sm font-medium transition-colors">
                 Suivant : Affectation
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
@@ -359,14 +355,14 @@ function createEmployeeForm() {
     {{-- ════════════════════════════════════════════════════════════════════════ --}}
     <div x-show="tab === 2" x-cloak class="space-y-4">
 
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                <span class="w-5 h-0.5 bg-indigo-500 rounded"></span> Poste & Organisation
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+                <span class="w-5 h-0.5 bg-emerald-600 rounded"></span> Poste & Organisation
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Service / Département</label>
-                    <select name="department_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                    <select name="department_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                         <option value="">— Aucun —</option>
                         @foreach($departments as $dep)
                             <option value="{{ $dep->id }}" @selected(old('department_id') == $dep->id)>{{ $dep->name }}</option>
@@ -382,18 +378,18 @@ function createEmployeeForm() {
                     <label class="block text-xs font-medium text-gray-600 mb-1">Intitulé du poste</label>
                     <input type="text" name="job_title" value="{{ old('job_title') }}"
                            placeholder="Ex : Comptable principal"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Fonction</label>
                     <input type="text" name="fonction" value="{{ old('fonction') }}"
                            placeholder="Ex : Responsable comptabilité"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Catégorie professionnelle <span class="text-red-500">*</span></label>
-                    <select name="category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                    <select name="category" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                         @foreach([
                             'cadre'          => 'Cadre',
                             'agent_maitrise' => 'Agent de maîtrise',
@@ -407,10 +403,10 @@ function createEmployeeForm() {
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Date d'embauche</label>
                     <input type="date" name="hiring_date" value="{{ old('hiring_date', now()->toDateString()) }}"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div class="flex items-end">
-                    <div class="w-full bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+                    <div class="w-full bg-blue-50 border border-blue-100 rounded-[4px] p-3 text-center">
                         <p class="text-xs text-blue-500 font-medium">Ancienneté estimée</p>
                         <p class="text-sm font-bold text-blue-700 mt-0.5">À partir de ce jour</p>
                     </div>
@@ -420,12 +416,12 @@ function createEmployeeForm() {
 
         <div class="flex justify-between">
             <button type="button" @click="tab = 1"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 État civil
             </button>
             <button type="button" @click="tab = 3"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-[4px] text-sm font-medium transition-colors">
                 Suivant : Contrat & Rémunération
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
@@ -438,13 +434,13 @@ function createEmployeeForm() {
     <div x-show="tab === 3" x-cloak class="space-y-4">
 
         {{-- Contrat --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                <span class="w-5 h-0.5 bg-amber-500 rounded"></span> Contrat de travail <span class="text-red-500 font-normal">*</span>
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+                <span class="w-5 h-0.5 bg-emerald-600 rounded"></span> Contrat de travail <span class="text-red-500 font-normal">*</span>
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 @foreach(['CDI' => ['CDI','Durée indéterminée','bg-blue-50 border-blue-300 text-blue-700'], 'CDD' => ['CDD','Durée déterminée','bg-amber-50 border-amber-300 text-amber-700'], 'stage' => ['Stage','Convention de stage','bg-green-50 border-green-300 text-green-700'], 'consultant' => ['Consultant','Prestation de service','bg-purple-50 border-purple-300 text-purple-700']] as $v => [$short, $long, $cls])
-                <label class="relative flex flex-col items-center p-3 rounded-xl border-2 cursor-pointer transition-all
+                <label class="relative flex flex-col items-center p-3 rounded-[4px] border-2 cursor-pointer transition-all
                     has-[:checked]:{{ $cls }} has-[:checked]:shadow-sm
                     border-gray-200 hover:border-gray-300">
                     <input type="radio" name="contract_type" value="{{ $v }}" x-model="contractType"
@@ -458,7 +454,7 @@ function createEmployeeForm() {
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Date de début <span class="text-red-500">*</span></label>
                     <input type="date" name="contract_start" value="{{ old('contract_start', now()->toDateString()) }}"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">
@@ -468,15 +464,15 @@ function createEmployeeForm() {
                     <input type="date" name="contract_end" value="{{ old('contract_end') }}"
                            :disabled="contractType === 'CDI'"
                            :class="contractType === 'CDI' ? 'bg-gray-50 text-gray-400' : ''"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
             </div>
         </div>
 
         {{-- Rémunération --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                <span class="w-5 h-0.5 bg-green-500 rounded"></span> Rémunération mensuelle
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+                <span class="w-5 h-0.5 bg-emerald-600 rounded"></span> Rémunération mensuelle
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
                 <div>
@@ -485,7 +481,7 @@ function createEmployeeForm() {
                         <input type="number" name="base_salary" x-model="baseSalary"
                                value="{{ old('base_salary') }}" min="0" step="1000"
                                placeholder="Ex : 250 000"
-                               class="w-full border border-gray-300 rounded-lg pl-3 pr-14 py-2.5 text-sm font-mono text-right focus:ring-2 focus:ring-blue-500 text-lg">
+                               class="w-full border border-gray-300 rounded-[4px] pl-3 pr-14 py-2.5 text-sm font-mono text-right focus:ring-1 focus:ring-emerald-500 text-lg">
                         <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">{{ $payroll->currency_code }}</span>
                     </div>
                     {{-- Barre SMIG --}}
@@ -517,8 +513,8 @@ function createEmployeeForm() {
                 </div>
 
                 {{-- Aperçu charges --}}
-                <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Aperçu des charges (estimé)</p>
+                <div class="bg-gray-50 rounded-[4px] border border-gray-300 p-4">
+                    <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-3">Aperçu des charges (estimé)</p>
                     <div class="space-y-1.5 text-xs">
                         <div class="flex justify-between">
                             <span class="text-gray-500">Salaire brut</span>
@@ -541,16 +537,16 @@ function createEmployeeForm() {
         </div>
 
         {{-- Primes & Indemnités --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                <span class="w-5 h-0.5 bg-purple-500 rounded"></span> Primes & Indemnités
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+                <span class="w-5 h-0.5 bg-emerald-600 rounded"></span> Primes & Indemnités
                 <span class="ml-auto text-[10px] font-normal text-gray-400">Facultatif — modifiable après création</span>
             </h3>
 
             {{-- Ligne d'ajout --}}
             <div class="flex gap-2 mb-3">
                 <select x-model="newTypeId"
-                        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500">
+                        class="flex-1 border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-purple-500">
                     <option value="">— Choisir un type de prime —</option>
                     @foreach($allowanceTypes as $atype)
                     <option value="{{ $atype->id }}"
@@ -565,7 +561,7 @@ function createEmployeeForm() {
                            :disabled="isAutoComputed(newTypeId)"
                            :placeholder="isAutoComputed(newTypeId) ? 'Auto' : 'Montant'"
                            :class="isAutoComputed(newTypeId) ? 'bg-gray-50 text-gray-400 italic' : ''"
-                           class="w-full border border-gray-300 rounded-lg pl-3 pr-16 py-2 text-sm text-right focus:ring-2 focus:ring-purple-500">
+                           class="w-full border border-gray-300 rounded-[4px] pl-3 pr-16 py-2 text-sm text-right focus:ring-1 focus:ring-purple-500">
                     <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                         <span x-show="!isAutoComputed(newTypeId)">{{ $payroll->currency_code }}</span>
                         <span x-show="isAutoComputed(newTypeId)" class="text-purple-400">%×ans</span>
@@ -573,15 +569,15 @@ function createEmployeeForm() {
                 </div>
                 <button type="button" @click="addAllowance()"
                         :disabled="!newTypeId || (!isAutoComputed(newTypeId) && newAmount <= 0)"
-                        class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg text-sm font-medium transition-colors">
+                        class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-[4px] text-sm font-medium transition-colors">
                     + Ajouter
                 </button>
             </div>
 
             {{-- Liste des primes ajoutées --}}
-            <div x-show="allowances.length > 0" class="border border-gray-100 rounded-lg overflow-hidden mb-2">
+            <div x-show="allowances.length > 0" class="border border-gray-100 rounded-[4px] overflow-hidden mb-2">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                    <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] text-emerald-900 font-bold uppercase tracking-wide">
                         <tr>
                             <th class="text-left px-3 py-2">Prime / Indemnité</th>
                             <th class="text-right px-3 py-2">Montant mensuel</th>
@@ -613,7 +609,7 @@ function createEmployeeForm() {
                             </tr>
                         </template>
                         <tr class="border-t-2 border-gray-200 bg-gray-50" x-show="allowances.length > 1">
-                            <td class="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Total primes</td>
+                            <td class="px-3 py-2 text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total primes</td>
                             <td class="px-3 py-2 text-right font-mono font-bold text-purple-700"
                                 x-text="totalAllowances.toLocaleString('fr-FR') + ' {{ $payroll->currency_code }}'"></td>
                             <td></td>
@@ -626,12 +622,12 @@ function createEmployeeForm() {
 
         <div class="flex justify-between">
             <button type="button" @click="tab = 2"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 Affectation
             </button>
             <button type="button" @click="tab = 4"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-[4px] text-sm font-medium transition-colors">
                 Suivant : Coordonnées bancaires
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
@@ -643,9 +639,9 @@ function createEmployeeForm() {
     {{-- ════════════════════════════════════════════════════════════════════════ --}}
     <div x-show="tab === 4" x-cloak class="space-y-4">
 
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                <span class="w-5 h-0.5 bg-teal-500 rounded"></span> Mode de paiement
+        <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+            <h3 class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+                <span class="w-5 h-0.5 bg-emerald-600 rounded"></span> Mode de paiement
             </h3>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
                 @foreach([
@@ -654,8 +650,8 @@ function createEmployeeForm() {
                     'cheque'   => ['📄', 'Chèque', ''],
                     'mobile'   => ['📱', 'Mobile', 'Money'],
                 ] as $v => [$ic, $l, $sub])
-                <label class="flex flex-col items-center p-3 rounded-xl border-2 cursor-pointer transition-all text-center
-                    has-[:checked]:border-teal-400 has-[:checked]:bg-teal-50 has-[:checked]:text-teal-700
+                <label class="flex flex-col items-center p-3 rounded-[4px] border-2 cursor-pointer transition-all text-center
+                    has-[:checked]:border-teal-400 has-[:checked]:bg-emerald-50 has-[:checked]:text-emerald-800
                     border-gray-200 hover:border-gray-300 text-gray-600">
                     <input type="radio" name="payment_mode" value="{{ $v }}" x-model="paymentMode"
                            {{ old('payment_mode','virement') === $v ? 'checked' : '' }} class="sr-only">
@@ -668,41 +664,41 @@ function createEmployeeForm() {
 
             {{-- Champs bancaires (virement uniquement) --}}
             <div x-show="paymentMode === 'virement'" x-transition>
-                <div class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5 mb-4 text-xs text-blue-700">
+                <div class="bg-blue-50 border border-blue-100 rounded-[4px] px-3 py-2.5 mb-4 text-xs text-blue-700">
                     <strong>Format RIB :</strong> Code banque (2 car.) · Code guichet (5 car.) · N° compte (11 car.) · Clé RIB (2 car.)
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Code banque</label>
                         <input type="text" name="bank_code" value="{{ old('bank_code') }}" maxlength="5" placeholder="BF"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono uppercase focus:ring-1 focus:ring-emerald-500">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Code guichet</label>
                         <input type="text" name="bank_branch" value="{{ old('bank_branch') }}" maxlength="5" placeholder="01234"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">N° de compte</label>
                         <input type="text" name="bank_account_number" value="{{ old('bank_account_number') }}" maxlength="11" placeholder="00123456789"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Clé RIB</label>
                         <input type="text" name="bank_rib_key" value="{{ old('bank_rib_key') }}" maxlength="2" placeholder="97"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Banque / Établissement</label>
                         <input type="text" name="bank_name" value="{{ old('bank_name') }}" placeholder="Ex : ECOBANK BF"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">N° de compte complet (optionnel)</label>
                         <input type="text" name="bank_account" value="{{ old('bank_account') }}" placeholder="Format libre"
-                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500">
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
                     </div>
                 </div>
             </div>
@@ -715,13 +711,13 @@ function createEmployeeForm() {
 
         <div class="flex justify-between">
             <button type="button" @click="tab = 3"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 Contrat & Rémunération
             </button>
             {{-- Bouton final --}}
             <button type="submit"
-                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-[4px] text-sm font-semibold transition-colors shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
@@ -736,8 +732,8 @@ function createEmployeeForm() {
 <div class="w-64 flex-shrink-0 space-y-4 sticky top-4">
 
     {{-- Fiche résumé --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="px-3 py-1.5" style="background:linear-gradient(135deg,#047857,#065f46)">
             <p class="text-xs font-semibold text-blue-100 uppercase tracking-wider">Fiche en cours</p>
             <p class="text-white font-bold text-sm mt-0.5" x-text="(lastName || '···') + ' ' + (firstName || '')"></p>
             <p class="text-blue-200 text-xs mt-0.5 font-mono">{{ $nextMatricule }}</p>
@@ -776,14 +772,14 @@ function createEmployeeForm() {
     </div>
 
     {{-- Progression onglets --}}
-    <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Progression</p>
+    <div class="bg-white rounded-[4px] border border-gray-300 p-4">
+        <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-3">Progression</p>
         <div class="space-y-2">
             @foreach([1 => 'État civil', 2 => 'Affectation', 3 => 'Contrat & Paie', 4 => 'Banque'] as $n => $lbl)
             <button type="button" @click="tab = {{ $n }}"
                     :class="tab === {{ $n }} ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-transparent text-gray-500 hover:bg-gray-50'"
-                    class="w-full flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-colors text-left">
-                <span :class="tab === {{ $n }} ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'"
+                    class="w-full flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-[4px] border transition-colors text-left">
+                <span :class="tab === {{ $n }} ? 'bg-emerald-700 text-white' : 'bg-gray-200 text-gray-500'"
                       class="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] flex-shrink-0">{{ $n }}</span>
                 {{ $lbl }}
                 @if($n === 1)
@@ -802,7 +798,7 @@ function createEmployeeForm() {
     </div>
 
     {{-- Rappel SMIG --}}
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs">
+    <div class="bg-amber-50 border border-amber-200 rounded-[4px] p-3 text-xs">
         <p class="font-semibold text-amber-700 mb-1">⚖ SMIG Burkina Faso</p>
         <p class="text-amber-600">Salaire minimum : <strong x-text="parseInt(smig).toLocaleString('fr-FR') + ' {{ $payroll->currency_code }}'"></strong>/mois</p>
         <p class="text-amber-500 mt-1">(Décret n°2024 — en vigueur)</p>
@@ -810,12 +806,12 @@ function createEmployeeForm() {
 
     {{-- Message d'erreur de validation côté client --}}
     <div x-show="formError" x-cloak
-         class="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"
+         class="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-[4px] text-xs text-red-700"
          x-text="formError"></div>
 
     {{-- Bouton submit accessible depuis tous les onglets --}}
     <button type="submit"
-            class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm">
+            class="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-[4px] text-sm font-semibold transition-colors shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
         </svg>

@@ -11,7 +11,7 @@
 @php $errors = $errors->getBag($bag); @endphp
 
 @if($errors->any())
-<div class="rounded-xl border border-red-200 bg-red-50 text-sm mb-4 overflow-hidden" role="alert">
+<div class="rounded-[4px] border border-red-200 bg-red-50 text-sm mb-4 overflow-hidden" role="alert">
     <div class="flex items-start gap-3 p-4">
         <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
             <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

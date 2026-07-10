@@ -8,16 +8,16 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Utilisateurs</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Utilisateurs</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $users->total() }} utilisateur(s)</p>
         </div>
         <a href="{{ route('users.create') }}"
-           class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
+           class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -26,13 +26,13 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-xl border border-gray-200 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="Nom, e-mail, poste..."
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
 
-            <select name="role" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="role" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les rôles</option>
                 @foreach($roles as $role)
                     <option value="{{ $role->name }}" {{ ($filters['role'] ?? '') === $role->name ? 'selected' : '' }}>
@@ -41,7 +41,7 @@
                 @endforeach
             </select>
 
-            <select name="status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 <option value="active"   {{ ($filters['status'] ?? '') === 'active'   ? 'selected' : '' }}>Actif</option>
                 <option value="inactive" {{ ($filters['status'] ?? '') === 'inactive' ? 'selected' : '' }}>Inactif</option>
@@ -49,51 +49,51 @@
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search','role','status']))
                 <a href="{{ route('users.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-3 py-2 rounded-lg transition-colors">✕</a>
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">✕</a>
                 @endif
             </div>
         </div>
     </form>
 
     {{-- Table --}}
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Utilisateur</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Poste</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rôle</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Dernière connexion</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
-                        <th class="px-4 py-3"></th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Utilisateur</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Poste</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Rôle</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Dernière connexion</th>
+                        <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                        <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($users as $user)
                     <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center
-                                    {{ $user->is_active ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-400' }} font-bold text-xs">
+                                    {{ $user->is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-400' }} font-bold text-xs">
                                     {{ strtoupper(substr($user->name, 0, 2)) }}
                                 </div>
                                 <div>
                                     <a href="{{ route('users.show', $user) }}"
-                                       class="font-medium text-gray-900 hover:text-indigo-600">{{ $user->name }}</a>
+                                       class="font-medium text-gray-900 hover:text-emerald-700">{{ $user->name }}</a>
                                     <p class="text-xs text-gray-500">{{ $user->email }}</p>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-4 py-3 text-gray-600 hidden md:table-cell">
+                        <td class="px-3 py-1.5 text-gray-600 hidden md:table-cell">
                             {{ $user->job_title ?? '—' }}
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             @foreach($user->roles as $role)
                                 @php
                                     $roleColors = [
@@ -101,29 +101,29 @@
                                         'directeur'   => 'bg-blue-100 text-blue-700',
                                         'commercial'  => 'bg-green-100 text-green-700',
                                         'comptable'   => 'bg-amber-100 text-amber-700',
-                                        'magasinier'  => 'bg-teal-100 text-teal-700',
+                                        'magasinier'  => 'bg-emerald-100 text-emerald-800',
                                     ];
                                     $color = $roleColors[$role->name] ?? 'bg-gray-100 text-gray-700';
                                 @endphp
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $color }}">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $color }}">
                                     {{ ucfirst(str_replace('_', ' ', $role->name)) }}
                                 </span>
                             @endforeach
                         </td>
-                        <td class="px-4 py-3 text-gray-500 text-xs hidden lg:table-cell">
+                        <td class="px-3 py-1.5 text-gray-500 text-xs hidden lg:table-cell">
                             {{ $user->last_login_at?->diffForHumans() ?? 'Jamais' }}
                         </td>
-                        <td class="px-4 py-3 text-center">
+                        <td class="px-3 py-1.5 text-center">
                             @if($user->is_active)
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Actif</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-green-100 text-green-700">Actif</span>
                             @else
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Inactif</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-gray-100 text-gray-500">Inactif</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <div class="flex items-center justify-end gap-1">
                                 <a href="{{ route('users.show', $user) }}"
-                                   class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Voir">
+                                   class="p-1.5 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors" title="Voir">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -170,7 +170,7 @@
             </table>
         </div>
         @if($users->hasPages())
-        <div class="px-4 py-3 border-t border-gray-100">
+        <div class="px-3 py-1.5 border-t border-gray-100">
             {{ $users->appends($filters)->links() }}
         </div>
         @endif

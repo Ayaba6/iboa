@@ -10,23 +10,23 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Codes journaux</h1>
+            <h1 class="text-[16px] font-bold text-gray-900">Codes journaux</h1>
             <p class="text-sm text-gray-500">Référentiel des journaux comptables (Achats, Ventes, Banque, Caisse, OD, À-nouveau).</p>
         </div>
         @can('accounting.write')
         <a href="{{ route('comptabilite.journal-types.create') }}"
-           class="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+           class="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Nouveau code journal
         </a>
         @endcan
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="tbl-scroll">
         <table class="tbl tbl-sticky w-full">
             <thead>
@@ -48,9 +48,9 @@
                     <td class="text-right tabular-nums">{{ $jt->entries_count }}</td>
                     <td class="text-center">
                         @if($jt->is_active)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Actif</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-emerald-100 text-emerald-700">Actif</span>
                         @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Inactif</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-gray-100 text-gray-600">Inactif</span>
                         @endif
                     </td>
                     <td class="text-right">
@@ -76,7 +76,7 @@
         </div>
     </div>
 
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+    <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4 text-sm text-blue-800">
         <p class="font-medium mb-1">💡 Codes standards SYSCOA</p>
         <ul class="list-disc list-inside text-xs space-y-0.5 text-blue-700">
             <li><code class="font-mono font-semibold">AC</code> — Achats · <code class="font-mono font-semibold">VE</code> — Ventes · <code class="font-mono font-semibold">BQ</code> — Banque · <code class="font-mono font-semibold">CA</code> — Caisse</li>

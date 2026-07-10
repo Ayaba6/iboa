@@ -4,7 +4,7 @@
 {{-- ══════════════════════════════════════════════════════════════
      HERO — Header avec salutation, horloge live, actions rapides
 ══════════════════════════════════════════════════════════════ --}}
-<div class="fade-up relative overflow-hidden rounded-2xl text-white hero-bg"
+<div class="fade-up relative overflow-hidden rounded-[4px] text-white hero-bg"
      x-data="dashboardHero()" x-init="init()">
 
     {{-- Grid overlay --}}
@@ -24,7 +24,7 @@
             <div class="flex-1">
                 <div class="flex items-center gap-3 mb-3">
                     {{-- Avatar --}}
-                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-sm font-bold shadow-lg ring-2 ring-white/20">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white text-sm font-bold shadow-lg ring-2 ring-white/20">
                         {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                     </div>
                     <div>
@@ -74,7 +74,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 @can('invoices.create')
                 <a href="{{ route('ventes.factures.create') }}"
-                   class="inline-flex items-center gap-2 bg-white text-indigo-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all hover:bg-indigo-50 shadow-lg whitespace-nowrap">
+                   class="inline-flex items-center gap-2 bg-white text-emerald-800 text-xs font-bold px-4 py-2.5 rounded-xl transition-all hover:bg-emerald-50 shadow-lg whitespace-nowrap">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                     Nouvelle facture
                 </a>

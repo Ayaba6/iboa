@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Traits\HasCompanyScope;
 
 class Attendance extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'employee_id', 'date', 'status',
         'arrival_time', 'departure_time',

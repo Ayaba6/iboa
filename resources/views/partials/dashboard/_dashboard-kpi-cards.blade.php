@@ -9,7 +9,7 @@
 
     {{-- CA Aujourd'hui --}}
     <div x-data="kpiCounter({{ $revenueJour }})" x-init="init()"
-         class="kpi-card fade-up bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden kpi-accent-sky" style="animation-delay:.04s">
+         class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-sky" style="animation-delay:.04s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 leading-tight">CA aujourd'hui</p>
@@ -43,11 +43,11 @@
 
     {{-- CA Ce Mois --}}
     <div x-data="kpiCounter({{ $revenueMois }})" x-init="init()"
-         class="kpi-card fade-up bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden kpi-accent-indigo" style="animation-delay:.08s">
+         class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-indigo" style="animation-delay:.08s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 leading-tight">CA ce mois</p>
-                <div class="w-9 h-9 rounded-xl bg-indigo-600 shadow-md shadow-indigo-200 flex items-center justify-center flex-shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-emerald-700 shadow-md shadow-indigo-200 flex items-center justify-center flex-shrink-0">
                     <svg style="width:18px;height:18px" class="text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                 </div>
             </div>
@@ -77,7 +77,7 @@
 
     {{-- Encaissements --}}
     <div x-data="kpiCounter({{ $encaissementsMois }})" x-init="init()"
-         class="kpi-card fade-up bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden kpi-accent-emerald" style="animation-delay:.12s">
+         class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-emerald" style="animation-delay:.12s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 leading-tight">Encaissements</p>
@@ -111,7 +111,7 @@
 
     {{-- Trésorerie --}}
     <div x-data="kpiCounter({{ $soldeTresorerie }})" x-init="init()"
-         class="kpi-card fade-up bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden kpi-accent-violet" style="animation-delay:.16s">
+         class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-violet" style="animation-delay:.16s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 leading-tight">Trésorerie</p>
@@ -132,7 +132,7 @@
                 </div>
                 @endforeach
                 @if($cashAccounts->count() > 2)
-                <a href="{{ route('tresorerie.caisses.index') }}" class="block text-xs text-indigo-400 hover:text-indigo-600 font-semibold mt-1">
+                <a href="{{ route('tresorerie.caisses.index') }}" class="block text-xs text-emerald-500 hover:text-emerald-700 font-semibold mt-1">
                     +{{ $cashAccounts->count() - 2 }} autre(s) →
                 </a>
                 @endif
@@ -142,7 +142,7 @@
     </div>
 
     {{-- Alertes --}}
-    <div class="kpi-card fade-up bg-white rounded-2xl border border-gray-100 shadow-sm p-5 kpi-accent-rose" style="animation-delay:.2s">
+    <div class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 p-5 kpi-accent-rose" style="animation-delay:.2s">
         <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Alertes</p>
 
         {{-- Factures retard --}}

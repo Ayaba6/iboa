@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Traits\HasCompanyScope;
 
 /**
  * Plan de paie — conteneur de rubriques par pays/devise/société.
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class PayrollPlan extends Model
 {
+    use HasCompanyScope;
+
     protected $fillable = [
         'company_id', 'code', 'libelle', 'description',
         'pays', 'country_code', 'devise',

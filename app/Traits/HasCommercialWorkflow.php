@@ -32,6 +32,11 @@ trait HasCommercialWorkflow
                     ->latest('created_at');
     }
 
+    public function submittedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'submitted_by');
+    }
+
     // ── Helpers état ──────────────────────────────────────────────────────────
 
     public function isBrouillon(): bool

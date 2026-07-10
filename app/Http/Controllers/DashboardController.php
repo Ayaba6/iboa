@@ -25,6 +25,18 @@ class DashboardController extends Controller
                 ->with('info', "Vous n'avez pas accès au tableau de bord.");
         }
 
+        // [SAGE parité] « Mes validations en attente » — mêmes données que la
+        // page Mes validations, limitées aux 6 plus anciennes pour le tableau.
+        $pendingAll      = app(\App\Services\PendingValidationsService::class)->for(auth()->user());
+        $pendingCount    = $pendingAll->count();
+        $mesValidations  = $pendingAll->sortBy('submitted_at')->take(6)->values();
+
+        // [SEC §15] Profils sans reports.view : accueil neutre (bandeau
+        // validations + message) — aucun KPI financier calculé ni transmis.
+        if (! auth()->user()->can('reports.view')) {
+            return view('dashboard', compact('pendingCount', 'mesValidations'));
+        }
+
         $now       = now();
         $month     = $now->month;
         $year      = $now->year;
@@ -220,6 +232,28 @@ class DashboardController extends Controller
         $recentActivity = AuditLog::orderByDesc('created_at')->limit(10)
             ->get(['user_name', 'action', 'model_type', 'model_id', 'created_at']);
 
+        // [SAGE parité] Dernières factures client (table dashboard).
+        $dernieresFactures = Invoice::with('client:id,name')
+            ->orderByDesc('issued_at')->orderByDesc('id')->limit(6)
+            ->get(['id', 'number', 'client_id', 'issued_at', 'subtotal_ht', 'total_ttc', 'currency_code', 'status']);
+
+        // [SAGE parité] Alertes stock : suivi des seuils — articles sous seuil
+        // en premier (rouge), puis les plus proches de leur seuil (surveillance).
+        $alertesStock = \App\Models\Product::query()
+            ->where('is_stockable', true)
+            ->where(fn ($q) => $q->whereNotNull('reorder_point')->orWhereNotNull('stock_min'))
+            ->withSum('productStocks as stock_dispo', 'quantity')
+            ->with('unit:id,abbreviation')
+            ->get(['id', 'name', 'reference', 'code_article', 'reorder_point', 'stock_min', 'unit_id'])
+            ->map(function ($p) {
+                $p->seuil       = (float) ($p->reorder_point ?? $p->stock_min ?? 0);
+                $p->sous_seuil  = $p->seuil > 0 && (float) ($p->stock_dispo ?? 0) <= $p->seuil;
+                return $p;
+            })
+            ->filter(fn ($p) => $p->seuil > 0)
+            ->sortBy(fn ($p) => [$p->sous_seuil ? 0 : 1, $p->seuil > 0 ? (float) ($p->stock_dispo ?? 0) / $p->seuil : 0])
+            ->take(6)->values();
+
         $topProduits = InvoiceItem::query()
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->join('products', 'invoice_items.product_id', '=', 'products.id')
@@ -235,7 +269,7 @@ class DashboardController extends Controller
             ->orderByDesc('ca_ht')->limit(5)->get();
 
         return view('dashboard', compact(
-            'revenueJour', 'revenueMois', 'revenueAnnee',
+            'revenueJour', 'revenuePrevJour', 'revenueMois', 'revenueAnnee',
             'nbFacturesMois', 'nbClients', 'nbCommandesEnCours',
             'encaissementsMois',
             'facturesEnRetard', 'montantEnRetard',
@@ -248,6 +282,7 @@ class DashboardController extends Controller
             'cashAccounts', 'facturesAEncaisser',
             'derniersEncaissements', 'dernieresCommandes',
             'recentActivity',
+            'pendingCount', 'mesValidations', 'dernieresFactures', 'alertesStock',
         ));
     }
 
@@ -258,6 +293,10 @@ class DashboardController extends Controller
      */
     public function kpisJson(): \Illuminate\Http\JsonResponse
     {
+        // [SEC §15] KPI financiers réservés aux porteurs de reports.view —
+        // même via le endpoint JSON du polling.
+        abort_unless(auth()->user()->can('reports.view'), 403);
+
         $now       = now();
         $month     = $now->month;
         $year      = $now->year;

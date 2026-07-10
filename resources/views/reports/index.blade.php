@@ -11,7 +11,7 @@
 <div class="space-y-8">
 
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">Rapports & États</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Rapports & États</h1>
         <p class="text-sm text-gray-500 mt-1">Sélectionnez un rapport pour analyser vos données — Excel & PDF disponibles</p>
     </div>
 
@@ -37,7 +37,7 @@
 
             @foreach($ventesCards as $card)
             <a href="{{ route($card['route']) }}"
-               class="group bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
+               class="group bg-white rounded-[4px] border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
                 <div class="flex items-start justify-between mb-3">
                     <h3 class="text-sm font-bold text-gray-900 group-hover:text-{{ $card['color'] }}-700 transition-colors">{{ $card['title'] }}</h3>
                     <svg class="w-4 h-4 text-gray-300 group-hover:text-{{ $card['color'] }}-500 transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -69,7 +69,7 @@
 
             @foreach($achatsCards as $card)
             <a href="{{ route($card['route']) }}"
-               class="group bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
+               class="group bg-white rounded-[4px] border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
                 <div class="flex items-start justify-between mb-3">
                     <h3 class="text-sm font-bold text-gray-900 group-hover:text-{{ $card['color'] }}-700 transition-colors">{{ $card['title'] }}</h3>
                     <svg class="w-4 h-4 text-gray-300 group-hover:text-{{ $card['color'] }}-500 transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -98,7 +98,7 @@
 
             @foreach($stocksCards as $card)
             <a href="{{ route($card['route']) }}"
-               class="group bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
+               class="group bg-white rounded-[4px] border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
                 <div class="flex items-start justify-between mb-3">
                     <h3 class="text-sm font-bold text-gray-900 group-hover:text-{{ $card['color'] }}-700 transition-colors">{{ $card['title'] }}</h3>
                     <svg class="w-4 h-4 text-gray-300 group-hover:text-{{ $card['color'] }}-500 transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -130,7 +130,7 @@
 
             @foreach($clientsCards as $card)
             <a href="{{ route($card['route']) }}"
-               class="group bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
+               class="group bg-white rounded-[4px] border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
                 <div class="flex items-start justify-between mb-3">
                     <h3 class="text-sm font-bold text-gray-900 group-hover:text-{{ $card['color'] }}-700 transition-colors">{{ $card['title'] }}</h3>
                     <svg class="w-4 h-4 text-gray-300 group-hover:text-{{ $card['color'] }}-500 transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -159,7 +159,7 @@
 
             @foreach($foursCards as $card)
             <a href="{{ route($card['route']) }}"
-               class="group bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
+               class="group bg-white rounded-[4px] border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-{{ $card['color'] }}-300 transition-all duration-200">
                 <div class="flex items-start justify-between mb-3">
                     <h3 class="text-sm font-bold text-gray-900 group-hover:text-{{ $card['color'] }}-700 transition-colors">{{ $card['title'] }}</h3>
                     <svg class="w-4 h-4 text-gray-300 group-hover:text-{{ $card['color'] }}-500 transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -180,7 +180,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
             <a href="{{ route('reports.etat-tva') }}"
-               class="group bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200">
+               class="group bg-white rounded-[4px] border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200">
                 <div class="flex items-start justify-between mb-3">
                     <h3 class="text-sm font-bold text-gray-900 group-hover:text-purple-700 transition-colors">État de TVA</h3>
                     <svg class="w-4 h-4 text-gray-300 group-hover:text-purple-500 transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>

@@ -49,7 +49,7 @@
                 item._ps_search = '';
                 $nextTick(() => { const el = document.getElementById('ps_{{ $pfx }}_' + item._key); if (el) el.focus(); });
             "
-            class="w-full flex items-center justify-between gap-1 border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white hover:border-{{ $accent }}-400 focus:outline-none focus:ring-1 focus:ring-{{ $accent }}-500 min-w-[160px] transition-colors"
+            class="w-full flex items-center justify-between gap-1 border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm bg-white hover:border-{{ $accent }}-400 focus:outline-none focus:ring-1 focus:ring-{{ $accent }}-500 min-w-[160px] transition-colors"
             :class="item._ps_open ? 'border-{{ $accent }}-500 ring-1 ring-{{ $accent }}-500' : ''">
         <span class="truncate text-left"
               :class="item.product_id ? 'text-gray-900' : 'text-gray-400'"
@@ -83,7 +83,7 @@
          x-transition:leave="transition ease-in duration-100"
          x-transition:leave-start="opacity-100 translate-y-0 scale-100"
          x-transition:leave-end="opacity-0 -translate-y-1 scale-[0.98]"
-         class="fixed z-50 flex flex-col bg-white rounded-xl shadow-lg ring-1 ring-gray-900/5 border border-gray-100 overflow-hidden"
+         class="fixed z-50 flex flex-col bg-white rounded-[4px] shadow-lg ring-1 ring-gray-900/5 border border-gray-100 overflow-hidden"
          :style="item._ps_rect
             ? 'left:' + item._ps_rect.left + 'px; width:' + item._ps_rect.width + 'px; max-height:' + item._ps_rect.maxH + 'px;'
               + (item._ps_rect.up ? 'bottom:' + item._ps_rect.bottom + 'px;' : 'top:' + item._ps_rect.top + 'px;')
@@ -91,7 +91,7 @@
 
         {{-- Barre de recherche (toujours visible, ne scrolle pas) --}}
         <div class="p-2.5 border-b border-gray-100 bg-gray-50/80 flex-shrink-0">
-            <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 shadow-sm
+            <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-[4px] px-2.5 py-1.5 shadow-sm
                         focus-within:border-{{ $accent }}-400 focus-within:ring-1 focus-within:ring-{{ $accent }}-300 transition">
                 <svg class="w-3.5 h-3.5 text-{{ $accent }}-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>

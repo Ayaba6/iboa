@@ -1,484 +1,352 @@
 {{--
-    Reusable supplier form partial.
-    Variables expected:
-      $supplier    (optional, for edit mode — Supplier model)
-      $formAction  — target URL
-      $formMethod  — 'POST' or 'PUT'
+  Formulaire fournisseur — fiche « Fournisseurs : Création complète » style SAGE X3.
+  Onglets : Général · Adresses · Achats · Finance · Réception · Contacts · Comptabilité · Documents.
+  Variables : $taxRates, $warehouses ; $supplier en édition.
 --}}
-
 @php
-    $isEdit           = isset($supplier) && $supplier->exists;
-    $existingContacts = $isEdit ? $supplier->contacts->toArray() : [];
-    $existingAddresses = $isEdit ? $supplier->addresses->toArray() : [];
+    $s = $supplier ?? null;
+    $isEdit = isset($supplier);
+
+    $lbl   = 'block text-[11px] font-bold text-gray-700 mb-1';
+    $inp   = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $inpR  = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white text-right font-mono tabular-nums focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $lk    = 'appearance-none w-full h-8 py-0 pl-2 pr-8 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $chk   = 'w-[15px] h-[15px] border-[1.5px] border-gray-400 rounded-[2px] text-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $chkLb = 'text-[12.5px] font-semibold text-gray-700 select-none';
+    $secH  = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
+    $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
+
+    $bool = fn($field, $default = false) => (bool) old($field, $s?->{$field} ?? $default);
+    $contactsInit = old('contacts', $s && $s->contacts->isNotEmpty()
+        ? $s->contacts->map(fn($x) => ['last_name'=>$x->last_name,'first_name'=>$x->first_name,'job_title'=>$x->job_title,'phone'=>$x->phone,'email'=>$x->email,'is_primary'=>(bool)$x->is_primary])->toArray()
+        : []);
+    $addressesInit = old('addresses', $s && $s->addresses->isNotEmpty()
+        ? $s->addresses->map(fn($x) => ['type'=>$x->type,'label'=>$x->label,'address'=>$x->address,'city'=>$x->city,'country'=>$x->country,'is_default'=>(bool)$x->is_default])->toArray()
+        : []);
 @endphp
 
-<form action="{{ $formAction }}" method="POST" novalidate>
+<form action="{{ $isEdit ? route('suppliers.update', $s) : route('suppliers.store') }}"
+      method="POST" enctype="multipart/form-data"
+      x-data="supplierForm({ tab: 'general', contacts: {{ Js::from($contactsInit) }}, addresses: {{ Js::from($addressesInit) }} })"
+      class="space-y-3">
     @csrf
-    @if($formMethod === 'PUT')
-        @method('PUT')
-    @endif
+    @if($isEdit) @method('PUT') @endif
 
-    <div
-        x-data="{
-            activeTab: 'info',
-            contacts: {{ Js::from($existingContacts) }},
-            addresses: {{ Js::from($existingAddresses) }},
+    <x-validation-errors />
 
-            addContact() {
-                this.contacts.push({
-                    civility: '',
-                    first_name: '',
-                    last_name: '',
-                    job_title: '',
-                    phone: '',
-                    mobile: '',
-                    email: '',
-                    is_primary: false
-                });
-            },
-            removeContact(index) {
-                this.contacts.splice(index, 1);
-            },
-
-            addAddress() {
-                this.addresses.push({
-                    type: 'siege',
-                    label: '',
-                    address: '',
-                    city: '',
-                    country: 'Bénin',
-                    is_default: false
-                });
-            },
-            removeAddress(index) {
-                this.addresses.splice(index, 1);
-            }
-        }"
-    >
-
-        {{-- Tab navigation --}}
-        <div class="border-b border-gray-200 mb-6">
-            <nav class="-mb-px flex gap-1 overflow-x-auto">
-                @foreach([
-                    ['id' => 'info',      'label' => 'Informations'],
-                    ['id' => 'legal',     'label' => 'Infos légales'],
-                    ['id' => 'contacts',  'label' => 'Contacts'],
-                    ['id' => 'addresses', 'label' => 'Adresses'],
-                ] as $tab)
-                <button type="button"
-                        @click="activeTab = '{{ $tab['id'] }}'"
-                        :class="activeTab === '{{ $tab['id'] }}'
-                            ? 'border-indigo-600 text-indigo-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none">
-                    {{ $tab['label'] }}
-                    @if($tab['id'] === 'contacts')
-                        <span x-show="contacts.length > 0"
-                              x-text="contacts.length"
-                              class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold"></span>
-                    @endif
-                    @if($tab['id'] === 'addresses')
-                        <span x-show="addresses.length > 0"
-                              x-text="addresses.length"
-                              class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold"></span>
-                    @endif
-                </button>
-                @endforeach
-            </nav>
+    <div class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+            <h2 class="text-[15px] font-bold text-gray-900">
+                Fournisseurs : Création complète
+                @if($isEdit)<span class="font-mono text-emerald-700 ml-1">{{ $s->code }}</span>@endif
+            </h2>
+            <div class="flex items-center gap-2">
+                <button type="submit"
+                        class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer</button>
+                <a href="{{ route('suppliers.index') }}"
+                   class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
+            </div>
         </div>
 
-        {{-- ================================================================
-             TAB 1 — Informations générales
-        ================================================================ --}}
-        <div x-show="activeTab === 'info'" x-cloak>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <nav class="flex items-stretch border-b border-gray-200 px-2 overflow-x-auto">
+            @foreach([
+                'general' => 'Général', 'adresses' => 'Adresses', 'achats' => 'Achats',
+                'finance' => 'Finance', 'reception' => 'Réception', 'contacts' => 'Contacts',
+                'compta' => 'Comptabilité', 'docs' => 'Documents',
+            ] as $key => $label)
+            <button type="button" @click="tab = '{{ $key }}'"
+                    class="px-3 py-1.5 text-[13px] font-semibold border-b-2 transition-colors whitespace-nowrap"
+                    :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-800' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $label }}</button>
+            @endforeach
+        </nav>
 
-                {{-- Raison sociale --}}
-                <div class="md:col-span-2">
-                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
-                        Raison sociale / Nom <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" id="name" name="name"
-                           value="{{ old('name', $supplier->name ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm @error('name') border-red-300 @enderror"
-                           placeholder="Ex: Société de distribution SARL">
-                    @error('name')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+        {{-- ═══════════ GÉNÉRAL ═══════════ --}}
+        <div x-show="tab === 'general'" class="p-4 space-y-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">1. Identification</div>
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Site</label>
+                        <div class="relative"><select name="site_id" class="{{ $lk }} font-mono"><option value="">—</option>@foreach($warehouses as $w)<option value="{{ $w->id }}" @selected(old('site_id', $s->site_id ?? '') == $w->id)>{{ $w->code }}</option>@endforeach</select>{!! $caret !!}</div>
+                    </div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Code fournisseur</label><input type="text" name="code" maxlength="30" value="{{ old('code', $s->code ?? '') }}" class="{{ $inp }} font-mono uppercase" placeholder="Auto si vide"></div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Type tiers</label>
+                        <div class="relative"><select name="type" class="{{ $lk }}">
+                            @php $t = old('type', $s->type ?? 'entreprise'); @endphp
+                            <option value="entreprise" @selected($t==='entreprise')>Entreprise</option>
+                            <option value="particulier" @selected($t==='particulier')>Particulier</option>
+                        </select>{!! $caret !!}</div>
+                    </div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Catégorie</label><input type="text" name="category" maxlength="60" value="{{ old('category', $s->category ?? '') }}" class="{{ $inp }}"></div>
+                    <div class="sm:col-span-4"><label class="{{ $lbl }}">Raison sociale <span class="text-red-600">*</span></label><input type="text" name="name" maxlength="150" required value="{{ old('name', $s->name ?? '') }}" class="{{ $inp }} font-medium"></div>
 
-                {{-- Code --}}
-                <div>
-                    <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Code fournisseur</label>
-                    <input type="text" id="code" name="code"
-                           value="{{ old('code', $supplier->code ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono @error('code') border-red-300 @enderror"
-                           placeholder="Généré automatiquement">
-                    <p class="mt-1 text-xs text-gray-400">Laissez vide pour génération automatique</p>
-                    @error('code')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                    <div class="sm:col-span-3"><label class="{{ $lbl }}">Sigle / Nom court</label><input type="text" name="trade_name" maxlength="100" value="{{ old('trade_name', $s->trade_name ?? '') }}" class="{{ $inp }}"></div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Statut</label>
+                        <div class="relative"><select name="is_active" class="{{ $lk }}">
+                            <option value="1" @selected(old('is_active', $s->is_active ?? true))>Actif</option>
+                            <option value="0" @selected(! old('is_active', $s->is_active ?? true))>Inactif</option>
+                        </select>{!! $caret !!}</div>
+                    </div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">NIF / IFU</label><input type="text" name="ifu" maxlength="50" value="{{ old('ifu', $s->ifu ?? '') }}" class="{{ $inp }} font-mono"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">RCCM</label><input type="text" name="rccm" maxlength="50" value="{{ old('rccm', $s->rccm ?? '') }}" class="{{ $inp }} font-mono"></div>
+                    <div class="sm:col-span-3"><label class="{{ $lbl }}">Numéro contribuable</label><input type="text" name="numero_contribuable" maxlength="30" value="{{ old('numero_contribuable', $s->numero_contribuable ?? '') }}" class="{{ $inp }} font-mono"></div>
 
-                {{-- Type --}}
-                <div>
-                    <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                    <select id="type" name="type"
-                            class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <option value="">— Sélectionner —</option>
-                        @foreach(['entreprise' => 'Entreprise / Société', 'particulier' => 'Particulier'] as $val => $label)
-                            <option value="{{ $val }}" {{ old('type', $supplier->type ?? 'entreprise') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                    <div class="sm:col-span-3"><label class="{{ $lbl }}">Groupe fournisseur</label><input type="text" name="groupe_fournisseur" maxlength="60" value="{{ old('groupe_fournisseur', $s->groupe_fournisseur ?? '') }}" class="{{ $inp }}"></div>
+                    <div class="sm:col-span-3"><label class="{{ $lbl }}">Secteur d'activité</label><input type="text" name="secteur_activite" maxlength="100" value="{{ old('secteur_activite', $s->secteur_activite ?? '') }}" class="{{ $inp }}"></div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Devise</label>
+                        <div class="relative"><select name="currency" class="{{ $lk }}">@php $cur = old('currency', $s->currency ?? 'XOF'); @endphp @foreach(['XOF','XAF','EUR','USD'] as $cu)<option value="{{ $cu }}" @selected($cur===$cu)>{{ $cu }}</option>@endforeach</select>{!! $caret !!}</div>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Langue</label>
+                        <div class="relative"><select name="language" class="{{ $lk }}">@php $lg = old('language', $s->language ?? 'FR'); @endphp<option value="FR" @selected($lg==='FR')>FR</option><option value="EN" @selected($lg==='EN')>EN</option></select>{!! $caret !!}</div>
+                    </div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Pays</label><input type="text" name="country" maxlength="100" value="{{ old('country', $s->country ?? 'CI') }}" class="{{ $inp }}"></div>
+                    <div class="sm:col-span-4 flex flex-wrap items-end gap-x-6 gap-y-2 pb-1">
+                        @foreach(['soumis_tva'=>'Soumis TVA','blocage_achat'=>'Blocage achat'] as $bn => $blab)
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="hidden" name="{{ $bn }}" value="0">
+                            <input type="checkbox" name="{{ $bn }}" value="1" class="{{ $chk }}" {{ $bool($bn, $bn === 'soumis_tva') ? 'checked' : '' }}>
+                            <span class="{{ $chkLb }}">{{ $blab }}</span>
+                        </label>
                         @endforeach
-                    </select>
-                    @error('type')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Email --}}
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="email" name="email"
-                           value="{{ old('email', $supplier->email ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm @error('email') border-red-300 @enderror"
-                           placeholder="contact@fournisseur.com">
-                    @error('email')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Phone --}}
-                <div>
-                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Téléphone fixe</label>
-                    <input type="text" id="phone" name="phone"
-                           value="{{ old('phone', $supplier->phone ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                           placeholder="+229 21 XX XX XX">
-                    @error('phone')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Phone 2 / Mobile --}}
-                <div>
-                    <label for="phone2" class="block text-sm font-medium text-gray-700 mb-1">Mobile / Tél. 2</label>
-                    <input type="text" id="phone2" name="phone2"
-                           value="{{ old('phone2', $supplier->phone2 ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                           placeholder="+229 97 XX XX XX">
-                    @error('phone2')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Website --}}
-                <div class="md:col-span-2">
-                    <label for="website" class="block text-sm font-medium text-gray-700 mb-1">Site web</label>
-                    <input type="url" id="website" name="website"
-                           value="{{ old('website', $supplier->website ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm @error('website') border-red-300 @enderror"
-                           placeholder="https://www.fournisseur.com">
-                    @error('website')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Notes --}}
-                <div class="md:col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes internes</label>
-                    <textarea id="notes" name="notes" rows="3"
-                              class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              placeholder="Informations complémentaires, conditions particulières...">{{ old('notes', $supplier->notes ?? '') }}</textarea>
-                    @error('notes')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-            </div>
-        </div>
-
-        {{-- ================================================================
-             TAB 2 — Infos légales & localisation
-        ================================================================ --}}
-        <div x-show="activeTab === 'legal'" x-cloak>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                {{-- IFU --}}
-                <div>
-                    <label for="ifu" class="block text-sm font-medium text-gray-700 mb-1">IFU</label>
-                    <input type="text" id="ifu" name="ifu"
-                           value="{{ old('ifu', $supplier->ifu ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono"
-                           placeholder="Ex: 1234567890123">
-                    @error('ifu')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- RCCM --}}
-                <div>
-                    <label for="rccm" class="block text-sm font-medium text-gray-700 mb-1">RCCM</label>
-                    <input type="text" id="rccm" name="rccm"
-                           value="{{ old('rccm', $supplier->rccm ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono"
-                           placeholder="Ex: RB/COT/XX/X/XXXX">
-                    @error('rccm')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Address --}}
-                <div class="md:col-span-2">
-                    <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Adresse principale</label>
-                    <input type="text" id="address" name="address"
-                           value="{{ old('address', $supplier->address ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                           placeholder="N° rue, quartier, BP...">
-                    @error('address')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- City --}}
-                <div>
-                    <label for="city" class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
-                    <input type="text" id="city" name="city"
-                           value="{{ old('city', $supplier->city ?? '') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                           placeholder="Cotonou">
-                    @error('city')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Country --}}
-                <div>
-                    <label for="country" class="block text-sm font-medium text-gray-700 mb-1">Pays</label>
-                    <input type="text" id="country" name="country"
-                           value="{{ old('country', $supplier->country ?? 'Bénin') }}"
-                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                           placeholder="Bénin">
-                    @error('country')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                {{-- Active status --}}
-                <div class="flex items-center gap-3 pt-2">
-                    <input type="hidden" name="is_active" value="0">
-                    <input type="checkbox" id="is_active" name="is_active" value="1"
-                           {{ old('is_active', $supplier->is_active ?? true) ? 'checked' : '' }}
-                           class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
-                    <label for="is_active" class="text-sm font-medium text-gray-700">Fournisseur actif</label>
-                </div>
-
-            </div>
-        </div>
-
-        {{-- ================================================================
-             TAB 3 — Contacts
-        ================================================================ --}}
-        <div x-show="activeTab === 'contacts'" x-cloak>
-
-            <template x-if="contacts.length === 0">
-                <div class="text-center py-12 text-gray-400">
-                    <svg class="w-10 h-10 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                    </svg>
-                    <p class="text-sm">Aucun contact ajouté</p>
-                    <p class="text-xs mt-1">Cliquez sur « Ajouter un contact » pour commencer</p>
-                </div>
-            </template>
-
-            <div class="space-y-4">
-                <template x-for="(contact, index) in contacts" :key="index">
-                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 relative">
-                        <div class="absolute top-3 right-3 flex items-center gap-2">
-                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" :name="`contacts[${index}][is_primary]`" value="1"
-                                       x-model="contact.is_primary"
-                                       class="w-3.5 h-3.5 text-indigo-600 rounded border-gray-300">
-                                <span class="text-xs text-gray-500">Principal</span>
-                            </label>
-                            <button type="button" @click="removeContact(index)"
-                                    class="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pr-20">
-                            {{-- Civility --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Civilité</label>
-                                <select :name="`contacts[${index}][civility]`" x-model="contact.civility"
-                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                    <option value="">—</option>
-                                    <option value="M.">M.</option>
-                                    <option value="Mme">Mme</option>
-                                    <option value="Dr">Dr</option>
-                                    <option value="Prof">Prof</option>
-                                </select>
-                            </div>
-                            {{-- First name --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Prénom</label>
-                                <input type="text" :name="`contacts[${index}][first_name]`" x-model="contact.first_name"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="Prénom">
-                            </div>
-                            {{-- Last name --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Nom <span class="text-red-500">*</span></label>
-                                <input type="text" :name="`contacts[${index}][last_name]`" x-model="contact.last_name"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="Nom de famille">
-                            </div>
-                            {{-- Job title --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Poste</label>
-                                <input type="text" :name="`contacts[${index}][job_title]`" x-model="contact.job_title"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="Ex: Responsable commercial">
-                            </div>
-                            {{-- Phone --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Téléphone</label>
-                                <input type="text" :name="`contacts[${index}][phone]`" x-model="contact.phone"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="+229 21 XX XX XX">
-                            </div>
-                            {{-- Mobile --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Mobile</label>
-                                <input type="text" :name="`contacts[${index}][mobile]`" x-model="contact.mobile"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="+229 97 XX XX XX">
-                            </div>
-                            {{-- Email --}}
-                            <div class="sm:col-span-2 lg:col-span-3">
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
-                                <input type="email" :name="`contacts[${index}][email]`" x-model="contact.email"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="contact@fournisseur.com">
-                            </div>
-                        </div>
                     </div>
-                </template>
-            </div>
-
-            <div class="mt-4">
-                <button type="button" @click="addContact()"
-                        class="inline-flex items-center gap-2 px-4 py-2 border border-dashed border-indigo-300 text-indigo-600 rounded-lg text-sm hover:bg-indigo-50 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Ajouter un contact
-                </button>
-            </div>
-        </div>
-
-        {{-- ================================================================
-             TAB 4 — Adresses
-        ================================================================ --}}
-        <div x-show="activeTab === 'addresses'" x-cloak>
-
-            <template x-if="addresses.length === 0">
-                <div class="text-center py-12 text-gray-400">
-                    <svg class="w-10 h-10 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    <p class="text-sm">Aucune adresse ajoutée</p>
-                    <p class="text-xs mt-1">Cliquez sur « Ajouter une adresse » pour commencer</p>
                 </div>
-            </template>
+            </section>
 
-            <div class="space-y-4">
-                <template x-for="(addr, index) in addresses" :key="index">
-                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 relative">
-                        <div class="absolute top-3 right-3 flex items-center gap-2">
-                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" :name="`addresses[${index}][is_default]`" value="1"
-                                       x-model="addr.is_default"
-                                       class="w-3.5 h-3.5 text-indigo-600 rounded border-gray-300">
-                                <span class="text-xs text-gray-500">Défaut</span>
-                            </label>
-                            <button type="button" @click="removeAddress(index)"
-                                    class="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
-                        </div>
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">2. Coordonnées</div>
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-5 gap-4">
+                    <div><label class="{{ $lbl }}">Téléphone principal</label><input type="text" name="phone" maxlength="20" value="{{ old('phone', $s->phone ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Téléphone secondaire</label><input type="text" name="phone2" maxlength="20" value="{{ old('phone2', $s->phone2 ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Mobile</label><input type="text" name="mobile" maxlength="20" value="{{ old('mobile', $s->mobile ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Email</label><input type="email" name="email" maxlength="150" value="{{ old('email', $s->email ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Site web</label><input type="text" name="website" maxlength="150" value="{{ old('website', $s->website ?? '') }}" class="{{ $inp }}"></div>
+                </div>
+            </section>
+        </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-24">
-                            {{-- Type --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                                <select :name="`addresses[${index}][type]`" x-model="addr.type"
-                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                    <option value="siege">Siège social</option>
-                                    <option value="livraison">Livraison</option>
-                                    <option value="facturation">Facturation</option>
-                                </select>
-                            </div>
-                            {{-- Label --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Libellé</label>
-                                <input type="text" :name="`addresses[${index}][label]`" x-model="addr.label"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="Ex: Entrepôt principal">
-                            </div>
-                            {{-- Address --}}
-                            <div class="sm:col-span-2">
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Adresse <span class="text-red-500">*</span></label>
-                                <input type="text" :name="`addresses[${index}][address]`" x-model="addr.address"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="N° rue, quartier, BP...">
-                            </div>
-                            {{-- City --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Ville</label>
-                                <input type="text" :name="`addresses[${index}][city]`" x-model="addr.city"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="Cotonou">
-                            </div>
-                            {{-- Country --}}
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Pays</label>
-                                <input type="text" :name="`addresses[${index}][country]`" x-model="addr.country"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                       placeholder="Bénin">
-                            </div>
-                        </div>
+        {{-- ═══════════ ADRESSES ═══════════ --}}
+        <div x-show="tab === 'adresses'" x-cloak class="p-4 space-y-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">3. Adresse principale</div>
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Adresse ligne 1</label><input type="text" name="address" maxlength="255" value="{{ old('address', $s->address ?? '') }}" class="{{ $inp }}"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Adresse ligne 2</label><input type="text" name="address_line2" maxlength="200" value="{{ old('address_line2', $s->address_line2 ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Boîte postale</label><input type="text" name="boite_postale" maxlength="60" value="{{ old('boite_postale', $s->boite_postale ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Code postal</label><input type="text" name="postal_code" maxlength="20" value="{{ old('postal_code', $s->postal_code ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Ville</label><input type="text" name="city" maxlength="100" value="{{ old('city', $s->city ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Quartier</label><input type="text" name="quartier" maxlength="100" value="{{ old('quartier', $s->quartier ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Région</label><input type="text" name="region" maxlength="100" value="{{ old('region', $s->region ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Pays</label><input type="text" name="country" maxlength="100" value="{{ old('country', $s->country ?? 'CI') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">GPS latitude</label><input type="number" step="0.000001" name="gps_lat" value="{{ old('gps_lat', $s->gps_lat ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">GPS longitude</label><input type="number" step="0.000001" name="gps_lng" value="{{ old('gps_lng', $s->gps_lng ?? '') }}" class="{{ $inpR }}"></div>
+                </div>
+            </section>
+
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }} flex items-center justify-between">
+                    <span>Adresses secondaires</span>
+                    <button type="button" @click="addAddress()" class="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-[3px]">+ Ajouter</button>
+                </div>
+                <div class="p-4">
+                    <table class="w-full text-[12.5px] border border-gray-200">
+                        <thead><tr class="bg-gray-50 text-gray-600">
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200 w-8">#</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Intitulé</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Adresse</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Ville</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Pays</th>
+                            <th class="text-center font-bold px-2 py-1.5 border-b border-gray-200 w-16">Défaut</th>
+                            <th class="w-8 border-b border-gray-200"></th>
+                        </tr></thead>
+                        <tbody>
+                            <template x-if="addresses.length === 0"><tr><td colspan="7" class="px-3 py-3 text-center text-gray-400 text-[12px]">Aucune adresse secondaire.</td></tr></template>
+                            <template x-for="(a, i) in addresses" :key="i">
+                                <tr class="border-b border-gray-100 last:border-0">
+                                    <td class="px-2 py-1 text-gray-400" x-text="i + 1"></td>
+                                    <td class="px-2 py-1"><input type="hidden" :name="`addresses[${i}][type]`" value="livraison"><input type="text" :name="`addresses[${i}][label]`" x-model="a.label" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1"><input type="text" :name="`addresses[${i}][address]`" x-model="a.address" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1"><input type="text" :name="`addresses[${i}][city]`" x-model="a.city" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1"><input type="text" :name="`addresses[${i}][country]`" x-model="a.country" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1 text-center"><input type="hidden" :name="`addresses[${i}][is_default]`" value="0"><input type="checkbox" :name="`addresses[${i}][is_default]`" value="1" x-model="a.is_default" class="{{ $chk }}"></td>
+                                    <td class="px-2 py-1 text-center"><button type="button" @click="removeAddress(i)" class="text-red-500 hover:text-red-700">✕</button></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        {{-- ═══════════ ACHATS ═══════════ --}}
+        <div x-show="tab === 'achats'" x-cloak class="p-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">4. Paramètres d'achat</div>
+                <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div><label class="{{ $lbl }}">Canal</label><input type="text" name="canal" maxlength="60" value="{{ old('canal', $s->canal ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Famille tarifaire</label><input type="text" name="famille_tarifaire" maxlength="60" value="{{ old('famille_tarifaire', $s->famille_tarifaire ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Remise par défaut (%)</label><input type="number" step="0.01" min="0" max="100" name="default_discount" value="{{ old('default_discount', $s->default_discount ?? 0) }}" class="{{ $inpR }}"></div>
+                    <div>
+                        <label class="{{ $lbl }}">Mode de règlement</label>
+                        <div class="relative"><select name="payment_mode" class="{{ $lk }}">
+                            @php $pm = old('payment_mode', $s->payment_mode ?? 'virement'); @endphp
+                            <option value="virement" @selected($pm==='virement')>Virement</option>
+                            <option value="cash" @selected($pm==='cash')>Comptant</option>
+                            <option value="cheque" @selected($pm==='cheque')>Chèque</option>
+                        </select>{!! $caret !!}</div>
                     </div>
-                </template>
-            </div>
-
-            <div class="mt-4">
-                <button type="button" @click="addAddress()"
-                        class="inline-flex items-center gap-2 px-4 py-2 border border-dashed border-indigo-300 text-indigo-600 rounded-lg text-sm hover:bg-indigo-50 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Ajouter une adresse
-                </button>
-            </div>
+                    <div><label class="{{ $lbl }}">Délai de règlement (jours)</label><input type="number" min="0" max="365" name="payment_days" value="{{ old('payment_days', $s->payment_days ?? 0) }}" class="{{ $inpR }}"></div>
+                    <div>
+                        <label class="{{ $lbl }}">TVA applicable</label>
+                        <div class="relative"><select name="tax_rate_id" class="{{ $lk }}"><option value="">—</option>@foreach($taxRates as $tr)<option value="{{ $tr->id }}" @selected(old('tax_rate_id', $s->tax_rate_id ?? '') == $tr->id)>{{ $tr->rate }} %</option>@endforeach</select>{!! $caret !!}</div>
+                    </div>
+                    <div><label class="{{ $lbl }}">Note qualité (0-5)</label><input type="number" step="0.1" min="0" max="5" name="rating" value="{{ old('rating', $s->rating ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Délai livr. moyen (j)</label><input type="number" min="0" name="avg_delivery_days" value="{{ old('avg_delivery_days', $s->avg_delivery_days ?? '') }}" class="{{ $inpR }}"></div>
+                </div>
+            </section>
         </div>
 
-        {{-- Form actions --}}
-        <div class="mt-8 flex items-center justify-end gap-3 pt-5 border-t border-gray-200">
-            <a href="{{ isset($supplier) && $supplier->exists ? route('suppliers.show', $supplier) : route('suppliers.index') }}"
-               class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                Annuler
-            </a>
-            <button type="submit"
-                    class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
-                {{ $isEdit ? 'Enregistrer les modifications' : 'Créer le fournisseur' }}
-            </button>
+        {{-- ═══════════ FINANCE ═══════════ --}}
+        <div x-show="tab === 'finance'" x-cloak class="p-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Finance</div>
+                <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div><label class="{{ $lbl }}">Plafond crédit</label><input type="number" min="0" step="1" name="credit_limit" value="{{ old('credit_limit', $s->credit_limit ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Encours autorisé</label><input type="number" min="0" step="1" name="encours_autorise" value="{{ old('encours_autorise', $s->encours_autorise ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Banque</label><input type="text" name="banque" maxlength="100" value="{{ old('banque', $s->banque ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">SWIFT</label><input type="text" name="swift" maxlength="20" value="{{ old('swift', $s->swift ?? '') }}" class="{{ $inp }} font-mono"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">RIB / IBAN</label><input type="text" name="rib_iban" maxlength="40" value="{{ old('rib_iban', $s->rib_iban ?? '') }}" class="{{ $inp }} font-mono"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Numéro de compte</label><input type="text" name="numero_compte" maxlength="30" value="{{ old('numero_compte', $s->numero_compte ?? '') }}" class="{{ $inp }} font-mono"></div>
+                </div>
+            </section>
         </div>
 
+        {{-- ═══════════ RÉCEPTION ═══════════ --}}
+        <div x-show="tab === 'reception'" x-cloak class="p-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">5. Réception</div>
+                <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                        <label class="{{ $lbl }}">Dépôt de réception par défaut</label>
+                        <div class="relative"><select name="depot_reception_id" class="{{ $lk }} font-mono"><option value="">—</option>@foreach($warehouses as $w)<option value="{{ $w->id }}" @selected(old('depot_reception_id', $s->depot_reception_id ?? '') == $w->id)>{{ $w->code }}</option>@endforeach</select>{!! $caret !!}</div>
+                    </div>
+                    <div><label class="{{ $lbl }}">Mode de livraison</label><input type="text" name="mode_livraison" maxlength="60" value="{{ old('mode_livraison', $s->mode_livraison ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Transporteur</label><input type="text" name="transporteur" maxlength="100" value="{{ old('transporteur', $s->transporteur ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Délai de livraison (jours)</label><input type="number" min="0" max="365" name="delai_livraison" value="{{ old('delai_livraison', $s->delai_livraison ?? '') }}" class="{{ $inpR }}"></div>
+                </div>
+            </section>
+        </div>
+
+        {{-- ═══════════ CONTACTS ═══════════ --}}
+        <div x-show="tab === 'contacts'" x-cloak class="p-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }} flex items-center justify-between">
+                    <span>Contacts</span>
+                    <button type="button" @click="addContact()" class="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-[3px]">+ Ajouter</button>
+                </div>
+                <div class="p-4">
+                    <table class="w-full text-[12.5px] border border-gray-200">
+                        <thead><tr class="bg-gray-50 text-gray-600">
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200 w-8">#</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Nom</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Prénom</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Fonction</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Téléphone</th>
+                            <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Email</th>
+                            <th class="text-center font-bold px-2 py-1.5 border-b border-gray-200 w-16">Principal</th>
+                            <th class="w-8 border-b border-gray-200"></th>
+                        </tr></thead>
+                        <tbody>
+                            <template x-if="contacts.length === 0"><tr><td colspan="8" class="px-3 py-3 text-center text-gray-400 text-[12px]">Aucun contact.</td></tr></template>
+                            <template x-for="(ct, i) in contacts" :key="i">
+                                <tr class="border-b border-gray-100 last:border-0">
+                                    <td class="px-2 py-1 text-gray-400" x-text="i + 1"></td>
+                                    <td class="px-2 py-1"><input type="text" :name="`contacts[${i}][last_name]`" x-model="ct.last_name" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1"><input type="text" :name="`contacts[${i}][first_name]`" x-model="ct.first_name" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1"><input type="text" :name="`contacts[${i}][job_title]`" x-model="ct.job_title" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1"><input type="text" :name="`contacts[${i}][phone]`" x-model="ct.phone" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1"><input type="email" :name="`contacts[${i}][email]`" x-model="ct.email" class="{{ $inp }} h-7"></td>
+                                    <td class="px-2 py-1 text-center"><input type="hidden" :name="`contacts[${i}][is_primary]`" value="0"><input type="checkbox" :name="`contacts[${i}][is_primary]`" value="1" x-model="ct.is_primary" class="{{ $chk }}"></td>
+                                    <td class="px-2 py-1 text-center"><button type="button" @click="removeContact(i)" class="text-red-500 hover:text-red-700">✕</button></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        {{-- ═══════════ COMPTABILITÉ ═══════════ --}}
+        <div x-show="tab === 'compta'" x-cloak class="p-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">6. Comptabilité</div>
+                <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div><label class="{{ $lbl }}">Compte tiers (401)</label><input type="text" name="compte_tiers" maxlength="30" value="{{ old('compte_tiers', $s->compte_tiers ?? '') }}" class="{{ $inp }} font-mono" placeholder="40110000"></div>
+                    <div><label class="{{ $lbl }}">Compte collectif</label><input type="text" name="compte_collectif" maxlength="30" value="{{ old('compte_collectif', $s->compte_collectif ?? '') }}" class="{{ $inp }} font-mono" placeholder="40100000"></div>
+                    <div><label class="{{ $lbl }}">Condition de paiement</label><input type="text" name="condition_paiement" maxlength="60" value="{{ old('condition_paiement', $s->condition_paiement ?? '') }}" class="{{ $inp }}" placeholder="30J FDM"></div>
+                    <div><label class="{{ $lbl }}">Échéance</label><input type="text" name="echeance" maxlength="60" value="{{ old('echeance', $s->echeance ?? '') }}" class="{{ $inp }}" placeholder="Fin de mois"></div>
+                    <div class="sm:col-span-4">
+                        <label class="{{ $lbl }}">Notes</label>
+                        <textarea name="notes" rows="2" class="w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400 resize-none">{{ old('notes', $s->notes ?? '') }}</textarea>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        {{-- ═══════════ DOCUMENTS ═══════════ --}}
+        <div x-show="tab === 'docs'" x-cloak class="p-4">
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }}">Documents / pièces jointes</div>
+                <div class="p-4 space-y-4">
+                    @if($isEdit && $s->attachments->isNotEmpty())
+                    <table class="w-full text-[12.5px] border border-gray-200">
+                        <thead><tr class="bg-gray-50 text-gray-600">
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200 w-10">#</th>
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Fichier</th>
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Type</th>
+                            <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Taille</th>
+                        </tr></thead>
+                        <tbody>
+                            @foreach($s->attachments as $i => $att)
+                            <tr class="border-b border-gray-100 last:border-0">
+                                <td class="px-3 py-1.5 text-gray-400">{{ $i + 1 }}</td>
+                                <td class="px-3 py-1.5 text-gray-700 font-mono">{{ $att->filename }}</td>
+                                <td class="px-3 py-1.5 text-gray-500">{{ $att->mime_type }}</td>
+                                <td class="px-3 py-1.5 text-gray-500 tabular-nums">{{ number_format($att->size / 1024, 0, ',', ' ') }} Ko</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    @endif
+                    <div>
+                        <label class="{{ $lbl }}">Ajouter des pièces jointes</label>
+                        <input type="file" name="documents[]" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                               class="w-full text-[13px] border border-[#c3d3c9] rounded-[3px] px-2 py-1.5 cursor-pointer
+                                      file:mr-3 file:py-0.5 file:px-2 file:border-0 file:bg-emerald-50 file:text-emerald-700
+                                      file:rounded-[2px] file:text-[12px] file:font-semibold hover:file:bg-emerald-100">
+                        <p class="text-[11px] text-gray-400 mt-1">PDF, images, Word, Excel — max 5 Mo par fichier.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
 </form>
+
+@push('scripts')
+<script>
+function supplierForm(init) {
+    return {
+        tab: init.tab || 'general',
+        contacts: init.contacts || [],
+        addresses: init.addresses || [],
+        addContact()     { this.contacts.push({ last_name: '', first_name: '', job_title: '', phone: '', email: '', is_primary: false }); },
+        removeContact(i) { this.contacts.splice(i, 1); },
+        addAddress()     { this.addresses.push({ type: 'livraison', label: '', address: '', city: '', country: 'CI', is_default: false }); },
+        removeAddress(i) { this.addresses.splice(i, 1); },
+    };
+}
+</script>
+@endpush

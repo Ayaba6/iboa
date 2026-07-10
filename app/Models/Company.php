@@ -71,9 +71,27 @@ class Company extends Model
         'current_fiscal_year_id',
         'validation_mode',
         'allow_self_validation',
+        // [Maquette Paramétrage société]
+        'company_code', 'sigle', 'cnss_number', 'main_activity', 'language', 'timezone',
+        'opened_at', 'status', 'notes', 'district', 'po_box', 'main_contact', 'accounting_email',
+        'fiscal_regime', 'vat_mode', 'default_vat_rate', 'tax_center', 'withholding_regime', 'taxpayer_type',
+        'stamp_path', 'signature_path', 'pdf_header_path', 'pdf_footer_path',
+        'multi_sites', 'vat_management', 'validation_workflow', 'electronic_signature',
+        'auto_pdf_print', 'email_notifications', 'secondary_currency', 'maintenance_mode',
     ];
 
     protected $casts = [
+        // [Maquette Paramétrage société]
+        'opened_at'            => 'date',
+        'default_vat_rate'     => 'decimal:2',
+        'multi_sites'          => 'boolean',
+        'vat_management'       => 'boolean',
+        'validation_workflow'  => 'boolean',
+        'electronic_signature' => 'boolean',
+        'auto_pdf_print'       => 'boolean',
+        'email_notifications'  => 'boolean',
+        'secondary_currency'   => 'boolean',
+        'maintenance_mode'     => 'boolean',
         'is_vat_subject'       => 'boolean',
         'allow_self_validation' => 'boolean',
     ];

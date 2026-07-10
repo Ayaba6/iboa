@@ -123,7 +123,12 @@ class PayRubricController extends Controller
             'base_ref'      => ['nullable', 'string', 'max:50'],
             'rate'          => ['nullable', 'numeric', 'min:0', 'max:10000'],
             'fixed_amount'  => ['nullable', 'integer', 'min:0'],
-            'formula'       => ['nullable', 'string', 'max:500'],
+            'formula'       => [
+                'nullable', 'string', 'max:500',
+                // Sécurité : la formule ne doit contenir que des opérateurs arithmétiques
+                // et des noms de variables (ex: salaire_base * 0.055). PHP/JS interdit.
+                'regex:/^[a-zA-Z0-9_\s\+\-\*\/\(\)\.\%]+$/',
+            ],
             'is_taxable'    => ['boolean'],
             'is_cnss_base'  => ['boolean'],
             'is_in_brut'    => ['boolean'],

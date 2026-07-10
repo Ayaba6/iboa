@@ -4,159 +4,135 @@
 @section('breadcrumb')
     <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Accueil</a>
     <span class="mx-1">/</span>
-    <span class="text-gray-900 font-medium">Trésorerie</span>
+    <a href="{{ route('tresorerie.dashboard') }}" class="hover:text-gray-700">Trésorerie</a>
+    <span class="mx-1">/</span>
+    <span class="text-gray-900 font-medium">Comptes</span>
 @endsection
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-3">
 
     {{-- Header --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Comptes de trésorerie</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $accounts->count() }} compte(s) actif(s)</p>
+            <h1 class="text-[16px] font-bold text-gray-900">Comptes de trésorerie</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Caisses, banques et mobile money — soldes temps réel</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex items-center gap-1.5">
             @can('cash_accounts.manage')
             <a href="{{ route('tresorerie.caisses.create') }}"
-               class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Nouveau compte
+               class="h-8 inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-medium px-3 rounded-[4px] transition-colors">
+                + Nouveau compte
             </a>
             @endcan
             <a href="{{ route('tresorerie.encaissements.index') }}"
-               class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
-                </svg>
+               class="h-8 inline-flex items-center gap-1.5 border border-emerald-500 text-emerald-700 bg-white hover:bg-emerald-50 text-[12px] font-medium px-3 rounded-[4px] transition-colors">
                 Encaissements
             </a>
             <a href="{{ route('tresorerie.decaissements.index') }}"
-               class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
-                </svg>
+               class="h-8 inline-flex items-center gap-1.5 border border-red-300 text-red-700 bg-white hover:bg-red-50 text-[12px] font-medium px-3 rounded-[4px] transition-colors">
                 Décaissements
             </a>
         </div>
     </div>
 
-    {{-- Summary cards (totals by type) --}}
+    {{-- KPIs synthèse --}}
     @php
-        $totalBalance = $accounts->sum('current_balance');
         $byType = $accounts->groupBy('type');
+        $kpis = [
+            ['label' => 'Total trésorerie', 'value' => number_format($accounts->sum('current_balance'), 0, ',', ' ') . ' F', 'sub' => $accounts->count() . ' compte(s) actif(s)', 'text' => 'text-emerald-800', 'bd' => 'border-emerald-300'],
+            ['label' => 'Banques',          'value' => number_format($byType->get('banque', collect())->sum('current_balance'), 0, ',', ' ') . ' F', 'sub' => $byType->get('banque', collect())->count() . ' compte(s)', 'text' => 'text-blue-700', 'bd' => 'border-blue-200'],
+            ['label' => 'Caisses',          'value' => number_format($byType->get('caisse', collect())->sum('current_balance'), 0, ',', ' ') . ' F', 'sub' => $byType->get('caisse', collect())->count() . ' caisse(s)', 'text' => 'text-gray-900', 'bd' => 'border-gray-300'],
+            ['label' => 'Mobile Money',     'value' => number_format($byType->get('mobile_money', collect())->sum('current_balance'), 0, ',', ' ') . ' F', 'sub' => $byType->get('mobile_money', collect())->count() . ' compte(s)', 'text' => 'text-violet-700', 'bd' => 'border-violet-200'],
+        ];
     @endphp
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-            <p class="text-xs font-medium text-indigo-600 uppercase tracking-wider">Total trésorerie</p>
-            <p class="text-2xl font-bold text-indigo-900 tabular-nums mt-1">
-                {{ number_format($totalBalance, 0, ',', ' ') }} FCFA
-            </p>
-            <p class="text-xs text-indigo-500 mt-1">{{ $accounts->count() }} compte(s)</p>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+        @foreach($kpis as $kpi)
+        <div class="bg-white rounded-[4px] border {{ $kpi['bd'] }} px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{{ $kpi['label'] }}</p>
+            <p class="mt-0.5 text-[17px] font-bold {{ $kpi['text'] }} tabular-nums leading-none">{{ $kpi['value'] }}</p>
+            <p class="mt-0.5 text-[11px] text-gray-400">{{ $kpi['sub'] }}</p>
         </div>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p class="text-xs font-medium text-blue-600 uppercase tracking-wider">Banque</p>
-            <p class="text-xl font-bold text-blue-900 tabular-nums mt-1">
-                {{ number_format($byType->get('banque', collect())->sum('current_balance'), 0, ',', ' ') }} FCFA
-            </p>
-            <p class="text-xs text-blue-500 mt-1">{{ $byType->get('banque', collect())->count() }} compte(s)</p>
-        </div>
-        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-            <p class="text-xs font-medium text-emerald-600 uppercase tracking-wider">Caisse + Mobile Money</p>
-            <p class="text-xl font-bold text-emerald-900 tabular-nums mt-1">
-                @php
-                    $caisseTotal = $byType->get('caisse', collect())->sum('current_balance')
-                                 + $byType->get('mobile_money', collect())->sum('current_balance');
-                @endphp
-                {{ number_format($caisseTotal, 0, ',', ' ') }} FCFA
-            </p>
-            <p class="text-xs text-emerald-500 mt-1">
-                {{ $byType->get('caisse', collect())->count() + $byType->get('mobile_money', collect())->count() }} compte(s)
-            </p>
-        </div>
+        @endforeach
     </div>
 
-    {{-- Accounts grid --}}
-    @if($accounts->isEmpty())
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-16 text-center">
-            <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <p class="text-gray-500 text-sm">Aucun compte de trésorerie configuré.</p>
-        </div>
-    @else
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            @foreach($accounts as $account)
+    {{-- Table dense --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="overflow-x-auto">
+        <table class="min-w-full text-[14px] border-collapse">
+            <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
+                <tr>
+                    <th class="px-3 py-1.5 text-left">Code</th>
+                    <th class="px-3 py-1.5 text-left">Compte</th>
+                    <th class="px-3 py-1.5 text-left">Type</th>
+                    <th class="px-3 py-1.5 text-left">Établissement</th>
+                    <th class="px-3 py-1.5 text-left">N° compte</th>
+                    <th class="px-3 py-1.5 text-left">Dernière transaction</th>
+                    <th class="px-3 py-1.5 text-right">Solde (FCFA)</th>
+                    <th class="px-3 py-1.5"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @forelse($accounts as $account)
                 @php
-                    // Determine card styling by type
-                    [$borderClass, $badgeBg, $badgeText, $balanceClass, $iconBg] = match($account->type) {
-                        'banque'       => ['border-blue-200',   'bg-blue-100',   'text-blue-700',   'text-blue-900',   'bg-blue-100'],
-                        'mobile_money' => ['border-purple-200', 'bg-purple-100', 'text-purple-700', 'text-purple-900', 'bg-purple-100'],
-                        default        => ['border-slate-200',  'bg-slate-100',  'text-slate-700',  'text-slate-900',  'bg-slate-100'],
+                    [$badge, $balanceClass] = match($account->type) {
+                        'banque'       => ['bg-blue-100 text-blue-700',     'text-blue-900'],
+                        'mobile_money' => ['bg-violet-100 text-violet-700', 'text-violet-900'],
+                        default        => ['bg-slate-100 text-slate-700',   'text-gray-900'],
                     };
-
-                    // Last transaction date
-                    $lastTx = $account->transactions()->latest('transaction_date')->first();
                 @endphp
-                <div class="bg-white rounded-xl border {{ $borderClass }} p-5 hover:shadow-md transition-shadow flex flex-col gap-3">
-
-                    {{-- Top row --}}
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 {{ $iconBg }} rounded-lg flex items-center justify-center flex-shrink-0">
-                                @if($account->type === 'banque')
-                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                                    </svg>
-                                @elseif($account->type === 'mobile_money')
-                                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                    </svg>
-                                @else
-                                    <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                    </svg>
-                                @endif
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900 text-sm leading-tight">{{ $account->name }}</p>
-                                <p class="text-xs text-gray-400 font-mono">{{ $account->code }}</p>
-                            </div>
-                        </div>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $badgeBg }} {{ $badgeText }} flex-shrink-0">
-                            {{ $account->typeBadge() }}
-                        </span>
-                    </div>
-
-                    {{-- Balance --}}
-                    <div>
-                        <p class="text-xs text-gray-400 mb-0.5">Solde actuel</p>
-                        <p class="text-2xl font-bold {{ $balanceClass }} tabular-nums">
-                            {{ number_format($account->current_balance, 0, ',', ' ') }}
-                            <span class="text-base font-normal text-gray-400">FCFA</span>
-                        </p>
-                    </div>
-
-                    {{-- Last transaction --}}
-                    <p class="text-xs text-gray-400">
-                        @if($lastTx)
-                            Dernière transaction : {{ $lastTx->transaction_date?->format('d/m/Y') }}
-                        @else
-                            Aucune transaction
+                <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                    <td class="px-3 py-1">
+                        <a href="{{ route('tresorerie.caisses.show', $account) }}" class="font-mono font-semibold text-blue-600 hover:text-blue-800 text-[13px]">{{ $account->code }}</a>
+                    </td>
+                    <td class="px-3 py-1 font-medium text-gray-900">
+                        {{ $account->name }}
+                        @if($account->is_default)<span class="ml-1 inline-flex px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-100 text-emerald-700">Défaut</span>@endif
+                    </td>
+                    <td class="px-3 py-1">
+                        <span class="inline-flex px-2 py-0.5 rounded-[3px] text-[10.5px] font-medium {{ $badge }}">{{ $account->typeBadge() }}</span>
+                    </td>
+                    <td class="px-3 py-1 text-gray-600">{{ $account->bank_name ?: '—' }}</td>
+                    <td class="px-3 py-1 font-mono text-[12px] text-gray-500">{{ $account->account_number ?: '—' }}</td>
+                    <td class="px-3 py-1 text-gray-500 tabular-nums">
+                        {{ $account->last_transaction_date ? \Carbon\Carbon::parse($account->last_transaction_date)->format('d/m/Y') : '—' }}
+                    </td>
+                    <td class="px-3 py-1 text-right font-bold tabular-nums {{ $balanceClass }}">
+                        {{ number_format($account->current_balance, 0, ',', ' ') }}
+                        @if($account->min_balance && $account->current_balance < $account->min_balance)
+                        <span class="block text-[10px] font-semibold text-red-600">sous seuil ({{ number_format($account->min_balance, 0, ',', ' ') }})</span>
                         @endif
-                    </p>
-
-                    {{-- Action --}}
-                    <a href="{{ route('tresorerie.caisses.show', $account) }}"
-                       class="mt-auto w-full text-center border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-600 hover:text-indigo-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                        Voir les transactions
-                    </a>
-                </div>
-            @endforeach
+                    </td>
+                    <td class="px-3 py-1 text-right whitespace-nowrap">
+                        <a href="{{ route('tresorerie.caisses.show', $account) }}" class="text-emerald-700 hover:text-emerald-900 text-xs font-medium">Détail →</a>
+                        @can('cash_accounts.manage')
+                        <a href="{{ route('tresorerie.caisses.edit', $account) }}" class="ml-2 text-gray-400 hover:text-gray-700 text-xs font-medium">Modifier</a>
+                        @endcan
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="8" class="px-4 py-12 text-center text-gray-400 text-[13px]">
+                        Aucun compte de trésorerie configuré.
+                        @can('cash_accounts.manage')
+                        <a href="{{ route('tresorerie.caisses.create') }}" class="text-emerald-700 hover:underline ml-1">Créer le premier</a>
+                        @endcan
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+            @if($accounts->isNotEmpty())
+            <tfoot>
+                <tr class="text-white font-bold" style="background:#065f46">
+                    <td colspan="6" class="px-3 py-1.5 text-right text-[11px] uppercase">Total trésorerie</td>
+                    <td class="px-3 py-1.5 text-right font-mono tabular-nums">{{ number_format($accounts->sum('current_balance'), 0, ',', ' ') }} F</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            @endif
+        </table>
         </div>
-    @endif
+    </div>
 
 </div>
 @endsection

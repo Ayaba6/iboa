@@ -27,5 +27,23 @@ Schedule::command('automation:daily')->dailyAt('05:45');
 // chaîne entre devis/commandes/factures/paiements/réceptions/écritures.
 Schedule::command('audit:sync')->dailyAt('05:50');
 
+// [SYNC] Resynchronisation réparatrice des agrégats dénormalisés (balances
+// clients/fournisseurs, restes à payer, montants facturés, statuts livraison,
+// balances de comptes) — tourne juste après l'audit qui détecte.
+Schedule::command('sync:modules')->dailyAt('05:55');
+
 // [CRM] Notifier chaque matin les responsables des activités en retard
 Schedule::command('crm:notify-overdue-activities')->dailyAt('08:00');
+
+// [CDC §Workflow] Relance des validations en attente au-delà du délai
+// configuré (config/validation.php — 24h production, 48h commercial/achats).
+Schedule::command('validations:remind')->dailyAt('08:15');
+
+// [CDC §14] Sauvegardes régulières quotidiennes — base de données seule.
+// La donnée critique (commandes, factures, écritures, stocks) vit en DB ;
+// les fichiers uploadés (logos, pièces jointes) changent rarement et
+// peuvent être sauvegardés à part (`php artisan backup:run` complet, à la
+// main ou via une tâche hebdomadaire séparée si le volume le justifie).
+Schedule::command('backup:clean')->dailyAt('01:30')->onOneServer();
+Schedule::command('backup:run --only-db')->dailyAt('02:00')->onOneServer();
+Schedule::command('backup:monitor')->dailyAt('07:00')->onOneServer();

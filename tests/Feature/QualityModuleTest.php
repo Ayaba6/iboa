@@ -63,6 +63,26 @@ it('creates and closes a non-conformity with corrective action', function () {
     expect($nc->corrective_action)->toContain('Recalibrage');
 });
 
+it('refuse de clôturer une non-conformité sans action corrective (CDC §12.4)', function () {
+    $this->actingAs(qaAdmin());
+    $insp = QualityInspection::factory()->create();
+
+    $this->post(route('qualite.non-conformities.store'), [
+        'title' => 'Défaut largeur', 'severity' => 'mineure', 'status' => 'ouverte',
+        'quality_inspection_id' => $insp->id,
+    ]);
+    $nc = NonConformity::first();
+
+    $this->put(route('qualite.non-conformities.update', $nc), [
+        'title' => $nc->title, 'severity' => 'mineure', 'status' => 'cloturee',
+        // corrective_action omise volontairement
+    ])->assertSessionHasErrors('corrective_action');
+
+    $nc->refresh();
+    expect($nc->status)->toBe('ouverte')
+        ->and($nc->closed_at)->toBeNull();
+});
+
 it('blocks quality management without permission', function () {
     $co = Company::firstOrCreate(['name' => 'QA'], ['email' => 'qa@qa.io']);
     \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'production.view', 'guard_name' => 'web']);
