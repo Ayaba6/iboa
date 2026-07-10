@@ -19,7 +19,7 @@
     $pfx      = $formName ?? 'f';
 @endphp
 
-<td class="px-3 py-2">
+<td class="px-2 py-1">
 
     {{-- Valeur soumise --}}
     <input type="hidden" :name="'items[' + index + '][product_id]'" :value="item.product_id">
@@ -49,7 +49,7 @@
                 item._ps_search = '';
                 $nextTick(() => { const el = document.getElementById('ps_{{ $pfx }}_' + item._key); if (el) el.focus(); });
             "
-            class="w-full flex items-center justify-between gap-1 border border-gray-300 rounded-[4px] px-2.5 py-1.5 text-sm bg-white hover:border-{{ $accent }}-400 focus:outline-none focus:ring-1 focus:ring-{{ $accent }}-500 min-w-[160px] transition-colors"
+            class="w-full h-8 flex items-center justify-between gap-1 border border-gray-300 rounded-[3px] px-2 py-0 text-[13px] bg-white hover:border-{{ $accent }}-400 focus:outline-none focus:ring-1 focus:ring-{{ $accent }}-500 min-w-[124px] transition-colors"
             :class="item._ps_open ? 'border-{{ $accent }}-500 ring-1 ring-{{ $accent }}-500' : ''">
         <span class="truncate text-left"
               :class="item.product_id ? 'text-gray-900' : 'text-gray-400'"

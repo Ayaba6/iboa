@@ -524,3 +524,9 @@ html.dark .erp-content .shadow-md { box-shadow: 0 1px 3px rgba(0,0,0,.35) !impor
 .topbar-sage nav span { color: #6b7280; }
 .topbar-sage nav .text-gray-900 { color: #ffffff !important; }
 .topbar-sage nav .font-medium { color: #ffffff !important; }
+
+/* ═══════════ [X3] Inputs numériques de tables de lignes — masque les spinners
+   natifs (ils mangent la largeur des colonnes denses Qté/PU/Remise). ═══════════ */
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.no-spin { -moz-appearance: textfield; appearance: textfield; }

@@ -95,7 +95,7 @@ class InvoiceController extends Controller
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
 
         // Taux TVA de type 'tva' pour le sélecteur (exclut les retenues)
-        $taxRatesVente = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
         return view('ventes.factures.create', compact('clients', 'products', 'selectedClient', 'clientWithholding', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
     }
@@ -216,7 +216,7 @@ class InvoiceController extends Controller
             ])->values(),
         ]);
         $clientExemptions  = $clients->pluck('is_tax_exempt', 'id');
-        $taxRatesVente     = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente     = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
         $editLock = $lock; // déjà le verrou actif pour ce user
         return view('ventes.factures.edit', compact('invoice', 'clients', 'products', 'clientWithholding', 'clientExemptions', 'taxRatesVente', 'editLock') + $this->maquetteFormData());

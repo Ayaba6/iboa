@@ -77,7 +77,7 @@ class QuoteController extends Controller
         $products       = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->withSum('productStocks as reserved_qty', 'reserved_quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
         $selectedClient = $request->query('client_id');
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
-        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
         return view('ventes.devis.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
     }
@@ -155,7 +155,7 @@ class QuoteController extends Controller
             ->get(['id', 'name', 'trade_name', 'phone', 'mobile', 'email', 'address', 'city', 'default_discount', 'payment_terms', 'payment_days', 'is_tax_exempt']);
         $products = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
-        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
         return view('ventes.devis.edit', compact('quote', 'clients', 'products', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
     }

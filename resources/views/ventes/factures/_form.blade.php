@@ -1,4 +1,9 @@
-@php $invoice ??= null; $selectedClient ??= null; $clientWithholding ??= []; $clientExemptions ??= []; $inv = $invoice; @endphp
+@php
+    $invoice ??= null; $selectedClient ??= null; $clientWithholding ??= []; $clientExemptions ??= []; $inv = $invoice;
+    // Taux marqué « par défaut » en priorité (sinon 2% BIC sortait avant 18% au tri).
+    $defaultTaxRate = (float) (optional(collect($taxRatesVente ?? [])->firstWhere('is_default', true))->rate
+        ?? optional(collect($taxRatesVente ?? [])->firstWhere('rate', '>', 0))->rate ?? 18);
+@endphp
 <script>
 window._invoiceFormData = {
     invoice:           @json($invoice ? $invoice->load('items') : null),
@@ -10,7 +15,7 @@ window._invoiceFormData = {
     oldClientId:       @json(old('client_id')),
     clientWithholding: @json($clientWithholding),
     clientExemptions:  @json($clientExemptions),
-    defaultTaxRate:    @json((float) (optional(collect($taxRatesVente ?? [])->firstWhere('rate', '>', 0))->rate ?? 18)),
+    defaultTaxRate:    @json($defaultTaxRate),
     orderItemsUrl:     @json(route('ventes.factures.order-items')),
     dnItemsUrl:        @json(route('ventes.factures.dn-items')),
 };
@@ -23,25 +28,27 @@ window._invoiceFormData = {
     $chk   = 'w-[15px] h-[15px] border-[1.5px] border-gray-400 rounded-[2px] text-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $secH  = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
+    $tdIn  = 'no-spin w-full h-8 border border-gray-300 rounded-[3px] px-2 py-0 text-[13px] tabular-nums bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
 @endphp
 
 <div x-data="invoiceFormVentes()" x-cloak class="space-y-3">
 
     <div class="bg-white border border-gray-300 rounded-[4px]">
         {{-- Bandeau SAGE --}}
-        <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-            <h2 class="text-[15px] font-bold text-gray-900">
+        <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
                 Facture de vente : {{ $inv ? 'Modification' : 'Création' }}
-                @if($inv)<span class="font-mono text-emerald-700 ml-1">{{ $inv->number }}</span>@endif
+                @if($inv)<span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $inv->number }}</span>@endif
             </h2>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
                 {{-- NB : PAS de :disabled (annulerait la soumission native au clic).
                      Anti-double-soumission = _idempotency_key côté serveur. --}}
                 <button type="submit" @click="submitting = true"
-                        class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 disabled:opacity-60 px-4 py-1.5 rounded-[4px] transition-colors"
+                        class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors"
                         x-text="submitting ? 'Enregistrement…' : 'Enregistrer'">Enregistrer</button>
-                <a href="{{ route('ventes.factures.index') }}" class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
+                <button type="button" onclick="window.print()"
+                        class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Imprimer</button>
+                <a href="{{ route('ventes.factures.index') }}" class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">Abandon</a>
             </div>
         </div>
 
@@ -233,47 +240,50 @@ window._invoiceFormData = {
                 <div class="grid grid-cols-1 xl:grid-cols-12">
                     <div class="xl:col-span-9 overflow-x-auto border-r border-gray-200">
                         <table class="w-full text-sm">
-                            <thead class="bg-[#eef5f0] border-b border-gray-300">
+                            <thead class="bg-[#3b4248]">
                                 <tr>
-                                    <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-8">#</th>
-                                    <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-40">Article</th>
-                                    <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Désignation</th>
-                                    <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-20">Quantité</th>
-                                    <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Prix unitaire HT</th>
-                                    <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-16">Remise (%)</th>
-                                    <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Prix net HT</th>
-                                    <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-16">TVA (%)</th>
-                                    <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Montant TVA</th>
-                                    <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Total TTC</th>
-                                    <th class="px-2 py-2 w-8"></th>
+                                    <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-8">N°</th>
+                                    <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-32">Article</th>
+                                    <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Désignation</th>
+                                    <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16">Qté</th>
+                                    <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">P.U. HT</th>
+                                    <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-14">Rem. %</th>
+                                    <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Net HT</th>
+                                    <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">TVA</th>
+                                    <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Mt TVA</th>
+                                    <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Total TTC</th>
+                                    <th class="px-2 py-1.5 w-8"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
                                 <template x-for="(item, index) in items" :key="item._key">
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-2 py-2 text-gray-400 text-xs" x-text="index + 1"></td>
+                                    <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                                        <td class="px-2 py-1 text-center text-gray-400 tabular-nums text-[12px]" x-text="index + 1"></td>
                                         @include('ventes.partials._product_combobox', ['accentColor' => 'indigo', 'formName' => 'invoice'])
-                                        <td class="px-2 py-2"><input type="text" :name="'items[' + index + '][description]'" x-model="item.description" placeholder="Désignation..." class="{{ $tdIn }} min-w-[160px]"></td>
-                                        <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
-                                        <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} text-right"></td>
-                                        <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
-                                        <td class="px-2 py-2 text-right tabular-nums text-gray-700 font-medium text-xs whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
-                                        <td class="px-2 py-2">
+                                        <td class="px-2 py-1"><input type="text" :name="'items[' + index + '][description]'" x-model="item.description" placeholder="Désignation…" class="{{ $tdIn }} min-w-[88px]"></td>
+                                        <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[40px] text-right"></td>
+                                        <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right"></td>
+                                        <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
+                                        <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
+                                        <td class="px-2 py-1">
                                             <template x-if="isClientTaxExempt">
-                                                <div class="w-full border border-amber-200 bg-amber-50 rounded px-2 py-1.5 text-sm text-right text-amber-700 font-medium cursor-not-allowed select-none">0 %<input type="hidden" :name="'items[' + index + '][tax_rate_value]'" value="0"></div>
+                                                <div class="w-full h-8 flex items-center justify-end border border-amber-200 bg-amber-50 rounded-[3px] px-2 text-[13px] text-amber-700 font-medium cursor-not-allowed select-none">0 %<input type="hidden" :name="'items[' + index + '][tax_rate_value]'" value="0"></div>
                                             </template>
                                             <template x-if="!isClientTaxExempt">
-                                                <select :name="'items[' + index + '][tax_rate_value]'" x-model.number="item.tax_rate_value" class="{{ $tdIn }} text-right">
-                                                    <option value="0">0 %</option>
-                                                    @foreach($taxRatesVente ?? [] as $tr)<option value="{{ $tr->rate }}">{{ $tr->rate }} %</option>@endforeach
-                                                    @if(empty($taxRatesVente ?? []))<option value="18">18 %</option>@endif
-                                                </select>
+                                                <div class="relative">
+                                                    <select :name="'items[' + index + '][tax_rate_value]'" x-model.number="item.tax_rate_value" class="{{ $tdIn }} appearance-none bg-none min-w-[56px] pl-1.5 pr-5 text-right">
+                                                        <option value="0">0 %</option>
+                                                        @foreach($taxRatesVente ?? [] as $tr)<option value="{{ (float) $tr->rate }}">{{ rtrim(rtrim(number_format($tr->rate, 2, ',', ''), '0'), ',') }} %</option>@endforeach
+                                                        @if(empty($taxRatesVente ?? []))<option value="18">18 %</option>@endif
+                                                    </select>
+                                                    <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>
+                                                </div>
                                             </template>
                                         </td>
-                                        <td class="px-2 py-2 text-right tabular-nums text-gray-600 text-xs whitespace-nowrap" x-text="formatNum(lineTax(item))"></td>
-                                        <td class="px-2 py-2 text-right tabular-nums text-gray-900 font-semibold text-xs whitespace-nowrap" x-text="formatNum(lineTtc(item))"></td>
-                                        <td class="px-2 py-2 text-center">
-                                            <button type="button" @click="removeItem(index)" x-show="items.length > 1" class="text-gray-300 hover:text-red-500 transition-colors">
+                                        <td class="px-2 py-1 text-right tabular-nums text-gray-600 text-[12.5px] whitespace-nowrap" x-text="formatNum(lineTax(item))"></td>
+                                        <td class="px-2 py-1 text-right tabular-nums text-gray-900 font-semibold text-[12.5px] whitespace-nowrap" x-text="formatNum(lineTtc(item))"></td>
+                                        <td class="px-2 py-1 text-center">
+                                            <button type="button" @click="removeItem(index)" x-show="items.length > 1" title="Supprimer la ligne" class="text-gray-300 hover:text-red-500 transition-colors">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                             </button>
                                         </td>
@@ -522,7 +532,8 @@ function invoiceFormVentes() {
                 this.items[index].tax_rate_value = this.isClientTaxExempt ? 0 : (p.tax_rate?.rate != null ? parseFloat(p.tax_rate.rate) : (this.defaultTaxRate ?? dtr));
             }
         },
-        formatNum(n) { return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.round(n * 100) / 100); },
+        // XOF sans centimes : décimales affichées seulement si présentes (gain de place colonnes)
+        formatNum(n) { return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Math.round((n || 0) * 100) / 100); },
         formatFcfa(n) { return this.formatNum(n) + ' FCFA'; }
     };
 }
