@@ -66,9 +66,9 @@
 
         <div class="bg-white border border-gray-300 rounded-[4px]">
             <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-                <h2 class="text-[15px] font-bold text-gray-900">
-                    Ordres de fabrication : Création complète
-                    @if($isEdit)<span class="font-mono text-emerald-700 ml-1">{{ $o->number }}</span>@endif
+                <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
+                    Ordres de fabrication : {{ $isEdit ? 'Modification' : 'Création complète' }}
+                    @if($isEdit)<span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $o->number }}</span>@endif
                 </h2>
                 <div class="flex items-center gap-2">
                     <input type="hidden" name="save_and_submit" :value="saveAndSubmit ? 1 : 0">
@@ -90,7 +90,9 @@
                     'entete' => 'Entête', 'composants' => 'Composants', 'operations' => 'Opérations',
                     'documents' => 'Documents', 'suivi' => 'Suivi', 'qualite' => 'Qualité',
                 ] as $key => $label)
-                <button type="button" @click="tab = '{{ $key }}'; document.getElementById('sec-{{ $key }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                {{-- $nextTick : le scroll smooth lancé pendant le re-render Alpine des onglets
+                     est interrompu (page longue) — on scrolle après le patch DOM. --}}
+                <button type="button" @click="tab = '{{ $key }}'; $nextTick(() => document.getElementById('sec-{{ $key }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
                         class="px-3 py-1.5 text-[13px] font-semibold border-b-2 transition-colors whitespace-nowrap"
                         :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-800' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $label }}</button>
                 @endforeach
