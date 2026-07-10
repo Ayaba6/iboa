@@ -666,6 +666,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('parametres',  [\App\Http\Controllers\Accounting\AccountingSettingController::class, 'update'])->name('parametres.update');
         });
 
+        // [Maquette X3] Annuaire des tiers (clients + fournisseurs unifiés)
+        Route::get('tiers', [\App\Http\Controllers\Accounting\TiersController::class, 'index'])->name('tiers.index');
+        Route::get('tiers/releve-client', [\App\Http\Controllers\Accounting\ClientStatementController::class, 'show'])->name('tiers.releve-client');
+        Route::post('tiers/releve-client/envoyer', [\App\Http\Controllers\Accounting\ClientStatementController::class, 'send'])->name('tiers.releve-client.send');
+        Route::post('tiers/releve-client/commentaire', [\App\Http\Controllers\Accounting\ClientStatementController::class, 'comment'])->name('tiers.releve-client.comment');
+
+        // [Maquette X3] Budgets comptables par compte général
+        Route::get('budgets', [\App\Http\Controllers\Accounting\BudgetController::class, 'index'])->name('budgets.index');
+        Route::middleware('permission:accounting.manage')->group(function () {
+            Route::post('budgets',                                  [\App\Http\Controllers\Accounting\BudgetController::class, 'store'])->name('budgets.store');
+            Route::post('budgets/{budget}/lignes',                  [\App\Http\Controllers\Accounting\BudgetController::class, 'storeLine'])->name('budgets.lines.store');
+            Route::delete('budgets/{budget}/lignes/{line}',         [\App\Http\Controllers\Accounting\BudgetController::class, 'destroyLine'])->name('budgets.lines.destroy');
+            Route::post('budgets/{budget}/valider',                 [\App\Http\Controllers\Accounting\BudgetController::class, 'validateBudget'])->name('budgets.validate');
+        });
+
         Route::middleware('permission:accounting.view')->group(function () {
             // Plan comptable — extra routes must come BEFORE the resource to avoid {account} conflict
             Route::get('plan-comptable/export',   [\App\Http\Controllers\Accounting\ChartOfAccountsController::class, 'export'])  ->name('plan-comptable.export');

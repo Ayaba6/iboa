@@ -24,7 +24,7 @@ class ClientReportController extends Controller
     /*  HELPER PRIVÉ — Construit le relevé d'un client sur une période         */
     /* ─────────────────────────────────────────────────────────────────────── */
 
-    private function buildStatement(Client $client, string $dateFrom, string $dateTo): array
+    public function buildStatement(Client $client, string $dateFrom, string $dateTo): array
     {
         // Solde d'ouverture = (factures - avoirs - règlements) AVANT date_from
         $factAvant  = Invoice::where('client_id', $client->id)
@@ -110,6 +110,16 @@ class ClientReportController extends Controller
         $clientId       = $request->input('client_id');
         $dateFrom       = $request->input('date_from');
         $dateTo         = $request->input('date_to');
+
+        // [Maquette X3] Le relevé mono-client vit désormais sur l'écran Comptabilité › Tiers.
+        // Seul le mode consolidé « tous les clients » reste ici (et les exports).
+        if ($clientId !== 'all') {
+            return redirect()->route('comptabilite.tiers.releve-client', array_filter([
+                'client_id' => $clientId,
+                'date_from' => $dateFrom,
+                'date_to'   => $dateTo,
+            ]));
+        }
 
         $client         = null;
         $lines          = collect();
