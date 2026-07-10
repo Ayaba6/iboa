@@ -36,21 +36,21 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
                 <input type="date" name="from" value="{{ $from }}"
-                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
                 <input type="date" name="to" value="{{ $to }}"
-                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Famille</label>
-                <select name="family_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
+                <select name="family_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="">— Toutes —</option>
                     @foreach($families as $f)
                         <option value="{{ $f->id }}" {{ $familyId == $f->id ? 'selected' : '' }}>{{ $f->name }}</option>
@@ -59,7 +59,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Trier par</label>
-                <select name="sort_by" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
+                <select name="sort_by" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="marge_brute" {{ $sortBy === 'marge_brute' ? 'selected' : '' }}>Marge brute</option>
                     <option value="ca_ht"       {{ $sortBy === 'ca_ht'       ? 'selected' : '' }}>CA HT</option>
                     <option value="qty_vendue"  {{ $sortBy === 'qty_vendue'  ? 'selected' : '' }}>Quantité vendue</option>
@@ -74,12 +74,12 @@
 
     {{-- KPIs --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4 shadow-sm">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2 shadow-sm">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest">CA HT total</p>
             <p class="text-[17px] font-bold text-gray-900 mt-1">{{ number_format($totalCaHt, 0, ',', ' ') }}</p>
             <p class="text-xs text-gray-400 mt-0.5">FCFA</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4 shadow-sm">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2 shadow-sm">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Coût total</p>
             <p class="text-[17px] font-bold text-gray-900 mt-1">{{ number_format($totalCout, 0, ',', ' ') }}</p>
             <p class="text-xs text-gray-400 mt-0.5">FCFA</p>

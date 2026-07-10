@@ -8,7 +8,9 @@
 @endsection
 
 @section('content')
-<div class="flex items-center justify-between mb-6">
+<div class="space-y-3">
+
+<div class="flex items-center justify-between">
     <div>
         <h1 class="text-[16px] font-bold text-gray-900">Centres de coûts / profit</h1>
         <p class="text-sm text-gray-500 mt-0.5">§12 CDC — Ventilation analytique par axe métier</p>
@@ -25,21 +27,40 @@
     </div>
 </div>
 
+{{-- KPIs synthèse --}}
+@php
+    $all = $centers->getCollection();
+    $kpis = [
+        ['label' => 'Centres',          'value' => $centers->total(),                                                            'text' => 'text-gray-900',    'bd' => 'border-gray-300'],
+        ['label' => 'Centres de coût',  'value' => $all->where('type', 'cost')->count(),                                         'text' => 'text-amber-700',   'bd' => 'border-amber-200'],
+        ['label' => 'Centres de profit','value' => $all->where('type', 'profit')->count(),                                       'text' => 'text-emerald-700', 'bd' => 'border-emerald-200'],
+        ['label' => 'Total ventilé (page)', 'value' => number_format($all->sum(fn ($c) => abs($c->analytic_lines_sum_amount ?? 0)), 0, ',', ' ') . ' F', 'text' => 'text-blue-700', 'bd' => 'border-blue-200'],
+    ];
+@endphp
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+    @foreach($kpis as $kpi)
+    <div class="bg-white rounded-[4px] border {{ $kpi['bd'] }} px-3 py-2">
+        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{{ $kpi['label'] }}</p>
+        <p class="mt-0.5 text-[17px] font-bold {{ $kpi['text'] }} tabular-nums leading-none">{{ $kpi['value'] }}</p>
+    </div>
+    @endforeach
+</div>
+
 <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-100 text-sm">
-        <thead class="bg-[#eef5f0] border-b border-gray-300">
+    <table class="min-w-full text-[14px] border-collapse">
+        <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
             <tr>
-                <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Code</th>
-                <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Nom</th>
-                <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Type</th>
-                <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Solde (FCFA)</th>
-                <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide tracking-wide">Lignes</th>
+                <th class="px-3 py-1.5 text-left">Code</th>
+                <th class="px-3 py-1.5 text-left">Nom</th>
+                <th class="px-3 py-1.5 text-left">Type</th>
+                <th class="px-3 py-1.5 text-right">Solde (FCFA)</th>
+                <th class="px-3 py-1.5 text-right">Lignes</th>
                 <th class="px-3 py-1.5"></th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-50">
+        <tbody class="divide-y divide-gray-100">
             @forelse($centers as $center)
-            <tr class="hover:bg-gray-50">
+            <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
                 <td class="px-3 py-1.5 font-mono font-semibold text-gray-700">{{ $center->code }}</td>
                 <td class="px-3 py-1.5 font-medium text-gray-900">{{ $center->name }}</td>
                 <td class="px-3 py-1.5">
@@ -74,5 +95,7 @@
     <div class="px-3 py-1.5 border-t border-gray-100">
         {{ $centers->links() }}
     </div>
+</div>
+
 </div>
 @endsection

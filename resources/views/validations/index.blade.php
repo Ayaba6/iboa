@@ -8,73 +8,62 @@
 @endsection
 
 @section('content')
-<div class="space-y-5">
-
-    {{-- KPI --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div class="bg-white rounded-[4px] border border-gray-300 px-4 py-3">
-            <p class="text-xs text-gray-500">En attente de moi</p>
-            <p class="text-lg font-bold text-amber-600 tabular-nums">{{ $pending->total() }}</p>
-        </div>
-        <div class="bg-white rounded-[4px] border {{ $lateCount > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white' }} px-4 py-3">
-            <p class="text-xs {{ $lateCount > 0 ? 'text-red-600' : 'text-gray-500' }}">En retard (> 48 h)</p>
-            <p class="text-lg font-bold {{ $lateCount > 0 ? 'text-red-700' : 'text-gray-900' }} tabular-nums">{{ $lateCount }}</p>
-        </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 px-4 py-3">
-            <p class="text-xs text-gray-500">Mes soumissions en cours</p>
-            <p class="text-lg font-bold text-blue-600 tabular-nums">{{ $mySubmissions->count() }}</p>
-        </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 px-4 py-3">
-            <p class="text-xs text-gray-500">Mes actions récentes</p>
-            <p class="text-lg font-bold text-gray-900 tabular-nums">{{ $history->total() }}</p>
-        </div>
-    </div>
+<div class="space-y-3">
 
     {{-- Header --}}
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">Mes validations</h1>
+        <h1 class="text-[16px] font-bold text-gray-900">Mes validations</h1>
         <p class="text-sm text-gray-500 mt-0.5">Tous les documents qui attendent votre action, selon vos habilitations</p>
     </div>
 
+    {{-- KPI --}}
+    @php
+        $kpis = [
+            ['label' => 'En attente de moi',       'value' => $pending->total(),        'text' => 'text-amber-600',                                   'bd' => 'border-amber-200'],
+            ['label' => 'En retard (> 48 h)',      'value' => $lateCount,               'text' => $lateCount > 0 ? 'text-red-700' : 'text-gray-400',  'bd' => $lateCount > 0 ? 'border-red-300' : 'border-gray-300'],
+            ['label' => 'Mes soumissions en cours','value' => $mySubmissions->count(),  'text' => 'text-blue-700',                                    'bd' => 'border-blue-200'],
+            ['label' => 'Mes actions récentes',    'value' => $history->total(),        'text' => 'text-gray-900',                                    'bd' => 'border-gray-300'],
+        ];
+    @endphp
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+        @foreach($kpis as $kpi)
+        <div class="bg-white rounded-[4px] border {{ $kpi['bd'] }} px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{{ $kpi['label'] }}</p>
+            <p class="mt-0.5 text-[17px] font-bold {{ $kpi['text'] }} tabular-nums leading-none">{{ $kpi['value'] }}</p>
+        </div>
+        @endforeach
+    </div>
+
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-3">
+        <div class="flex flex-wrap items-end gap-2">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="N° document, client, demandeur…"
-                   class="xl:col-span-2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-
-            <select name="type" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                   class="w-64 h-8 border border-gray-300 rounded-[4px] px-2 text-[13px] focus:ring-1 focus:ring-emerald-400">
+            <select name="type" class="h-8 py-0 border border-gray-300 rounded-[4px] px-2 text-[13px] bg-white focus:ring-1 focus:ring-emerald-400">
                 <option value="">Tous les types</option>
                 @foreach($types as $t)
                 <option value="{{ $t }}" {{ ($filters['type'] ?? '') === $t ? 'selected' : '' }}>{{ $t }}</option>
                 @endforeach
             </select>
-
             <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" title="Soumis à partir du"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                   class="h-8 border border-gray-300 rounded-[4px] px-2 text-[13px] focus:ring-1 focus:ring-emerald-400">
             <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" title="Soumis jusqu'au"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
-
+                   class="h-8 border border-gray-300 rounded-[4px] px-2 text-[13px] focus:ring-1 focus:ring-emerald-400">
             <input type="number" name="amount_min" value="{{ $filters['amount_min'] ?? '' }}" min="0" step="1000"
                    placeholder="Montant min (F)"
-                   class="border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:ring-2 focus:ring-emerald-500">
-        </div>
-        <div class="flex flex-wrap items-center gap-3 mt-3">
-            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                   class="w-36 h-8 border border-gray-300 rounded-[4px] px-2 text-[13px] text-right tabular-nums focus:ring-1 focus:ring-emerald-400">
+            <label class="flex items-center gap-1.5 text-[13px] text-gray-700 cursor-pointer h-8">
                 <input type="checkbox" name="late" value="1" {{ ($filters['late'] ?? '') === '1' ? 'checked' : '' }}
-                       class="w-4 h-4 rounded text-red-600 border-gray-300 focus:ring-red-500">
-                <span>⏰ En retard uniquement (&gt; 48 h)</span>
+                       class="w-[15px] h-[15px] rounded-[2px] text-red-600 border-gray-400 focus:ring-red-500">
+                En retard uniquement
             </label>
             <div class="ml-auto flex items-center gap-2">
                 <button type="submit"
-                        class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
-                    Filtrer
-                </button>
+                        class="h-8 bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-medium px-3 rounded-[4px] transition-colors">Filtrer</button>
                 @if(array_filter($filters))
                 <a href="{{ route('validations.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-4 py-2 rounded-lg transition-colors">
-                    Réinitialiser
-                </a>
+                   class="h-8 flex items-center border border-gray-300 text-gray-600 hover:bg-gray-50 text-[12px] px-2.5 rounded-[4px] transition-colors">Réinitialiser</a>
                 @endif
             </div>
         </div>
@@ -87,17 +76,17 @@
             <span class="normal-case tracking-normal font-semibold text-gray-500">{{ $pending->total() }} document(s)</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-[12.5px] border-collapse">
-                <thead>
-                    <tr class="bg-gray-50 text-gray-500 border-b border-gray-200">
-                        <th class="text-left font-bold px-3 py-2 text-[11px] uppercase w-32">Type document</th>
-                        <th class="text-left font-bold px-3 py-2 text-[11px] uppercase w-36">Référence</th>
-                        <th class="text-left font-bold px-3 py-2 text-[11px] uppercase hidden md:table-cell">Tiers / Fournisseur</th>
-                        <th class="text-right font-bold px-3 py-2 text-[11px] uppercase hidden sm:table-cell w-32">Montant</th>
-                        <th class="text-left font-bold px-3 py-2 text-[11px] uppercase hidden lg:table-cell">Demandeur</th>
-                        <th class="text-left font-bold px-3 py-2 text-[11px] uppercase hidden lg:table-cell w-40">Soumis le</th>
-                        <th class="text-left font-bold px-3 py-2 text-[11px] uppercase hidden xl:table-cell w-24">Niveau</th>
-                        <th class="px-3 py-2 w-24"></th>
+            <table class="w-full text-[14px] border-collapse">
+                <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
+                    <tr>
+                        <th class="text-left px-3 py-1.5 w-32">Type document</th>
+                        <th class="text-left px-3 py-1.5 w-36">Référence</th>
+                        <th class="text-left px-3 py-1.5 hidden md:table-cell">Tiers / Fournisseur</th>
+                        <th class="text-right px-3 py-1.5 hidden sm:table-cell w-32">Montant</th>
+                        <th class="text-left px-3 py-1.5 hidden lg:table-cell">Demandeur</th>
+                        <th class="text-left px-3 py-1.5 hidden lg:table-cell w-40">Soumis le</th>
+                        <th class="text-left px-3 py-1.5 hidden xl:table-cell w-24">Niveau</th>
+                        <th class="px-3 py-1.5 w-24"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -124,7 +113,7 @@
                         <td class="px-3 py-1.5 text-gray-500 hidden xl:table-cell">{{ $p['level'] }}</td>
                         <td class="px-3 py-1.5 text-right">
                             <a href="{{ $p['url'] }}"
-                               class="inline-flex items-center gap-1 px-3 py-1 border border-emerald-500 text-emerald-700 bg-white hover:bg-emerald-50 rounded-full text-[12px] font-semibold transition-colors">
+                               class="inline-flex items-center gap-1 px-2.5 py-0.5 border border-emerald-500 text-emerald-700 bg-white hover:bg-emerald-50 rounded-[3px] text-[12px] font-semibold transition-colors">
                                 Traiter →
                             </a>
                         </td>
@@ -151,7 +140,7 @@
         @endif
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
         {{-- Mes soumissions en cours --}}
         <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">

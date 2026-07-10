@@ -37,21 +37,21 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
                 <input type="date" name="from" value="{{ $from }}"
-                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
                 <input type="date" name="to" value="{{ $to }}"
-                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Client</label>
-                <select name="client_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
+                <select name="client_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="">— Tous —</option>
                     @foreach($clients as $c)
                         <option value="{{ $c->id }}" {{ $clientId == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
@@ -60,7 +60,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Regrouper par</label>
-                <select name="group_by" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
+                <select name="group_by" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="month" {{ $groupBy === 'month' ? 'selected' : '' }}>Mois</option>
                     <option value="week"  {{ $groupBy === 'week'  ? 'selected' : '' }}>Semaine</option>
                     <option value="day"   {{ $groupBy === 'day'   ? 'selected' : '' }}>Jour</option>

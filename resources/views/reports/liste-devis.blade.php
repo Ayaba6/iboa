@@ -33,19 +33,19 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
-                <input type="date" name="from" value="{{ $from }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                <input type="date" name="from" value="{{ $from }}" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
-                <input type="date" name="to" value="{{ $to }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                <input type="date" name="to" value="{{ $to }}" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Client</label>
-                <select name="client_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-emerald-400">
+                <select name="client_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-400">
                     <option value="">— Tous —</option>
                     @foreach($clients as $c)
                         <option value="{{ $c->id }}" {{ $clientId == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
@@ -54,7 +54,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Statut</label>
-                <select name="status" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-emerald-400">
+                <select name="status" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-400">
                     <option value="">— Tous statuts —</option>
                     @foreach($statuses as $key => $label)
                         <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -70,56 +70,56 @@
 
     {{-- KPIs --}}
     <div class="grid grid-cols-3 gap-4">
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Nb devis</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Nb devis</p>
             <p class="mt-1 text-[17px] font-bold text-emerald-800">{{ $totals['count'] }}</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total HT</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Total HT</p>
             <p class="mt-1 text-[17px] font-bold text-blue-700">{{ number_format($totals['ht'], 0, ',', ' ') }} F</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total TTC</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Total TTC</p>
             <p class="mt-1 text-[17px] font-bold text-gray-900">{{ number_format($totals['ttc'], 0, ',', ' ') }} F</p>
         </div>
     </div>
 
     {{-- Tableau --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead class="bg-emerald-700 text-white">
+        <table class="w-full text-[14px] border-collapse">
+            <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                 <tr>
-                    <th class="px-3 py-1.5 text-left font-semibold">N° Devis</th>
-                    <th class="px-3 py-1.5 text-center font-semibold">Date</th>
-                    <th class="px-3 py-1.5 text-center font-semibold">Validité</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Client</th>
-                    <th class="px-3 py-1.5 text-center font-semibold">Statut</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">HT</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">TTC</th>
+                    <th class="px-3 py-1.5 text-left">N° Devis</th>
+                    <th class="px-3 py-1.5 text-center">Date</th>
+                    <th class="px-3 py-1.5 text-center">Validité</th>
+                    <th class="px-3 py-1.5 text-left">Client</th>
+                    <th class="px-3 py-1.5 text-center">Statut</th>
+                    <th class="px-3 py-1.5 text-right">HT</th>
+                    <th class="px-3 py-1.5 text-right">TTC</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($rows as $r)
                 @php
                     $sc = match($r->status) {
-                        'valide' => 'blue', 'converti' => 'green',
-                        'expire' => 'orange', 'refuse' => 'red', 'annule' => 'red',
-                        default  => 'gray',
+                        'valide' => 'bg-blue-100 text-blue-800', 'converti' => 'bg-green-100 text-green-800',
+                        'expire' => 'bg-orange-100 text-orange-800', 'refuse' => 'bg-red-100 text-red-800', 'annule' => 'bg-red-100 text-red-800',
+                        default  => 'bg-gray-100 text-gray-800',
                     };
                     $sl = $statuses[$r->status] ?? $r->status;
                 @endphp
-                <tr class="hover:bg-gray-50">
-                    <td class="px-3 py-2.5 font-medium text-emerald-800">
+                <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                    <td class="px-3 py-1 font-medium text-emerald-800">
                         <a href="{{ route('ventes.devis.show', $r->id) }}" class="hover:underline">{{ $r->number }}</a>
                     </td>
-                    <td class="px-3 py-2.5 text-center text-gray-600">{{ $r->issued_at?->format('d/m/Y') }}</td>
-                    <td class="px-3 py-2.5 text-center text-gray-600">{{ $r->expires_at?->format('d/m/Y') ?? '—' }}</td>
-                    <td class="px-3 py-2.5 text-gray-800">{{ $r->client?->name ?? '—' }}</td>
-                    <td class="px-3 py-2.5 text-center">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $sc }}-100 text-{{ $sc }}-800">{{ $sl }}</span>
+                    <td class="px-3 py-1 text-center text-gray-600">{{ $r->issued_at?->format('d/m/Y') }}</td>
+                    <td class="px-3 py-1 text-center text-gray-600">{{ $r->expires_at?->format('d/m/Y') ?? '—' }}</td>
+                    <td class="px-3 py-1 text-gray-800">{{ $r->client?->name ?? '—' }}</td>
+                    <td class="px-3 py-1 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $sc }}">{{ $sl }}</span>
                     </td>
-                    <td class="px-3 py-2.5 text-right tabular-nums text-gray-700">{{ number_format($r->subtotal_ht, 0, ',', ' ') }}</td>
-                    <td class="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">{{ number_format($r->total_ttc, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums text-gray-700">{{ number_format($r->subtotal_ht, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums font-semibold text-gray-900">{{ number_format($r->total_ttc, 0, ',', ' ') }}</td>
                 </tr>
                 @empty
                 <tr>
@@ -128,7 +128,7 @@
                 @endforelse
             </tbody>
             @if($rows->count())
-            <tfoot class="bg-indigo-900 text-white font-bold">
+            <tfoot class="text-white font-bold" style="background:#065f46">
                 <tr>
                     <td class="px-3 py-1.5" colspan="5">TOTAL ({{ $totals['count'] }} devis)</td>
                     <td class="px-3 py-1.5 text-right tabular-nums">{{ number_format($totals['ht'], 0, ',', ' ') }}</td>

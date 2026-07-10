@@ -33,11 +33,11 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Dépôt</label>
-                <select name="warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-emerald-400">
+                <select name="warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-400">
                     <option value="">— Tous les dépôts —</option>
                     @foreach($warehouses as $w)
                         <option value="{{ $w->id }}" {{ $warehouseId == $w->id ? 'selected' : '' }}>{{ $w->name }}</option>
@@ -46,7 +46,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Famille</label>
-                <select name="family_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-emerald-400">
+                <select name="family_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-400">
                     <option value="">— Toutes familles —</option>
                     @foreach($families as $f)
                         <option value="{{ $f->id }}" {{ $familyId == $f->id ? 'selected' : '' }}>{{ $f->name }}</option>
@@ -56,7 +56,7 @@
             <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-600 mb-1">Recherche</label>
                 <input type="text" name="search" value="{{ $search }}" placeholder="Nom ou référence du produit…"
-                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
         </div>
         <div class="mt-3 flex gap-2">
@@ -67,50 +67,50 @@
 
     {{-- KPIs --}}
     <div class="grid grid-cols-3 gap-4">
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Nb références</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Nb références</p>
             <p class="mt-1 text-[17px] font-bold text-emerald-800">{{ $stocks->count() }}</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Qté disponible totale</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Qté disponible totale</p>
             <p class="mt-1 text-[17px] font-bold text-emerald-700">{{ number_format($totals['dispo'], 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Valeur stock</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Valeur stock</p>
             <p class="mt-1 text-[17px] font-bold text-blue-700">{{ number_format($totals['valeur'], 0, ',', ' ') }} F</p>
         </div>
     </div>
 
     {{-- Tableau --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead class="bg-emerald-700 text-white">
+        <table class="w-full text-[14px] border-collapse">
+            <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                 <tr>
-                    <th class="px-3 py-1.5 text-left font-semibold">Référence</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Produit</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Famille</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Dépôt</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Qté totale</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Réservé</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Disponible</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Coût moy.</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Valeur</th>
+                    <th class="px-3 py-1.5 text-left">Référence</th>
+                    <th class="px-3 py-1.5 text-left">Produit</th>
+                    <th class="px-3 py-1.5 text-left">Famille</th>
+                    <th class="px-3 py-1.5 text-left">Dépôt</th>
+                    <th class="px-3 py-1.5 text-right">Qté totale</th>
+                    <th class="px-3 py-1.5 text-right">Réservé</th>
+                    <th class="px-3 py-1.5 text-right">Disponible</th>
+                    <th class="px-3 py-1.5 text-right">Coût moy.</th>
+                    <th class="px-3 py-1.5 text-right">Valeur</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($stocks as $s)
                 <tr class="hover:bg-gray-50 {{ $s->dispo <= 0 ? 'bg-red-50' : '' }}">
-                    <td class="px-3 py-2.5 text-gray-500 font-mono text-xs">{{ $s->reference ?? '—' }}</td>
-                    <td class="px-3 py-2.5 font-medium text-gray-800">{{ $s->product_name }}</td>
-                    <td class="px-3 py-2.5 text-gray-500">{{ $s->family_name ?? '—' }}</td>
-                    <td class="px-3 py-2.5 text-gray-600">{{ $s->warehouse_name ?? '—' }}</td>
-                    <td class="px-3 py-2.5 text-right tabular-nums text-gray-700">{{ number_format($s->quantity, 0, ',', ' ') }}</td>
-                    <td class="px-3 py-2.5 text-right tabular-nums text-amber-600">{{ number_format($s->reserved_quantity, 0, ',', ' ') }}</td>
-                    <td class="px-3 py-2.5 text-right tabular-nums font-medium {{ $s->dispo <= 0 ? 'text-red-600' : 'text-emerald-700' }}">
+                    <td class="px-3 py-1 text-gray-500 font-mono text-xs">{{ $s->reference ?? '—' }}</td>
+                    <td class="px-3 py-1 font-medium text-gray-800">{{ $s->product_name }}</td>
+                    <td class="px-3 py-1 text-gray-500">{{ $s->family_name ?? '—' }}</td>
+                    <td class="px-3 py-1 text-gray-600">{{ $s->warehouse_name ?? '—' }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums text-gray-700">{{ number_format($s->quantity, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums text-amber-600">{{ number_format($s->reserved_quantity, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums font-medium {{ $s->dispo <= 0 ? 'text-red-600' : 'text-emerald-700' }}">
                         {{ number_format($s->dispo, 0, ',', ' ') }}
                     </td>
-                    <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ number_format($s->avg_cost, 0, ',', ' ') }}</td>
-                    <td class="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">{{ number_format($s->valeur, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums text-gray-600">{{ number_format($s->avg_cost, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums font-semibold text-gray-900">{{ number_format($s->valeur, 0, ',', ' ') }}</td>
                 </tr>
                 @empty
                 <tr>
@@ -119,7 +119,7 @@
                 @endforelse
             </tbody>
             @if($stocks->count())
-            <tfoot class="bg-indigo-900 text-white font-bold">
+            <tfoot class="text-white font-bold" style="background:#065f46">
                 <tr>
                     <td class="px-3 py-1.5" colspan="4">TOTAL ({{ $stocks->count() }} article{{ $stocks->count() > 1 ? 's' : '' }})</td>
                     <td class="px-3 py-1.5 text-right tabular-nums">{{ number_format($totals['qty'], 0, ',', ' ') }}</td>

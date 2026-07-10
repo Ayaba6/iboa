@@ -33,15 +33,15 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-2 gap-3 max-w-sm">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
-                <input type="date" name="from" value="{{ $from }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                <input type="date" name="from" value="{{ $from }}" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
-                <input type="date" name="to" value="{{ $to }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                <input type="date" name="to" value="{{ $to }}" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
         </div>
         <div class="mt-3 flex gap-2">
@@ -95,17 +95,17 @@
         <div class="px-3 py-1.5 bg-[#eef5f0] border-b border-emerald-100">
             <h2 class="text-sm font-bold text-emerald-800">TVA Collectée — Détail par taux</h2>
         </div>
-        <table class="w-full text-sm">
-            <thead class="bg-emerald-700 text-white">
+        <table class="w-full text-[14px] border-collapse">
+            <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                 <tr>
                     <th class="px-3 py-1.5 text-center font-semibold w-24">Taux</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Base HT</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Montant TVA</th>
+                    <th class="px-3 py-1.5 text-right">Base HT</th>
+                    <th class="px-3 py-1.5 text-right">Montant TVA</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($tvaCollectee as $row)
-                <tr class="hover:bg-gray-50">
+                <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
                     <td class="px-3 py-1.5 text-center">
                         <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-900">
                             {{ $row->taux }}%
@@ -121,7 +121,7 @@
                 @endforelse
             </tbody>
             @if($tvaCollectee->count())
-            <tfoot class="bg-indigo-900 text-white font-bold">
+            <tfoot class="text-white font-bold" style="background:#065f46">
                 <tr>
                     <td class="px-3 py-1.5 text-center">TOTAL</td>
                     <td class="px-3 py-1.5 text-right tabular-nums">{{ number_format($tvaCollectee->sum('base_ht'), 0, ',', ' ') }} F</td>
@@ -137,16 +137,16 @@
         <div class="px-3 py-1.5 bg-emerald-50 border-b border-emerald-100">
             <h2 class="text-sm font-bold text-emerald-700">TVA Déductible — Factures fournisseurs</h2>
         </div>
-        <table class="w-full text-sm">
-            <thead class="bg-emerald-700 text-white">
+        <table class="w-full text-[14px] border-collapse">
+            <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                 <tr>
-                    <th class="px-3 py-1.5 text-left font-semibold">Description</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Base HT achats</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">TVA déductible</th>
+                    <th class="px-3 py-1.5 text-left">Description</th>
+                    <th class="px-3 py-1.5 text-right">Base HT achats</th>
+                    <th class="px-3 py-1.5 text-right">TVA déductible</th>
                 </tr>
             </thead>
             <tbody>
-                <tr class="hover:bg-gray-50">
+                <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
                     <td class="px-3 py-1.5 text-gray-700">Factures fournisseurs validées sur la période</td>
                     <td class="px-3 py-1.5 text-right tabular-nums text-gray-700">{{ number_format($tvaDeductible?->base_ht ?? 0, 0, ',', ' ') }} F</td>
                     <td class="px-3 py-1.5 text-right tabular-nums font-semibold text-emerald-700">{{ number_format($totalDeductible, 0, ',', ' ') }} F</td>

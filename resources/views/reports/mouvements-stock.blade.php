@@ -33,19 +33,19 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
-                <input type="date" name="from" value="{{ $from }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                <input type="date" name="from" value="{{ $from }}" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
-                <input type="date" name="to" value="{{ $to }}" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                <input type="date" name="to" value="{{ $to }}" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Dépôt</label>
-                <select name="warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-emerald-400">
+                <select name="warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-400">
                     <option value="">— Tous —</option>
                     @foreach($warehouses as $w)
                         <option value="{{ $w->id }}" {{ $warehouseId == $w->id ? 'selected' : '' }}>{{ $w->name }}</option>
@@ -54,7 +54,7 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                <select name="type" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-emerald-400">
+                <select name="type" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-400">
                     <option value="">— Tous types —</option>
                     @foreach($typeLabels as $key => $label)
                         <option value="{{ $key }}" {{ $type === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -70,67 +70,67 @@
 
     {{-- KPIs --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Nb mouvements</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Nb mouvements</p>
             <p class="mt-1 text-[17px] font-bold text-emerald-800">{{ $movements->count() }}</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Entrées (qté)</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Entrées (qté)</p>
             <p class="mt-1 text-[17px] font-bold text-emerald-700">{{ number_format($totals['qty_entree'], 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Sorties (qté)</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Sorties (qté)</p>
             <p class="mt-1 text-[17px] font-bold text-rose-700">{{ number_format($totals['qty_sortie'], 0, ',', ' ') }}</p>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Valeur totale</p>
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Valeur totale</p>
             <p class="mt-1 text-[17px] font-bold text-blue-700">{{ number_format($totals['valeur_total'], 0, ',', ' ') }} F</p>
         </div>
     </div>
 
     {{-- Tableau --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead class="bg-emerald-700 text-white">
+        <table class="w-full text-[14px] border-collapse">
+            <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                 <tr>
-                    <th class="px-3 py-1.5 text-center font-semibold">Date</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Référence</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Produit</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Dépôt</th>
-                    <th class="px-3 py-1.5 text-center font-semibold">Type</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Qté</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">P.U.</th>
-                    <th class="px-3 py-1.5 text-right font-semibold">Montant</th>
-                    <th class="px-3 py-1.5 text-left font-semibold">Notes</th>
+                    <th class="px-3 py-1.5 text-center">Date</th>
+                    <th class="px-3 py-1.5 text-left">Référence</th>
+                    <th class="px-3 py-1.5 text-left">Produit</th>
+                    <th class="px-3 py-1.5 text-left">Dépôt</th>
+                    <th class="px-3 py-1.5 text-center">Type</th>
+                    <th class="px-3 py-1.5 text-right">Qté</th>
+                    <th class="px-3 py-1.5 text-right">P.U.</th>
+                    <th class="px-3 py-1.5 text-right">Montant</th>
+                    <th class="px-3 py-1.5 text-left">Notes</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($movements as $m)
                 @php
                     $typeColor = match($m->type) {
-                        'entree'     => 'emerald',
-                        'sortie'     => 'rose',
-                        'transfert'  => 'blue',
-                        'ajustement' => 'amber',
-                        default      => 'gray',
+                        'entree'     => 'bg-emerald-100 text-emerald-800',
+                        'sortie'     => 'bg-rose-100 text-rose-800',
+                        'transfert'  => 'bg-blue-100 text-blue-800',
+                        'ajustement' => 'bg-amber-100 text-amber-800',
+                        default      => 'bg-gray-100 text-gray-800',
                     };
                 @endphp
-                <tr class="hover:bg-gray-50">
-                    <td class="px-3 py-2.5 text-center text-gray-600">{{ \Carbon\Carbon::parse($m->occurred_at)->format('d/m/Y') }}</td>
-                    <td class="px-3 py-2.5 font-mono text-xs text-gray-500">{{ $m->reference ?? '—' }}</td>
-                    <td class="px-3 py-2.5 font-medium text-gray-800">{{ $m->product_name }}</td>
-                    <td class="px-3 py-2.5 text-gray-600">{{ $m->warehouse_name ?? '—' }}</td>
-                    <td class="px-3 py-2.5 text-center">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $typeColor }}-100 text-{{ $typeColor }}-800">
+                <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                    <td class="px-3 py-1 text-center text-gray-600">{{ \Carbon\Carbon::parse($m->occurred_at)->format('d/m/Y') }}</td>
+                    <td class="px-3 py-1 font-mono text-xs text-gray-500">{{ $m->reference ?? '—' }}</td>
+                    <td class="px-3 py-1 font-medium text-gray-800">{{ $m->product_name }}</td>
+                    <td class="px-3 py-1 text-gray-600">{{ $m->warehouse_name ?? '—' }}</td>
+                    <td class="px-3 py-1 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $typeColor }}">
                             {{ $typeLabels[$m->type] ?? $m->type }}
                         </span>
                     </td>
-                    <td class="px-3 py-2.5 text-right tabular-nums font-medium {{ $m->type === 'sortie' ? 'text-rose-700' : 'text-emerald-700' }}">
+                    <td class="px-3 py-1 text-right tabular-nums font-medium {{ $m->type === 'sortie' ? 'text-rose-700' : 'text-emerald-700' }}">
                         {{ $m->type === 'sortie' ? '-' : '+' }}{{ number_format($m->quantity, 0, ',', ' ') }}
                     </td>
-                    <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ number_format($m->unit_cost, 0, ',', ' ') }}</td>
-                    <td class="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">{{ number_format($m->total_cost, 0, ',', ' ') }}</td>
-                    <td class="px-3 py-2.5 text-gray-500 text-xs">{{ $m->notes ?? '' }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums text-gray-600">{{ number_format($m->unit_cost, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums font-semibold text-gray-900">{{ number_format($m->total_cost, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-gray-500 text-xs">{{ $m->notes ?? '' }}</td>
                 </tr>
                 @empty
                 <tr>

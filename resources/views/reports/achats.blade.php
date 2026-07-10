@@ -20,21 +20,21 @@
     </div>
 
     {{-- Filtres --}}
-    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Du</label>
                 <input type="date" name="from" value="{{ $from }}"
-                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Au</label>
                 <input type="date" name="to" value="{{ $to }}"
-                       class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400">
+                       class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Fournisseur</label>
-                <select name="supplier_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
+                <select name="supplier_id" class="w-full border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                     <option value="">— Tous —</option>
                     @foreach($suppliers as $s)
                         <option value="{{ $s->id }}" {{ $supplierId == $s->id ? 'selected' : '' }}>{{ $s->name }}</option>
@@ -44,7 +44,7 @@
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Grouper par</label>
                 <div class="flex gap-2">
-                    <select name="group_by" class="flex-1 border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-400 bg-white">
+                    <select name="group_by" class="flex-1 border border-gray-300 rounded-[4px] px-2 h-8 text-[13px] focus:ring-1 focus:ring-emerald-400 bg-white">
                         <option value="month" {{ $groupBy === 'month' ? 'selected' : '' }}>Mois</option>
                         <option value="week"  {{ $groupBy === 'week'  ? 'selected' : '' }}>Semaine</option>
                         <option value="day"   {{ $groupBy === 'day'   ? 'selected' : '' }}>Jour</option>
@@ -70,7 +70,7 @@
             ];
         @endphp
         @foreach($kpis as $kpi)
-        <div class="bg-white rounded-[4px] border border-gray-300 p-4">
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
             <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{{ $kpi['label'] }}</p>
             <p class="text-lg font-black text-gray-900 tabular-nums mt-1">{{ $kpi['value'] }}</p>
             <p class="text-[10px] text-gray-400">{{ $kpi['unit'] }}</p>
@@ -89,8 +89,8 @@
             <div class="py-12 text-center text-gray-400 text-sm">Aucune donnée pour cette période.</div>
             @else
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] font-bold text-emerald-900 uppercase tracking-wide">
+                <table class="w-full text-[14px] border-collapse">
+                    <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                         <tr>
                             <th class="px-3 py-1.5 text-left">Période</th>
                             <th class="px-3 py-1.5 text-right">Nbre</th>
@@ -101,22 +101,22 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($serie as $row)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-2.5 font-medium text-gray-800">{{ $row->label }}</td>
-                            <td class="px-3 py-2.5 text-right text-gray-600 tabular-nums">{{ $row->nb }}</td>
-                            <td class="px-3 py-2.5 text-right tabular-nums text-gray-700">{{ number_format($row->ht, 0, ',', ' ') }}</td>
-                            <td class="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">{{ number_format($row->ttc, 0, ',', ' ') }}</td>
-                            <td class="px-3 py-2.5 text-right tabular-nums text-green-700">{{ number_format($row->paye, 0, ',', ' ') }}</td>
+                        <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                            <td class="px-3 py-1 font-medium text-gray-800">{{ $row->label }}</td>
+                            <td class="px-3 py-1 text-right text-gray-600 tabular-nums">{{ $row->nb }}</td>
+                            <td class="px-3 py-1 text-right tabular-nums text-gray-700">{{ number_format($row->ht, 0, ',', ' ') }}</td>
+                            <td class="px-3 py-1 text-right tabular-nums font-semibold text-gray-900">{{ number_format($row->ttc, 0, ',', ' ') }}</td>
+                            <td class="px-3 py-1 text-right tabular-nums text-green-700">{{ number_format($row->paye, 0, ',', ' ') }}</td>
                         </tr>
                         @endforeach
                     </tbody>
-                    <tfoot class="bg-gray-50 border-t-2 border-gray-200 font-bold text-sm">
+                    <tfoot class="text-white font-bold text-[13px]" style="background:#065f46">
                         <tr>
-                            <td class="px-3 py-2.5 text-gray-700">Total</td>
-                            <td class="px-3 py-2.5 text-right tabular-nums text-gray-700">{{ $serie->sum('nb') }}</td>
-                            <td class="px-3 py-2.5 text-right tabular-nums text-gray-900">{{ number_format($serie->sum('ht'), 0, ',', ' ') }}</td>
-                            <td class="px-3 py-2.5 text-right tabular-nums text-gray-900">{{ number_format($serie->sum('ttc'), 0, ',', ' ') }}</td>
-                            <td class="px-3 py-2.5 text-right tabular-nums text-green-700">{{ number_format($serie->sum('paye'), 0, ',', ' ') }}</td>
+                            <td class="px-3 py-1 text-gray-700">Total</td>
+                            <td class="px-3 py-1 text-right tabular-nums text-gray-700">{{ $serie->sum('nb') }}</td>
+                            <td class="px-3 py-1 text-right tabular-nums text-gray-900">{{ number_format($serie->sum('ht'), 0, ',', ' ') }}</td>
+                            <td class="px-3 py-1 text-right tabular-nums text-gray-900">{{ number_format($serie->sum('ttc'), 0, ',', ' ') }}</td>
+                            <td class="px-3 py-1 text-right tabular-nums text-green-700">{{ number_format($serie->sum('paye'), 0, ',', ' ') }}</td>
                         </tr>
                     </tfoot>
                 </table>
