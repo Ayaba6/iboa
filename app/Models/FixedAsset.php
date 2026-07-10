@@ -29,6 +29,11 @@ class FixedAsset extends Model
         'asset_account', 'depr_account', 'charge_account',
         'status', 'cession_date', 'cession_value',
         'vendor', 'invoice_ref', 'notes', 'created_by',
+        // [Maquette X3]
+        'famille', 'asset_type', 'serial_number', 'accessory_cost',
+        'periodicity', 'prorata_temporis', 'degressive_rate',
+        'service_code', 'responsable', 'utilisateur', 'localisation',
+        'batiment', 'bureau', 'centre_analytique', 'projet', 'code_activite',
     ];
 
     protected $casts = [

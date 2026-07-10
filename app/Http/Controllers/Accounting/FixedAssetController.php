@@ -88,11 +88,30 @@ class FixedAssetController extends Controller
             'vendor'              => ['nullable', 'string', 'max:255'],
             'invoice_ref'         => ['nullable', 'string', 'max:100'],
             'notes'               => ['nullable', 'string'],
+            // [Maquette X3]
+            'famille'             => ['nullable', 'string', 'max:30'],
+            'asset_type'          => ['nullable', 'string', 'max:30'],
+            'serial_number'       => ['nullable', 'string', 'max:60'],
+            'accessory_cost'      => ['nullable', 'integer', 'min:0'],
+            'periodicity'         => ['nullable', 'in:mensuelle,trimestrielle,annuelle'],
+            'prorata_temporis'    => ['nullable', 'boolean'],
+            'degressive_rate'     => ['nullable', 'numeric', 'min:0', 'max:99.99'],
+            'service_code'        => ['nullable', 'string', 'max:30'],
+            'responsable'         => ['nullable', 'string', 'max:100'],
+            'utilisateur'         => ['nullable', 'string', 'max:100'],
+            'localisation'        => ['nullable', 'string', 'max:60'],
+            'batiment'            => ['nullable', 'string', 'max:60'],
+            'bureau'              => ['nullable', 'string', 'max:60'],
+            'centre_analytique'   => ['nullable', 'string', 'max:30'],
+            'projet'              => ['nullable', 'string', 'max:60'],
+            'code_activite'       => ['nullable', 'string', 'max:30'],
         ]);
 
         $data['residual_value'] = $data['residual_value'] ?? 0;
         $data['depr_account']   = $data['depr_account']   ?? '';
         $data['charge_account'] = $data['charge_account'] ?? '';
+        $data['accessory_cost'] = $data['accessory_cost'] ?? 0;
+        $data['prorata_temporis'] = $request->boolean('prorata_temporis', true);
 
         try {
             $asset = $this->service->create($data);
