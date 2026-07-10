@@ -52,6 +52,10 @@ class CostCenterController extends Controller
         $data['company_id'] = currentCompany()->id;
         $center = CostCenter::create($data);
 
+        if ($request->boolean('save_and_new')) {
+            return redirect()->route('analytique.centres-couts.create')->with('success', "Centre {$center->code} créé — nouveau centre.");
+        }
+
         return redirect()->route('analytique.centres-couts.show', $center)->with('success', "Centre {$center->code} créé.");
     }
 

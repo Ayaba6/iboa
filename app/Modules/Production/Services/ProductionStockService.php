@@ -42,6 +42,23 @@ class ProductionStockService
             $length = (float) $order->length;
         }
 
+        // [Paramétrage OF] « Autoriser dépassement qté » = Non → la production
+        // déclarée ne peut pas excéder la quantité demandée (sur-production
+        // interdite : consommerait de la matière non budgétée).
+        $requested = (float) $order->quantity_requested;
+        if ($order->autoriser_depassement_qte !== true && $requested > 0
+            && (float) $order->quantity_produced + $quantity > $requested + 0.001) {
+            $reste = max(0, $requested - (float) $order->quantity_produced);
+            throw ValidationException::withMessages([
+                'quantity' => sprintf(
+                    'Dépassement de quantité non autorisé sur cet OF : reste à produire %s (demandé %s, déjà produit %s). Activez « Autoriser dépassement qté » ou ajustez la déclaration.',
+                    rtrim(rtrim(number_format($reste, 2, ',', ' '), '0'), ','),
+                    rtrim(rtrim(number_format($requested, 2, ',', ' '), '0'), ','),
+                    rtrim(rtrim(number_format((float) $order->quantity_produced, 2, ',', ' '), '0'), ',')
+                ),
+            ]);
+        }
+
         return DB::transaction(function () use ($order, $data, $length, $quantity) {
             $totalMeters = round($length * $quantity, 2);
             $productId   = $data['product_id'] ?? $order->product_id;

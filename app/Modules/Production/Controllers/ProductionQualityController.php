@@ -57,18 +57,10 @@ class ProductionQualityController extends Controller
         ]);
 
         // [Audit OF] QC conforme posé sur un OF déjà clôturé (dérogation) :
-        // on rejoue les automatismes qualité — lot PF « conforme » + réservation
-        // pour le client de la commande liée (mêmes règles qu'à la clôture).
+        // rejoue les effets qualité — logique partagée avec la clôture.
         if ($order->status === 'termine' && $request->input('status') === 'conforme') {
-            $order->batches()->where('status', 'en_cours')->update(['status' => 'conforme']);
-            try {
-                if ($order->order_id && $order->product_id && (float) $order->quantity_produced > 0
-                    && ! \App\Models\StockReservation::where('production_order_id', $order->id)->where('status', 'reserved')->exists()) {
-                    app(\App\Modules\Production\Services\ReservationService::class)->reserveForOrder($order);
-                }
-            } catch (\Throwable $e) {
-                // réservation faisable manuellement
-            }
+            app(\App\Modules\Production\Services\ProductionService::class)
+                ->applyQualityOutcomes($order, 'conforme');
         }
 
         return back()->with('success', 'Contrôle qualité enregistré.');

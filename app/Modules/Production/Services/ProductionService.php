@@ -326,6 +326,17 @@ class ProductionService
     public function markPartiallyDone(ProductionOrder $order): void
     {
         $this->assertStatus($order, ['en_cours', 'termine_partiellement']);
+
+        // [Paramétrage OF] « Autoriser clôture partielle » = Non → la clôture
+        // partielle est interdite : l'OF doit produire la quantité demandée
+        // avant toute clôture (règle contractuelle client / OF spéciale).
+        // (=== false : un attribut non hydraté (null) suit le défaut métier « autorisé »)
+        if ($order->autoriser_cloture_partielle === false) {
+            throw ValidationException::withMessages([
+                'status' => 'Clôture partielle non autorisée sur cet OF (paramètre « Autoriser clôture partielle » = Non). Produisez la quantité demandée ou modifiez le paramétrage.',
+            ]);
+        }
+
         $order->update(['status' => 'termine_partiellement']);
     }
 
@@ -459,32 +470,44 @@ class ProductionService
             // lot créable manuellement depuis la fiche
         }
 
-        // 1bis. QC conforme → lots « en cours » passent « conforme » (PF libéré).
-        try {
-            if ($lastQc?->status === 'conforme') {
-                $order->batches()->where('status', 'en_cours')->update(['status' => 'conforme']);
-            }
-        } catch (\Throwable $e) {
-            // statut lot modifiable manuellement
-        }
-
-        // 2. Réservation PF pour le client de la commande liée — uniquement si la
-        //    qualité est acquise (QC non requis, ou dernier contrôle conforme) :
-        //    on ne promet pas au client un PF non conforme.
-        try {
-            if ($qcOk && $order->order_id && $order->product_id && (float) $order->quantity_produced > 0
-                && ! \App\Models\StockReservation::where('production_order_id', $order->id)->where('status', 'reserved')->exists()) {
-                app(ReservationService::class)->reserveForOrder($order->fresh());
-            }
-        } catch (\Throwable $e) {
-            // réservation faisable manuellement (« Réserver pour le client »)
-        }
+        // 1bis + 2. Effets qualité (lot conforme, réservation PF client) —
+        // logique partagée avec le contrôle qualité posé APRÈS clôture.
+        $this->applyQualityOutcomes($order, $lastQc?->status, $qcOk);
 
         // 3. Coût de revient automatique
         try {
             app(ProductionCostService::class)->compute($order->fresh());
         } catch (\Throwable $e) {
             // recalculable depuis la fiche (« Calculer »)
+        }
+    }
+
+    /**
+     * [Audit OF] Effets d'un verdict qualité sur un OF terminé (ou en clôture) :
+     * lot PF « conforme » + réservation automatique pour la commande liée.
+     * Appelé à la clôture (afterFinish) ET quand un contrôle conforme est posé
+     * après coup (ProductionQualityController) — source unique, pas de doublon.
+     * Best-effort : chaque effet reste faisable manuellement depuis la fiche.
+     */
+    public function applyQualityOutcomes(ProductionOrder $order, ?string $qcStatus, ?bool $qualityAcquired = null): void
+    {
+        $qualityAcquired ??= (! $order->controle_qualite_obligatoire || $qcStatus === 'conforme');
+
+        try {
+            if ($qcStatus === 'conforme') {
+                $order->batches()->where('status', 'en_cours')->update(['status' => 'conforme']);
+            }
+        } catch (\Throwable $e) {
+            // statut lot modifiable manuellement
+        }
+
+        try {
+            if ($qualityAcquired && $order->order_id && $order->product_id && (float) $order->quantity_produced > 0
+                && ! \App\Models\StockReservation::where('production_order_id', $order->id)->where('status', 'reserved')->exists()) {
+                app(ReservationService::class)->reserveForOrder($order->fresh());
+            }
+        } catch (\Throwable $e) {
+            // réservation faisable manuellement (« Réserver pour le client »)
         }
     }
 

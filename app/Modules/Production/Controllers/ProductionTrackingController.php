@@ -57,7 +57,7 @@ class ProductionTrackingController extends Controller
 
         $coils      = Coil::where('status', '!=', 'epuisee')->orderBy('reference')->get(['id', 'reference', 'remaining_weight', 'cost_per_kg']);
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
-        $nextNumber = 'SUIVI-' . now()->year . '-' . str_pad((string) (ProductionTracking::whereYear('created_at', now()->year)->count() + 1), 4, '0', STR_PAD_LEFT);
+        $nextNumber = $this->nextTrackingNumber();
 
         return view('production.trackings.create', compact('orders', 'order', 'coils', 'warehouses', 'nextNumber'));
     }
@@ -141,7 +141,7 @@ class ProductionTrackingController extends Controller
 
             return ProductionTracking::create([
                 'company_id'          => $order->company_id,
-                'number'              => 'SUIVI-' . now()->year . '-' . str_pad((string) (ProductionTracking::withoutGlobalScopes()->whereYear('created_at', now()->year)->lockForUpdate()->count() + 1), 4, '0', STR_PAD_LEFT),
+                'number'              => $this->nextTrackingNumber(lock: true),
                 'production_order_id' => $order->id,
                 'tracking_date'       => $data['tracking_date'] ?? now()->toDateString(),
                 'track_operations'    => $trackOps,
@@ -160,5 +160,16 @@ class ProductionTrackingController extends Controller
 
         return redirect()->route('production.orders.show', $order)
             ->with('success', "Suivi {$tracking->number} enregistré sur l'OF {$order->number}.");
+    }
+
+    /** Prochain numéro de suivi (SUIVI-YYYY-####). $lock : compteur verrouillé (store). */
+    private function nextTrackingNumber(bool $lock = false): string
+    {
+        $q = ProductionTracking::withoutGlobalScopes()->whereYear('created_at', now()->year);
+        if ($lock) {
+            $q->lockForUpdate();
+        }
+
+        return 'SUIVI-' . now()->year . '-' . str_pad((string) ($q->count() + 1), 4, '0', STR_PAD_LEFT);
     }
 }

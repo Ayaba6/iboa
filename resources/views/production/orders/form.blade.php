@@ -44,7 +44,12 @@
                     need(c) { return c.coef * this.totalQty; },
                     get shortage() { return this.comps.some(c => this.need(c) > c.stock); },
                     get matCost() { return this.comps.reduce((s, c) => s + this.need(c) * c.cost, 0); },
-                    get laborCost() { return this.bom ? this.bom.labor_per_unit * this.totalQty : 0; },
+                    get laborCost() {
+                        if (!this.bom) return 0;
+                        if (this.bom.labor_per_unit > 0) return this.bom.labor_per_unit * this.totalQty;
+                        /* Repli : temps standard gamme × coût horaire poste (cascade identique au coût réel) */
+                        return this.ops.reduce((s, o) => s + ((o.setup + o.run * this.totalQty) / 60) * (o.rate || 0), 0);
+                    },
                     get machineMin() { return this.bom ? this.bom.machine_time * this.totalQty : 0; },
                     get ops() { return this.bom && this.bom.routing ? this.bom.routing.ops : []; },
                     get opsMin() { return this.ops.reduce((s, o) => s + o.setup + o.run * this.totalQty, 0); },
@@ -113,7 +118,7 @@
             </div>
 
             {{-- ═══════════ ENTÊTE ═══════════ --}}
-            <div id="sec-entete" class="p-4 space-y-4 scroll-mt-28">
+            <div id="sec-entete" class="p-4 space-y-4 scroll-mt-40">
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }}">Entête</div>
                     <div class="p-4 grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
@@ -372,7 +377,7 @@
             </div>
 
             {{-- ═══════════ COMPOSANTS ═══════════ --}}
-            <div id="sec-composants" class="p-4 pt-0 scroll-mt-28">
+            <div id="sec-composants" class="p-4 pt-0 scroll-mt-40">
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }}">Composants &amp; allocation matière</div>
                     <div class="p-4 space-y-3">
@@ -443,7 +448,7 @@
             </div>
 
             {{-- ═══════════ OPÉRATIONS ═══════════ --}}
-            <div id="sec-operations" class="p-4 pt-0 scroll-mt-28">
+            <div id="sec-operations" class="p-4 pt-0 scroll-mt-40">
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }}">Opérations / gamme</div>
                     <div class="p-4 space-y-3">
@@ -504,7 +509,7 @@
             </div>
 
             {{-- ═══════════ DOCUMENTS ═══════════ --}}
-            <div id="sec-documents" class="p-4 pt-0 scroll-mt-28">
+            <div id="sec-documents" class="p-4 pt-0 scroll-mt-40">
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }}">Documents / pièces jointes</div>
                     <div class="p-4 space-y-4">
@@ -541,7 +546,7 @@
             </div>
 
             {{-- ═══════════ SUIVI (lecture) ═══════════ --}}
-            <div id="sec-suivi" class="p-4 pt-0 scroll-mt-28">
+            <div id="sec-suivi" class="p-4 pt-0 scroll-mt-40">
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }}">Suivi de production</div>
                     <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-[13px]">
@@ -555,7 +560,7 @@
             </div>
 
             {{-- ═══════════ QUALITÉ (lecture) ═══════════ --}}
-            <div id="sec-qualite" class="p-4 pt-0 scroll-mt-28">
+            <div id="sec-qualite" class="p-4 pt-0 scroll-mt-40">
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }}">Contrôle qualité</div>
                     <div class="p-4">

@@ -462,6 +462,9 @@ class ProductionOrderController extends Controller
                     'center' => $op->workCenter?->name ?? '—',
                     'setup'  => (float) ($op->setup_minutes ?? 0),
                     'run'    => (float) ($op->run_minutes_per_unit ?? 0),
+                    // Coût horaire du poste — repli MO du prévisionnel quand la
+                    // BOM n'a pas de labor_per_unit (même cascade que le coût réel).
+                    'rate'   => (float) ($op->workCenter?->cost_per_hour ?? 0),
                 ])->values()->all(),
             ] : null,
         ]])->all();

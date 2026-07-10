@@ -93,7 +93,8 @@ class ProductionDemoSeeder extends Seeder
             if ($coil->remaining_weight > 200) {
                 $consume->consume($order, $coil, rand(100, 200), rand(20, 60));
             }
-            $out = $stock->recordOutput($order, ['warehouse_id' => $warehouse->id, 'length' => 6, 'quantity' => rand(8, 30), 'unit_cost' => rand(2500, 4000)]);
+            // Déclaration plafonnée au demandé (garde « Autoriser dépassement qté » = Non par défaut).
+            $out = $stock->recordOutput($order, ['warehouse_id' => $warehouse->id, 'length' => 6, 'quantity' => min(rand(8, 30), (int) $order->quantity_requested), 'unit_cost' => rand(2500, 4000)]);
             // [CDC §13.3] Données démo : visa chef d'équipe posé pour permettre la clôture
             $out->update(['status' => 'validee', 'validated_at' => now()]);
             $stock->recordWaste($order, ['type' => 'rebut', 'weight' => rand(5, 20), 'reason' => 'Bord abîmé']);

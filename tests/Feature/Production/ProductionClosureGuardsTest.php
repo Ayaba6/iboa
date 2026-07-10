@@ -335,6 +335,41 @@ it('ignore un contrôle qualité strictement identique soumis deux fois (doublon
     expect($of->qualityControls()->count())->toBe(2);
 });
 
+it('respecte « Autoriser clôture partielle » : Non → Terminer partiellement bloqué', function () {
+    $this->actingAs(guardAdmin());
+
+    $of = guardOf(['quantity_produced' => 4, 'autoriser_cloture_partielle' => false, 'controle_qualite_obligatoire' => false]);
+    expect(fn () => app(ProductionService::class)->markPartiallyDone($of->fresh()))
+        ->toThrow(ValidationException::class);
+    expect($of->fresh()->status)->toBe('en_cours');
+
+    // Oui (défaut) → clôture partielle autorisée.
+    $of2 = guardOf(['quantity_produced' => 4, 'controle_qualite_obligatoire' => false]);
+    app(ProductionService::class)->markPartiallyDone($of2->fresh());
+    expect($of2->fresh()->status)->toBe('termine_partiellement');
+});
+
+it('respecte « Autoriser dépassement qté » : Non → déclaration au-delà du demandé bloquée', function () {
+    $this->actingAs(guardAdmin());
+    $wh = Warehouse::first();
+    $pf = Product::factory()->create(['is_stockable' => true]);
+
+    // Défaut (Non) : demandé 10, déjà produit 8 → déclarer 5 dépasse → refus.
+    $of = guardOf(['product_id' => $pf->id, 'quantity_requested' => 10, 'quantity_produced' => 8, 'controle_qualite_obligatoire' => false])->fresh();
+    expect(fn () => app(ProductionStockService::class)->recordOutput($of, ['warehouse_id' => $wh->id, 'quantity' => 5, 'length' => 6]))
+        ->toThrow(ValidationException::class);
+    expect((float) $of->fresh()->quantity_produced)->toEqual(8.0);
+
+    // Déclarer exactement le reste (2) → accepté.
+    app(ProductionStockService::class)->recordOutput($of->fresh(), ['warehouse_id' => $wh->id, 'quantity' => 2, 'length' => 6]);
+    expect((float) $of->fresh()->quantity_produced)->toEqual(10.0);
+
+    // Dépassement autorisé (Oui) → sur-production acceptée.
+    $of2 = guardOf(['product_id' => $pf->id, 'quantity_requested' => 10, 'quantity_produced' => 8, 'autoriser_depassement_qte' => true, 'controle_qualite_obligatoire' => false])->fresh();
+    app(ProductionStockService::class)->recordOutput($of2, ['warehouse_id' => $wh->id, 'quantity' => 5, 'length' => 6]);
+    expect((float) $of2->fresh()->quantity_produced)->toEqual(13.0);
+});
+
 it('la déclaration sans longueur reprend la longueur de l\'en-tête OF (métrage non nul)', function () {
     $this->actingAs(guardAdmin());
     $wh = Warehouse::first();
