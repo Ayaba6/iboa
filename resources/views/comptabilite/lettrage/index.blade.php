@@ -10,32 +10,53 @@
 @section('content')
 <div x-data="lettrageApp()" class="space-y-3">
 
-    {{-- ── En-tête ──────────────────────────────────────────────────────────── --}}
-    <div class="flex items-center justify-between">
+    {{-- ── En-tête [X3] ─────────────────────────────────────────────────────── --}}
+    <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Lettrage des comptes tiers</h1>
-            <p class="text-sm text-gray-400 mt-0.5">Appariement des factures et règlements — comptes de classe 4</p>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Lettrage des comptes tiers</h1>
+            <p class="text-[12.5px] text-gray-500">Appariement des factures et règlements — comptes de classe 4</p>
         </div>
-        <div class="text-xs text-gray-400">Comptes de tiers (classe 4)</div>
+        <div class="flex items-center gap-1.5">
+            <button type="button" onclick="window.print()"
+                    class="h-8 inline-flex items-center border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-[12px] font-semibold px-3 rounded-[4px] transition-colors">Imprimer</button>
+            <a href="{{ route('comptabilite.dashboard') }}"
+               class="h-8 inline-flex items-center border border-gray-300 text-gray-500 hover:text-gray-700 hover:bg-gray-50 text-[12px] font-semibold px-3 rounded-[4px] transition-colors">Abandon</a>
+        </div>
     </div>
 
-    {{-- ── Sélecteur de compte ──────────────────────────────────────────────── --}}
+    {{-- ── Fiche critères [X3] ──────────────────────────────────────────────── --}}
     <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
-        <div class="flex gap-3 items-end">
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Sélectionner un compte tiers</label>
-                <select name="account_id" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-violet-500">
-                    <option value="">Choisir un compte...</option>
-                    @foreach($accounts as $account)
-                    <option value="{{ $account->id }}" {{ ($selectedAccount?->id) == $account->id ? 'selected' : '' }}>
-                        {{ $account->code }} — {{ $account->name }}
-                    </option>
-                    @endforeach
-                </select>
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3 items-end">
+            <div class="sm:col-span-3">
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Société <span class="text-red-600">*</span></label>
+                <input type="text" value="{{ currentCompany()?->name }}" readonly
+                       class="w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-gray-50 text-gray-600">
             </div>
-            <button type="submit" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-5 py-1.5 rounded-[4px] transition-colors">
-                Charger
-            </button>
+            <div class="sm:col-span-1">
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Site <span class="text-red-600">*</span></label>
+                <input type="text" value="01" readonly
+                       class="w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-gray-50 text-gray-600 font-mono">
+            </div>
+            <div class="sm:col-span-6">
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Compte tiers <span class="text-red-600">*</span></label>
+                <div class="relative">
+                    <select name="account_id" class="appearance-none w-full h-8 py-0 pl-2 pr-8 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400">
+                        <option value="">Choisir un compte…</option>
+                        @foreach($accounts as $account)
+                        <option value="{{ $account->id }}" {{ ($selectedAccount?->id) == $account->id ? 'selected' : '' }}>
+                            {{ $account->code }} — {{ $account->name }}
+                        </option>
+                        @endforeach
+                    </select>
+                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>
+                </div>
+                <p class="text-[10.5px] text-gray-400 mt-0.5">Comptes de tiers détaillés (classe 4)</p>
+            </div>
+            <div class="sm:col-span-2">
+                <button type="submit" class="w-full h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold rounded-[4px] transition-colors">
+                    Charger
+                </button>
+            </div>
         </div>
     </form>
 
@@ -369,6 +390,16 @@
         </div>
     </div>
     @endif
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Compte : <span class="text-white font-semibold">{{ $selectedAccount ? $selectedAccount->code . ' — ' . $selectedAccount->name : 'Aucun' }}</span></span>
+        @if($stats)<span class="border-l border-white/10 pl-6">Taux de lettrage : <span class="text-white font-semibold">{{ $stats['pct_lettered'] }} %</span></span>@endif
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
 
     {{-- ── Toast ────────────────────────────────────────────────────────────── --}}
     <div x-show="toast" x-transition:enter="transition ease-out duration-200"

@@ -322,7 +322,7 @@ request()->routeIs('achats.*')                                                  
                             auth()->user()->can('clients.view')   ? [route('clients.grand-livre'),  'Grand livre clients', 'clients.grand-livre']  : null,
                             auth()->user()->can('suppliers.view') ? [route('suppliers.index'),      'Fournisseurs',        'suppliers*']           : null,
                             auth()->user()->can('products.view')  ? [route('products.index'),         'Articles',             'products*']             : null,
-                            auth()->user()->can('products.view')  ? [route('product-families.index'), 'Familles / Catégories','product-families*']     : null,
+                            auth()->user()->can('products.view')  ? [route('product-families.index'), 'Catégories articles','product-families*']     : null,
                             auth()->user()->can('products.view')  ? [route('brands.index'),           'Marques',              'brands*']               : null,
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
@@ -420,8 +420,9 @@ request()->routeIs('achats.*')                                                  
                             [route('production.dashboard'),      'Tableau de bord',       'production.dashboard'],
                             [route('production.orders.index'),   'Ordres de fabrication', 'production.orders*'],
                             [route('production.trackings.index'), 'Suivi de fabrication', 'production.trackings*'],
-                            /* Matière : gestionnaires production + magasin */
-                            $puser->canAny(['production.create', 'stocks.adjust']) ? [route('production.coils.index'), 'Bobines (matière)', 'production.coils*'] : null,
+                            /* Bobines : plus de sous-menu dédié — rattachées à la fiche article
+                               (section « Bobines / lots matière », onglet Stock). Routes conservées
+                               pour la traçabilité (réceptions, consommations OF). */
                             /* Référentiels (coûts standards inclus) : gestionnaires production seulement */
                             $puser->can('production.create') ? [route('production.bom.index'),          'Nomenclatures',      'production.bom*'] : null,
                             $puser->can('production.create') ? [route('production.routings.index'),     'Gammes',             'production.routings*'] : null,

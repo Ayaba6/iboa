@@ -13,8 +13,7 @@
 
 @section('content')
 <div class="max-w-5xl mx-auto space-y-3"
-     x-data="journalEntryForm()"
-     x-init="init()">
+     x-data="journalEntryForm()">
 
     <div class="flex items-center justify-between">
         <h1 class="text-[16px] font-bold text-gray-900">Modifier l'écriture <span class="font-mono text-violet-700">{{ $entry->number }}</span></h1>

@@ -34,7 +34,7 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Commandes</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Commandes</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $orders->total() }} commande(s)</p>
         </div>
         <a href="{{ route('ventes.commandes.create') }}"
@@ -48,10 +48,16 @@
 
     {{-- Filters --}}
     <form method="GET" data-autosubmit class="bg-white rounded-[4px] border border-gray-300 p-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, client..."
-                   class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+        @php $lblX = 'block text-[11px] font-bold text-gray-700 mb-1'; @endphp
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <div>
+            <label class="{{ $lblX }}">Rechercher</label>
+            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, client…"
+                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
 
+            <div>
+            <label class="{{ $lblX }}">Statut</label>
             <select name="status" class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon"             {{ ($filters['status'] ?? '') === 'brouillon'             ? 'selected' : '' }}>Brouillon</option>
@@ -63,6 +69,7 @@
                 <option value="facture"            {{ ($filters['status'] ?? '') === 'facture'            ? 'selected' : '' }}>Facturée</option>
                 <option value="annule"             {{ ($filters['status'] ?? '') === 'annule'             ? 'selected' : '' }}>Annulée</option>
             </select>
+            </div>
 
             <input type="text" name="client_id" value="{{ $filters['client_id'] ?? '' }}" placeholder="ID Client"
                    class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 hidden">
@@ -87,14 +94,14 @@
         <div class="tbl-scroll">
             <table class="w-full text-[12.5px] border-collapse">
                 <thead>
-                    <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide w-32">N° commande</th>
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide">Client</th>
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide hidden md:table-cell w-24">Date</th>
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide hidden lg:table-cell w-28">Livraison prévue</th>
-                        <th class="text-right font-bold px-3 py-1.5 uppercase tracking-wide hidden lg:table-cell w-32">Montant HT</th>
-                        <th class="text-right font-bold px-3 py-1.5 uppercase tracking-wide w-32">Montant TTC</th>
-                        <th class="text-center font-bold px-3 py-1.5 uppercase tracking-wide w-32">Statut</th>
+                    <tr class="bg-[#3b4248] text-white text-[11px]">
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-32">N° commande</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap">Client</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden md:table-cell w-24">Date</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell w-28">Livraison prévue</th>
+                        <th class="text-right font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell w-32">Montant HT</th>
+                        <th class="text-right font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-32">Montant TTC</th>
+                        <th class="text-center font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-32">Statut</th>
                         <th class="px-3 py-2 w-24"></th>
                     </tr>
                 </thead>
@@ -165,6 +172,15 @@
             <span>{{ $orders->total() }} commande(s) · Total TTC filtré : <b class="text-emerald-700 tabular-nums">{{ $fmt($summary['total_ttc']) }} FCFA</b></span>
             @if($orders->hasPages())<div>{{ $orders->appends($filters)->links() }}</div>@endif
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Filtre actif : <span class="text-white font-semibold">{{ array_filter($filters ?? []) ? implode(', ', array_keys(array_filter($filters))) : 'Aucun' }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 
 </div>

@@ -49,22 +49,24 @@
 
     {{-- ═══ Bandeau + onglets SAGE ═════════════════════════════════════════════ --}}
     <div class="bg-white border border-gray-300 rounded-[4px]">
-        <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-            <h2 class="text-[15px] font-bold text-gray-900">
-                Articles : Création complète
-                @if($isEdit)<span class="font-mono text-emerald-700 ml-1">{{ $p->code_article ?: $p->reference }}</span>@endif
+        <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
+                Articles : {{ $isEdit ? 'Modification' : 'Création complète' }}
+                @if($isEdit)<span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $p->code_article ?: $p->reference }}</span>@endif
             </h2>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
                 <button type="submit"
-                        class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">
+                        class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">
                     Enregistrer
                 </button>
+                <button type="button" onclick="window.print()"
+                        class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Imprimer</button>
                 <a href="{{ route('products.index') }}"
-                   class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">
+                   class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">
                     Abandon
                 </a>
                 <a href="{{ route('products.create') }}"
-                   class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-full transition-colors">
+                   class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">
                     Créer +
                 </a>
             </div>
@@ -330,6 +332,62 @@
                     </table>
                 </div>
             </section>
+
+            @if($isEdit && $p->relationLoaded('coils') && ($p->coils->isNotEmpty() || $p->has_lot_number))
+            {{-- [Bobines → article] chaque bobine physique = un lot matière de cet article --}}
+            <section class="border border-gray-200 rounded-[4px]">
+                <div class="{{ $secH }} flex items-center justify-between">
+                    <span>Bobines / lots matière</span>
+                    @can('production.create')
+                    <a href="{{ route('production.coils.create', ['product_id' => $p->id]) }}"
+                       class="text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-0.5 rounded-[3px] normal-case tracking-normal">+ Nouvelle bobine</a>
+                    @endcan
+                </div>
+                <div class="p-4">
+                    @if($p->coils->isNotEmpty())
+                    <table class="w-full text-[12.5px] border border-gray-200">
+                        <thead><tr class="bg-[#3b4248] text-white text-[11px] font-semibold uppercase whitespace-nowrap">
+                            <th class="text-left px-2 py-1.5">Référence</th>
+                            <th class="text-left px-2 py-1.5">Lot</th>
+                            <th class="text-right px-2 py-1.5">Ép. (mm)</th>
+                            <th class="text-right px-2 py-1.5">Larg. (mm)</th>
+                            <th class="text-right px-2 py-1.5">Poids restant (kg)</th>
+                            <th class="text-left px-2 py-1.5">Statut</th>
+                            <th class="text-left px-2 py-1.5">Reçue le</th>
+                        </tr></thead>
+                        <tbody>
+                            @foreach($p->coils as $coil)
+                            <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50">
+                                <td class="px-2 py-1.5 whitespace-nowrap">
+                                    <a href="{{ route('production.coils.show', $coil) }}" class="font-mono text-emerald-700 hover:underline">{{ $coil->reference }}</a>
+                                </td>
+                                <td class="px-2 py-1.5 font-mono text-[12px] text-gray-600">{{ $coil->lot_number }}</td>
+                                <td class="px-2 py-1.5 text-right tabular-nums">{{ number_format((float) $coil->thickness, 2, ',', ' ') }}</td>
+                                <td class="px-2 py-1.5 text-right tabular-nums">{{ number_format((float) $coil->width, 0, ',', ' ') }}</td>
+                                <td class="px-2 py-1.5 text-right tabular-nums font-semibold">{{ number_format((float) $coil->remaining_weight, 0, ',', ' ') }}</td>
+                                <td class="px-2 py-1.5">
+                                    @php $cb = match($coil->status){
+                                        'disponible' => 'bg-emerald-100 text-emerald-700',
+                                        'en_production', 'reservee' => 'bg-blue-100 text-blue-700',
+                                        'epuisee' => 'bg-gray-200 text-gray-500',
+                                        default => 'bg-amber-100 text-amber-700',
+                                    }; @endphp
+                                    <span class="inline-flex px-1.5 py-0.5 rounded-[2px] text-[10.5px] font-semibold {{ $cb }}">{{ ucfirst(str_replace('_', ' ', $coil->status)) }}</span>
+                                </td>
+                                <td class="px-2 py-1.5 text-gray-600 tabular-nums whitespace-nowrap">{{ optional($coil->received_at)->format('d/m/Y') ?? '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    <div class="mt-2 text-right">
+                        <a href="{{ route('production.coils.index', ['product_id' => $p->id]) }}" class="text-[12px] font-semibold text-emerald-700 hover:underline">Voir toutes les bobines de cet article →</a>
+                    </div>
+                    @else
+                    <p class="text-[13px] text-gray-400 italic">Aucune bobine réceptionnée pour cet article.</p>
+                    @endif
+                </div>
+            </section>
+            @endif
         </div>
 
         {{-- ══════════════════ ACHAT ═══════════════════════════════════════════ --}}
@@ -619,6 +677,15 @@
         </div>
     </div>
 </form>
+
+{{-- ── Barre de contexte pied de page [X3] ─────────────────────────────────── --}}
+<div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+    <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+    <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+    <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">{{ $isEdit ? 'Article ' . ($p->code_article ?: $p->reference) : 'Nouvel article' }}</span></span>
+    <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+    <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+</div>
 
 @push('scripts')
 <script>

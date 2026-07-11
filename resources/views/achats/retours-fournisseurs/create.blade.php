@@ -21,8 +21,7 @@
     $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
 @endphp
 <div class="max-w-7xl"
-     x-data="supplierReturnForm()"
-     x-init="init()">
+     x-data="supplierReturnForm()">
 
     @if($errors->any())
     <div class="bg-red-50 border border-red-300 text-red-700 px-3 py-2.5 rounded-[4px] text-[13px] mb-3">

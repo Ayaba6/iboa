@@ -37,7 +37,6 @@
 <div
     @if($counter)
     x-data="kpiCounter({{ (int)$value }})"
-    x-init="init()"
     @endif
     class="kpi-card group relative bg-white rounded-[4px] border border-gray-300 overflow-hidden
            ring-2 ring-transparent transition-all duration-200 {{ $c['ring'] }}

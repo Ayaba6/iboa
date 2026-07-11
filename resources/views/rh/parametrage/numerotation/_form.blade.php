@@ -2,7 +2,7 @@
     Partial : formulaire règle de numérotation.
     Variables attendues : $numbering (instance), $isEdit (bool)
 --}}
-<div x-data="numerotationForm()" x-init="init()" class="space-y-8">
+<div x-data="numerotationForm()" class="space-y-8">
 
     {{-- Section Identification --}}
     <div class="bg-white rounded-[4px] border border-gray-300 p-6">

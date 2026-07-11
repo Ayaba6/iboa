@@ -13,10 +13,10 @@
 
 @section('content')
 @php
-    $lbl   = 'block text-[12px] font-semibold text-gray-800 mb-1 whitespace-nowrap overflow-hidden';
-    $inp   = 'w-full h-8 px-2 border border-gray-400 rounded-[3px] text-[14px] text-gray-900 bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
-    $inpRo = 'w-full h-8 px-2 border border-gray-300 rounded-[3px] text-[14px] bg-gray-100 text-gray-700';
-    $lk    = 'appearance-none w-full h-8 py-0 pl-2 pr-7 border border-gray-400 rounded-[3px] text-[14px] text-gray-900 bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $lbl   = 'block text-[11px] font-bold text-gray-700 mb-1 leading-tight min-h-[26px]';
+    $inp   = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] text-gray-900 bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+    $inpRo = 'w-full h-8 px-2 border border-gray-300 rounded-[3px] text-[13px] bg-gray-50 text-gray-600';
+    $lk    = 'appearance-none w-full h-8 py-0 pl-2 pr-8 border border-[#c3d3c9] rounded-[3px] text-[13px] text-gray-900 bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $secH  = 'text-[13px] font-bold text-emerald-700 mb-3';
     $caret = '<span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none text-[12px]">&#9662;</span>';
     $fmt   = fn ($n) => number_format((int) $n, 0, ',', ' ');
@@ -93,10 +93,10 @@
     @endif
 
     {{-- 1. Sélection du tiers --}}
-    <form method="GET" id="releve-filter" data-anchor="sec-criteres" class="bg-white rounded-[4px] border border-gray-200 p-4 scroll-mt-24">
+    <form method="GET" id="releve-filter" data-anchor="sec-criteres" class="bg-white rounded-[4px] border border-gray-300 overflow-hidden scroll-mt-24">
         <span id="sec-criteres"></span>
-        <h2 class="{{ $secH }}"><span class="text-gray-400 font-normal">1.</span> Sélection du tiers / client</h2>
-        <div class="grid grid-cols-12 gap-x-3 gap-y-3">
+        <div class="px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900">1. Sélection du tiers / client</div>
+        <div class="p-4 grid grid-cols-12 gap-x-3 gap-y-3">
             <div class="col-span-6 sm:col-span-2">
                 <label class="{{ $lbl }}">Société <span class="text-red-500">*</span></label>
                 <input type="text" value="{{ $company?->name }}" class="{{ $inpRo }}" readonly>
@@ -165,7 +165,9 @@
 
     @if($client)
     {{-- 2. Synthèse — 8 KPIs --}}
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 scroll-mt-24" id="sec-synthese">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden scroll-mt-24" id="sec-synthese">
+        <div class="px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900">2. Synthèse — situation du compte</div>
+        <div class="p-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         @foreach([
             ['Solde initial', $stats['solde_initial'], 'text-gray-900', 'border-gray-300', 'text-gray-400', 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'],
             ['Débit période', $stats['debit'], 'text-blue-700', 'border-blue-200', 'text-blue-400', 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'],
@@ -176,17 +178,18 @@
             ['Encours autorisé', $stats['encours_aut'], 'text-emerald-700', 'border-emerald-200', 'text-emerald-400', 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
             ['Dépassement éventuel', $stats['depassement'], $stats['depassement'] > 0 ? 'text-red-600' : 'text-gray-400', $stats['depassement'] > 0 ? 'border-red-400' : 'border-gray-300', $stats['depassement'] > 0 ? 'text-red-400' : 'text-gray-300', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'],
         ] as [$kLbl, $kVal, $kTxt, $kBd, $kIco, $kPath])
-        <div class="bg-white rounded-[4px] border {{ $kBd }} px-2.5 py-2">
-            <div class="flex items-center gap-1.5">
-                <svg class="w-4 h-4 flex-shrink-0 {{ $kIco }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-gray-50/60 rounded-[4px] border {{ $kBd }} px-3 py-2.5 flex flex-col min-h-[76px]">
+            <div class="flex items-start gap-1.5">
+                <svg class="w-4 h-4 flex-shrink-0 mt-px {{ $kIco }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $kPath }}"/>
                 </svg>
                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide leading-tight">{{ $kLbl }}</p>
             </div>
-            <p class="mt-0.5 text-[15px] font-bold tabular-nums {{ $kTxt }} leading-none">{{ $fmt($kVal) }}</p>
-            <p class="mt-0.5 text-[10px] text-gray-400">XOF</p>
+            <p class="mt-auto text-[16px] font-bold tabular-nums {{ $kTxt }} leading-none">{{ $fmt($kVal) }}</p>
+            <p class="mt-1 text-[10px] text-gray-400 font-medium">XOF</p>
         </div>
         @endforeach
+        </div>
     </div>
 
     {{-- 3. Détail des écritures / relevé --}}

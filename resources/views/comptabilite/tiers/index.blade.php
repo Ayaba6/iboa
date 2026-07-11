@@ -165,8 +165,8 @@
                 @forelse($tiers as $t)
                 @php [$sLabel, $sClass] = $statutBadges[$t->statut] ?? ['?', 'bg-gray-100 text-gray-500']; @endphp
                 <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
-                    <td class="px-3 py-1">
-                        <a href="{{ $t->url }}" class="font-mono font-semibold text-blue-600 hover:text-blue-800 text-[13px]">{{ $t->code }}</a>
+                    <td class="px-3 py-1 whitespace-nowrap">
+                        <a href="{{ $t->url }}" class="font-mono font-semibold text-blue-600 hover:text-blue-800 text-[12px]">{{ $t->code }}</a>
                     </td>
                     <td class="px-3 py-1 font-medium text-gray-900 whitespace-nowrap">{{ $t->name }}</td>
                     <td class="px-3 py-1">
@@ -175,14 +175,14 @@
                         </span>
                     </td>
                     <td class="px-3 py-1 text-gray-600 text-[12px]">{{ $t->category }}</td>
-                    <td class="px-3 py-1 font-mono text-[11.5px] text-gray-500">{{ $t->ifu ?: '—' }}</td>
-                    <td class="px-3 py-1 font-mono text-[11.5px] text-gray-500">{{ $t->rccm ?: '—' }}</td>
+                    <td class="px-3 py-1 font-mono text-[11.5px] text-gray-500 whitespace-nowrap">{{ $t->ifu ?: '—' }}</td>
+                    <td class="px-3 py-1 font-mono text-[11.5px] text-gray-500 whitespace-nowrap">{{ $t->rccm ?: '—' }}</td>
                     <td class="px-3 py-1 text-gray-600">{{ $t->city ?: '—' }}</td>
-                    <td class="px-3 py-1 text-gray-600 text-[12px]">{{ $t->country }}</td>
+                    <td class="px-3 py-1 text-gray-600 text-[12px] whitespace-nowrap">{{ $t->country }}</td>
                     <td class="px-3 py-1 text-gray-600 tabular-nums text-[12px] whitespace-nowrap">{{ $t->phone ?: '—' }}</td>
                     <td class="px-3 py-1 font-mono text-[12px] text-gray-700">{{ $t->collectif }}</td>
-                    <td class="px-3 py-1 text-right tabular-nums font-medium">{{ $t->encours ? $fmt($t->encours) : '—' }}</td>
-                    <td class="px-3 py-1 text-right tabular-nums font-medium {{ $t->solde < 0 ? 'text-red-600' : 'text-gray-900' }}">
+                    <td class="px-3 py-1 text-right tabular-nums font-medium whitespace-nowrap">{{ $t->encours ? $fmt($t->encours) : '—' }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums font-medium whitespace-nowrap {{ $t->solde < 0 ? 'text-red-600' : 'text-gray-900' }}">
                         {{ $t->solde < 0 ? '-' : '' }}{{ $fmt(abs($t->solde)) }}
                     </td>
                     <td class="px-3 py-1 text-right tabular-nums text-gray-600">{{ $t->plafond ? $fmt($t->plafond) : '—' }}</td>

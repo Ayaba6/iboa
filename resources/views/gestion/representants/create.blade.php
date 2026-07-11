@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl">
+<div class="w-full">
     @if($errors->any())
     <div class="bg-red-50 border border-red-300 text-red-700 px-3 py-2.5 rounded-[4px] text-[13px] mb-3">
         <ul class="list-disc list-inside space-y-0.5">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>

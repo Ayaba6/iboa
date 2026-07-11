@@ -38,20 +38,22 @@
     <x-validation-errors />
 
     <div class="bg-white border border-gray-300 rounded-[4px]">
-        <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-            <h2 class="text-[15px] font-bold text-gray-900">
-                Clients : Création complète
-                @if($isEdit)<span class="font-mono text-emerald-700 ml-1">{{ $c->code }}</span>@endif
+        <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
+                Clients : {{ $isEdit ? 'Modification' : 'Création complète' }}
+                @if($isEdit)<span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $c->code }}</span>@endif
             </h2>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
                 @if($isEdit)
                 <button type="button" onclick="document.getElementById('archiveClientForm').requestSubmit()"
-                        class="text-[13px] font-semibold text-red-600 border border-red-200 bg-white hover:bg-red-50 px-4 py-1.5 rounded-full transition-colors">Archiver</button>
+                        class="text-[14px] font-semibold text-red-600 border border-red-200 bg-white hover:bg-red-50 px-5 py-2 rounded-[4px] transition-colors">Archiver</button>
                 @endif
                 <button type="submit"
-                        class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer</button>
+                        class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">Enregistrer</button>
+                <button type="button" onclick="window.print()"
+                        class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Imprimer</button>
                 <a href="{{ route('clients.index') }}"
-                   class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
+                   class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">Abandon</a>
             </div>
         </div>
 
@@ -176,7 +178,7 @@
 
             <section class="border border-gray-200 rounded-[4px]">
                 <div class="{{ $secH }} flex items-center justify-between">
-                    <span>8. Adresses de livraison</span>
+                    <span>4. Adresses de livraison</span>
                     <button type="button" @click="addAddress()" class="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-[3px]">+ Ajouter</button>
                 </div>
                 <div class="p-4">
@@ -212,7 +214,7 @@
         {{-- ═══════════ COMMERCIAL ═══════════ --}}
         <div id="sec-commercial" class="p-4 pt-0 scroll-mt-28">
             <section class="border border-gray-200 rounded-[4px]">
-                <div class="{{ $secH }}">4. Paramètres commerciaux</div>
+                <div class="{{ $secH }}">5. Paramètres commerciaux</div>
                 <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
                         <label class="{{ $lbl }}">Représentant commercial</label>
@@ -278,7 +280,7 @@
         {{-- ═══════════ LIVRAISON ═══════════ --}}
         <div id="sec-livraison" class="p-4 pt-0 scroll-mt-28">
             <section class="border border-gray-200 rounded-[4px]">
-                <div class="{{ $secH }}">5. Livraison</div>
+                <div class="{{ $secH }}">6. Livraison</div>
                 <div class="p-4 grid grid-cols-2 sm:grid-cols-5 gap-4">
                     <div>
                         <label class="{{ $lbl }}">Dépôt de livraison par défaut</label>
@@ -334,7 +336,7 @@
         {{-- ═══════════ COMPTABILITÉ ═══════════ --}}
         <div id="sec-compta" class="p-4 pt-0 scroll-mt-28">
             <section class="border border-gray-200 rounded-[4px]">
-                <div class="{{ $secH }}">6. Comptabilité</div>
+                <div class="{{ $secH }}">8. Comptabilité</div>
                 <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div><label class="{{ $lbl }}">Compte tiers</label><input type="text" name="compte_tiers" maxlength="30" value="{{ old('compte_tiers', $c->compte_tiers ?? '') }}" class="{{ $inp }} font-mono" placeholder="41110000"></div>
                     <div><label class="{{ $lbl }}">Compte collectif</label><input type="text" x-model="compteCollectif" maxlength="30" class="{{ $inp }} font-mono" placeholder="41100000"></div>
@@ -383,9 +385,63 @@
                     </div>
                 </div>
             </section>
+
+            @if($isEdit && isset($clientDocs))
+            {{-- [CDC OA-12 r.7] Liste consolidée des documents liés au client --}}
+            <section class="border border-gray-200 rounded-[4px] mt-4">
+                <div class="{{ $secH }}">10. Documents liés au client</div>
+                <div class="p-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+                    @foreach([
+                        'devis'     => ['titre' => 'Derniers devis',     'route' => 'ventes.devis.show'],
+                        'commandes' => ['titre' => 'Dernières commandes', 'route' => 'ventes.commandes.show'],
+                        'factures'  => ['titre' => 'Dernières factures',  'route' => 'ventes.factures.show'],
+                    ] as $type => $meta)
+                    <div>
+                        <div class="text-[12px] font-bold text-gray-700 mb-1.5">{{ $meta['titre'] }}</div>
+                        <table class="w-full text-[12px] border border-gray-200">
+                            <thead>
+                                <tr class="bg-[#3b4248] text-white text-[11px] font-semibold uppercase whitespace-nowrap">
+                                    <th class="text-left px-2 py-1.5">N°</th>
+                                    <th class="text-left px-2 py-1.5">Date</th>
+                                    <th class="text-right px-2 py-1.5">TTC</th>
+                                    <th class="text-left px-2 py-1.5">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($clientDocs[$type] as $doc)
+                                <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 border-b border-gray-100 last:border-0">
+                                    <td class="px-2 py-1.5 whitespace-nowrap">
+                                        <a href="{{ route($meta['route'], $doc->id) }}" class="font-mono text-emerald-700 hover:underline">{{ $doc->number }}</a>
+                                    </td>
+                                    <td class="px-2 py-1.5 text-gray-600 whitespace-nowrap tabular-nums">{{ $doc->issued_at?->format('d/m/Y') }}</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums whitespace-nowrap">{{ number_format((float) $doc->total_ttc, 0, ',', ' ') }}</td>
+                                    <td class="px-2 py-1.5 whitespace-nowrap">
+                                        <span class="inline-block px-1.5 py-0.5 rounded-[2px] text-[10.5px] font-semibold bg-gray-100 text-gray-600">{{ ucfirst(str_replace('_', ' ', $doc->status)) }}</span>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="4" class="px-2 py-2 text-gray-400 italic">Aucun document</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    @endforeach
+                </div>
+            </section>
+            @endif
         </div>
     </div>
 </form>
+
+{{-- ── Barre de contexte pied de page [X3] ─────────────────────────────────── --}}
+<div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+    <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+    <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+    <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">{{ $isEdit ? 'Client ' . $c->code : 'Nouveau client' }}</span></span>
+    @if($isEdit)<span class="border-l border-white/10 pl-6">Créée le : <span class="text-white font-semibold">{{ $c->created_at?->format('d/m/Y') }}</span>{{ $c->createdBy ? ' par ' : '' }}<span class="text-white font-semibold">{{ $c->createdBy?->name }}</span></span>@endif
+    <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+    <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+</div>
 
 @push('scripts')
 <script>

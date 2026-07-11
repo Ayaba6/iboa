@@ -39,15 +39,17 @@
 
         <div class="bg-white border border-gray-300 rounded-[4px]">
             {{-- Header bar --}}
-            <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-                <h2 class="text-[15px] font-bold text-gray-900 flex items-center gap-1.5">
-                    Dépôt : Création complète
-                    @if($w->exists)<span class="font-mono text-emerald-700">{{ $w->code }}</span>@endif
-                    <span class="text-amber-400">★</span>
+            <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+                <h2 class="text-[22px] font-bold text-gray-900 leading-tight flex items-center gap-1.5">
+                    Dépôt : {{ $w->exists ? 'Modification' : 'Création complète' }}
+                    @if($w->exists)<span class="font-mono text-emerald-700 text-[18px]">{{ $w->code }}</span>@endif
+                    <span class="text-amber-400 text-[16px]">★</span>
                 </h2>
-                <div class="flex items-center gap-2">
-                    <button type="submit" class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer</button>
-                    <a href="{{ route('stocks.warehouses.index') }}" class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
+                <div class="flex items-center gap-1.5">
+                    <button type="submit" class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">Enregistrer</button>
+                    <button type="button" onclick="window.print()"
+                            class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Imprimer</button>
+                    <a href="{{ route('stocks.warehouses.index') }}" class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">Abandon</a>
                 </div>
             </div>
 
@@ -197,7 +199,7 @@
                     <div class="p-0">
                         <p class="px-3 py-2 text-[11.5px] text-gray-500">La colonne <b>Autorisé</b> reflète les paramètres de gestion (onglet Général). Cochez <b>Validation requise</b> pour imposer un contrôle avant chaque mouvement.</p>
                         <table class="w-full text-[12.5px] border-collapse">
-                            <thead class="bg-[#eef5f0] border-y border-gray-200 text-[10px] font-bold text-emerald-900 uppercase tracking-wide">
+                            <thead class="bg-[#3b4248] text-[11px] font-semibold text-white uppercase tracking-wide">
                                 <tr>
                                     <th class="px-3 py-1.5 text-left">Flux</th>
                                     <th class="px-3 py-1.5 text-center w-24">Autorisé</th>
@@ -248,7 +250,7 @@
                     <div class="p-4 space-y-4">
                         @if($w->exists && $w->attachments->isNotEmpty())
                         <table class="w-full text-[12.5px] border border-gray-200">
-                            <thead><tr class="bg-gray-50 text-gray-600">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px]">
                                 <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200 w-10">#</th>
                                 <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Fichier</th>
                                 <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Type</th>
@@ -279,4 +281,13 @@
             </div>
         </div>
     </form>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">{{ $w->exists ? 'Dépôt ' . $w->code : 'Nouveau dépôt' }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
 </div>

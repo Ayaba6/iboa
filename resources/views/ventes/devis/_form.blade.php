@@ -438,6 +438,16 @@ window._quoteFormData = {
 </div>{{-- /card --}}
 </div>{{-- /x-data root --}}
 
+{{-- ── Barre de contexte pied de page [X3] ─────────────────────────────────── --}}
+<div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+    <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+    <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+    <span class="border-l border-white/10 pl-6">Document : <span class="text-white font-semibold">{{ $q?->number ?? 'Devis (brouillon)' }}</span></span>
+    <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+    <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+</div>
+
+
 @push('scripts')
 <script>
 function quoteForm() {

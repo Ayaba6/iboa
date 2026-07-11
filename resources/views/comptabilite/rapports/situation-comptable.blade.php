@@ -14,7 +14,7 @@
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Situation comptable</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Situation comptable</h1>
             <p class="text-sm text-gray-500 mt-0.5">Tableau de bord financier au {{ now()->format('d/m/Y') }}</p>
         </div>
         <div class="flex gap-3">
@@ -28,11 +28,11 @@
             </a>
             @endif
             <a href="{{ route('comptabilite.bilan') }}"
-               class="text-sm text-violet-600 hover:text-violet-800 font-medium border border-violet-200 px-3 py-1.5 rounded-[4px]">
+               class="h-8 inline-flex items-center text-[12px] text-emerald-700 hover:bg-emerald-50 font-semibold border border-emerald-300 bg-white px-3 rounded-[4px] transition-colors">
                 Bilan →
             </a>
             <a href="{{ route('comptabilite.compte-de-resultat') }}"
-               class="text-sm text-violet-600 hover:text-violet-800 font-medium border border-violet-200 px-3 py-1.5 rounded-[4px]">
+               class="h-8 inline-flex items-center text-[12px] text-emerald-700 hover:bg-emerald-50 font-semibold border border-emerald-300 bg-white px-3 rounded-[4px] transition-colors">
                 CDR →
             </a>
         </div>
@@ -157,7 +157,7 @@
                         @foreach($cashAccounts as $acc)
                         <tr class="hover:bg-gray-50">
                             <td class="px-3 py-2.5 w-full">
-                                <span class="font-mono text-violet-600 font-semibold text-xs">{{ $acc->code }}</span>
+                                <span class="font-mono text-blue-600 font-semibold text-xs">{{ $acc->code }}</span>
                                 <span class="text-gray-700 ml-2">{{ $acc->name }}</span>
                             </td>
                             <td class="px-3 py-2.5 text-right tabular-nums font-semibold whitespace-nowrap {{ $acc->net >= 0 ? 'text-emerald-700' : 'text-red-700' }}">
@@ -179,22 +179,22 @@
         <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <h2 class="font-semibold text-gray-800">Dernières écritures validées</h2>
             <a href="{{ route('comptabilite.journaux.index', ['status' => 'valide']) }}"
-               class="text-xs text-violet-600 hover:text-violet-800 font-medium">Voir tout →</a>
+               class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">Voir tout →</a>
         </div>
         <table class="w-full text-sm">
-            <thead class="bg-[#eef5f0] border-b border-gray-300">
+            <thead class="bg-[#3b4248]">
                 <tr>
-                    <th class="px-3 py-1.5 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                    <th class="px-3 py-1.5 text-left text-xs font-semibold text-gray-500 uppercase">Numéro</th>
-                    <th class="px-3 py-1.5 text-left text-xs font-semibold text-gray-500 uppercase w-full">Description</th>
-                    <th class="px-3 py-1.5 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Montant</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase">Date</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase">Numéro</th>
+                    <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase w-full">Description</th>
+                    <th class="px-3 py-1.5 text-right text-[11px] font-semibold text-white uppercase whitespace-nowrap">Montant (XOF)</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
                 @foreach($recentEntries as $entry)
                 <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{{ route('comptabilite.journaux.show', $entry) }}'">
                     <td class="px-3 py-2.5 text-gray-600 whitespace-nowrap">{{ $entry->entry_date?->format('d/m/Y') }}</td>
-                    <td class="px-3 py-2.5 font-mono font-semibold text-violet-700 text-xs whitespace-nowrap">{{ $entry->number }}</td>
+                    <td class="px-3 py-2.5 font-mono font-semibold text-blue-600 text-xs whitespace-nowrap">{{ $entry->number }}</td>
                     <td class="px-3 py-2.5 text-gray-700 w-full">
                         {{ Str::limit($entry->description, 60) }}
                         @if($entry->reference)
@@ -210,6 +210,15 @@
         </table>
     </div>
     @endif
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Arrêté au : <span class="text-white font-semibold">{{ now()->format('d/m/Y') }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
 
 </div>
 @endsection

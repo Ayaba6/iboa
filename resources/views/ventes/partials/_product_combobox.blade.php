@@ -33,7 +33,7 @@
                    au-dessus uniquement si l'espace en bas est insuffisant ET qu'il
                    y a plus de place au-dessus. Le dropdown ne recouvre jamais le champ. */
                 const r = $event.currentTarget.getBoundingClientRect();
-                const GAP = 6, MIN_H = 200, DESIRED = 360;
+                const GAP = 6, MIN_H = 180, DESIRED = 300;
                 const below = window.innerHeight - r.bottom - GAP;
                 const above = r.top - GAP;
                 const up = below < MIN_H && above > below;
@@ -90,8 +90,8 @@
             : ''">
 
         {{-- Barre de recherche (toujours visible, ne scrolle pas) --}}
-        <div class="p-2.5 border-b border-gray-100 bg-gray-50/80 flex-shrink-0">
-            <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-[4px] px-2.5 py-1.5 shadow-sm
+        <div class="p-1.5 border-b border-gray-100 bg-gray-50/80 flex-shrink-0">
+            <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-[4px] px-2 py-1 shadow-sm
                         focus-within:border-{{ $accent }}-400 focus-within:ring-1 focus-within:ring-{{ $accent }}-300 transition">
                 <svg class="w-3.5 h-3.5 text-{{ $accent }}-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -117,7 +117,7 @@
 
             {{-- Réinitialiser --}}
             <li @click="item.product_id = ''; item._ps_open = false; item._ps_search = ''; onProductChange(index)"
-                class="flex items-center gap-2 px-3 py-2.5 text-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                class="flex items-center gap-2 px-3 py-1.5 text-[13px] cursor-pointer hover:bg-gray-50 transition-colors"
                 :class="!item.product_id ? 'bg-{{ $accent }}-50 text-{{ $accent }}-600' : 'text-gray-500'">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -128,19 +128,19 @@
             {{-- Résultats filtrés (réf / nom / code-barres / catégorie) --}}
             <template x-for="p in window.psFilter(products, item._ps_search).slice(0, 60)" :key="p.id">
                 <li @click="item.product_id = String(p.id); item._ps_open = false; item._ps_search = ''; onProductChange(index)"
-                    class="px-3 py-2.5 cursor-pointer hover:bg-{{ $accent }}-50/70 transition-colors"
+                    class="px-3 py-1.5 cursor-pointer hover:bg-{{ $accent }}-50/70 transition-colors"
                     :class="String(item.product_id) === String(p.id) ? 'bg-{{ $accent }}-50' : ''">
                     <div class="flex items-center justify-between gap-2">
                         <div class="min-w-0 flex-1">
                             {{-- Nom avec surbrillance --}}
-                            <p class="text-sm font-medium text-gray-900 truncate leading-tight"
+                            <p class="text-[13px] font-medium text-gray-900 truncate leading-tight"
                                x-html="window.psHighlight(p.name, item._ps_search)"></p>
-                            {{-- Méta : réf • catégorie • Stock N • prix --}}
-                            <div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-xs mt-0.5 leading-tight">
+                            {{-- Méta : réf • catégorie • Stock N • prix — une seule ligne tronquée --}}
+                            <div class="flex items-center flex-nowrap gap-x-1.5 text-[11px] mt-0.5 leading-tight truncate whitespace-nowrap">
                                 <span class="text-gray-400" x-show="p.reference"
                                       x-html="window.psHighlight(p.reference, item._ps_search)"></span>
                                 <span class="text-gray-300" x-show="p.reference && p.family && p.family.name">•</span>
-                                <span class="text-gray-400" x-show="p.family && p.family.name"
+                                <span class="text-gray-400 truncate max-w-[120px]" x-show="p.family && p.family.name"
                                       x-html="window.psHighlight(p.family ? p.family.name : '', item._ps_search)"></span>
                                 <span class="text-gray-300" x-show="(p.reference || (p.family && p.family.name)) && p.is_stockable">•</span>
                                 <span x-show="p.is_stockable" class="font-medium"
