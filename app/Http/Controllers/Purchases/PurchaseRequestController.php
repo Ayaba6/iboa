@@ -16,6 +16,8 @@ use Illuminate\View\View;
 
 class PurchaseRequestController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(private PurchaseRequestService $service) {}
 
     public function index(Request $request): View
@@ -52,22 +54,6 @@ class PurchaseRequestController extends Controller
         return redirect()
             ->route('achats.demandes-achat.show', $pr)
             ->with('success', 'Demande d\'achat ' . $pr->number . ' créée.');
-    }
-
-    /** Enregistre les pièces jointes de la demande d'achat. */
-    private function uploadDocuments(PurchaseRequest $pr, \Illuminate\Http\Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/purchase_request/'.$pr->id, 'local');
-            $pr->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(PurchaseRequest $demandesAchat): View

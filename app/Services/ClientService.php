@@ -20,6 +20,7 @@ class ClientService
             if (empty($data['code'])) {
                 $data['code'] = $this->repository->generateCode();
             }
+            $data['created_by']       = auth()->id(); // [CDC OA-12 r.7] traçabilité création fiche
             $data['credit_limit']     = (float) ($data['credit_limit']     ?? 0);
             $data['payment_days']     = (int)   ($data['payment_days']     ?? 0);
             $data['default_discount'] = (float) ($data['default_discount'] ?? 0);
@@ -53,6 +54,7 @@ class ClientService
             $taxRateIds  = $data['tax_rate_ids'] ?? [];
             unset($data['contacts'], $data['addresses'], $data['tax_rate_ids']);
 
+            $data['created_by']       = auth()->id(); // [CDC OA-12 r.7] traçabilité création fiche
             $data['credit_limit']     = (float) ($data['credit_limit']     ?? 0);
             $data['payment_days']     = (int)   ($data['payment_days']     ?? 0);
             $data['default_discount'] = (float) ($data['default_discount'] ?? 0);

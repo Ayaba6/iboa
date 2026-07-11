@@ -14,6 +14,8 @@ use Illuminate\View\View;
 
 class WarehouseController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct()
     {
         $this->middleware('can:settings.manage')->except(['index', 'show']);
@@ -75,22 +77,6 @@ class WarehouseController extends Controller
         return redirect()
             ->route('stocks.warehouses.index')
             ->with('success', "Entrepôt « {$warehouse->name} » créé avec succès.");
-    }
-
-    /** Enregistre les pièces jointes du dépôt. */
-    private function uploadDocuments(Warehouse $warehouse, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/warehouse/'.$warehouse->id, 'local');
-            $warehouse->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     // ── Show ─────────────────────────────────────────────────────────────────

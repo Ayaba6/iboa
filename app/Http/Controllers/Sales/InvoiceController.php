@@ -21,6 +21,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class InvoiceController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     use ManagesEditLock;
 
     public function __construct(
@@ -154,22 +156,6 @@ class InvoiceController extends Controller
             'orders'        => \App\Models\Order::orderByDesc('id')->limit(100)->get(['id', 'reference', 'number', 'issued_at']),
             'deliveryNotes' => \App\Models\DeliveryNote::orderByDesc('id')->limit(100)->get(['id', 'number']),
         ];
-    }
-
-    /** Enregistre les pièces jointes (documents) de la facture. */
-    private function uploadDocuments(Invoice $invoice, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/invoice/'.$invoice->id, 'local');
-            $invoice->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(Invoice $facture)
@@ -327,7 +313,7 @@ class InvoiceController extends Controller
             fn($v) => $v !== '' && $v !== null
         );
 
-        $company = \App\Models\currentCompany();
+        $company = currentCompany();
 
         $invoices = Invoice::with(['client'])
             ->when(!empty($filters['client_id']), fn($q) => $q->where('client_id', $filters['client_id']))

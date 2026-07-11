@@ -116,6 +116,12 @@ class JournalEntryService
 
             $entry->load('lines');
 
+            // Une écriture sans ligne (ou à 0) est « équilibrée » au sens 0 = 0 :
+            // sans ce guard elle se valide et pollue le journal (pièce vide).
+            if ($entry->lines->isEmpty() || ((float) $entry->lines->sum('debit') <= 0 && (float) $entry->lines->sum('credit') <= 0)) {
+                throw new \RuntimeException('Écriture sans ligne ou à montant nul — ajoutez des lignes avant de valider.');
+            }
+
             if (! $entry->isBalanced()) {
                 throw new \RuntimeException('L\'écriture n\'est pas équilibrée (débit ≠ crédit).');
             }

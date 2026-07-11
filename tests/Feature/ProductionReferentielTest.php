@@ -61,7 +61,11 @@ it('receives a coil and computes cost per kg', function () {
         'is_active' => true, 'country' => 'Burkina Faso', 'balance' => 0,
     ]);
 
+    // [Bobines → article] rattachement à un article matière désormais obligatoire
+    $matiere = \App\Models\Product::factory()->create(['name' => 'Bobine test PR']);
+
     $this->post(route('production.coils.store'), [
+        'product_id' => $matiere->id,
         'reference' => 'BOB-001', 'initial_weight' => 2000, 'purchase_price' => 1000000,
         'supplier_id' => $supplier->id, 'lot_number' => 'LOT-PR-001',
         'color' => 'RAL 9006', 'thickness' => 0.5, 'width' => 1000,
@@ -72,6 +76,47 @@ it('receives a coil and computes cost per kg', function () {
     expect($coil->remaining_weight)->toEqual(2000.0);
     expect((float) $coil->cost_per_kg)->toEqual(500.0);
     expect($coil->status)->toBe('disponible');
+});
+
+it('refuse une bobine sans article matière rattaché', function () {
+    $this->actingAs(prodAdmin());
+
+    $supplier = Supplier::create([
+        'code' => 'FOUR-PR2', 'type' => 'entreprise', 'name' => 'Fournisseur PR2',
+        'is_active' => true, 'country' => 'Burkina Faso', 'balance' => 0,
+    ]);
+
+    $this->post(route('production.coils.store'), [
+        'reference' => 'BOB-SANS-ART', 'initial_weight' => 1000, 'purchase_price' => 500000,
+        'supplier_id' => $supplier->id, 'lot_number' => 'LOT-SANS-ART',
+        'color' => 'RAL 9006', 'thickness' => 0.5, 'width' => 1000,
+    ])->assertSessionHasErrors('product_id');
+
+    expect(Coil::where('reference', 'BOB-SANS-ART')->exists())->toBeFalse();
+});
+
+it('affiche les bobines sur la fiche de l\'article matière', function () {
+    $this->actingAs(prodAdmin());
+
+    $matiere = \App\Models\Product::factory()->create(['name' => 'Bobine Galva Fiche']);
+    $supplier = Supplier::create([
+        'code' => 'FOUR-PR3', 'type' => 'entreprise', 'name' => 'Fournisseur PR3',
+        'is_active' => true, 'country' => 'Burkina Faso', 'balance' => 0,
+    ]);
+    Coil::create([
+        'company_id' => \App\Models\Company::first()->id,
+        'product_id' => $matiere->id, 'supplier_id' => $supplier->id,
+        'reference' => 'BOB-FICHE-1', 'lot_number' => 'LOT-FICHE-1', 'color' => 'RAL 9006',
+        'thickness' => 0.5, 'width' => 1000, 'initial_weight' => 2000, 'remaining_weight' => 1500,
+        'estimated_length' => 0, 'purchase_price' => 1000000, 'cost_per_kg' => 500,
+        'status' => 'disponible', 'received_at' => now(),
+    ]);
+
+    $this->get(route('products.edit', $matiere))
+        ->assertOk()
+        ->assertSee('Bobines / lots matière')
+        ->assertSee('BOB-FICHE-1')
+        ->assertSee('Nouvelle bobine');
 });
 
 it('creates a bom with component lines', function () {

@@ -22,6 +22,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(
         private ProductService $service,
         private ProductRepository $repository
@@ -108,22 +110,6 @@ class ProductController extends Controller
         $product->warehouses()->sync($sync);
     }
 
-    /** Enregistre les pièces jointes (documents) de l'article. */
-    private function uploadDocuments(Product $product, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/product/'.$product->id, 'local');
-            $product->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
-    }
-
     public function show(Product $product): View
     {
         $this->authorize('view', $product);
@@ -149,7 +135,8 @@ class ProductController extends Controller
     {
         $this->authorize('update', $product);
         $product = $this->repository->findWithDetails($product->id);
-        $product->load(['warehouses', 'attachments']);
+        // [Bobines → article] les bobines physiques (lots matière) s'affichent sur la fiche
+        $product->load(['warehouses', 'attachments', 'coils' => fn ($q) => $q->latest('received_at')->limit(15)]);
         [$families, $brands, $units, $taxRates, $suppliers, $accounts, $componentProducts] =
             $this->loadFormReferenceData($product->id);
         $warehouses         = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_production', 'can_sale', 'can_purchase', 'can_stock']);

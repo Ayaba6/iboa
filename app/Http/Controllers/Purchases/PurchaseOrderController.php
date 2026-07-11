@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 
 class PurchaseOrderController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     use ManagesEditLock;
 
     public function __construct(private PurchaseOrderService $service) {}
@@ -93,22 +95,6 @@ class PurchaseOrderController extends Controller
         return redirect()
             ->route('achats.commandes.show', $po)
             ->with('success', 'Commande achat ' . $po->number . ' créée avec succès.');
-    }
-
-    /** Enregistre les pièces jointes (documents) du bon de commande. */
-    private function uploadDocuments(PurchaseOrder $po, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/purchaseorder/'.$po->id, 'local');
-            $po->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(PurchaseOrder $commande)

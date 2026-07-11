@@ -17,6 +17,8 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(
         private OrderService                $service,
         private CommercialWorkflowService   $workflow,
@@ -101,22 +103,6 @@ class OrderController extends Controller
         return redirect()
             ->route('ventes.commandes.show', $order)
             ->with('success', 'Commande ' . $order->number . ' créée avec succès.');
-    }
-
-    /** Enregistre les pièces jointes (documents) de la commande. */
-    private function uploadDocuments(Order $order, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/order/'.$order->id, 'local');
-            $order->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(Order $commande)

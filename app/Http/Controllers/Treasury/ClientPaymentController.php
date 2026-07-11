@@ -81,7 +81,7 @@ class ClientPaymentController extends Controller
             $request->only(['search', 'client_id', 'payment_method_id', 'date_from', 'date_to']),
             fn($v) => $v !== '' && $v !== null
         );
-        $company  = \App\Models\currentCompany();
+        $company  = currentCompany();
         $dateFrom = $filters['date_from'] ?? null;
         $dateTo   = $filters['date_to']   ?? null;
 

@@ -19,6 +19,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class QuoteController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(
         private QuoteService                $service,
         private CommercialWorkflowService   $workflow,
@@ -120,22 +122,6 @@ class QuoteController extends Controller
         return redirect()
             ->route('ventes.devis.show', $quote)
             ->with('success', 'Devis ' . $quote->number . ' créé avec succès.');
-    }
-
-    /** Enregistre les pièces jointes (documents) du devis. */
-    private function uploadDocuments(Quote $quote, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/quote/'.$quote->id, 'local');
-            $quote->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(Quote $devis)

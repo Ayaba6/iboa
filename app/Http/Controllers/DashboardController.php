@@ -229,9 +229,6 @@ class DashboardController extends Controller
             ->orderByDesc('created_at')->limit(6)
             ->get(['id', 'number', 'client_id', 'total_ttc', 'status', 'issued_at']);
 
-        $recentActivity = AuditLog::orderByDesc('created_at')->limit(10)
-            ->get(['user_name', 'action', 'model_type', 'model_id', 'created_at']);
-
         // [SAGE parité] Dernières factures client (table dashboard).
         $dernieresFactures = Invoice::with('client:id,name')
             ->orderByDesc('issued_at')->orderByDesc('id')->limit(6)
@@ -253,6 +250,132 @@ class DashboardController extends Controller
             ->filter(fn ($p) => $p->seuil > 0)
             ->sortBy(fn ($p) => [$p->sous_seuil ? 0 : 1, $p->seuil > 0 ? (float) ($p->stock_dispo ?? 0) / $p->seuil : 0])
             ->take(6)->values();
+
+        // ── [Maquette X3] KPIs & séries supplémentaires ───────────────────────
+
+        // Décaissements du mois (+ tendance vs mois précédent)
+        $decKpi = DB::table('supplier_payments')
+            ->where('status', 'confirme')
+            ->selectRaw("
+                SUM(CASE WHEN YEAR(payment_date)=? AND MONTH(payment_date)=? THEN amount ELSE 0 END) AS dec_mois,
+                SUM(CASE WHEN YEAR(payment_date)=? AND MONTH(payment_date)=? THEN amount ELSE 0 END) AS dec_prev_mois
+            ", [$year, $month, $prevMonth->year, $prevMonth->month])->first();
+        $decaissementsMois = (int) $decKpi->dec_mois;
+        $trendDecaissements = $this->trend($decaissementsMois, (int) $decKpi->dec_prev_mois);
+
+        // OF en cours / en retard (date fin prévue dépassée)
+        $ofActifs   = ['lance', 'en_cours', 'termine_partiellement'];
+        $ofEnCours  = DB::table('production_orders')->whereIn('status', $ofActifs)->whereNull('deleted_at')->count();
+        $ofEnRetard = DB::table('production_orders')->whereIn('status', $ofActifs)->whereNull('deleted_at')
+            ->whereNotNull('date_fin_prevue')->where('date_fin_prevue', '<', $now->toDateString())->count();
+
+        // Alertes qualité : contrôles non conformes des 30 derniers jours
+        $alertesQualite = DB::table('production_quality_controls')
+            ->where('status', 'non_conforme')
+            ->where('created_at', '>=', $now->copy()->subDays(30))->count();
+
+        // CA (HT) 12 mois — année en cours vs année précédente
+        $caHt2Years = DB::table('invoices')
+            ->whereIn('status', $invoiceStatuses)
+            ->whereIn(DB::raw('YEAR(issued_at)'), [$year, $year - 1])
+            ->selectRaw('YEAR(issued_at) as y, MONTH(issued_at) as m, SUM(subtotal_ht) as total')
+            ->groupByRaw('YEAR(issued_at), MONTH(issued_at)')->get();
+        $caN = array_fill(1, 12, 0); $caN1 = array_fill(1, 12, 0);
+        foreach ($caHt2Years as $row) {
+            if ((int) $row->y === $year) $caN[(int) $row->m] = (int) $row->total;
+            else $caN1[(int) $row->m] = (int) $row->total;
+        }
+        $caAnnuel = [
+            'labels' => ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'],
+            'prev'   => array_values($caN1),
+            'cur'    => array_values($caN),
+        ];
+
+        // Trésorerie disponible — série 30 jours reconstruite à rebours depuis le
+        // solde actuel (solde j = solde actuel − flux nets postérieurs à j).
+        $fluxNets = [];
+        foreach ($encByDay as $d => $v)  $fluxNets[$d] = ($fluxNets[$d] ?? 0) + (int) $v;
+        foreach (SupplierPayment::where('status', 'confirme')
+            ->where('payment_date', '>=', $thirtyDaysAgo)
+            ->selectRaw('DATE(payment_date) as day, SUM(amount) as total')
+            ->groupByRaw('DATE(payment_date)')->pluck('total', 'day') as $d => $v) {
+            $fluxNets[$d] = ($fluxNets[$d] ?? 0) - (int) $v;
+        }
+        $treso30 = []; $treso30Labels = []; $solde = $soldeTresorerie;
+        for ($i = 0; $i <= 29; $i++) {
+            $d = $now->copy()->subDays($i);
+            array_unshift($treso30, $solde);
+            array_unshift($treso30Labels, $d->format('d/m'));
+            $solde -= $fluxNets[$d->toDateString()] ?? 0; // on recule d'un jour
+        }
+
+        // Répartition du CA (HT) par famille — YTD, top 4 + Autres
+        $famRaw = DB::table('invoice_items')
+            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+            ->leftJoin('products', 'invoice_items.product_id', '=', 'products.id')
+            ->leftJoin('product_families', 'products.family_id', '=', 'product_families.id')
+            ->whereIn('invoices.status', $invoiceStatuses)
+            ->whereYear('invoices.issued_at', $year)
+            ->selectRaw("COALESCE(product_families.name, 'Autres') as famille, SUM(invoice_items.line_total_ht) as total")
+            ->groupBy('famille')->orderByDesc('total')->get();
+        $top = $famRaw->take(4);
+        $autres = (int) $famRaw->slice(4)->sum('total');
+        $caParFamille = $top->map(fn ($r) => ['label' => $r->famille, 'value' => (int) $r->total])->values()->all();
+        if ($autres > 0) $caParFamille[] = ['label' => 'Autres', 'value' => $autres];
+
+        // CA HT du mois (la maquette affiche le CA hors taxes) + tendance
+        $caHtKpi = DB::table('invoices')
+            ->whereIn('status', $invoiceStatuses)
+            ->selectRaw("
+                SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN subtotal_ht ELSE 0 END) AS ht_mois,
+                SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN subtotal_ht ELSE 0 END) AS ht_prev
+            ", [$year, $month, $prevMonth->year, $prevMonth->month])->first();
+        $caHtMois   = (int) $caHtKpi->ht_mois;
+        $trendCaHt  = $this->trend($caHtMois, (int) $caHtKpi->ht_prev);
+
+        // Montant total des commandes en attente (sous-texte du compteur)
+        $montantCommandesEnCours = (int) DB::table('orders')
+            ->whereIn('status', ['confirme', 'en_preparation', 'partiellement_livre'])
+            ->whereNull('deleted_at')->sum('total_ttc');
+
+        // Activités récentes enrichies : référence document + tiers (maquette)
+        $activityModels = [
+            'Order' => \App\Models\Order::class, 'Invoice' => Invoice::class,
+            'Quote' => \App\Models\Quote::class, 'DeliveryNote' => \App\Models\DeliveryNote::class,
+            'ClientPayment' => ClientPayment::class, 'CreditNote' => \App\Models\CreditNote::class,
+        ];
+        $recentActivity = AuditLog::orderByDesc('created_at')->limit(6)
+            ->get(['user_name', 'action', 'model_type', 'model_id', 'created_at'])
+            ->map(function ($a) use ($activityModels) {
+                $base = class_basename($a->model_type ?? '');
+                $a->doc_ref = null; $a->tiers = null;
+                if ($a->model_id && isset($activityModels[$base])) {
+                    $m = $activityModels[$base]::with('client:id,name')->find($a->model_id, ['id', 'number', 'client_id']);
+                    $a->doc_ref = $m?->number;
+                    $a->tiers   = $m?->client?->name;
+                }
+                return $a;
+            });
+
+        // Compteur stock critique (liste complète, pas seulement les 6 affichés)
+        $stockCritique = \App\Models\Product::query()
+            ->where('is_stockable', true)
+            ->where(fn ($q) => $q->whereNotNull('reorder_point')->orWhereNotNull('stock_min'))
+            ->withSum('productStocks as stock_dispo', 'quantity')
+            ->get(['id', 'reorder_point', 'stock_min'])
+            ->filter(fn ($p) => ($s = (float) ($p->reorder_point ?? $p->stock_min ?? 0)) > 0
+                                && (float) ($p->stock_dispo ?? 0) <= $s)
+            ->count();
+
+        // Alertes & points de vigilance (composite multi-modules, max 6)
+        $alertesVigilance = collect();
+        if ($ofEnRetard > 0)      $alertesVigilance->push(['niveau' => 'critique', 'message' => "$ofEnRetard OF en retard sur la date de fin prévue", 'module' => 'Production', 'url' => route('production.orders.index')]);
+        if ($stockCritique > 0)   $alertesVigilance->push(['niveau' => 'alerte',   'message' => "Stock critique : $stockCritique article(s) à réapprovisionner", 'module' => 'Stocks', 'url' => route('stocks.index')]);
+        if ($facturesEnRetard > 0) $alertesVigilance->push(['niveau' => 'alerte',  'message' => "Échéances clients dépassées : $facturesEnRetard facture(s) — " . number_format($montantEnRetard, 0, ',', ' ') . ' F', 'module' => 'Comptabilité', 'url' => route('ventes.factures.index', ['status' => 'en_retard'])]);
+        if ($alertesQualite > 0)  $alertesVigilance->push(['niveau' => 'alerte',   'message' => "$alertesQualite contrôle(s) qualité non conforme(s) sur 30 jours", 'module' => 'Qualité', 'url' => route('production.orders.index')]);
+        if ($pendingCount > 0)    $alertesVigilance->push(['niveau' => 'info',     'message' => "$pendingCount document(s) en attente de validation", 'module' => 'Workflow', 'url' => route('validations.index')]);
+        if ($ruptureStock > 0)    $alertesVigilance->push(['niveau' => 'info',     'message' => "$ruptureStock ligne(s) de stock à zéro ou négative(s)", 'module' => 'Stocks', 'url' => route('stocks.index')]);
+        $alertesVigilance = $alertesVigilance->take(6);
 
         $topProduits = InvoiceItem::query()
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -283,6 +406,10 @@ class DashboardController extends Controller
             'derniersEncaissements', 'dernieresCommandes',
             'recentActivity',
             'pendingCount', 'mesValidations', 'dernieresFactures', 'alertesStock',
+            'decaissementsMois', 'trendDecaissements',
+            'ofEnCours', 'ofEnRetard', 'stockCritique', 'alertesQualite',
+            'caAnnuel', 'treso30', 'treso30Labels', 'caParFamille', 'alertesVigilance',
+            'caHtMois', 'trendCaHt', 'montantCommandesEnCours',
         ));
     }
 
