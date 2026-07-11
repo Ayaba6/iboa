@@ -1401,6 +1401,8 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     // production uniquement (chef production / directeur usine).
     Route::middleware('permission:production.update')->group(function () {
         Route::get('planning', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'index'])->name('planning');
+        // [X3 §19] Déplacer OF / réaffecter ligne depuis le plan de charge
+        Route::post('planning/replan/{order}', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'replan'])->name('planning.replan');
         Route::get('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'index'])->name('cutting');
         Route::post('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'optimize'])->name('cutting.optimize');
         // [Maquette Optimisation de découpe] fiches persistées
@@ -1456,6 +1458,9 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     Route::post('orders/{order}/partial', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'partial'])->name('orders.partial');
     Route::post('orders/{order}/finish', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'finish'])->name('orders.finish');
     Route::post('orders/{order}/cancel', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'cancel'])->name('orders.cancel');
+    // [X3] Suspension / reprise d'OF
+    Route::post('orders/{order}/suspend', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'suspend'])->name('orders.suspend');
+    Route::post('orders/{order}/resume',  [\App\Modules\Production\Controllers\ProductionOrderController::class, 'resume'])->name('orders.resume');
     // §13.2 CDC — Validation financière DAF/DG avant lancement OF
     Route::post('orders/{order}/authorize-finance', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'authorizeFinance'])->name('orders.authorize-finance');
     // §13.3 CDC — Validation 2-niveaux avant lancement (Chef Atelier → Responsable Production)

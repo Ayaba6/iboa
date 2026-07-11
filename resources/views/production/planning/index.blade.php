@@ -12,7 +12,7 @@
 @section('content')
 @php
     $lk  = 'appearance-none h-8 pl-2 pr-7 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
-    $th  = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $th  = 'px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide';
     $tauxGlobal = $plan['total_capacity_h'] > 0 ? $plan['total_planned_h'] / $plan['total_capacity_h'] * 100 : 0;
 @endphp
 <div class="space-y-4">
@@ -20,7 +20,7 @@
     {{-- Bandeau --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-[17px] font-bold text-gray-900">Plan de charge</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Plan de charge</h1>
             <p class="text-[12px] text-gray-500">Capacité vs charge planifiée par centre de travail (OF actifs)</p>
         </div>
         <form method="GET" class="flex items-center gap-2">
@@ -61,7 +61,7 @@
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Centre</th>
                         <th class="{{ $th }} text-right">Opérations</th>
@@ -97,6 +97,92 @@
         <div class="px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
             {{ count($plan['rows']) }} centre(s) — charge {{ number_format($plan['total_planned_h'], 1, ',', ' ') }} h / capacité {{ number_format($plan['total_capacity_h'], 1, ',', ' ') }} h — Charge = temps prévu des opérations non terminées sur OF lancés/en cours. Capacité = capacité journalière × rendement × horizon.
         </div>
+    </div>
+
+    {{-- [X3 §19] Replanification — déplacer OF / réaffecter ligne --}}
+    @can('production.create')
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+            <h2 class="text-[13px] font-bold text-gray-900">Replanification des OF actifs</h2>
+            <p class="text-[11px] text-gray-500">Déplacer les dates prévues ou réaffecter la ligne — OF clôturés/annulés exclus.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-[12.5px] border-collapse">
+                <thead class="bg-[#3b4248] text-white">
+                    <tr>
+                        <th class="px-3 py-1.5 text-[11px] font-semibold uppercase text-left whitespace-nowrap">N° OF</th>
+                        <th class="px-3 py-1.5 text-[11px] font-semibold uppercase text-left">Article</th>
+                        <th class="px-3 py-1.5 text-[11px] font-semibold uppercase text-left hidden lg:table-cell">Client</th>
+                        <th class="px-3 py-1.5 text-[11px] font-semibold uppercase text-center">Statut</th>
+                        <th class="px-3 py-1.5 text-[11px] font-semibold uppercase text-left">Ligne</th>
+                        <th class="px-3 py-1.5 text-[11px] font-semibold uppercase text-left whitespace-nowrap">Fabrication</th>
+                        <th class="px-3 py-1.5 text-[11px] font-semibold uppercase text-left whitespace-nowrap">Fin prévue</th>
+                        <th class="px-3 py-1.5"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($ofActifs as $of)
+                    @php
+                        $enRetard = $of->date_fin_prevue && $of->date_fin_prevue->isPast()
+                                    && in_array($of->status, ['lance', 'en_cours', 'suspendu'], true);
+                        $inpMini  = 'h-7 border border-[#c3d3c9] rounded-[3px] px-1.5 py-0 text-[12px] bg-white focus:outline-none focus:border-emerald-600';
+                    @endphp
+                    <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50">
+                        <td class="px-3 py-1.5 whitespace-nowrap">
+                            {{-- form vide + attribut form="" sur les champs : un <form> ne peut pas enjamber plusieurs <td> --}}
+                            <form id="replan-{{ $of->id }}" method="POST" action="{{ route('production.planning.replan', $of) }}">@csrf</form>
+                            <a href="{{ route('production.orders.show', $of) }}" class="font-mono text-emerald-800 hover:underline">{{ $of->number }}</a>
+                            @if($enRetard)<span class="ml-1 inline-block w-2 h-2 rounded-full bg-red-500" title="En retard"></span>@endif
+                        </td>
+                        <td class="px-3 py-1.5 text-gray-600 max-w-[180px] truncate" title="{{ $of->product?->name }}">{{ $of->product?->name ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-gray-500 hidden lg:table-cell max-w-[130px] truncate">{{ $of->client?->trade_name ?? $of->client?->name ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-center">
+                            @php $badge = match($of->status){
+                                'brouillon' => 'bg-gray-100 text-gray-600',
+                                'lance'     => 'bg-blue-100 text-blue-700',
+                                'en_cours'  => 'bg-emerald-100 text-emerald-700',
+                                'suspendu'  => 'bg-orange-100 text-orange-700',
+                                default     => 'bg-amber-100 text-amber-700',
+                            }; @endphp
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[10.5px] font-medium {{ $badge }}">{{ $of->statusLabel() }}</span>
+                        </td>
+                        <td class="px-3 py-1.5">
+                            <div class="relative">
+                                <select name="production_line_id" form="replan-{{ $of->id }}" class="{{ $inpMini }} appearance-none pr-6 min-w-[120px]">
+                                    <option value="">—</option>
+                                    @foreach($lignes as $l)
+                                    <option value="{{ $l->id }}" @selected($of->production_line_id == $l->id)>{{ $l->name }}</option>
+                                    @endforeach
+                                </select>
+                                <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[10px]">&#9662;</span>
+                            </div>
+                        </td>
+                        <td class="px-3 py-1.5">
+                            <input type="date" name="date_fabrication_prevue" form="replan-{{ $of->id }}" value="{{ $of->date_fabrication_prevue?->format('Y-m-d') }}" class="{{ $inpMini }}">
+                        </td>
+                        <td class="px-3 py-1.5">
+                            <input type="date" name="date_fin_prevue" form="replan-{{ $of->id }}" value="{{ $of->date_fin_prevue?->format('Y-m-d') }}" class="{{ $inpMini }} {{ $enRetard ? 'border-red-400' : '' }}">
+                        </td>
+                        <td class="px-3 py-1.5 text-right">
+                            <button form="replan-{{ $of->id }}" class="text-[12px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-[3px]">Appliquer</button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="8" class="px-4 py-10 text-center text-gray-400 text-sm">Aucun OF actif à replanifier.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endcan
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fonction : <span class="text-white font-semibold">Plan de charge ({{ $horizon }} j)</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 </div>
 @endsection

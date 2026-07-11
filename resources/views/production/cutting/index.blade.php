@@ -14,7 +14,7 @@
     $lbl  = 'block text-[11px] font-bold text-gray-700 mb-1';
     $inp  = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white text-right font-mono focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $secH = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
-    $th   = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $th   = 'px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide';
     $initLines = old('items', $input['items'] ?? [['length'=>'','quantity'=>'']]);
 @endphp
 <div class="max-w-4xl space-y-4" x-data="{ lines: {{ Js::from(array_values($initLines)) }} }">
@@ -112,7 +112,7 @@
                     </div>
                     <div class="p-4 overflow-x-auto">
                         <table class="w-full text-[12.5px]">
-                            <thead class="bg-[#eef5f0] border-b border-gray-300">
+                            <thead class="bg-[#3b4248] text-white">
                                 <tr>
                                     <th class="{{ $th }} text-left w-5/12">Longueur</th>
                                     <th class="{{ $th }} text-right w-5/12">Quantité</th>
@@ -183,5 +183,14 @@
         </div>
     </div>
     @endif
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] mt-3">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fonction : <span class="text-white font-semibold">Optimisation découpe</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
 </div>
 @endsection

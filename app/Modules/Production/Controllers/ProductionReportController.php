@@ -35,6 +35,10 @@ class ProductionReportController extends Controller
         'maintenance'  => 'Maintenance machines',
         'qualite'      => 'Contrôles qualité',
         'non_conformites' => 'Non-conformités',
+        'of_retard'    => 'OF en retard',
+        'of_statut'    => 'OF par statut',
+        'perf_ligne'   => 'Performance par ligne',
+        'stock_mp_pf'  => 'Stock matière / produit fini',
     ];
 
     public function index(Request $request): mixed
@@ -85,8 +89,100 @@ class ProductionReportController extends Controller
             'maintenance'  => $this->maintenance($f, $t),
             'qualite'      => $this->qualite($f, $t),
             'non_conformites' => $this->nonConformites(),
+            'of_retard'    => $this->ofEnRetard(),
+            'of_statut'    => $this->ofParStatut(),
+            'perf_ligne'   => $this->performanceLigne($f, $t),
+            'stock_mp_pf'  => $this->stockMpPf(),
             default        => $this->production($f, $t),
         };
+    }
+
+    /** [X3 §26] OF en retard : date fin prévue dépassée, statut actif. */
+    private function ofEnRetard(): array
+    {
+        $rows = \App\Modules\Production\Models\ProductionOrder::with(['client:id,name', 'product:id,name', 'productionLine:id,name'])
+            ->enRetard()
+            ->orderBy('date_fin_prevue')->get();
+
+        $data = $rows->map(fn ($o) => [
+            $o->number, $o->client?->name ?? '—', $o->product?->name ?? '—',
+            $o->statusLabel(), $o->date_fin_prevue?->format('d/m/Y'),
+            (int) $o->date_fin_prevue?->diffInDays(today()),
+            (float) $o->quantity_requested, (float) $o->quantity_produced,
+        ])->all();
+
+        return [
+            'title'   => 'OF en retard',
+            'headers' => ['N° OF', 'Client', 'Article', 'Statut', 'Fin prévue', 'Retard (j)', 'Qté demandée', 'Qté produite'],
+            'rows'    => $data,
+            'numeric' => [5, 6, 7],
+            'totals'  => null,
+        ];
+    }
+
+    /** [X3 §26] Répartition des OF par statut. */
+    private function ofParStatut(): array
+    {
+        $rows = \App\Modules\Production\Models\ProductionOrder::selectRaw('status, COUNT(*) nb, SUM(quantity_requested) qd, SUM(quantity_produced) qp')
+            ->groupBy('status')->orderByDesc('nb')->get();
+
+        $data = $rows->map(fn ($r) => [
+            (new \App\Modules\Production\Models\ProductionOrder(['status' => $r->status]))->statusLabel(),
+            (int) $r->nb, (float) $r->qd, (float) $r->qp,
+        ])->all();
+
+        return [
+            'title'   => 'OF par statut',
+            'headers' => ['Statut', 'Nombre', 'Qté demandée', 'Qté produite'],
+            'rows'    => $data,
+            'numeric' => [1, 2, 3],
+            'totals'  => ['TOTAL', (int) $rows->sum('nb'), (float) $rows->sum('qd'), (float) $rows->sum('qp')],
+        ];
+    }
+
+    /** [X3 §26] Performance par ligne de production (période). */
+    private function performanceLigne(Carbon $f, Carbon $t): array
+    {
+        $rows = \App\Modules\Production\Models\ProductionOutput::whereBetween('produced_at', [$f, $t])
+            ->join('production_orders', 'production_orders.id', '=', 'production_outputs.production_order_id')
+            ->leftJoin('production_lines', 'production_lines.id', '=', 'production_orders.production_line_id')
+            ->selectRaw('COALESCE(production_lines.name, "—") ligne, COUNT(DISTINCT production_orders.id) nof, SUM(production_outputs.quantity) q, SUM(production_outputs.total_meters) m')
+            ->groupByRaw('production_lines.name')->orderByDesc('m')->get();
+
+        $data = $rows->map(fn ($r) => [$r->ligne, (int) $r->nof, (float) $r->q, round((float) $r->m, 1)])->all();
+
+        return [
+            'title'   => 'Performance par ligne de production',
+            'headers' => ['Ligne', 'OF', 'Quantité', 'Mètres'],
+            'rows'    => $data,
+            'numeric' => [1, 2, 3],
+            'totals'  => ['TOTAL', (int) $rows->sum('nof'), (float) $rows->sum('q'), round((float) $rows->sum('m'), 1)],
+        ];
+    }
+
+    /** [X3 §26] Stock matière première & produit fini par article. */
+    private function stockMpPf(): array
+    {
+        $rows = \App\Models\ProductStock::join('products', 'products.id', '=', 'product_stocks.product_id')
+            ->join('product_families', 'product_families.id', '=', 'products.family_id')
+            ->whereIn('product_families.code', ['MP', 'BPRE', 'BGAL', 'PF'])
+            ->selectRaw('product_families.code fam, products.name produit, SUM(product_stocks.quantity) q, SUM(product_stocks.reserved_quantity) r, SUM(product_stocks.quantity - product_stocks.reserved_quantity) dispo, MAX(products.stock_min) smin')
+            ->groupByRaw('product_families.code, products.id, products.name')
+            ->orderByRaw('product_families.code, products.name')->get();
+
+        $data = $rows->map(fn ($r) => [
+            $r->fam === 'PF' ? 'Produit fini' : 'Matière',
+            $r->produit, (float) $r->q, (float) $r->r, (float) $r->dispo,
+            (float) $r->smin > 0 && (float) $r->dispo < (float) $r->smin ? 'SOUS SEUIL' : 'OK',
+        ])->all();
+
+        return [
+            'title'   => 'Stock matière première / produit fini',
+            'headers' => ['Type', 'Article', 'Stock', 'Réservé', 'Disponible', 'Alerte'],
+            'rows'    => $data,
+            'numeric' => [2, 3, 4],
+            'totals'  => null,
+        ];
     }
 
     private function charge(): array

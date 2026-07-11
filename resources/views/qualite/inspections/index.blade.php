@@ -12,14 +12,14 @@
     $lbl = 'block text-[11px] font-bold text-gray-700 mb-1';
     $lk  = 'appearance-none w-full h-8 py-0 pl-2 pr-7 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $th  = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $th  = 'px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide';
 @endphp
 <div class="space-y-4">
 
     {{-- Bandeau --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-[17px] font-bold text-gray-900">Contrôles qualité</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Contrôles qualité</h1>
             <p class="text-[12px] text-gray-500">Réception · en-cours · produit fini</p>
         </div>
         @can('production.update')
@@ -83,7 +83,7 @@
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Réf.</th>
                         <th class="{{ $th }} text-left">Type</th>
@@ -125,6 +125,15 @@
             <span>{{ $inspections->total() }} contrôle(s) — {{ $stats['non_conforme'] }} non conforme(s) — {{ number_format($stats['rejected'],0,',',' ') }} rejeté(s)</span>
             @if($inspections->hasPages())<div>{{ $inspections->links() }}</div>@endif
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] mt-3">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fonction : <span class="text-white font-semibold">Contrôles qualité</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 </div>
 @endsection

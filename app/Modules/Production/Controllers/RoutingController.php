@@ -13,6 +13,8 @@ use Illuminate\View\View;
 
 class RoutingController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct()
     {
         $this->middleware('permission:production.create');
@@ -49,22 +51,6 @@ class RoutingController extends Controller
         $routing->load(['operations', 'attachments']);
 
         return view('production.routings.form', $this->formData($routing));
-    }
-
-    /** Enregistre les pièces jointes (documents) de la gamme. */
-    private function uploadDocuments(Routing $routing, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/routing/'.$routing->id, 'local');
-            $routing->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function update(Request $request, Routing $routing): RedirectResponse

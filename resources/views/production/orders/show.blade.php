@@ -19,65 +19,161 @@
     .of-sage .tbl tbody tr:nth-child(even) { background: rgba(249, 250, 251, .4); }
     .of-sage .tbl tbody tr:hover { background: rgba(236, 253, 245, .5); }
 </style>
-<div class="max-w-4xl mx-auto space-y-3 of-sage" x-data="{ cancelOpen: false }">
+@php
+    // [X3] Navigation fiche à fiche + libellés type
+    $prevId  = \App\Modules\Production\Models\ProductionOrder::where('id', '<', $order->id)->max('id');
+    $nextId  = \App\Modules\Production\Models\ProductionOrder::where('id', '>', $order->id)->min('id');
+    $firstId = \App\Modules\Production\Models\ProductionOrder::min('id');
+    $lastId  = \App\Modules\Production\Models\ProductionOrder::max('id');
+    $typeCode  = strtoupper(substr($order->of_type ?? 'standard', 0, 3));
+    $typeLabel = match($order->of_type){ 'reprise' => 'Reprise', 'retouche' => 'Retouche', 'speciale_client' => 'Spéciale client', default => 'Standard' };
+    $navBtn = 'inline-flex items-center justify-center w-8 h-8 rounded-[4px] text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-colors';
+    $navOff = 'inline-flex items-center justify-center w-8 h-8 rounded-[4px] text-gray-300 cursor-default';
+    $sideLn = 'flex items-center gap-2 w-full text-left px-3 py-1.5 text-[12.5px] text-gray-600 hover:text-emerald-800 hover:bg-emerald-50/60 rounded-[3px] transition-colors';
+@endphp
+<div class="w-full space-y-3 of-sage" x-data="{ cancelOpen: false, tab: 'gestion', autresOpen: false }">
 
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    {{-- ══ En-tête X3 : titre type + navigation fiches + actions ══ --}}
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-            <div class="flex items-center gap-3">
-                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $order->number }}</h1>
-                @php $sc = match($order->status){ 'brouillon'=>'bg-gray-100 text-gray-600','lance'=>'bg-amber-100 text-amber-700','en_cours'=>'bg-sky-100 text-sky-700','termine'=>'bg-emerald-100 text-emerald-700',default=>'bg-red-100 text-red-700' }; @endphp
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">
+                Ordres de fabrication
+                <span class="font-normal text-gray-500 ml-2 text-[18px]">{{ $typeCode }} : {{ $typeLabel }}</span>
+            </h1>
+            <div class="flex items-center gap-3 mt-1">
+                <span class="font-mono text-emerald-700 font-semibold text-[15px]">{{ $order->number }}</span>
+                @php $sc = match($order->status){ 'brouillon'=>'bg-gray-100 text-gray-600','lance'=>'bg-amber-100 text-amber-700','en_cours'=>'bg-sky-100 text-sky-700','termine'=>'bg-emerald-100 text-emerald-700','suspendu'=>'bg-orange-100 text-orange-700',default=>'bg-red-100 text-red-700' }; @endphp
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $sc }}">{{ $order->statusLabel() }}</span>
+                <span class="text-[12.5px] text-gray-500">{{ $order->client?->trade_name ?? $order->client?->name ?? 'Sans client' }} · {{ $order->product?->name ?? '—' }}</span>
             </div>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $order->client?->trade_name ?? $order->client?->name ?? 'Sans client' }} · {{ $order->product?->name ?? '—' }}</p>
         </div>
-        <div class="flex items-center gap-2">
-            @if($order->isEditable())
-                @can('production.create')
-                <a href="{{ route('production.orders.edit', $order) }}" class="border border-gray-300 text-gray-700 text-sm px-3 py-1.5 rounded-[4px] hover:bg-gray-50">Modifier</a>
-                @endcan
-            @endif
+        <div class="flex items-center gap-1">
+            {{-- Navigation fiche à fiche [X3] --}}
+            <a href="{{ $firstId && $firstId != $order->id ? route('production.orders.show', $firstId) : '#' }}" class="{{ $firstId && $firstId != $order->id ? $navBtn : $navOff }}" title="Premier OF">⇤</a>
+            <a href="{{ $prevId ? route('production.orders.show', $prevId) : '#' }}" class="{{ $prevId ? $navBtn : $navOff }}" title="OF précédent">◀</a>
+            <a href="{{ $nextId ? route('production.orders.show', $nextId) : '#' }}" class="{{ $nextId ? $navBtn : $navOff }}" title="OF suivant">▶</a>
+            <a href="{{ $lastId && $lastId != $order->id ? route('production.orders.show', $lastId) : '#' }}" class="{{ $lastId && $lastId != $order->id ? $navBtn : $navOff }}" title="Dernier OF">⇥</a>
+            <a href="{{ route('production.orders.index') }}" class="{{ $navBtn }}" title="Liste des OF">☰</a>
 
-            @if($order->status === 'brouillon')
-                @can('production.launch')
-                <form method="POST" action="{{ route('production.orders.allocate', $order) }}">@csrf
-                    <button class="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Allouer la matière</button>
-                </form>
-                @include('production.orders._launch-button', ['order' => $order, 'materialShortages' => $materialShortages ?? []])
-                @endcan
-            @elseif($order->status === 'matiere_allouee')
-                @can('production.launch')
-                @include('production.orders._launch-button', ['order' => $order, 'materialShortages' => $materialShortages ?? []])
-                @endcan
-            @elseif($order->status === 'lance')
-                @can('production.launch')
-                <form method="POST" action="{{ route('production.orders.start', $order) }}">@csrf
-                    <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold px-3 py-1.5 rounded-[4px]">Démarrer production</button>
-                </form>
-                @endcan
-            @elseif(in_array($order->status, ['en_cours','termine_partiellement']))
-                @can('production.validate')
-                @if($order->status === 'en_cours')
-                <form method="POST" action="{{ route('production.orders.partial', $order) }}">@csrf
-                    <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Terminer partiellement</button>
-                </form>
-                @endif
-                @php $ofShortfall = (float) $order->quantity_requested > 0 && (float) $order->quantity_produced < (float) $order->quantity_requested; @endphp
-                <form method="POST" action="{{ route('production.orders.finish', $order) }}"
-                      @if($ofShortfall) onsubmit="return confirm('Quantité produite ({{ rtrim(rtrim(number_format((float)$order->quantity_produced,2,'.',''),'0'),'.') }}) inférieure à la demande ({{ rtrim(rtrim(number_format((float)$order->quantity_requested,2,'.',''),'0'),'.') }}). Clôturer définitivement en abandonnant le reliquat ? Sinon utilisez « Terminer partiellement ».');" @endif>
-                    @csrf
-                    @if($ofShortfall)<input type="hidden" name="confirm_shortfall" value="1">@endif
-                    <button class="{{ $ofShortfall ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700' }} text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
-                        {{ $ofShortfall ? "Terminer l'OF (écart)" : "Terminer l'OF" }}
-                    </button>
-                </form>
-                @endcan
-            @endif
+            <span class="w-px h-6 bg-gray-200 mx-2"></span>
 
-            @if(!in_array($order->status, ['termine','annule']))
-                @can('production.cancel')
-                <button type="button" @click="cancelOpen = true" class="border border-red-200 text-red-600 text-sm px-3 py-1.5 rounded-[4px] hover:bg-red-50">Annuler</button>
-                @endcan
-            @endif
+            <button type="button" onclick="window.print()" class="border border-emerald-600 text-emerald-700 text-[13px] font-semibold px-4 py-1.5 rounded-[4px] hover:bg-emerald-50 transition-colors">Imprimer</button>
+            <div class="relative">
+                <button type="button" @click="autresOpen = !autresOpen" @click.outside="autresOpen = false"
+                        class="border border-emerald-600 text-emerald-700 text-[13px] font-semibold px-4 py-1.5 rounded-[4px] hover:bg-emerald-50 transition-colors">Autres ▾</button>
+                <div x-show="autresOpen" x-cloak class="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-[4px] shadow-lg z-30 py-1">
+                    @if($order->isEditable())@can('production.create')
+                    <a href="{{ route('production.orders.edit', $order) }}" class="{{ $sideLn }}">Modifier l'OF</a>
+                    @endcan @endif
+                    @if($order->isSuspendable())@can('production.launch')
+                    <form method="POST" action="{{ route('production.orders.suspend', $order) }}" onsubmit="return confirm('Suspendre cet OF ?');">@csrf
+                        <button class="{{ $sideLn }} text-orange-700">Suspendre l'OF</button>
+                    </form>
+                    @endcan @endif
+                    @if($order->status === 'suspendu')@can('production.launch')
+                    <form method="POST" action="{{ route('production.orders.resume', $order) }}">@csrf
+                        <button class="{{ $sideLn }}">Reprendre l'OF</button>
+                    </form>
+                    @endcan @endif
+                    @if(!in_array($order->status, ['termine','annule']))@can('production.cancel')
+                    <button type="button" @click="cancelOpen = true; autresOpen = false" class="{{ $sideLn }} text-red-600">Annuler l'OF</button>
+                    @endcan @endif
+                </div>
+            </div>
+            @can('production.create')
+            <a href="{{ route('production.orders.create') }}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold px-5 py-1.5 rounded-[4px] transition-colors">Créer</a>
+            @endcan
+        </div>
+    </div>
+
+    {{-- ══ Onglets principaux [X3] ══ --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 px-2">
+        <nav class="flex items-stretch overflow-x-auto">
+            @foreach(['gestion' => 'Gestion', 'planification' => 'Planification', 'lancement' => 'Lancement', 'suivi' => 'Suivi', 'cloture' => 'Clôture', 'couts' => 'Coûts', 'tracabilite' => 'Traçabilité', 'documents' => 'Documents'] as $tk => $tl)
+            <button type="button" @click="tab = '{{ $tk }}'"
+                    class="px-4 py-2 text-[13px] font-semibold border-b-2 whitespace-nowrap transition-colors"
+                    :class="tab === '{{ $tk }}' ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $tl }}</button>
+            @endforeach
+        </nav>
+    </div>
+
+    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_13rem] gap-3 items-start">
+    <div class="min-w-0 space-y-3">
+
+    {{-- ══ [X3 Gestion] Entête 4 colonnes ══ --}}
+    <div x-show="tab === 'gestion'" class="bg-white rounded-[4px] border border-gray-300 p-4">
+        @php
+            $xf  = 'w-full h-8 border border-gray-300 rounded-[3px] px-2 text-[13px] bg-gray-50 text-gray-800 font-mono';
+            $xl  = 'block text-[11px] font-bold text-gray-700 mb-0.5';
+            $xs  = 'text-[11px] text-gray-400 mt-0.5';
+            $fmt0 = fn ($v) => number_format((float) $v, 0, ',', ' ');
+        @endphp
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3">
+            <div class="space-y-3">
+                <div><span class="{{ $xl }}">Site de production <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $order->site_production ?? 'OUTLB' }}</div><p class="{{ $xs }}">Usine de production</p></div>
+                <div><span class="{{ $xl }}">Numéro OF <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center font-semibold">{{ $order->number }}</div></div>
+                <div><span class="{{ $xl }}">Type <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $typeCode }}</div><p class="{{ $xs }}">{{ $typeLabel }}</p></div>
+                <div><span class="{{ $xl }}">Statut <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ strtoupper(substr($order->status, 0, 2)) }}</div><p class="{{ $xs }}">{{ $order->statusLabel() }}</p></div>
+                <div><span class="{{ $xl }}">Description</span><div class="{{ $xf }} flex items-center font-sans truncate" title="{{ $order->designation }}">{{ $order->designation ?: '—' }}</div></div>
+            </div>
+            <div class="space-y-3">
+                <div><span class="{{ $xl }}">Article à fabriquer <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center truncate" title="{{ $order->product?->name }}">{{ $order->product?->reference ?? '—' }}</div><p class="{{ $xs }} truncate">{{ $order->product?->name }}</p></div>
+                <div><span class="{{ $xl }}">Quantité à fabriquer</span><div class="flex gap-1"><div class="{{ $xf }} flex items-center justify-end tabular-nums">{{ $fmt0($order->quantity_requested) }}</div><span class="h-8 px-2 border border-gray-300 rounded-[3px] bg-gray-100 text-[12px] flex items-center text-gray-500">{{ $order->unite_production ?: 'UN' }}</span></div></div>
+                <div><span class="{{ $xl }}">Quantité lancée</span><div class="flex gap-1"><div class="{{ $xf }} flex items-center justify-end tabular-nums">{{ $order->launched_at ? $fmt0($order->quantity_requested) : '0' }}</div><span class="h-8 px-2 border border-gray-300 rounded-[3px] bg-gray-100 text-[12px] flex items-center text-gray-500">{{ $order->unite_production ?: 'UN' }}</span></div></div>
+                <div><span class="{{ $xl }}">Quantité terminée</span><div class="flex gap-1"><div class="{{ $xf }} flex items-center justify-end tabular-nums text-emerald-700 font-semibold">{{ $fmt0($order->quantity_produced) }}</div><span class="h-8 px-2 border border-gray-300 rounded-[3px] bg-gray-100 text-[12px] flex items-center text-gray-500">{{ $order->unite_production ?: 'UN' }}</span></div></div>
+                <div><span class="{{ $xl }}">Reste à produire</span><div class="flex gap-1"><div class="{{ $xf }} flex items-center justify-end tabular-nums {{ max(0,(float)$order->quantity_requested-(float)$order->quantity_produced) > 0 ? 'text-amber-700' : '' }}">{{ $fmt0(max(0, (float) $order->quantity_requested - (float) $order->quantity_produced)) }}</div><span class="h-8 px-2 border border-gray-300 rounded-[3px] bg-gray-100 text-[12px] flex items-center text-gray-500">{{ $order->unite_production ?: 'UN' }}</span></div></div>
+            </div>
+            <div class="space-y-3">
+                <div><span class="{{ $xl }}">Nomenclature {{ $order->product?->is_manufacturable ? '' : '' }}<span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center truncate">{{ $order->billOfMaterial?->code ?? '—' }}</div><p class="{{ $xs }} truncate">{{ $order->billOfMaterial?->name }}</p></div>
+                <div><span class="{{ $xl }}">Version nomenclature</span><div class="{{ $xf }} flex items-center">{{ $order->bom_version ?: ($order->billOfMaterial ? $order->billOfMaterial->version_majeure . '.' . $order->billOfMaterial->version_mineure : '—') }}</div></div>
+                <div><span class="{{ $xl }}">Gamme</span><div class="{{ $xf }} flex items-center truncate">{{ $order->billOfMaterial?->routings?->first()?->code ?? ($order->operations->isNotEmpty() ? 'Gamme chargée' : '—') }}</div><p class="{{ $xs }}">{{ $order->routing_version ? 'v' . $order->routing_version : '' }}</p></div>
+                <div><span class="{{ $xl }}">Site planification <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $order->site_planification ?? ($order->site_production ?? 'OUTLB') }}</div><p class="{{ $xs }}">Usine de production</p></div>
+                <div><span class="{{ $xl }}">Ligne de production</span><div class="{{ $xf }} flex items-center truncate">{{ $order->productionLine?->name ?? '—' }}</div></div>
+            </div>
+            <div class="space-y-3">
+                <div><span class="{{ $xl }}">Lot</span><div class="{{ $xf }} flex items-center truncate">{{ $order->batches->first()?->batch_number ?? '—' }}</div></div>
+                <div><span class="{{ $xl }}">Date de début <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center tabular-nums">{{ $order->date_debut_prevue?->format('d/m/y') ?? $order->date_fabrication_prevue?->format('d/m/y') ?? '—' }}</div></div>
+                <div><span class="{{ $xl }}">Date de fin <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center tabular-nums {{ $order->date_fin_prevue && $order->date_fin_prevue->isPast() && !in_array($order->status,['termine','annule']) ? 'text-red-600 font-semibold' : '' }}">{{ $order->date_fin_prevue?->format('d/m/y') ?? '—' }}</div></div>
+                <div><span class="{{ $xl }}">Responsable</span><div class="{{ $xf }} flex items-center font-sans truncate">{{ $order->responsible?->name ?? '—' }}</div><p class="{{ $xs }}">Responsable production</p></div>
+                <div><span class="{{ $xl }}">Commande liée</span><div class="{{ $xf }} flex items-center">@if($order->order)<a href="{{ route('ventes.commandes.show', $order->order_id) }}" class="text-blue-700 hover:underline">{{ $order->order->number }}</a>@else — @endif</div></div>
+            </div>
+        </div>
+
+        {{-- Sous-blocs Entête [X3] : Dates / Informations / Gestion / Statistiques --}}
+        <div class="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 text-[12.5px]">
+            <div>
+                <p class="text-[11px] font-bold text-gray-900 uppercase mb-2">Dates</p>
+                <div class="space-y-1 text-gray-600">
+                    <p>Lancement : <span class="tabular-nums text-gray-900">{{ $order->date_lancement?->format('d/m/Y') ?? optional($order->launched_at)->format('d/m/Y') ?? '—' }}</span></p>
+                    <p>Clôture : <span class="tabular-nums text-gray-900">{{ optional($order->finished_at)->format('d/m/Y') ?? '—' }}</span></p>
+                    <p>Fabrication prévue : <span class="tabular-nums text-gray-900">{{ $order->date_fabrication_prevue?->format('d/m/Y') ?? '—' }}</span></p>
+                </div>
+            </div>
+            <div>
+                <p class="text-[11px] font-bold text-gray-900 uppercase mb-2">Informations</p>
+                <div class="space-y-1 text-gray-600">
+                    <p>Dépôt matière : <span class="text-gray-900">{{ \App\Models\Warehouse::find($order->depot_matiere_id)?->code ?? '—' }}</span></p>
+                    <p>Dépôt produit fini : <span class="text-gray-900">{{ $order->depotProduitFini?->code ?? '—' }}</span></p>
+                    <p>Dépôt rebut : <span class="text-gray-900">{{ $order->depotRebut?->code ?? '—' }}</span></p>
+                </div>
+            </div>
+            <div>
+                <p class="text-[11px] font-bold text-gray-900 uppercase mb-2">Gestion</p>
+                <div class="space-y-1 text-gray-600">
+                    <p>Mode de lancement : <span class="text-gray-900">{{ strtoupper(substr($order->mode_lancement ?? 'manuel', 0, 3)) }}</span> <span class="text-gray-400">{{ ucfirst($order->mode_lancement ?? 'manuel') }}</span></p>
+                    <p><span class="{{ $order->controle_qualite_obligatoire ? 'text-emerald-700' : 'text-gray-400' }}">{{ $order->controle_qualite_obligatoire ? '☑' : '☐' }}</span> Contrôle qualité</p>
+                    <p><span class="{{ $order->cost ? 'text-emerald-700' : 'text-gray-400' }}">{{ $order->cost ? '☑' : '☐' }}</span> Calcul coût</p>
+                    <p><span class="{{ $order->timeLogs->isNotEmpty() ? 'text-emerald-700' : 'text-gray-400' }}">{{ $order->timeLogs->isNotEmpty() ? '☑' : '☐' }}</span> Pointage</p>
+                </div>
+            </div>
+            <div>
+                <p class="text-[11px] font-bold text-gray-900 uppercase mb-2">Statistiques</p>
+                <div class="space-y-1 text-gray-600">
+                    <p>Nbre déclarations : <span class="tabular-nums text-gray-900">{{ $order->outputs->count() }}</span></p>
+                    <p>Nbre consommations : <span class="tabular-nums text-gray-900">{{ $order->consumptions->count() }}</span></p>
+                    <p>Nbre rejets : <span class="tabular-nums {{ $order->wastes->count() > 0 ? 'text-red-600 font-semibold' : 'text-gray-900' }}">{{ $order->wastes->count() }}</span></p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -151,7 +247,8 @@
     </div>
     @endif
 
-    {{-- ══ Modification exceptionnelle OF (§13.10 CDC) — 4 étapes ══ --}}
+    <div x-show="tab === 'lancement'" x-cloak>
+{{-- ══ Modification exceptionnelle OF (§13.10 CDC) — 4 étapes ══ --}}
     @if(in_array($order->status, ['lance','en_cours','termine_partiellement']))
     <div class="bg-white rounded-[4px] border border-gray-300 p-5" x-data="{ open: {{ $order->modification_status === 'en_attente' ? 'true' : 'false' }} }">
         <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
@@ -256,7 +353,10 @@
     </div>
     @endif
 
-    {{-- ══ Chaîne de production (Commande → Comptabilisation) ══ --}}
+    </div>
+
+<div x-show="tab === 'planification'" x-cloak>
+{{-- ══ Chaîne de production (Commande → Comptabilisation) ══ --}}
     <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <h2 class="font-semibold text-gray-900 mb-4">Chaîne de production</h2>
         <div class="flex flex-wrap gap-y-3">
@@ -339,7 +439,10 @@
     </div>
     @endif
 
-    {{-- Caractéristiques --}}
+    </div>
+
+<div x-show="tab === 'gestion'" x-cloak>
+{{-- Caractéristiques --}}
     <div class="bg-white rounded-[4px] border border-gray-300 p-6">
         <h2 class="font-semibold text-gray-900 mb-4">Caractéristiques</h2>
         <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -406,7 +509,10 @@
 
     @php $live = $order->isInProgress() && auth()->user()->can('production.update'); @endphp
 
-    {{-- ══ Consommation matière ══ --}}
+    </div>
+
+<div x-show="tab === 'suivi'" x-cloak>
+{{-- ══ Consommation matière ══ --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Consommation matière</h2>
@@ -477,7 +583,10 @@
         </div>
     </div>
 
-    {{-- ══ Sorties produits finis ══ --}}
+    </div>
+
+<div x-show="tab === 'suivi'" x-cloak>
+{{-- ══ Sorties produits finis ══ --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Sorties produits finis</h2>
@@ -559,7 +668,10 @@
         </div>
     </div>
 
-    {{-- ══ Chutes / pertes ══ --}}
+    </div>
+
+<div x-show="tab === 'cloture'" x-cloak>
+{{-- ══ Chutes / pertes ══ --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Chutes & pertes</h2>
@@ -656,7 +768,10 @@
         </div>
     </div>
 
-    {{-- ══ Coût de revient ══ --}}
+    </div>
+
+<div x-show="tab === 'couts'" x-cloak>
+{{-- ══ Coût de revient ══ --}}
     @can('production.cost.view')
     @php $cost = $order->cost; @endphp
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
@@ -713,7 +828,10 @@
     </div>
     @endcan
 
-    {{-- ══ Contrôle qualité ══ --}}
+    </div>
+
+<div x-show="tab === 'suivi'" x-cloak>
+{{-- ══ Contrôle qualité ══ --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white"><h2 class="text-[13px] font-bold text-gray-900">Contrôle qualité</h2></div>
         @can('production.update')
@@ -776,7 +894,10 @@
         </div>
     </div>
 
-    {{-- ══ Work Orders (gamme opératoire) ══ --}}
+    </div>
+
+<div x-show="tab === 'suivi'" x-cloak>
+{{-- ══ Work Orders (gamme opératoire) ══ --}}
     @php $woLive = in_array($order->status, ['lance','en_cours'], true) && auth()->user()->can('production.update'); @endphp
     @if($order->operations->isNotEmpty() || in_array($order->status, ['lance','en_cours'], true))
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
@@ -839,7 +960,10 @@
     </div>
     @endif
 
-    {{-- ══ Main-d'œuvre (pointage temps → RH) ══ --}}
+    </div>
+
+<div x-show="tab === 'suivi'" x-cloak>
+{{-- ══ Main-d'œuvre (pointage temps → RH) ══ --}}
     @php $moAllowed = in_array($order->status, ['lance','en_cours','termine'], true); $moHours = $order->timeLogs->sum('hours'); $moCost = $order->timeLogs->sum('labor_cost'); @endphp
     @if($moAllowed || $order->timeLogs->isNotEmpty())
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
@@ -896,7 +1020,10 @@
     </div>
     @endif
 
-    {{-- ══ Lots de fabrication (traçabilité) ══ --}}
+    </div>
+
+<div x-show="tab === 'tracabilite'" x-cloak>
+{{-- ══ Lots de fabrication (traçabilité) ══ --}}
     @if($order->batches->isNotEmpty() || in_array($order->status, ['lance','en_cours','termine'], true))
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
@@ -937,7 +1064,10 @@
     </div>
     @endif
 
-    {{-- ══ Réservation produit fini (client) ══ --}}
+    </div>
+
+<div x-show="tab === 'cloture'" x-cloak>
+{{-- ══ Réservation produit fini (client) ══ --}}
     @php $activeRes = $order->reservations->where('status', 'reserved'); @endphp
     @if($order->status === 'termine' || $order->reservations->isNotEmpty())
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
@@ -1003,7 +1133,145 @@
         @endcan
     @endif
 
-    {{-- Modal annulation --}}
+    </div>
+
+
+    {{-- ══ [X3 Lancement] Synthèse lancement ══ --}}
+    <div x-show="tab === 'lancement'" x-cloak class="bg-white rounded-[4px] border border-gray-300 p-4">
+        <h2 class="text-[13px] font-bold text-gray-900 mb-3">Synthèse du lancement</h2>
+        <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-[12.5px]">
+            <div><dt class="text-[11px] font-bold text-gray-500">Lancé le</dt><dd class="tabular-nums">{{ optional($order->launched_at)->format('d/m/Y') ?? '—' }}{{ $order->heure_lancement ? ' ' . substr($order->heure_lancement, 0, 5) : '' }}</dd></div>
+            <div><dt class="text-[11px] font-bold text-gray-500">Mode lancement</dt><dd>{{ ucfirst($order->mode_lancement ?? 'manuel') }}</dd></div>
+            <div><dt class="text-[11px] font-bold text-gray-500">Équipe prévue</dt><dd>{{ $order->equipe_prevue ?? '—' }} {{ $order->nb_operateurs ? '(' . $order->nb_operateurs . ' op.)' : '' }}</dd></div>
+            <div><dt class="text-[11px] font-bold text-gray-500">Autorisation financière</dt><dd>{{ match($order->financial_authorization){ 'approved' => '✔ Approuvée', 'bypassed' => 'Non requise', 'rejected' => '✖ Refusée', default => 'En attente' } }}</dd></div>
+        </dl>
+    </div>
+
+    {{-- ══ [X3 Documents] Pièces jointes ══ --}}
+    <div x-show="tab === 'documents'" x-cloak class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white"><h2 class="text-[13px] font-bold text-gray-900">Documents / pièces jointes</h2></div>
+        <div class="p-4">
+            @if($order->attachments && $order->attachments->isNotEmpty())
+            <table class="w-full text-[12.5px] border border-gray-200">
+                <thead><tr class="bg-[#3b4248] text-white text-[11px] font-semibold uppercase">
+                    <th class="text-left px-2 py-1.5 w-10">#</th>
+                    <th class="text-left px-2 py-1.5">Fichier</th>
+                    <th class="text-left px-2 py-1.5">Type</th>
+                    <th class="text-left px-2 py-1.5">Taille</th>
+                </tr></thead>
+                <tbody>
+                    @foreach($order->attachments as $i => $att)
+                    <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40">
+                        <td class="px-2 py-1.5 text-gray-400">{{ $i + 1 }}</td>
+                        <td class="px-2 py-1.5 font-mono">{{ $att->filename }}</td>
+                        <td class="px-2 py-1.5 text-gray-500">{{ $att->mime_type }}</td>
+                        <td class="px-2 py-1.5 text-gray-500 tabular-nums">{{ number_format($att->size / 1024, 0, ',', ' ') }} Ko</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+            @else
+            <p class="text-[13px] text-gray-400 italic">Aucun document joint. Ajoutez des pièces via « Modifier l'OF ».</p>
+            @endif
+        </div>
+    </div>
+
+    </div>{{-- /colonne principale --}}
+
+    {{-- ══ Panneau d'actions droit [X3] ══ --}}
+    <aside class="mb-3 lg:mb-0 bg-white rounded-[4px] border border-gray-300 p-2 lg:sticky lg:top-20 space-y-0.5 text-[12.5px]">
+        <a href="{{ route('production.orders.index') }}" class="{{ $sideLn }}">⎋ Quitter la page</a>
+        @can('production.create')<a href="{{ route('production.orders.create') }}" class="{{ $sideLn }}">＋ Nouveau</a>@endcan
+        @if($order->isEditable())@can('production.create')<a href="{{ route('production.orders.edit', $order) }}" class="{{ $sideLn }}">✎ Modifier</a>@endcan @endif
+        <div class="border-t border-gray-100 my-1"></div>
+
+        @if($order->status === 'brouillon')
+            @can('production.submit_validation')
+            <form method="POST" action="{{ route('production.orders.submit-validation', $order) }}">@csrf
+                <button class="{{ $sideLn }} text-emerald-700 font-semibold">Soumettre validation</button>
+            </form>
+            @endcan
+            @can('production.launch')
+            <form method="POST" action="{{ route('production.orders.allocate', $order) }}">@csrf
+                <button class="{{ $sideLn }} text-amber-700 font-semibold">Allouer la matière</button>
+            </form>
+            <div class="px-1">@include('production.orders._launch-button', ['order' => $order, 'materialShortages' => $materialShortages ?? []])</div>
+            @endcan
+        @elseif($order->status === 'attente_chef')
+            {{-- [§13.3] Validation 2 niveaux : le bandeau « validations » mène ici — bouton requis --}}
+            @can('production.validate_chef')
+            <form method="POST" action="{{ route('production.orders.validate-chef', $order) }}">@csrf
+                <button class="{{ $sideLn }} text-emerald-700 font-semibold">✔ Valider (Chef Atelier)</button>
+            </form>
+            @else
+            <p class="px-3 py-1.5 text-[11.5px] text-gray-400 italic">En attente validation Chef Atelier</p>
+            @endcan
+        @elseif($order->status === 'attente_responsable')
+            @can('production.validate_responsable')
+            <form method="POST" action="{{ route('production.orders.validate-responsable', $order) }}">@csrf
+                <button class="{{ $sideLn }} text-emerald-700 font-semibold">✔ Valider (Resp. Production)</button>
+            </form>
+            @else
+            <p class="px-3 py-1.5 text-[11.5px] text-gray-400 italic">En attente validation Resp. Production</p>
+            @endcan
+        @elseif($order->status === 'matiere_allouee')
+            @can('production.launch')
+            <div class="px-1">@include('production.orders._launch-button', ['order' => $order, 'materialShortages' => $materialShortages ?? []])</div>
+            @endcan
+        @elseif($order->status === 'lance')
+            @can('production.launch')
+            <form method="POST" action="{{ route('production.orders.start', $order) }}">@csrf
+                <button class="{{ $sideLn }} text-emerald-700 font-semibold">▶ Démarrer production</button>
+            </form>
+            @endcan
+        @elseif(in_array($order->status, ['en_cours','termine_partiellement']))
+            @can('production.validate')
+            @if((float) $order->quantity_produced <= 0)
+                {{-- Rien de déclaré : la clôture serait refusée par la garde — on guide vers la déclaration --}}
+                <p class="px-3 py-1.5 text-[11.5px] text-amber-700">Aucune production déclarée — clôture impossible. Déclarez la sortie (onglet <button type="button" @click="tab = 'suivi'" class="underline font-semibold">Suivi</button>) puis faites-la viser.</p>
+            @else
+            @if($order->status === 'en_cours')
+            <form method="POST" action="{{ route('production.orders.partial', $order) }}">@csrf
+                <button class="{{ $sideLn }}">Terminer partiellement</button>
+            </form>
+            @endif
+            @php $ofShortfall = (float) $order->quantity_requested > 0 && (float) $order->quantity_produced < (float) $order->quantity_requested; @endphp
+            <form method="POST" action="{{ route('production.orders.finish', $order) }}"
+                  @if($ofShortfall) onsubmit="return confirm('Quantité produite ({{ rtrim(rtrim(number_format((float)$order->quantity_produced,2,'.',''),'0'),'.') }}) inférieure à la demande ({{ rtrim(rtrim(number_format((float)$order->quantity_requested,2,'.',''),'0'),'.') }}). Clôturer définitivement en abandonnant le reliquat ?');" @endif>
+                @csrf
+                @if($ofShortfall)<input type="hidden" name="confirm_shortfall" value="1">@endif
+                <button class="{{ $sideLn }} {{ $ofShortfall ? 'text-red-600' : 'text-emerald-700' }} font-semibold">{{ $ofShortfall ? "Clôture (écart)" : "Clôture" }}</button>
+            </form>
+            @endif
+            @endcan
+        @endif
+
+        @if($order->isSuspendable())
+            @can('production.launch')
+            <form method="POST" action="{{ route('production.orders.suspend', $order) }}" onsubmit="return confirm('Suspendre cet OF ?');">@csrf
+                <button class="{{ $sideLn }} text-orange-700">Suspendre</button>
+            </form>
+            @endcan
+        @elseif($order->status === 'suspendu')
+            @can('production.launch')
+            <form method="POST" action="{{ route('production.orders.resume', $order) }}">@csrf
+                <button class="{{ $sideLn }} text-emerald-700 font-semibold">Reprendre l'OF</button>
+            </form>
+            @endcan
+        @endif
+
+        @if(!in_array($order->status, ['termine','annule']))
+            @can('production.cancel')
+            <button type="button" @click="cancelOpen = true" class="{{ $sideLn }} text-red-600">Annuler</button>
+            @endcan
+        @endif
+
+        <div class="border-t border-gray-100 my-1"></div>
+        <button type="button" onclick="window.print()" class="{{ $sideLn }}">🖶 Imprimer</button>
+    </aside>
+    </div>{{-- /flex --}}
+
+{{-- Modal annulation --}}
     @can('production.cancel')
     <div x-show="cancelOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="cancelOpen = false">
         <div class="bg-white rounded-[4px] shadow-2xl w-full max-w-md p-6 space-y-4">

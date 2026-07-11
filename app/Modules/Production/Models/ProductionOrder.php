@@ -46,6 +46,8 @@ class ProductionOrder extends Model
         'modification_commercial_avis_at','modification_commercial_avis_by','modification_commercial_comment',
         'modification_finance_avis_at','modification_finance_avis_by','modification_finance_comment',
         'modification_dg_approved_at','modification_dg_approved_by','modification_dg_comment',
+        // [X3] Suspension d'OF
+        'suspended_from','suspended_at',
     ];
     protected $casts = [
         'thickness'=>'decimal:2','length'=>'decimal:2','usable_width'=>'decimal:1',
@@ -62,6 +64,7 @@ class ProductionOrder extends Model
         'largeur_totale'=>'decimal:1','longueur_standard'=>'decimal:2',
         'poids_par_metre'=>'decimal:3','poids_theorique'=>'decimal:2',
         'tolerance_longueur'=>'decimal:2','tolerance_epaisseur'=>'decimal:3','temps_reglage'=>'decimal:2',
+        'suspended_at'=>'datetime',
     ];
 
     public function depotProduitFini(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_produit_fini_id'); }
@@ -74,6 +77,7 @@ class ProductionOrder extends Model
     public function billOfMaterial(): BelongsTo { return $this->belongsTo(BillOfMaterial::class); }
     public function productionLine(): BelongsTo { return $this->belongsTo(ProductionLine::class); }
     public function responsible(): BelongsTo { return $this->belongsTo(User::class, 'responsible_id'); }
+    public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
     public function lines(): HasMany { return $this->hasMany(ProductionOrderLine::class); }
     public function consumptions(): HasMany { return $this->hasMany(ProductionConsumption::class); }
     public function outputs(): HasMany { return $this->hasMany(ProductionOutput::class); }
@@ -105,8 +109,14 @@ class ProductionOrder extends Model
         return $this->isInProgress() && $this->modification_status === 'approuvee';
     }
     public function totalMeters(): float { return (float) $this->lines->sum('total_meters'); }
-    public function statusLabel(): string { return match($this->status){'brouillon'=>'Brouillon','matiere_allouee'=>'Matière allouée','attente_chef'=>'En attente Chef Atelier','attente_responsable'=>'En attente Responsable Prod.','lance'=>'Lancé','en_cours'=>'En cours','termine_partiellement'=>'Terminé partiellement','termine'=>'Terminé','annule'=>'Annulé',default=>$this->status}; }
-    public function statusColor(): string { return match($this->status){'brouillon'=>'gray','matiere_allouee'=>'amber','attente_chef'=>'orange','attente_responsable'=>'yellow','lance'=>'blue','en_cours'=>'sky','termine_partiellement'=>'teal','termine'=>'green','annule'=>'red',default=>'gray'}; }
+    public function statusLabel(): string { return match($this->status){'brouillon'=>'Brouillon','matiere_allouee'=>'Matière allouée','attente_chef'=>'En attente Chef Atelier','attente_responsable'=>'En attente Responsable Prod.','lance'=>'Lancé','en_cours'=>'En cours','termine_partiellement'=>'Terminé partiellement','termine'=>'Terminé','annule'=>'Annulé','suspendu'=>'Suspendu',default=>$this->status}; }
+    public function statusColor(): string { return match($this->status){'brouillon'=>'gray','matiere_allouee'=>'amber','attente_chef'=>'orange','attente_responsable'=>'yellow','lance'=>'blue','en_cours'=>'sky','termine_partiellement'=>'teal','termine'=>'green','annule'=>'red','suspendu'=>'orange',default=>'gray'}; }
+    public function isSuspendable(): bool { return in_array($this->status, ['lance', 'en_cours', 'termine_partiellement'], true); }
+
+    /** [Dédoublonnage] OF actif dont la date de fin prévue est dépassée. */
+    public function scopeEnRetard($q) { return $q->whereIn('status', ['lance', 'en_cours', 'termine_partiellement', 'suspendu'])->whereNotNull('date_fin_prevue')->whereDate('date_fin_prevue', '<', today()); }
+    /** [Dédoublonnage] OF pas encore lancé (brouillon + circuit de validation). */
+    public function scopeALancer($q) { return $q->whereIn('status', ['brouillon', 'matiere_allouee', 'attente_chef', 'attente_responsable']); }
 
     protected static function newFactory()
     {

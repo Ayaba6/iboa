@@ -11,6 +11,8 @@ use Illuminate\View\View;
 
 class WorkCenterController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct()
     {
         $this->middleware('permission:production.create');
@@ -66,22 +68,6 @@ class WorkCenterController extends Controller
         $this->uploadDocuments($workCenter, $request);
 
         return redirect()->route('production.work-centers.index')->with('success', 'Centre de travail mis à jour.');
-    }
-
-    /** Enregistre les pièces jointes du poste de charge. */
-    private function uploadDocuments(WorkCenter $wc, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/workcenter/'.$wc->id, 'local');
-            $wc->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function destroy(WorkCenter $workCenter): RedirectResponse
