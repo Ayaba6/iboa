@@ -15,7 +15,7 @@
     <div class="bg-white border border-gray-300 rounded-[4px]">
         {{-- Bandeau SAGE --}}
         <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-            <h2 class="text-[15px] font-bold text-gray-900">
+            <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
                 Représentant : Création complète
                 @if($r && $r->exists)<span class="font-mono text-emerald-700 ml-1">{{ $r->code ?: $r->name }}</span>@endif
             </h2>
@@ -113,6 +113,15 @@
                 </div>
             </section>
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">{{ $r && $r->exists ? 'Représentant ' . ($r->code ?: $r->name) : 'Nouveau représentant' }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 
 </div>

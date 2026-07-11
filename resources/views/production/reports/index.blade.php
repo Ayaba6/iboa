@@ -15,14 +15,14 @@
     $inp = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $lk  = 'appearance-none w-full h-8 py-0 pl-2 pr-7 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $th  = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $th  = 'px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide';
 @endphp
 <div class="space-y-4">
 
     {{-- Bandeau --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-[17px] font-bold text-gray-900">Rapports de production</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Rapports de production</h1>
             <p class="text-[12px] text-gray-500">{{ $report['title'] }} — du {{ \Carbon\Carbon::parse($from)->format('d/m/Y') }} au {{ \Carbon\Carbon::parse($to)->format('d/m/Y') }}</p>
         </div>
         <div class="flex items-center gap-2">
@@ -69,7 +69,7 @@
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         @foreach($report['headers'] as $i => $h)
                         <th class="{{ $th }} {{ in_array($i, $report['numeric']) ? 'text-right' : 'text-left' }}">{{ $h }}</th>
@@ -105,6 +105,15 @@
         <div class="px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
             {{ count($report['rows']) }} ligne(s) — période du {{ \Carbon\Carbon::parse($from)->format('d/m/Y') }} au {{ \Carbon\Carbon::parse($to)->format('d/m/Y') }}
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] mt-3">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fonction : <span class="text-white font-semibold">Rapports production</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 </div>
 @endsection

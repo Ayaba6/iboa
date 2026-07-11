@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(private SupplierService $service) {}
 
     public function index(Request $request)
@@ -50,22 +52,6 @@ class SupplierController extends Controller
             'taxRates'   => \App\Models\TaxRate::where('is_active', true)->orderByDesc('is_default')->orderBy('rate')->get(),
             'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
         ];
-    }
-
-    /** Enregistre les pièces jointes (documents) du fournisseur. */
-    private function uploadDocuments(Supplier $supplier, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/supplier/'.$supplier->id, 'local');
-            $supplier->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(Supplier $supplier)

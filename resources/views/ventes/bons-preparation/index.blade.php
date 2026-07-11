@@ -35,30 +35,40 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Bons de préparation</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Bons de préparation</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $bps->total() }} bon(s)</p>
         </div>
     </div>
 
     {{-- Filters --}}
     <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        @php $lblX = 'block text-[11px] font-bold text-gray-700 mb-1'; @endphp
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <div>
+            <label class="{{ $lblX }}">Rechercher</label>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="N° BP ou commande…"
-                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
 
-            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            <div>
+            <label class="{{ $lblX }}">Statut</label>
+            <select name="status" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 @foreach(['en_attente' => 'En attente', 'en_cours' => 'En cours', 'charge' => 'Chargé', 'annule' => 'Annulé'] as $v => $l)
                     <option value="{{ $v }}" {{ ($filters['status'] ?? '') === $v ? 'selected' : '' }}>{{ $l }}</option>
                 @endforeach
             </select>
+            </div>
 
-            <select name="payment_mode" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            <div>
+            <label class="{{ $lblX }}">Mode de règlement</label>
+            <select name="payment_mode" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les modes</option>
                 <option value="cash"   {{ ($filters['payment_mode'] ?? '') === 'cash'   ? 'selected' : '' }}>Comptant</option>
                 <option value="credit" {{ ($filters['payment_mode'] ?? '') === 'credit' ? 'selected' : '' }}>Crédit</option>
             </select>
+            </div>
 
             <div class="flex gap-2">
                 <button type="submit"
@@ -80,13 +90,13 @@
         <div class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
                 <thead>
-                    <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
-                        <th class="text-left font-bold px-3 py-2 uppercase tracking-wide w-32">N° BP</th>
-                        <th class="text-left font-bold px-3 py-2 uppercase tracking-wide hidden md:table-cell w-32">Commande</th>
-                        <th class="text-left font-bold px-3 py-2 uppercase tracking-wide">Client</th>
-                        <th class="text-center font-bold px-3 py-2 uppercase tracking-wide hidden lg:table-cell w-24">Mode</th>
-                        <th class="text-center font-bold px-3 py-2 uppercase tracking-wide w-28">Statut</th>
-                        <th class="text-left font-bold px-3 py-2 uppercase tracking-wide hidden md:table-cell w-32">Créé le</th>
+                    <tr class="bg-[#3b4248] text-white text-[11px]">
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-32">N° BP</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden md:table-cell w-32">Commande</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap">Client</th>
+                        <th class="text-center font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell w-24">Mode</th>
+                        <th class="text-center font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-28">Statut</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden md:table-cell w-32">Créé le</th>
                         <th class="px-3 py-2 w-20"></th>
                     </tr>
                 </thead>
@@ -197,6 +207,15 @@
             <span>{{ $bps->total() }} bon(s) de préparation</span>
             @if($bps->hasPages())<div>{{ $bps->appends($filters)->links() }}</div>@endif
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Filtre actif : <span class="text-white font-semibold">{{ array_filter($filters ?? []) ? implode(', ', array_keys(array_filter($filters))) : 'Aucun' }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 
 </div>

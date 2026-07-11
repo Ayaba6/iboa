@@ -63,6 +63,7 @@ class Client extends Model
         'currency',
         'language',
         'assigned_to',
+        'created_by',
         'tax_rate_id',
         // Exonération TVA
         'is_tax_exempt',
@@ -132,6 +133,11 @@ class Client extends Model
     public function taxRates(): BelongsToMany
     {
         return $this->belongsToMany(TaxRate::class, 'client_tax_rates');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function contacts(): HasMany

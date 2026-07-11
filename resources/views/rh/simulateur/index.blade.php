@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div x-data="simulateur()" x-init="init()" class="max-w-6xl mx-auto space-y-3">
+<div x-data="simulateur()" class="max-w-6xl mx-auto space-y-3">
 
     {{-- En-tete --}}
     <div class="flex items-start justify-between flex-wrap gap-3">

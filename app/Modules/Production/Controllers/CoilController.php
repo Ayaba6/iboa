@@ -21,6 +21,7 @@ class CoilController extends Controller
     public function index(Request $request): View
     {
         $coils = Coil::with(['product', 'supplier'])
+            ->when($request->input('product_id'), fn ($q, $v) => $q->where('product_id', $v))
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
             ->when($request->input('q'), fn ($q, $v) => $q->where(fn ($w) =>
                 $w->where('reference', 'like', "%$v%")->orWhere('lot_number', 'like', "%$v%")->orWhere('color', 'like', "%$v%")))
@@ -39,7 +40,13 @@ class CoilController extends Controller
 
     public function create(): View
     {
-        return view('production.coils.form', $this->formData(new Coil()));
+        $coil = new Coil();
+        // Pré-sélection de l'article quand on arrive depuis la fiche article (section Bobines)
+        if ($pid = request()->integer('product_id')) {
+            $coil->product_id = $pid;
+        }
+
+        return view('production.coils.form', $this->formData($coil));
     }
 
     public function store(Request $request): RedirectResponse
@@ -102,7 +109,8 @@ class CoilController extends Controller
         // [CDC §13.5] Contrôles obligatoires à la réception bobine :
         // poids, largeur, épaisseur, couleur, lot, fournisseur.
         $data = $request->validate([
-            'product_id'       => ['nullable', 'integer', 'exists:products,id'],
+            // [Bobines → article] une bobine est un lot physique d'un article matière : rattachement obligatoire
+            'product_id'       => ['required', 'integer', 'exists:products,id'],
             'supplier_id'      => ['required', 'integer', 'exists:suppliers,id'],
             'reference'        => ['required', 'string', 'max:60'],
             'lot_number'       => ['required', 'string', 'max:60'],

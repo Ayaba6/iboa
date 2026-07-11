@@ -5,7 +5,7 @@
      HERO — Header avec salutation, horloge live, actions rapides
 ══════════════════════════════════════════════════════════════ --}}
 <div class="fade-up relative overflow-hidden rounded-[4px] text-white hero-bg"
-     x-data="dashboardHero()" x-init="init()">
+     x-data="dashboardHero()">
 
     {{-- Grid overlay --}}
     <div class="pointer-events-none absolute inset-0 opacity-30"

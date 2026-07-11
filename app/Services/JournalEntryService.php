@@ -95,6 +95,11 @@ class JournalEntryService
                 throw new \RuntimeException('Seules les écritures en brouillon peuvent être validées.');
             }
 
+            // [Maquette X3] Une écriture de simulation n'impacte jamais les soldes.
+            if ($entry->is_simulation) {
+                throw new \RuntimeException('Écriture de simulation — décochez le flag Simulation avant validation.');
+            }
+
             // [FIX-JOURNAL-01] Refuse to validate against a closed or archived fiscal year.
             if ($entry->fiscal_year_id) {
                 $fy = \App\Models\FiscalYear::find($entry->fiscal_year_id);
@@ -110,6 +115,12 @@ class JournalEntryService
             $this->assertPeriodNotLocked($entry->company_id, $entry->entry_date);
 
             $entry->load('lines');
+
+            // Une écriture sans ligne (ou à 0) est « équilibrée » au sens 0 = 0 :
+            // sans ce guard elle se valide et pollue le journal (pièce vide).
+            if ($entry->lines->isEmpty() || ((float) $entry->lines->sum('debit') <= 0 && (float) $entry->lines->sum('credit') <= 0)) {
+                throw new \RuntimeException('Écriture sans ligne ou à montant nul — ajoutez des lignes avant de valider.');
+            }
 
             if (! $entry->isBalanced()) {
                 throw new \RuntimeException('L\'écriture n\'est pas équilibrée (débit ≠ crédit).');
@@ -234,6 +245,9 @@ class JournalEntryService
                 'credit'             => (int) ($line['credit'] ?? 0),
                 'due_date'           => $line['due_date'] ?? null,
                 'reconciliation_ref' => $line['reconciliation_ref'] ?? null,
+                'partner_name'       => $line['partner_name'] ?? null,
+                'cost_center'        => $line['cost_center'] ?? null,
+                'tax_code'           => $line['tax_code'] ?? null,
                 'sort_order'         => $i,
             ]);
         }

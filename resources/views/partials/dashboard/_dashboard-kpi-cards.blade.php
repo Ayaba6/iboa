@@ -8,7 +8,7 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
 
     {{-- CA Aujourd'hui --}}
-    <div x-data="kpiCounter({{ $revenueJour }})" x-init="init()"
+    <div x-data="kpiCounter({{ $revenueJour }})"
          class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-sky" style="animation-delay:.04s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
@@ -42,7 +42,7 @@
     </div>
 
     {{-- CA Ce Mois --}}
-    <div x-data="kpiCounter({{ $revenueMois }})" x-init="init()"
+    <div x-data="kpiCounter({{ $revenueMois }})"
          class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-indigo" style="animation-delay:.08s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
@@ -76,7 +76,7 @@
     </div>
 
     {{-- Encaissements --}}
-    <div x-data="kpiCounter({{ $encaissementsMois }})" x-init="init()"
+    <div x-data="kpiCounter({{ $encaissementsMois }})"
          class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-emerald" style="animation-delay:.12s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">
@@ -110,7 +110,7 @@
     </div>
 
     {{-- Trésorerie --}}
-    <div x-data="kpiCounter({{ $soldeTresorerie }})" x-init="init()"
+    <div x-data="kpiCounter({{ $soldeTresorerie }})"
          class="kpi-card fade-up bg-white rounded-[4px] border border-gray-300 overflow-hidden kpi-accent-violet" style="animation-delay:.16s">
         <div class="p-5">
             <div class="flex items-start justify-between gap-2 mb-3">

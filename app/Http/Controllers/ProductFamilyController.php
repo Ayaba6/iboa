@@ -16,21 +16,35 @@ use Illuminate\Support\Facades\Auth;
 
 class ProductFamilyController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct()
     {
         $this->middleware('can:settings.manage')->except(['index']);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $families = ProductFamily::with(['children' => fn($q) => $q->withCount('products')])
-            ->withCount('products')
-            ->whereNull('parent_id')
-            ->orderBy('name')
-            ->paginate(20)
-            ->withQueryString();
+        // [X3] Deux sous-modules : Catégories (racines, arborescence) / Familles (sous-familles, à plat)
+        $niveau = $request->input('niveau') === 'famille' ? 'famille' : 'categorie';
 
-        return view('product-families.index', compact('families'));
+        if ($niveau === 'famille') {
+            $families = ProductFamily::with('parent:id,code,name')
+                ->withCount('products')
+                ->whereNotNull('parent_id')
+                ->orderBy('name')
+                ->paginate(20)
+                ->withQueryString();
+        } else {
+            $families = ProductFamily::with(['children' => fn($q) => $q->withCount('products')])
+                ->withCount('products')
+                ->whereNull('parent_id')
+                ->orderBy('name')
+                ->paginate(20)
+                ->withQueryString();
+        }
+
+        return view('product-families.index', compact('families', 'niveau'));
     }
 
     public function create()
@@ -120,22 +134,6 @@ class ProductFamilyController extends Controller
             ];
         }
         $family->warehouses()->sync($sync);
-    }
-
-    /** Enregistre les pièces jointes (documents) de la catégorie. */
-    private function uploadDocuments(ProductFamily $family, \Illuminate\Http\Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/productfamily/'.$family->id, 'local');
-            $family->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => Auth::id(),
-            ]);
-        }
     }
 
     /**

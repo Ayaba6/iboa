@@ -27,10 +27,10 @@
     ])
 
     {{-- Header --}}
-    <div class="bg-white rounded-[4px] border border-gray-300 p-5">
+    <div class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $invoice->number }}</h1>
+                <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Facture <span class="font-mono text-emerald-700 text-[18px]">{{ $invoice->number }}</span></h1>
                 @php
                     $statusBadges = [
                         'brouillon'           => 'badge-gray',
@@ -294,6 +294,15 @@
         @endif
     </div>
 
+    {{-- Onglets-ancres X3 --}}
+    <nav class="flex items-stretch border-b border-gray-200 gap-1 bg-white rounded-t-[4px] px-2" x-data="{ atab: 'entete' }">
+        @foreach(['entete' => 'Entête', 'lignes' => 'Lignes', 'reglement' => 'Règlement', 'echeancier' => 'Échéancier', 'historique' => 'Historique'] as $tk => $tl)
+        <button type="button" @click="atab = '{{ $tk }}'; $refs['sec_{{ $tk }}']?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                class="px-3 py-2 text-[14px] font-semibold border-b-2 transition-colors whitespace-nowrap"
+                :class="atab === '{{ $tk }}' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $tl }}</button>
+        @endforeach
+    </nav>
+
     {{-- En-tête document avec logo --}}
     @php
         $statusLabelsLh = [
@@ -318,9 +327,9 @@
     ])
 
     {{-- 2 colonnes: info + totaux --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
-            <h2 class="text-base font-semibold text-gray-900">Informations</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start scroll-mt-24" x-ref="sec_entete">
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-200 p-4 space-y-4">
+            <h2 class="text-[13px] font-bold text-emerald-700"><span class="text-gray-400 font-normal">1.</span> Informations</h2>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                     <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Client</dt>
@@ -387,8 +396,8 @@
         </div>
 
         {{-- Totaux --}}
-        <div class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-3 h-fit">
-            <h2 class="text-base font-semibold text-gray-900">Récapitulatif</h2>
+        <div class="bg-white rounded-[4px] border border-gray-200 p-4 space-y-3 h-fit">
+            <h2 class="text-[13px] font-bold text-emerald-700"><span class="text-gray-400 font-normal">2.</span> Récapitulatif</h2>
             <div class="flex justify-between text-sm text-gray-600">
                 <span>Montant HT</span>
                 <span class="font-medium tabular-nums">{{ number_format($invoice->subtotal_ht, 0, ',', ' ') }} FCFA</span>
@@ -440,42 +449,52 @@
     </div>
 
     {{-- Lignes --}}
-    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-200">
-            <h2 class="text-base font-semibold text-gray-900">Lignes de facture</h2>
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden scroll-mt-24" x-ref="sec_lignes">
+        <div class="px-4 py-2 border-b border-gray-200 bg-[#eef5f0] flex items-center justify-between">
+            <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">3. Lignes de facture</h2>
+            <span class="text-[12px] text-gray-500">{{ $invoice->items->count() }} ligne(s)</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+            <table class="min-w-full text-[14px] border-collapse">
+                <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                     <tr>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">#</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Description</th>
-                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Qté</th>
-                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Prix Unit.</th>
-                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Remise%</th>
-                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">TVA%</th>
-                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total HT</th>
-                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total TTC</th>
+                        <th class="px-3 py-1.5 text-left w-8">#</th>
+                        <th class="px-3 py-1.5 text-left">Description</th>
+                        <th class="px-3 py-1.5 text-right">Qté</th>
+                        <th class="px-3 py-1.5 text-right">Prix unit.</th>
+                        <th class="px-3 py-1.5 text-right hidden md:table-cell">Remise %</th>
+                        <th class="px-3 py-1.5 text-right">TVA %</th>
+                        <th class="px-3 py-1.5 text-right">Total HT</th>
+                        <th class="px-3 py-1.5 text-right">Total TTC</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($invoice->items as $item)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-3 py-1.5 text-gray-400 text-xs">{{ $loop->iteration }}</td>
-                        <td class="px-3 py-1.5 text-gray-900">{{ $item->description }}</td>
-                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
-                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums hidden md:table-cell">{{ ($item->discount_percent ?? 0) > 0 ? number_format($item->discount_percent, 2, ',', ' ').'%' : '—' }}</td>
-                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
-                        <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
-                        <td class="px-3 py-1.5 text-right text-gray-900 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
+                    <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                        <td class="px-3 py-1 text-gray-400 text-xs">{{ $loop->iteration }}</td>
+                        <td class="px-3 py-1 text-gray-900 font-medium">{{ $item->description }}</td>
+                        <td class="px-3 py-1 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
+                        <td class="px-3 py-1 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }}</td>
+                        <td class="px-3 py-1 text-right text-gray-600 tabular-nums hidden md:table-cell">{{ ($item->discount_percent ?? 0) > 0 ? number_format($item->discount_percent, 2, ',', ' ').'%' : '—' }}</td>
+                        <td class="px-3 py-1 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
+                        <td class="px-3 py-1 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }}</td>
+                        <td class="px-3 py-1 text-right text-gray-900 tabular-nums font-bold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }}</td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-10 text-center text-gray-400 text-sm">Aucune ligne.</td>
+                        <td colspan="8" class="px-4 py-10 text-center text-gray-400 text-[13px]">Aucune ligne.</td>
                     </tr>
                     @endforelse
                 </tbody>
+                @if($invoice->items->isNotEmpty())
+                <tfoot>
+                    <tr class="text-white font-bold" style="background:#065f46">
+                        <td colspan="6" class="px-3 py-1.5 text-right text-[11px] uppercase">Total</td>
+                        <td class="px-3 py-1.5 text-right font-mono tabular-nums">{{ number_format($invoice->subtotal_ht, 0, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right font-mono tabular-nums">{{ number_format($invoice->total_ttc, 0, ',', ' ') }} F</td>
+                    </tr>
+                </tfoot>
+                @endif
             </table>
         </div>
     </div>
@@ -485,70 +504,59 @@
     @php
         $totalPaye = $invoice->payments->sum(fn($p) => $p->pivot->amount ?? 0);
     @endphp
-    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
-                Paiements reçus
-                <span class="text-xs bg-green-100 text-green-700 font-medium px-2 py-0.5 rounded-full">
-                    {{ $invoice->payments->count() }} encaissement(s)
-                </span>
-            </h2>
-            <span class="text-sm font-semibold text-green-700 tabular-nums">
-                {{ number_format($totalPaye, 0, ',', ' ') }} FCFA encaissés
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden scroll-mt-24" x-ref="sec_reglement">
+        <div class="px-4 py-2 border-b border-gray-200 bg-[#eef5f0] flex items-center justify-between">
+            <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">4. Paiements reçus — {{ $invoice->payments->count() }} encaissement(s)</h2>
+            <span class="text-[12px] font-semibold text-emerald-800 tabular-nums">
+                {{ number_format($totalPaye, 0, ',', ' ') }} F encaissés
             </span>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+            <table class="min-w-full text-[14px] border-collapse">
+                <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                     <tr>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">N° encaissement</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Date</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Mode</th>
-                        <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Montant alloué</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Référence</th>
+                        <th class="px-3 py-1.5 text-left">N° encaissement</th>
+                        <th class="px-3 py-1.5 text-left">Date</th>
+                        <th class="px-3 py-1.5 text-left hidden md:table-cell">Mode</th>
+                        <th class="px-3 py-1.5 text-right">Montant alloué</th>
+                        <th class="px-3 py-1.5 text-left hidden lg:table-cell">Référence</th>
                         <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($invoice->payments as $pmt)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-3 py-1.5">
-                            <span class="font-mono font-semibold text-green-700 text-xs">{{ $pmt->number }}</span>
+                    <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                        <td class="px-3 py-1">
+                            <a href="{{ route('tresorerie.encaissements.show', $pmt) }}" class="font-mono font-semibold text-blue-600 hover:text-blue-800 text-[13px]">{{ $pmt->number }}</a>
                         </td>
-                        <td class="px-3 py-1.5 text-gray-700">{{ $pmt->payment_date?->format('d/m/Y') ?? '—' }}</td>
-                        <td class="px-3 py-1.5 text-gray-600 hidden md:table-cell">{{ $pmt->paymentMethod?->name ?? '—' }}</td>
-                        <td class="px-3 py-1.5 text-right font-semibold tabular-nums text-green-600">
-                            {{ number_format($pmt->pivot->amount ?? $pmt->amount, 0, ',', ' ') }} FCFA
+                        <td class="px-3 py-1 text-gray-700 tabular-nums">{{ $pmt->payment_date?->format('d/m/Y') ?? '—' }}</td>
+                        <td class="px-3 py-1 text-gray-600 hidden md:table-cell">{{ $pmt->paymentMethod?->name ?? '—' }}</td>
+                        <td class="px-3 py-1 text-right font-bold tabular-nums text-emerald-700">
+                            {{ number_format($pmt->pivot->amount ?? $pmt->amount, 0, ',', ' ') }}
                         </td>
-                        <td class="px-3 py-1.5 text-gray-400 text-xs hidden lg:table-cell">
+                        <td class="px-3 py-1 text-gray-400 text-xs hidden lg:table-cell">
                             {{ $pmt->reference ?: '—' }}
                         </td>
-                        <td class="px-3 py-1.5 text-right">
+                        <td class="px-3 py-1 text-right">
                             <a href="{{ route('tresorerie.encaissements.show', $pmt) }}"
-                               class="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                                Voir →
+                               class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">
+                                Détail →
                             </a>
                         </td>
                     </tr>
                     @endforeach
                 </tbody>
-                <tfoot class="bg-gray-50">
-                    <tr>
-                        <td colspan="3" class="px-3 py-2.5 text-xs font-semibold text-gray-600 text-right hidden md:table-cell">Total encaissé :</td>
-                        <td colspan="3" class="px-3 py-2.5 text-xs font-semibold text-gray-600 text-right md:hidden">Total :</td>
-                        <td class="px-3 py-2.5 text-right font-bold tabular-nums text-green-700">
-                            {{ number_format($totalPaye, 0, ',', ' ') }} FCFA
+                <tfoot>
+                    <tr class="text-white font-bold" style="background:#065f46">
+                        <td colspan="3" class="px-3 py-1.5 text-right text-[11px] uppercase">Total encaissé</td>
+                        <td class="px-3 py-1.5 text-right font-mono tabular-nums">
+                            {{ number_format($totalPaye, 0, ',', ' ') }} F
                         </td>
-                        <td colspan="2" class="px-3 py-2.5">
+                        <td colspan="2" class="px-3 py-1.5 text-[11px] font-semibold">
                             @if($invoice->remaining_amount > 0)
-                                <span class="text-xs font-medium text-red-600">
-                                    Reste : {{ number_format($invoice->remaining_amount, 0, ',', ' ') }} FCFA
-                                </span>
+                                Reste : {{ number_format($invoice->remaining_amount, 0, ',', ' ') }} F
                             @else
-                                <span class="text-xs font-medium text-green-600 flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                                    Soldée
-                                </span>
+                                ✓ Soldée
                             @endif
                         </td>
                     </tr>
@@ -561,21 +569,21 @@
     {{-- Avoirs liés --}}
     @if($invoice->creditNotes->isNotEmpty())
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 class="text-base font-semibold text-gray-900">Avoirs liés</h2>
+        <div class="px-4 py-2 border-b border-gray-200 bg-[#eef5f0] flex items-center justify-between">
+            <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">5. Avoirs liés</h2>
             <a href="{{ route('ventes.avoirs.create', ['invoice_id' => $invoice->id]) }}"
-               class="text-xs text-purple-600 hover:text-purple-800 font-medium border border-purple-200 hover:bg-purple-50 px-3 py-1.5 rounded-[4px] transition-colors">
+               class="text-xs text-purple-600 hover:text-purple-800 font-medium border border-purple-200 hover:bg-purple-50 px-2.5 py-1 rounded-[4px] transition-colors">
                 + Nouvel avoir
             </a>
         </div>
-        <table class="w-full divide-y divide-gray-200 text-sm">
-            <thead class="bg-[#eef5f0] border-b border-gray-300">
+        <table class="min-w-full text-[14px] border-collapse">
+            <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                 <tr>
-                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Numéro</th>
-                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Date</th>
-                    <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Motif</th>
-                    <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Montant TTC</th>
-                    <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                    <th class="px-3 py-1.5 text-left">Numéro</th>
+                    <th class="px-3 py-1.5 text-left">Date</th>
+                    <th class="px-3 py-1.5 text-left hidden md:table-cell">Motif</th>
+                    <th class="px-3 py-1.5 text-right">Montant TTC</th>
+                    <th class="px-3 py-1.5 text-center">Statut</th>
                     <th class="px-3 py-1.5"></th>
                 </tr>
             </thead>
@@ -585,14 +593,14 @@
                     $cnBadges = ['brouillon' => 'bg-gray-100 text-gray-600', 'valide' => 'bg-purple-100 text-purple-700', 'applique' => 'bg-green-100 text-green-700', 'annule' => 'bg-red-100 text-red-600'];
                     $cnLabels = ['brouillon' => 'Brouillon', 'valide' => 'Validé', 'applique' => 'Appliqué', 'annule' => 'Annulé'];
                 @endphp
-                <tr class="hover:bg-gray-50">
-                    <td class="px-3 py-1.5 font-mono font-semibold text-purple-700">
+                <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                    <td class="px-3 py-1 font-mono font-semibold text-purple-700 text-[13px]">
                         <a href="{{ route('ventes.avoirs.show', $cn) }}" class="hover:text-purple-900">{{ $cn->number }}</a>
                     </td>
-                    <td class="px-3 py-1.5 text-gray-600">{{ $cn->issued_at?->format('d/m/Y') ?? '—' }}</td>
-                    <td class="px-3 py-1.5 text-gray-500 text-xs hidden md:table-cell">{{ $cn->reason ?? '—' }}</td>
-                    <td class="px-3 py-1.5 text-right tabular-nums text-purple-700 font-semibold">{{ number_format($cn->total_ttc, 0, ',', ' ') }} FCFA</td>
-                    <td class="px-3 py-1.5 text-center">
+                    <td class="px-3 py-1 text-gray-600 tabular-nums">{{ $cn->issued_at?->format('d/m/Y') ?? '—' }}</td>
+                    <td class="px-3 py-1 text-gray-500 text-xs hidden md:table-cell">{{ $cn->reason ?? '—' }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums text-purple-700 font-bold">{{ number_format($cn->total_ttc, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-center">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $cnBadges[$cn->status] ?? 'bg-gray-100 text-gray-600' }}">
                             {{ $cnLabels[$cn->status] ?? $cn->status }}
                         </span>
@@ -611,15 +619,10 @@
 
     {{-- [UX-4] Historique d'audit --}}
     @if(isset($audits) && $audits->isNotEmpty())
-    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                Historique
-            </h2>
-            <span class="text-xs text-gray-400">{{ $audits->count() }} opération(s)</span>
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden scroll-mt-24" x-ref="sec_historique">
+        <div class="px-4 py-2 border-b border-gray-200 bg-[#eef5f0] flex items-center justify-between">
+            <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">7. Historique</h2>
+            <span class="text-[12px] text-gray-500">{{ $audits->count() }} opération(s)</span>
         </div>
         <div class="divide-y divide-gray-100">
             @foreach($audits as $audit)
@@ -742,16 +745,13 @@
     {{-- ── Échéancier client ──────────────────────────────────────────────────── --}}
     @if(!in_array($invoice->status, ['brouillon','annulee','payee']))
     @php $schedules = $invoice->paymentSchedules; @endphp
-    <div class="bg-white rounded-[4px] border border-emerald-200 overflow-hidden"
+    <div class="bg-white rounded-[4px] border border-emerald-200 overflow-hidden scroll-mt-24" x-ref="sec_echeancier"
          x-data="{ tab: '{{ $schedules->count() ? 'view' : 'create' }}', mode: 'percent', rows: [{ percent: 100, days_after: 0, label: '' }], customRows: [{ due_date: '', amount: '', label: '' }] }">
 
         {{-- Header --}}
-        <div class="px-3 py-1.5 bg-[#eef5f0] border-b border-emerald-200 flex items-center justify-between">
+        <div class="px-4 py-2 bg-[#eef5f0] border-b border-emerald-200 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                <h2 class="text-sm font-bold text-emerald-800">Échéancier de paiement</h2>
+                <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">6. Échéancier de paiement</h2>
                 @if($schedules->count())
                 <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">
                     {{ $schedules->count() }} échéance(s)
@@ -771,30 +771,35 @@
         {{-- View existing schedule --}}
         @if($schedules->count())
         <div x-show="tab === 'view'">
-            <table class="w-full text-sm">
-                <thead class="bg-emerald-800 text-white">
+            <table class="min-w-full text-[14px] border-collapse">
+                <thead class="bg-[#3b4248] text-[12px] font-semibold text-white">
                     <tr>
-                        <th class="px-3 py-2.5 text-left font-semibold">Libellé</th>
-                        <th class="px-3 py-2.5 text-center font-semibold">Échéance</th>
-                        <th class="px-3 py-2.5 text-right font-semibold">Montant</th>
-                        <th class="px-3 py-2.5 text-right font-semibold">Payé</th>
-                        <th class="px-3 py-2.5 text-right font-semibold">Reste</th>
-                        <th class="px-3 py-2.5 text-center font-semibold">Statut</th>
+                        <th class="px-3 py-1.5 text-left">Libellé</th>
+                        <th class="px-3 py-1.5 text-center">Échéance</th>
+                        <th class="px-3 py-1.5 text-right">Montant</th>
+                        <th class="px-3 py-1.5 text-right">Payé</th>
+                        <th class="px-3 py-1.5 text-right">Reste</th>
+                        <th class="px-3 py-1.5 text-center">Statut</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-indigo-50">
+                <tbody class="divide-y divide-gray-100">
                     @foreach($schedules as $sch)
                     @php
-                        $schColors = ['en_attente'=>'gray','partiel'=>'amber','paye'=>'green','annule'=>'red'];
+                        // [PIÈGE Tailwind] classes statiques — bg-{$x}-100 invisible au scanner
+                        $schBadges = [
+                            'en_attente' => 'bg-gray-100 text-gray-700',
+                            'partiel'    => 'bg-amber-100 text-amber-700',
+                            'paye'       => 'bg-green-100 text-green-700',
+                            'annule'     => 'bg-red-100 text-red-700',
+                        ];
                         $schLabels = ['en_attente'=>'En attente','partiel'=>'Partiel','paye'=>'Payé','annule'=>'Annulé'];
-                        $sc2 = $schColors[$sch->status] ?? 'gray';
                         $isLate = $sch->isOverdue();
                     @endphp
-                    <tr class="hover:bg-emerald-50 {{ $isLate ? 'bg-rose-50' : '' }}">
-                        <td class="px-3 py-2.5 text-gray-700">
+                    <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors {{ $isLate ? '!bg-rose-50' : '' }}">
+                        <td class="px-3 py-1 text-gray-700">
                             {{ $sch->label ?: ('Échéance '.$sch->installment_number) }}
                         </td>
-                        <td class="px-3 py-2.5 text-center {{ $isLate ? 'text-rose-700 font-semibold' : 'text-gray-700' }}">
+                        <td class="px-3 py-1 text-center tabular-nums {{ $isLate ? 'text-rose-700 font-semibold' : 'text-gray-700' }}">
                             {{ $sch->due_date->format('d/m/Y') }}
                             @if($isLate)
                             <span class="ml-1 text-xs text-rose-600 font-bold">
@@ -802,25 +807,25 @@
                             </span>
                             @endif
                         </td>
-                        <td class="px-3 py-2.5 text-right tabular-nums text-gray-700">{{ number_format($sch->amount, 0, ',', ' ') }}</td>
-                        <td class="px-3 py-2.5 text-right tabular-nums text-green-700">{{ number_format($sch->paid_amount, 0, ',', ' ') }}</td>
-                        <td class="px-3 py-2.5 text-right tabular-nums font-bold {{ $sch->remainingAmount() > 0 ? 'text-orange-600' : 'text-gray-400' }}">
+                        <td class="px-3 py-1 text-right tabular-nums text-gray-700">{{ number_format($sch->amount, 0, ',', ' ') }}</td>
+                        <td class="px-3 py-1 text-right tabular-nums text-green-700">{{ number_format($sch->paid_amount, 0, ',', ' ') }}</td>
+                        <td class="px-3 py-1 text-right tabular-nums font-bold {{ $sch->remainingAmount() > 0 ? 'text-orange-600' : 'text-gray-400' }}">
                             {{ number_format($sch->remainingAmount(), 0, ',', ' ') }}
                         </td>
-                        <td class="px-3 py-2.5 text-center">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-{{ $sc2 }}-100 text-{{ $sc2 }}-700">
+                        <td class="px-3 py-1 text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[10.5px] font-medium {{ $schBadges[$sch->status] ?? 'bg-gray-100 text-gray-700' }}">
                                 {{ $schLabels[$sch->status] ?? $sch->status }}
                             </span>
                         </td>
                     </tr>
                     @endforeach
                 </tbody>
-                <tfoot class="bg-[#eef5f0]">
-                    <tr>
-                        <td colspan="2" class="px-3 py-2.5 text-sm font-semibold text-emerald-900 text-right">Totaux</td>
-                        <td class="px-3 py-2.5 text-right tabular-nums font-bold text-emerald-900">{{ number_format($schedules->sum('amount'), 0, ',', ' ') }}</td>
-                        <td class="px-3 py-2.5 text-right tabular-nums font-bold text-green-700">{{ number_format($schedules->sum('paid_amount'), 0, ',', ' ') }}</td>
-                        <td class="px-3 py-2.5 text-right tabular-nums font-bold text-orange-600">{{ number_format($schedules->sum(fn($s) => $s->remainingAmount()), 0, ',', ' ') }}</td>
+                <tfoot>
+                    <tr class="text-white font-bold" style="background:#065f46">
+                        <td colspan="2" class="px-3 py-1.5 text-right text-[11px] uppercase">Totaux</td>
+                        <td class="px-3 py-1.5 text-right font-mono tabular-nums">{{ number_format($schedules->sum('amount'), 0, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right font-mono tabular-nums">{{ number_format($schedules->sum('paid_amount'), 0, ',', ' ') }}</td>
+                        <td class="px-3 py-1.5 text-right font-mono tabular-nums">{{ number_format($schedules->sum(fn($s) => $s->remainingAmount()), 0, ',', ' ') }}</td>
                         <td></td>
                     </tr>
                 </tfoot>

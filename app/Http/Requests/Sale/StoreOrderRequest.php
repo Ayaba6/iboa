@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreOrderRequest extends FormRequest
 {
+    use \App\Http\Requests\Sale\Concerns\ChecksFloorPrice;
+
     public function authorize(): bool
     {
         return true;

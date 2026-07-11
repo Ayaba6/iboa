@@ -33,8 +33,8 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Articles</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $products->total() }} article(s) trouvé(s)</p>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Articles</h1>
+            <p class="text-[12.5px] text-gray-500">{{ $products->total() }} article(s) trouvé(s) — référentiel produits</p>
         </div>
         <div class="flex items-center gap-2 self-start flex-wrap">
             <a href="{{ route('exports.products', request()->query()) }}"
@@ -70,55 +70,78 @@
 
     {{-- Filters --}}
     <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
+        @php
+            $lblX = 'block text-[11px] font-bold text-gray-700 mb-1';
+            $inpX = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+            $lkX  = 'appearance-none w-full h-8 py-0 pl-2 pr-8 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
+            $carX = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
+        @endphp
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
             {{-- Recherche texte (prend 2 cols sur xl) --}}
             <div class="sm:col-span-2 xl:col-span-2">
+                <label class="{{ $lblX }}">Rechercher</label>
                 <input type="text" name="search" value="{{ request('search') }}"
-                       placeholder="Désignation, référence, code-barres…"
-                       class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                       placeholder="Désignation, référence, code-barres…" class="{{ $inpX }}">
             </div>
 
-            <select name="family_id" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500">
-                <option value="">Toutes les familles</option>
-                @foreach($families as $family)
-                    <option value="{{ $family->id }}" {{ request('family_id') == $family->id ? 'selected' : '' }}>{{ $family->name }}</option>
-                    @foreach($family->children as $child)
-                    <option value="{{ $child->id }}" {{ request('family_id') == $child->id ? 'selected' : '' }}>&nbsp;&nbsp;└ {{ $child->name }}</option>
+            <div>
+                <label class="{{ $lblX }}">Famille</label>
+                <div class="relative"><select name="family_id" class="{{ $lkX }}">
+                    <option value="">Toutes les familles</option>
+                    @foreach($families as $family)
+                        <option value="{{ $family->id }}" {{ request('family_id') == $family->id ? 'selected' : '' }}>{{ $family->name }}</option>
+                        @foreach($family->children as $child)
+                        <option value="{{ $child->id }}" {{ request('family_id') == $child->id ? 'selected' : '' }}>&nbsp;&nbsp;└ {{ $child->name }}</option>
+                        @endforeach
                     @endforeach
-                @endforeach
-            </select>
+                </select>{!! $carX !!}</div>
+            </div>
 
-            <select name="type" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500">
-                <option value="">Tous les types</option>
-                <option value="simple"  {{ request('type') === 'simple'  ? 'selected' : '' }}>Simple</option>
-                <option value="service" {{ request('type') === 'service' ? 'selected' : '' }}>Service</option>
-                <option value="compose" {{ request('type') === 'compose' ? 'selected' : '' }}>Composé</option>
-            </select>
+            <div>
+                <label class="{{ $lblX }}">Type</label>
+                <div class="relative"><select name="type" class="{{ $lkX }}">
+                    <option value="">Tous les types</option>
+                    <option value="simple"  {{ request('type') === 'simple'  ? 'selected' : '' }}>Simple</option>
+                    <option value="service" {{ request('type') === 'service' ? 'selected' : '' }}>Service</option>
+                    <option value="compose" {{ request('type') === 'compose' ? 'selected' : '' }}>Composé</option>
+                </select>{!! $carX !!}</div>
+            </div>
 
-            <select name="is_active" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500">
-                <option value="">Tous les statuts</option>
-                <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>Actifs</option>
-                <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>Inactifs</option>
-            </select>
+            <div>
+                <label class="{{ $lblX }}">Actif / inactif</label>
+                <div class="relative"><select name="is_active" class="{{ $lkX }}">
+                    <option value="">Tous</option>
+                    <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>Actifs</option>
+                    <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>Inactifs</option>
+                </select>{!! $carX !!}</div>
+            </div>
         </div>
 
         {{-- [PHASE E] Filtres avancés : code article, statut, familles 3 niveaux --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mt-3">
-            <input type="text" name="code_article" value="{{ request('code_article') }}" placeholder="Code article…"
-                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] font-mono focus:ring-1 focus:ring-emerald-500">
-            <select name="statut" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500">
-                <option value="">Tous les statuts</option>
-                <option value="actif"    {{ request('statut') === 'actif'    ? 'selected' : '' }}>Actif</option>
-                <option value="inactif"  {{ request('statut') === 'inactif'  ? 'selected' : '' }}>Inactif</option>
-                <option value="bloque"   {{ request('statut') === 'bloque'   ? 'selected' : '' }}>Bloqué</option>
-            </select>
+            <div>
+                <label class="{{ $lblX }}">Code article</label>
+                <input type="text" name="code_article" value="{{ request('code_article') }}" placeholder="ART…" class="{{ $inpX }} font-mono">
+            </div>
+            <div>
+                <label class="{{ $lblX }}">Statut</label>
+                <div class="relative"><select name="statut" class="{{ $lkX }}">
+                    <option value="">Tous les statuts</option>
+                    <option value="actif"    {{ request('statut') === 'actif'    ? 'selected' : '' }}>Actif</option>
+                    <option value="inactif"  {{ request('statut') === 'inactif'  ? 'selected' : '' }}>Inactif</option>
+                    <option value="bloque"   {{ request('statut') === 'bloque'   ? 'selected' : '' }}>Bloqué</option>
+                </select>{!! $carX !!}</div>
+            </div>
             @foreach(['famille1_id' => 'Famille 1', 'famille2_id' => 'Famille 2', 'famille3_id' => 'Famille 3'] as $fname => $flabel)
-            <select name="{{ $fname }}" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500">
-                <option value="">{{ $flabel }}</option>
-                @foreach(($familiesFlat ?? collect()) as $f)
-                    <option value="{{ $f->id }}" {{ request($fname) == $f->id ? 'selected' : '' }}>{{ $f->code }} — {{ $f->name }}</option>
-                @endforeach
-            </select>
+            <div>
+                <label class="{{ $lblX }}">{{ $flabel }}</label>
+                <div class="relative"><select name="{{ $fname }}" class="{{ $lkX }}">
+                    <option value="">—</option>
+                    @foreach(($familiesFlat ?? collect()) as $f)
+                        <option value="{{ $f->id }}" {{ request($fname) == $f->id ? 'selected' : '' }}>{{ $f->code }} — {{ $f->name }}</option>
+                    @endforeach
+                </select>{!! $carX !!}</div>
+            </div>
             @endforeach
         </div>
         <div class="flex items-center gap-2 mt-3">
@@ -144,16 +167,18 @@
         <div class="tbl-scroll">
             <table class="w-full text-[12.5px] border-collapse">
                 <thead>
-                    <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide w-32">Code article</th>
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide">Désignation</th>
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide hidden md:table-cell">Catégorie</th>
-                        <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide hidden lg:table-cell w-32">Type</th>
-                        <th class="text-center font-bold px-3 py-1.5 uppercase tracking-wide w-24">Flux</th>
-                        <th class="text-center font-bold px-3 py-1.5 uppercase tracking-wide hidden lg:table-cell w-16">UM</th>
-                        <th class="text-right font-bold px-3 py-1.5 uppercase tracking-wide hidden lg:table-cell w-28">Stock à terme</th>
-                        <th class="text-center font-bold px-3 py-1.5 uppercase tracking-wide w-24">Statut</th>
-                        <th class="px-3 py-2 w-24"></th>
+                    <tr class="bg-[#3b4248] text-white text-[11px]">
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-32">Code article</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide">Désignation</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide hidden md:table-cell">Catégorie</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide hidden lg:table-cell w-32">Type</th>
+                        <th class="text-center font-semibold px-3 py-1.5 uppercase tracking-wide w-24">Flux</th>
+                        <th class="text-center font-semibold px-3 py-1.5 uppercase tracking-wide hidden lg:table-cell w-16">UM</th>
+                        <th class="text-right font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell w-24">Poids net (kg)</th>
+                        <th class="text-right font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell w-28">Stock à terme</th>
+                        <th class="text-center font-semibold px-3 py-1.5 uppercase tracking-wide w-24">Statut</th>
+                        <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell w-32">Créé le / par</th>
+                        <th class="px-3 py-1.5 w-24"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -176,7 +201,7 @@
                             <a href="{{ route('products.show', $product) }}" class="font-medium text-gray-900 hover:text-emerald-700 block truncate max-w-md">{{ $product->name }}</a>
                         </td>
                         <td class="px-3 py-1 hidden md:table-cell text-gray-600">
-                            {{ $product->family?->name ?? '—' }}
+                            <span class="block truncate max-w-[180px]" title="{{ $product->family?->name }}">{{ $product->family?->name ?? '—' }}</span>
                         </td>
                         <td class="px-3 py-1 hidden lg:table-cell text-gray-600">
                             {{ $typeArticleLabels[$product->type_article] ?? ($product->type_article ?: '—') }}
@@ -191,6 +216,9 @@
                         <td class="px-3 py-1 text-center hidden lg:table-cell text-gray-500 font-mono">
                             {{ $product->unit?->abbreviation ?? $product->unit?->name ?? '—' }}
                         </td>
+                        <td class="px-3 py-1 text-right tabular-nums hidden lg:table-cell whitespace-nowrap text-gray-600">
+                            {{ $product->net_weight_per_us > 0 ? rtrim(rtrim(number_format($product->net_weight_per_us, 3, ',', ' '), '0'), ',') : '—' }}
+                        </td>
                         <td class="px-3 py-1 text-right tabular-nums hidden lg:table-cell whitespace-nowrap">
                             <span class="{{ $stockATerme < 0 ? 'text-red-600 font-semibold' : ($stockATerme > 0 ? 'text-gray-900' : 'text-gray-400') }}">{{ number_format($stockATerme, 0, ',', ' ') }}</span>
                         </td>
@@ -199,6 +227,10 @@
                                 <span class="w-1.5 h-1.5 rounded-full {{ $statut === 'actif' ? 'bg-green-500' : ($statut === 'bloque' ? 'bg-red-500' : 'bg-gray-400') }}"></span>
                                 {{ $statutLabels[$statut] ?? $statut }}
                             </span>
+                        </td>
+                        <td class="px-3 py-1 hidden xl:table-cell text-[11.5px] text-gray-500 whitespace-nowrap">
+                            {{ $product->created_at?->format('d/m/Y') }}
+                            @if($product->createdBy)<span class="block text-gray-400">{{ Str::limit($product->createdBy->name, 14) }}</span>@endif
                         </td>
                         <td class="px-3 py-1">
                             <div class="flex items-center justify-end gap-0.5">
@@ -219,7 +251,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9" class="px-4 py-16 text-center">
+                        <td colspan="11" class="px-4 py-16 text-center">
                             <div class="flex flex-col items-center gap-3 text-gray-400">
                                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
@@ -248,6 +280,15 @@
             </div>
             @if($products->hasPages())<div>{{ $products->withQueryString()->links() }}</div>@endif
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Référentiel : <span class="text-white font-semibold">{{ $summary['total'] }} articles ({{ $summary['active'] }} actifs)</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 
 </div>

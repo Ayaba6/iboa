@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-6xl">
+<div class="w-full">
     @include('clients._form')
 </div>
 @endsection

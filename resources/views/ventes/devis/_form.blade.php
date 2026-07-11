@@ -3,6 +3,9 @@
     $selectedClient   ??= null;
     $clientExemptions ??= [];
     $q = $quote;
+    // Taux marqué « par défaut » en priorité (sinon 2% BIC sortait avant 18% au tri).
+    $defaultTaxRate = (float) (optional(collect($taxRatesVente ?? [])->firstWhere('is_default', true))->rate
+        ?? optional(collect($taxRatesVente ?? [])->firstWhere('rate', '>', 0))->rate ?? 18);
 @endphp
 
 {{-- PHP → JS : données brutes utilisées par Alpine --}}
@@ -16,7 +19,7 @@ window._quoteFormData = {
     oldGlobalPct:      @json(old('global_discount_percent', 0)),
     selectedClientId:  @json(old('client_id', $quote?->client_id ?? $selectedClient)),
     clientExemptions:  @json($clientExemptions),
-    defaultTaxRate:    @json((float) (optional(collect($taxRatesVente ?? [])->firstWhere('rate', '>', 0))->rate ?? 18)),
+    defaultTaxRate:    @json($defaultTaxRate),
     orderItemsUrl:     @json(route('ventes.devis.order-items')),
 };
 </script>
@@ -29,23 +32,24 @@ window._quoteFormData = {
     $txa   = 'w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white resize-none focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $secH  = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
+    $tdIn  = 'no-spin w-full h-8 border border-gray-300 rounded-[3px] px-2 py-0 text-[13px] tabular-nums bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
 @endphp
 
 <div x-data="quoteForm()" x-ref="root" x-cloak class="space-y-3">
 
 <div class="bg-white border border-gray-300 rounded-[4px]">
 {{-- Bandeau + actions --}}
-<div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-    <h2 class="text-[15px] font-bold text-gray-900">
-        {{ $q ? 'Devis : Modification' : 'Nouveau devis' }}
-        @if($q)<span class="font-mono text-emerald-700 ml-1">{{ $q->number }}</span>@endif
+<div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+    <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
+        Devis : {{ $q ? 'Modification' : 'Création' }}
+        @if($q)<span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $q->number }}</span>@endif
     </h2>
-    <div class="flex items-center gap-2">
-        <button type="submit" @click="submitted = true" :disabled="submitting || totalTtc < 0"
-                class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 disabled:opacity-60 px-4 py-1.5 rounded-[4px] transition-colors"
-                x-text="submitting ? 'Enregistrement…' : 'Enregistrer'">Enregistrer</button>
-        <a href="{{ route('ventes.devis.index') }}" class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
+    <div class="flex items-center gap-1.5">
+        <button type="submit" @click="submitted = true" :disabled="totalTtc < 0"
+                class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 px-5 py-2 rounded-[4px] transition-colors">Enregistrer</button>
+        <button type="button" onclick="window.print()"
+                class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Imprimer</button>
+        <a href="{{ route('ventes.devis.index') }}" class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">Abandon</a>
     </div>
 </div>
 
@@ -225,40 +229,49 @@ window._quoteFormData = {
         <div class="grid grid-cols-1 xl:grid-cols-12">
             <div class="xl:col-span-9 overflow-x-auto border-r border-gray-200">
                 <table class="w-full text-sm">
-                    <thead class="bg-[#eef5f0] border-b border-gray-300">
+                    <thead class="bg-[#3b4248]">
                         <tr>
-                            <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-8">#</th>
-                            <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-40">Article</th>
-                            <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Désignation</th>
-                            <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-20">Quantité</th>
-                            <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Prix unitaire HT</th>
-                            <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-16">Remise (%)</th>
-                            <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Prix net HT</th>
-                            <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-16">TVA (%)</th>
-                            <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Montant TVA</th>
-                            <th class="px-2 py-2 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-24">Total TTC</th>
-                            <th class="px-2 py-2 w-14"></th>
+                            <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-8">N°</th>
+                            <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-32">Article</th>
+                            <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Désignation</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16">Qté</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">P.U. HT</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-14">Rem. %</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Net HT</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">TVA</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Mt TVA</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Total TTC</th>
+                            <th class="px-1 py-1.5 w-10"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <template x-for="(item, index) in items" :key="item._key">
-                            <tr class="hover:bg-gray-50 group" @focusin="activeIndex = index" :class="activeIndex === index ? 'bg-emerald-50/40' : ''">
-                                <td class="px-2 py-2 text-gray-400 text-xs" x-text="index + 1"></td>
+                            <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors group" @focusin="activeIndex = index" :class="activeIndex === index ? 'bg-emerald-50/40' : ''">
+                                <td class="px-2 py-1 text-center text-gray-400 tabular-nums text-[12px]" x-text="index + 1"></td>
                                 @include('ventes.partials._product_combobox', ['accentColor' => 'blue', 'formName' => 'quote'])
-                                <td class="px-2 py-2">
-                                    <input type="text" :name="'items[' + index + '][description]'" x-model="item.description" placeholder="Désignation..."
+                                <td class="px-2 py-1">
+                                    <input type="text" :name="'items[' + index + '][description]'" x-model="item.description" placeholder="Désignation…"
                                            :class="item.description.trim() === '' && submitted ? 'border-red-400 bg-red-50' : 'border-gray-300'"
-                                           class="w-full border rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 min-w-[160px]">
+                                           class="no-spin w-full h-8 border rounded-[3px] px-2 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 min-w-[88px]">
                                 </td>
-                                <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
-                                <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} text-right"></td>
-                                <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
-                                <td class="px-2 py-2 text-right tabular-nums text-gray-700 font-medium text-xs whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
-                                <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][tax_rate_value]'" x-model.number="item.tax_rate_value" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
-                                <td class="px-2 py-2 text-right tabular-nums text-gray-600 text-xs whitespace-nowrap" x-text="formatNum(lineTax(item))"></td>
-                                <td class="px-2 py-2 text-right tabular-nums text-gray-900 font-semibold text-xs whitespace-nowrap" x-text="formatNum(lineTtc(item))"></td>
-                                <td class="px-2 py-2">
-                                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[40px] text-right"></td>
+                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right"></td>
+                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
+                                <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
+                                <td class="px-2 py-1">
+                                    <div class="relative">
+                                        <select :name="'items[' + index + '][tax_rate_value]'" x-model.number="item.tax_rate_value" class="{{ $tdIn }} appearance-none bg-none min-w-[56px] pl-1.5 pr-5 text-right">
+                                            <option value="0">0 %</option>
+                                            @foreach($taxRatesVente ?? [] as $tr)<option value="{{ (float) $tr->rate }}">{{ rtrim(rtrim(number_format($tr->rate, 2, ',', ''), '0'), ',') }} %</option>@endforeach
+                                            @if(empty($taxRatesVente ?? []))<option value="18">18 %</option>@endif
+                                        </select>
+                                        <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>
+                                    </div>
+                                </td>
+                                <td class="px-2 py-1 text-right tabular-nums text-gray-600 text-[12.5px] whitespace-nowrap" x-text="formatNum(lineTax(item))"></td>
+                                <td class="px-2 py-1 text-right tabular-nums text-gray-900 font-semibold text-[12.5px] whitespace-nowrap" x-text="formatNum(lineTtc(item))"></td>
+                                <td class="px-1 py-1">
+                                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button type="button" @click="duplicateItem(index)" title="Dupliquer" class="text-gray-300 hover:text-emerald-600 transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                         </button>
@@ -424,6 +437,16 @@ window._quoteFormData = {
 
 </div>{{-- /card --}}
 </div>{{-- /x-data root --}}
+
+{{-- ── Barre de contexte pied de page [X3] ─────────────────────────────────── --}}
+<div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+    <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+    <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+    <span class="border-l border-white/10 pl-6">Document : <span class="text-white font-semibold">{{ $q?->number ?? 'Devis (brouillon)' }}</span></span>
+    <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+    <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+</div>
+
 
 @push('scripts')
 <script>
@@ -625,7 +648,8 @@ function quoteForm() {
             const disc = parseFloat(this.selectedClient?.default_discount || 0);
             if (disc > 0) this.items.forEach(i => { i.discount_percent = disc; });
         },
-        formatNum(n) { return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.round((n || 0) * 100) / 100); },
+        // XOF sans centimes : décimales affichées seulement si présentes (gain de place colonnes)
+        formatNum(n) { return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Math.round((n || 0) * 100) / 100); },
         formatFcfa(n) { return this.formatNum(n) + ' FCFA'; },
     };
 }

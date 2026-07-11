@@ -12,7 +12,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-3" x-data="transferForm()" x-init="init()">
+<div class="max-w-5xl mx-auto space-y-3" x-data="transferForm()">
 
     <h1 class="text-[16px] font-bold text-gray-900">Modifier le transfert <span class="font-mono text-blue-700">{{ $transfer->number }}</span></h1>
 

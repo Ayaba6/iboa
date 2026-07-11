@@ -13,14 +13,14 @@
     $inp = 'w-full h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $lk  = 'appearance-none w-full h-8 py-0 pl-2 pr-7 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $th  = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $th  = 'px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide';
 @endphp
 <div class="space-y-4">
 
     {{-- Bandeau --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-[17px] font-bold text-gray-900">Bobines — matière première</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Bobines — matière première</h1>
             <p class="text-[12px] text-gray-500">Réception, lot, poids restant &amp; coût au kg</p>
         </div>
         @can('production.create')
@@ -84,7 +84,7 @@
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Référence</th>
                         <th class="{{ $th }} text-left">Lot</th>
@@ -105,7 +105,7 @@
                         </td>
                         <td class="px-3 py-1.5 font-mono text-[12px] text-gray-600">{{ $c->lot_number ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-gray-600 hidden md:table-cell">{{ $c->color ?? '—' }}</td>
-                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums hidden lg:table-cell whitespace-nowrap">{{ rtrim(rtrim(number_format($c->thickness,2,',',''),'0'),',') }} × {{ number_format($c->width,0,',',' ') }}</td>
+                        <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums hidden lg:table-cell whitespace-nowrap">{{ rtrim(rtrim(number_format((float) $c->thickness,2,',',''),'0'),',') }} × {{ number_format((float) $c->width,0,',',' ') }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums whitespace-nowrap">
                             <span class="font-semibold text-gray-900">{{ number_format($c->remaining_weight,0,',',' ') }}</span>
                             <span class="text-gray-400"> / {{ number_format($c->initial_weight,0,',',' ') }} kg</span>
@@ -145,6 +145,15 @@
             <span>{{ $coils->total() }} bobine(s) — poids disponible : <span class="font-semibold text-gray-700 tabular-nums">{{ number_format($stats['poids_dispo'], 0, ',', ' ') }} kg</span> — valeur : <span class="font-semibold text-gray-700 tabular-nums">{{ number_format($stats['valeur'], 0, ',', ' ') }} F</span></span>
             @if($coils->hasPages())<div>{{ $coils->links() }}</div>@endif
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] mt-3">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fonction : <span class="text-white font-semibold">Bobines / lots matière</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 </div>
 @endsection

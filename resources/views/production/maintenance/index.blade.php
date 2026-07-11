@@ -11,7 +11,7 @@
 
 @section('content')
 @php
-    $th = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $th = 'px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide';
     $panelH = 'px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white';
 @endphp
 <div class="space-y-4">
@@ -19,7 +19,7 @@
     {{-- Bandeau --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-[17px] font-bold text-gray-900">Maintenance machines</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Maintenance machines</h1>
             <p class="text-[12px] text-gray-500">Préventive · corrective · disponibilité (MTBF / MTTR)</p>
         </div>
         @can('production.update')
@@ -50,7 +50,7 @@
         <div class="{{ $panelH }}"><h2 class="text-[13px] font-bold text-gray-900">Disponibilité machines (30 j)</h2></div>
         <div class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Machine</th>
                         <th class="{{ $th }} text-right">Disponibilité</th>
@@ -88,7 +88,7 @@
         <div class="{{ $panelH }}"><h2 class="text-[13px] font-bold text-gray-900">Interventions</h2></div>
         <div class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Machine</th>
                         <th class="{{ $th }} text-left">Type</th>
@@ -134,6 +134,15 @@
             <span>{{ $maintenances->total() }} intervention(s)</span>
             @if($maintenances->hasPages())<div>{{ $maintenances->links() }}</div>@endif
         </div>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] mt-3">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fonction : <span class="text-white font-semibold">Maintenance</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 </div>
 @endsection

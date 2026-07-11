@@ -108,9 +108,9 @@ request()->routeIs('achats.*')                                                  
             {{-- ── Dashboard ────────────────────────────── --}}
             <a href="{{ route('dashboard') }}"
                class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
-                      {{ request()->routeIs('dashboard') ? 'bg-[#00A651] text-white shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
+                      {{ request()->routeIs('dashboard') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                 @if(request()->routeIs('dashboard'))
-                <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>
+                <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>
                 @endif
                 <svg class="w-[18px] h-[18px] flex-shrink-0 {{ request()->routeIs('dashboard') ? 'text-white' : 'text-gray-400 group-hover:text-white' }}"
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,9 +128,9 @@ request()->routeIs('achats.*')                                                  
             {{-- ── Mes validations ─────────────────────── --}}
             <a href="{{ route('validations.index') }}"
                class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
-                      {{ request()->routeIs('validations.index') ? 'bg-[#00A651] text-white shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
+                      {{ request()->routeIs('validations.index') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                 @if(request()->routeIs('validations.index'))
-                <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>
+                <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>
                 @endif
                 <svg class="w-[18px] h-[18px] flex-shrink-0 {{ request()->routeIs('validations.index') ? 'text-white' : 'text-gray-400 group-hover:text-white' }}"
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,8 +158,8 @@ request()->routeIs('achats.*')                                                  
             @can('direction.view')
             <a href="{{ route('direction.dashboard') }}"
                class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
-                      {{ request()->routeIs('direction.dashboard') ? 'bg-[#00A651] text-white shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                @if(request()->routeIs('direction.dashboard'))<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                      {{ request()->routeIs('direction.dashboard') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
+                @if(request()->routeIs('direction.dashboard'))<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                 <svg class="w-[18px] h-[18px] flex-shrink-0 {{ request()->routeIs('direction.dashboard') ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
@@ -170,8 +170,8 @@ request()->routeIs('achats.*')                                                  
             {{-- Chaîne de Valeur Intégrée (§3 CDC) --}}
             <a href="{{ route('chaine-valeur') }}"
                class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
-                      {{ request()->routeIs('chaine-valeur') ? 'bg-[#00A651] text-white shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                @if(request()->routeIs('chaine-valeur'))<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                      {{ request()->routeIs('chaine-valeur') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
+                @if(request()->routeIs('chaine-valeur'))<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                 <svg class="w-[18px] h-[18px] flex-shrink-0 {{ request()->routeIs('chaine-valeur') ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
                 </svg>
@@ -201,7 +201,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <div class="w-[18px] h-[18px] flex-shrink-0 flex items-center justify-center">
                         <svg class="w-full h-full {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
@@ -252,7 +252,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
@@ -297,7 +297,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                     </svg>
@@ -322,7 +322,7 @@ request()->routeIs('achats.*')                                                  
                             auth()->user()->can('clients.view')   ? [route('clients.grand-livre'),  'Grand livre clients', 'clients.grand-livre']  : null,
                             auth()->user()->can('suppliers.view') ? [route('suppliers.index'),      'Fournisseurs',        'suppliers*']           : null,
                             auth()->user()->can('products.view')  ? [route('products.index'),         'Articles',             'products*']             : null,
-                            auth()->user()->can('products.view')  ? [route('product-families.index'), 'Familles / Catégories','product-families*']     : null,
+                            auth()->user()->can('products.view')  ? [route('product-families.index'), 'Catégories articles','product-families*']     : null,
                             auth()->user()->can('products.view')  ? [route('brands.index'),           'Marques',              'brands*']               : null,
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
@@ -346,7 +346,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                     </svg>
@@ -396,7 +396,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                     </svg>
@@ -420,8 +420,9 @@ request()->routeIs('achats.*')                                                  
                             [route('production.dashboard'),      'Tableau de bord',       'production.dashboard'],
                             [route('production.orders.index'),   'Ordres de fabrication', 'production.orders*'],
                             [route('production.trackings.index'), 'Suivi de fabrication', 'production.trackings*'],
-                            /* Matière : gestionnaires production + magasin */
-                            $puser->canAny(['production.create', 'stocks.adjust']) ? [route('production.coils.index'), 'Bobines (matière)', 'production.coils*'] : null,
+                            /* Bobines : plus de sous-menu dédié — rattachées à la fiche article
+                               (section « Bobines / lots matière », onglet Stock). Routes conservées
+                               pour la traçabilité (réceptions, consommations OF). */
                             /* Référentiels (coûts standards inclus) : gestionnaires production seulement */
                             $puser->can('production.create') ? [route('production.bom.index'),          'Nomenclatures',      'production.bom*'] : null,
                             $puser->can('production.create') ? [route('production.routings.index'),     'Gammes',             'production.routings*'] : null,
@@ -461,7 +462,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
@@ -515,7 +516,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
@@ -603,7 +604,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                     </svg>
@@ -623,6 +624,7 @@ request()->routeIs('achats.*')                                                  
                     <div class="ml-4 pl-3 border-l border-white/10 space-y-0.5 py-1">
                         @foreach(array_filter([
                             auth()->user()->can('accounting.view') ? [route('comptabilite.plan-comptable.index'), 'Plan comptable',      'comptabilite.plan-comptable*']    : null,
+                            auth()->user()->can('accounting.view') ? [route('comptabilite.tiers.index'),          'Tiers',               'comptabilite.tiers*']             : null,
                             auth()->user()->can('accounting.view') ? [route('comptabilite.journal-types.index'),   'Codes journaux',      'comptabilite.journal-types*']     : null,
                             auth()->user()->can('accounting.manage') ? [route('comptabilite.parametres.edit'), 'Paramètres comptables', 'comptabilite.parametres*'] : null,
                             auth()->user()->can('accounting.view') ? [route('comptabilite.journaux.index'),        'Journaux',            'comptabilite.journaux*']          : null,
@@ -636,6 +638,7 @@ request()->routeIs('achats.*')                                                  
                             auth()->user()->can('accounting.view') ? [route('comptabilite.lettrage.index'),        'Lettrage',            'comptabilite.lettrage*']          : null,
                             auth()->user()->can('accounting.view') ? [route('comptabilite.rapprochement.index'),   'Rapprochement banc.', 'comptabilite.rapprochement*']     : null,
                             auth()->user()->can('accounting.view') ? [route('comptabilite.tva.index'),             'Déclarations TVA',    'comptabilite.tva*']               : null,
+                            auth()->user()->can('accounting.view') ? [route('comptabilite.budgets.index'),         'Budgets',             'comptabilite.budgets*']           : null,
                             auth()->user()->can('accounting.validate') ? [route('comptabilite.periods.index'),    'Verrouillage périodes','comptabilite.periods*']           : null,
                             auth()->user()->can('accounting.view') ? [route('comptabilite.immobilisations.index'), 'Immobilisations',     'comptabilite.immobilisations*']    : null,
                             auth()->user()->can('accounting.view') ? [route('comptabilite.bilan'),                 'Bilan',               'comptabilite.bilan']              : null,
@@ -661,7 +664,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
@@ -785,7 +788,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
@@ -830,7 +833,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                     </svg>
@@ -879,7 +882,7 @@ request()->routeIs('achats.*')                                                  
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
                         class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
-                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full"></span>@endif
+                    @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>

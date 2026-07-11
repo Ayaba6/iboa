@@ -33,10 +33,37 @@ class LedgerController extends Controller
         $dateTo    = $request->input('date_to');
         $search    = $request->input('search');
 
+        // [Maquette X3] Filtres avancés
+        $filters = [
+            'journal_type_id' => $request->input('journal_type_id'),
+            'partner'         => $request->input('partner'),
+            'piece_from'      => $request->input('piece_from'),
+            'piece_to'        => $request->input('piece_to'),
+            // Par défaut : écritures validées uniquement (comportement historique)
+            'validated_only'  => $request->input('validated_only', '1') === '1',
+            'account_from'    => $request->input('account_from'),
+            'account_to'      => $request->input('account_to'),
+            'period_from'     => $request->input('period_from'),
+            'period_to'       => $request->input('period_to'),
+        ];
+
+        // [Maquette X3] Période du/au (mois de l'exercice) → bornes de dates
+        // si les dates comptables ne sont pas saisies explicitement.
+        $fyYear = $company->currentFiscalYear?->starts_at?->year ?? (int) date('Y');
+        if ($filters['period_from'] && ! $dateFrom) {
+            $dateFrom = sprintf('%d-%02d-01', $fyYear, (int) $filters['period_from']);
+        }
+        if ($filters['period_to'] && ! $dateTo) {
+            $dateTo = \Carbon\Carbon::create($fyYear, (int) $filters['period_to'], 1)->endOfMonth()->format('Y-m-d');
+        }
+
         $classes = AccountClass::where('company_id', $company->id)
             ->orderBy('number')
             ->get();
 
+        $journalTypes = JournalType::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']);
+
+        // Liste complète (datalist / sous-libellés) — le filtrage par plage se fait sur $rangeAccounts.
         $accounts = Account::postable()
             ->where('company_id', $company->id)
             ->when($classId, fn($q) => $q->where('account_class_id', $classId))
@@ -44,17 +71,64 @@ class LedgerController extends Controller
             ->get(['id', 'code', 'name', 'account_class_id']);
 
         // Single account selected → classic single-account view
-        $account       = $accountId ? Account::find($accountId) : null;
-        $lines         = collect();
-        $accountGroups = collect();  // used in multi-account (class) mode
+        $account        = $accountId ? Account::find($accountId) : null;
+        $lines          = collect();
+        $accountGroups  = collect();  // used in multi-account (class) mode
+        $openingBalance = null;       // [Maquette X3] solde d'ouverture (mono-compte, si date_from)
 
-        if ($accountId) {
-            $lines = $this->loadLines($accountId, $dateFrom, $dateTo, $search);
+        // [Maquette X3] Par défaut : UN seul compte affiché (le premier mouvementé),
+        // l'utilisateur choisit ensuite sa plage via « Compte général du/au ».
+        if (! $accountId && ! $filters['account_from'] && ! $filters['account_to']) {
+            $defaultCode = Account::postable()
+                ->where('company_id', $company->id)
+                ->whereIn('id', JournalEntryLine::query()->select('account_id'))
+                ->orderBy('code')
+                ->value('code')
+                ?? Account::postable()->where('company_id', $company->id)->orderBy('code')->value('code');
+
+            if ($defaultCode) {
+                $filters['account_from'] = $defaultCode;
+                $filters['account_to']   = $defaultCode;
+            }
+        }
+
+        // Comptes de la plage sélectionnée (pour le chargement des lignes)
+        $rangeAccounts = $accounts
+            ->when($filters['account_from'], fn($c, $v) => $c->where('code', '>=', $v))
+            ->when($filters['account_to'],   fn($c, $v) => $c->where('code', '<=', $v))
+            ->values();
+
+        // Mode plat permanent : liste unique triée par date, colonnes Compte/Intitulé.
+        $flatMode = ! $accountId;
+
+        if ($flatMode) {
+            $accountIds = $rangeAccounts->pluck('id')->toArray();
+            $lines = $this->loadLinesForAccounts($accountIds, $dateFrom, $dateTo, $search, $filters);
+
+            if ($dateFrom && ! empty($accountIds)) {
+                $openingBalance = (int) JournalEntryLine::whereIn('account_id', $accountIds)
+                    ->whereHas('journalEntry', fn($q) => $q
+                        ->where('status', 'valide')
+                        ->whereDate('entry_date', '<', $dateFrom))
+                    ->selectRaw('COALESCE(SUM(debit - credit), 0) as bal')
+                    ->value('bal');
+            }
+        } elseif ($accountId) {
+            $lines = $this->loadLines($accountId, $dateFrom, $dateTo, $search, $filters);
+
+            if ($dateFrom) {
+                $openingBalance = (int) JournalEntryLine::where('account_id', $accountId)
+                    ->whereHas('journalEntry', fn($q) => $q
+                        ->where('status', 'valide')
+                        ->whereDate('entry_date', '<', $dateFrom))
+                    ->selectRaw('COALESCE(SUM(debit - credit), 0) as bal')
+                    ->value('bal');
+            }
         } else {
             // Bulk-load all lines for the account set in one query, then group in PHP
             $allLines = $this->loadLinesForAccounts(
                 $accounts->pluck('id')->toArray(),
-                $dateFrom, $dateTo, $search
+                $dateFrom, $dateTo, $search, $filters
             );
             $grouped = $allLines->groupBy('account_id');
             $accountMap = $accounts->keyBy('id');
@@ -74,10 +148,10 @@ class LedgerController extends Controller
         }
 
         return view('comptabilite.grand-livre', compact(
-            'accounts', 'classes',
+            'accounts', 'classes', 'journalTypes',
             'account', 'accountId',
             'classId', 'lines', 'accountGroups',
-            'dateFrom', 'dateTo', 'search'
+            'dateFrom', 'dateTo', 'search', 'filters', 'openingBalance', 'flatMode'
         ));
     }
 
@@ -521,34 +595,33 @@ class LedgerController extends Controller
     // Private helpers
     // -------------------------------------------------------------------------
 
-    private function loadLinesForAccounts(array $accountIds, ?string $dateFrom, ?string $dateTo, ?string $search)
+    private function loadLinesForAccounts(array $accountIds, ?string $dateFrom, ?string $dateTo, ?string $search, array $filters = [])
     {
         if (empty($accountIds)) {
             return collect();
         }
 
-        return JournalEntryLine::with(['journalEntry.journalType'])
+        return $this->linesQuery($dateFrom, $dateTo, $search, $filters)
             ->whereIn('account_id', $accountIds)
-            ->when($dateFrom, fn($q) => $q->whereHas('journalEntry', fn($je) => $je->whereDate('entry_date', '>=', $dateFrom)))
-            ->when($dateTo,   fn($q) => $q->whereHas('journalEntry', fn($je) => $je->whereDate('entry_date', '<=', $dateTo)))
-            ->when($search,   fn($q) => $q->where(fn($sq) =>
-                $sq->where('label', 'like', '%'.$search.'%')
-                   ->orWhereHas('journalEntry', fn($je) => $je->where('number', 'like', '%'.$search.'%')
-                                                              ->orWhere('reference', 'like', '%'.$search.'%'))
-            ))
-            ->whereHas('journalEntry', fn($q) => $q->where('status', 'valide'))
-            ->orderBy(
-                JournalEntry::select('entry_date')
-                    ->whereColumn('journal_entries.id', 'journal_entry_lines.journal_entry_id')
-                    ->limit(1)
-            )
             ->get();
     }
 
-    private function loadLines(int $accountId, ?string $dateFrom, ?string $dateTo, ?string $search)
+    private function loadLines(int $accountId, ?string $dateFrom, ?string $dateTo, ?string $search, array $filters = [])
     {
-        return JournalEntryLine::with(['journalEntry.journalType'])
+        return $this->linesQuery($dateFrom, $dateTo, $search, $filters)
             ->where('account_id', $accountId)
+            ->get();
+    }
+
+    /**
+     * Requête de base des lignes du grand livre — factorise les deux modes.
+     * [Maquette X3] filtres : journal, tiers, plage de pièces, validées uniquement.
+     */
+    private function linesQuery(?string $dateFrom, ?string $dateTo, ?string $search, array $filters = [])
+    {
+        $validatedOnly = $filters['validated_only'] ?? true;
+
+        return JournalEntryLine::with(['journalEntry.journalType', 'account:id,code,name'])
             ->when($dateFrom, fn($q) => $q->whereHas('journalEntry', fn($je) => $je->whereDate('entry_date', '>=', $dateFrom)))
             ->when($dateTo,   fn($q) => $q->whereHas('journalEntry', fn($je) => $je->whereDate('entry_date', '<=', $dateTo)))
             ->when($search,   fn($q) => $q->where(fn($sq) =>
@@ -556,12 +629,22 @@ class LedgerController extends Controller
                    ->orWhereHas('journalEntry', fn($je) => $je->where('number', 'like', '%'.$search.'%')
                                                               ->orWhere('reference', 'like', '%'.$search.'%'))
             ))
-            ->whereHas('journalEntry', fn($q) => $q->where('status', 'valide'))
+            ->when($filters['journal_type_id'] ?? null, fn($q, $v) =>
+                $q->whereHas('journalEntry', fn($je) => $je->where('journal_type_id', $v)))
+            ->when($filters['partner'] ?? null, fn($q, $v) =>
+                $q->where(fn($sq) => $sq->where('partner_name', 'like', '%'.$v.'%')
+                    ->orWhereHas('journalEntry', fn($je) => $je->where('partner_name', 'like', '%'.$v.'%'))))
+            ->when($filters['piece_from'] ?? null, fn($q, $v) =>
+                $q->whereHas('journalEntry', fn($je) => $je->where('number', '>=', $v)))
+            ->when($filters['piece_to'] ?? null, fn($q, $v) =>
+                $q->whereHas('journalEntry', fn($je) => $je->where('number', '<=', $v)))
+            ->when($validatedOnly,
+                fn($q) => $q->whereHas('journalEntry', fn($je) => $je->where('status', 'valide')),
+                fn($q) => $q->whereHas('journalEntry', fn($je) => $je->whereIn('status', ['valide', 'brouillon'])))
             ->orderBy(
                 JournalEntry::select('entry_date')
                     ->whereColumn('journal_entries.id', 'journal_entry_lines.journal_entry_id')
                     ->limit(1)
-            )
-            ->get();
+            );
     }
 }

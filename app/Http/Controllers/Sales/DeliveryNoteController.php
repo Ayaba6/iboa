@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 
 class DeliveryNoteController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(
         private DeliveryNoteService         $service,
         private CommercialWorkflowService   $workflow,
@@ -133,22 +135,6 @@ class DeliveryNoteController extends Controller
         return redirect()
             ->route('ventes.bons-livraison.show', $bonsLivraison)
             ->with('success', 'Bon de livraison mis à jour.');
-    }
-
-    /** Enregistre les pièces jointes du bon de livraison. */
-    private function uploadDocuments(DeliveryNote $deliveryNote, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/delivery_note/'.$deliveryNote->id, 'local');
-            $deliveryNote->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     /**

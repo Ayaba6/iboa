@@ -27,15 +27,36 @@
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
 @endphp
 
-<div class="max-w-6xl">
-    <form method="POST" enctype="multipart/form-data"
+@php
+    // [X3] barre d'icônes verticale droite
+    $railBtn = 'w-9 h-9 flex items-center justify-center rounded-[4px] text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-colors';
+@endphp
+<div class="flex items-start gap-4">
+    @include('production.orders._selector')
+    <div class="flex-1 min-w-0">
+    <form method="POST" enctype="multipart/form-data" id="of-form"
           action="{{ $isEdit ? route('production.orders.update', $o) : route('production.orders.store') }}"
           x-data="{ tab: 'entete', lines: {{ Js::from($initialLines) }},
+                    sections: { entete: true, articles: true, allocation: true, params: true, caract: true },
+                    ofType: '{{ old('of_type', $o->of_type ?? 'standard') }}',
+                    ofTypeLabels: { standard: 'Standard', reprise: 'Reprise', retouche: 'Retouche', speciale_client: 'Spéciale client' },
                     pid: '{{ old('product_id', $o->product_id ?? '') }}', bomId: '{{ old('bill_of_material_id', $o->bill_of_material_id ?? '') }}',
                     qty: '{{ old('quantity_requested', $o->quantity_requested ?? '') }}',
                     ppm: '{{ old('poids_par_metre', $o->poids_par_metre ?? '') }}',
                     saveAndSubmit: false,
                     boms: {{ Js::from($bomData) }},
+                    byproducts: {{ Js::from($byproducts) }},
+                    get launched() {
+                        /* [X3 Articles lancés] article principal + sous-produits avarié/chute */
+                        const rows = [];
+                        const bp = this.byproducts[this.pid];
+                        if (bp) {
+                            rows.push({ ref: bp.ref, name: bp.name, kind: 'principal', qty: this.totalQty, metrage: this.totalMeters });
+                            if (bp.avarie) rows.push({ ref: bp.avarie.ref, name: bp.avarie.name, kind: 'avarié', qty: 0, metrage: 0 });
+                            if (bp.chute)  rows.push({ ref: bp.chute.ref,  name: bp.chute.name,  kind: 'chute',  qty: 0, metrage: 0 });
+                        }
+                        return rows;
+                    },
                     /* ── Prévisionnel LIVE ── */
                     get totalQty() { const lq = this.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0); return lq > 0 ? lq : (parseFloat(this.qty) || 0); },
                     get totalMeters() { return this.lines.reduce((s, l) => s + (parseFloat(l.length) || 0) * (parseFloat(l.quantity) || 0), 0); },
@@ -66,31 +87,42 @@
 
         <div class="bg-white border border-gray-300 rounded-[4px]">
             <div class="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-                <h2 class="text-[15px] font-bold text-gray-900">
-                    Ordres de fabrication : Création complète
-                    @if($isEdit)<span class="font-mono text-emerald-700 ml-1">{{ $o->number }}</span>@endif
+                <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
+                    Ordres de fabrication
+                    <span class="font-normal text-gray-500 text-[18px]" x-text="ofType.substring(0, 3).toUpperCase() + ' : ' + (ofTypeLabels[ofType] || 'Standard')"></span>
+                    @if($isEdit)<span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $o->number }}</span>
+                    @else<span class="text-gray-400 text-[15px] font-normal ml-1">(création)</span>@endif
                 </h2>
                 <div class="flex items-center gap-2">
                     <input type="hidden" name="save_and_submit" :value="saveAndSubmit ? 1 : 0">
+                    {{-- [X3] boutons outline vert / gris --}}
                     <button type="submit"
-                            class="text-[13px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer</button>
+                            class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-5 py-1.5 rounded-full transition-colors">Enregistrer</button>
+                    <a href="{{ route('production.orders.index') }}"
+                       class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-1.5 rounded-full transition-colors">Abandon</a>
                     @if(! $isEdit)
                     {{-- type=button + $nextTick : le submit natif partirait AVANT le
                          flush du binding Alpine (:value du hidden save_and_submit). --}}
                     <button type="button" @click="saveAndSubmit = true; $nextTick(() => $el.closest('form').submit())"
-                            class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-[4px] transition-colors">Enregistrer + soumettre validation</button>
+                            class="text-[13px] font-semibold text-emerald-700 border border-emerald-500 bg-white hover:bg-emerald-50 px-5 py-1.5 rounded-full transition-colors">Créer + soumettre</button>
                     @endif
-                    <a href="{{ route('production.orders.index') }}"
-                       class="text-[13px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px] transition-colors">Abandon</a>
                 </div>
             </div>
 
             <nav class="flex items-stretch border-b border-gray-200 px-2 overflow-x-auto">
-                @foreach([
-                    'entete' => 'Entête', 'composants' => 'Composants', 'operations' => 'Opérations',
-                    'documents' => 'Documents', 'suivi' => 'Suivi', 'qualite' => 'Qualité',
-                ] as $key => $label)
-                <button type="button" @click="tab = '{{ $key }}'; document.getElementById('sec-{{ $key }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                @php
+                    $tabs = [
+                        'entete' => 'Entête', 'composants' => 'Composants', 'operations' => 'Opérations',
+                        'documents' => 'Documents', 'suivi' => 'Suivi', 'qualite' => 'Qualité',
+                    ];
+                    if ($isEdit) {
+                        $tabs += ['allocation' => 'Allocation matière', 'couts' => 'Coûts', 'tracabilite' => 'Traçabilité'];
+                    }
+                @endphp
+                @foreach($tabs as $key => $label)
+                {{-- $nextTick : le scroll smooth lancé pendant le re-render Alpine des onglets
+                     est interrompu (page longue) — on scrolle après le patch DOM. --}}
+                <button type="button" @click="tab = '{{ $key }}'; $nextTick(() => document.getElementById('sec-{{ $key }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
                         class="px-3 py-1.5 text-[13px] font-semibold border-b-2 transition-colors whitespace-nowrap"
                         :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-800' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $label }}</button>
                 @endforeach
@@ -120,8 +152,11 @@
             {{-- ═══════════ ENTÊTE ═══════════ --}}
             <div id="sec-entete" class="p-4 space-y-4 scroll-mt-40">
                 <section class="border border-gray-200 rounded-[4px]">
-                    <div class="{{ $secH }}">Entête</div>
-                    <div class="p-4 grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
+                    <button type="button" @click="sections.entete = !sections.entete" class="{{ $secH }} w-full flex items-center justify-between">
+                        <span>1. Entête</span>
+                        <svg class="w-4 h-4 transition-transform" :class="sections.entete ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="sections.entete" class="p-4 grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Site planification</label><input type="text" name="site_planification" maxlength="20" value="{{ old('site_planification', $o->site_planification) }}" class="{{ $inp }} font-mono uppercase" placeholder="OUTLB"></div>
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Site production</label><input type="text" name="site_production" maxlength="20" value="{{ old('site_production', $o->site_production) }}" class="{{ $inp }} font-mono uppercase" placeholder="OUTLB"></div>
                         <div class="sm:col-span-3"><label class="{{ $lbl }}">Numéro O.F.</label><input type="text" value="{{ $o->number ?: 'Auto à la création' }}" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly></div>
@@ -168,7 +203,7 @@
 
                         <div class="sm:col-span-2">
                             <label class="{{ $lbl }}">Type d'OF</label>
-                            <div class="relative"><select name="of_type" class="{{ $lk }}">
+                            <div class="relative"><select name="of_type" x-model="ofType" class="{{ $lk }}">
                                 @php $ot = old('of_type', $o->of_type ?? 'standard'); @endphp
                                 @foreach(['standard' => 'Fabrication standard', 'reprise' => 'Reprise', 'retouche' => 'Retouche', 'speciale_client' => 'Spéciale client'] as $v => $l)
                                 <option value="{{ $v }}" @selected($ot === $v)>{{ $l }}</option>
@@ -213,6 +248,76 @@
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Version gamme</label><input type="text" name="routing_version" maxlength="20" value="{{ old('routing_version', $o->routing_version ?? 'V1') }}" class="{{ $inp }} font-mono"></div>
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Équipe prévue</label><input type="text" name="equipe_prevue" maxlength="60" value="{{ old('equipe_prevue', $o->equipe_prevue) }}" class="{{ $inp }}" placeholder="Équipe A"></div>
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Nb opérateurs</label><input type="number" name="nb_operateurs" min="0" max="500" value="{{ old('nb_operateurs', $o->nb_operateurs) }}" class="{{ $inpR }}"></div>
+                    </div>
+                </section>
+
+                {{-- ═══════════ [X3] 2. ARTICLES LANCÉS (principal + sous-produits) ═══════════ --}}
+                <section class="border border-gray-200 rounded-[4px]" x-show="launched.length">
+                    <button type="button" @click="sections.articles = !sections.articles" class="{{ $secH }} w-full flex items-center justify-between"><span>2. Articles lancés</span><svg class="w-4 h-4 transition-transform" :class="sections.articles ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></button>
+                    <div x-show="sections.articles" class="p-4">
+                        <table class="w-full text-[12.5px] border border-gray-200">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px] font-semibold uppercase whitespace-nowrap">
+                                <th class="text-left px-2 py-1.5 w-8">#</th>
+                                <th class="text-left px-2 py-1.5">Article</th>
+                                <th class="text-left px-2 py-1.5">Désignation</th>
+                                <th class="text-left px-2 py-1.5">Nature</th>
+                                <th class="text-left px-2 py-1.5">Statut ligne</th>
+                                <th class="text-right px-2 py-1.5">Métrage (Tôlebac)</th>
+                                <th class="text-right px-2 py-1.5">Qté</th>
+                            </tr></thead>
+                            <tbody>
+                                <template x-for="(row, i) in launched" :key="i">
+                                    <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40">
+                                        <td class="px-2 py-1.5 text-gray-400" x-text="i + 1"></td>
+                                        <td class="px-2 py-1.5 font-mono text-emerald-800" x-text="row.ref"></td>
+                                        <td class="px-2 py-1.5 text-gray-700" x-text="row.name"></td>
+                                        <td class="px-2 py-1.5">
+                                            <span class="inline-flex px-1.5 py-0.5 rounded-[2px] text-[10.5px] font-semibold"
+                                                  :class="{ 'bg-emerald-100 text-emerald-700': row.kind === 'principal', 'bg-red-100 text-red-700': row.kind === 'avarié', 'bg-amber-100 text-amber-700': row.kind === 'chute' }"
+                                                  x-text="row.kind"></span>
+                                        </td>
+                                        <td class="px-2 py-1.5 text-gray-500">En attente</td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums text-gray-600" x-text="row.metrage ? fmt(row.metrage, 2) + ' m' : '—'"></td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums" x-text="fmt(row.qty)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <p class="text-[11px] text-gray-400 mt-1.5">Article principal issu de la sélection ci-dessus. Les sous-produits (avarié / chute) sont hérités de la fiche article et déclarés à la production.</p>
+                    </div>
+                </section>
+
+                {{-- ═══════════ [X3] 3. ALLOCATION MATIÈRE (composants nomenclature) ═══════════ --}}
+                <section class="border border-gray-200 rounded-[4px]" x-show="bomId && comps.length" x-cloak>
+                    <button type="button" @click="sections.allocation = !sections.allocation" class="{{ $secH }} w-full flex items-center justify-between"><span>3. Allocation matière</span><svg class="w-4 h-4 transition-transform" :class="sections.allocation ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></button>
+                    <div x-show="sections.allocation" class="p-4">
+                        <table class="w-full text-[12.5px] border border-gray-200">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px] font-semibold uppercase whitespace-nowrap">
+                                <th class="text-left px-2 py-1.5 w-8">#</th>
+                                <th class="text-left px-2 py-1.5">Article composant</th>
+                                <th class="text-left px-2 py-1.5">Lot bobine</th>
+                                <th class="text-left px-2 py-1.5">Dépôt sortie</th>
+                                <th class="text-right px-2 py-1.5">Qté prévue</th>
+                                <th class="text-right px-2 py-1.5">Qté allouée</th>
+                                <th class="text-left px-2 py-1.5">UOM</th>
+                                <th class="text-right px-2 py-1.5">Stock disponible</th>
+                            </tr></thead>
+                            <tbody>
+                                <template x-for="(c, i) in comps" :key="c.name">
+                                    <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40" :class="need(c) > c.stock ? 'bg-red-50' : ''">
+                                        <td class="px-2 py-1.5 text-gray-400" x-text="i + 1"></td>
+                                        <td class="px-2 py-1.5 text-gray-900" x-text="c.name"></td>
+                                        <td class="px-2 py-1.5 text-gray-400 italic">à l'allocation</td>
+                                        <td class="px-2 py-1.5 font-mono text-gray-600">{{ $warehouses->firstWhere('id', old('depot_matiere_id', $o->depot_matiere_id))?->code ?? '—' }}</td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums font-semibold" x-text="fmt(need(c), 2)"></td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums text-gray-400">0,00</td>
+                                        <td class="px-2 py-1.5 text-gray-600" x-text="c.unit"></td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums" :class="need(c) > c.stock ? 'text-red-700 font-bold' : 'text-gray-700'" x-text="fmt(c.stock, 2)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <p class="text-[11px] text-gray-400 mt-1.5">Composants issus de la nomenclature. Le lot/bobine et la quantité allouée sont renseignés lors de l'allocation matière (au lancement de l'OF).</p>
                     </div>
                 </section>
 
@@ -267,8 +372,11 @@
                 </section>
 
                 <section class="border border-gray-200 rounded-[4px]">
-                    <div class="{{ $secH }}">Paramètres de production</div>
-                    <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <button type="button" @click="sections.params = !sections.params" class="{{ $secH }} w-full flex items-center justify-between">
+                        <span>4. Paramètres de production</span>
+                        <svg class="w-4 h-4 transition-transform" :class="sections.params ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="sections.params" class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div>
                             <label class="{{ $lbl }}">Machine / ligne</label>
                             <div class="relative"><select name="production_line_id" class="{{ $lk }}"><option value="">—</option>@foreach($lines as $l)<option value="{{ $l->id }}" @selected(old('production_line_id',$o->production_line_id)==$l->id)>{{ $l->name }}</option>@endforeach</select>{!! $caret !!}</div>
@@ -341,7 +449,7 @@
                     </div>
                     <div class="p-4">
                         <table class="w-full text-[12.5px] border border-gray-200">
-                            <thead><tr class="bg-[#eef5f0] text-emerald-900">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px]">
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Libellé</th>
                                 <th class="text-right font-bold px-2 py-1.5 border-b border-gray-200">Longueur (m)</th>
                                 <th class="text-right font-bold px-2 py-1.5 border-b border-gray-200">Quantité</th>
@@ -427,7 +535,7 @@
 
                         @if($isEdit && $o->relationLoaded('consumptions') && $o->consumptions->isNotEmpty())
                         <table class="w-full text-[12.5px] border border-gray-200">
-                            <thead><tr class="bg-[#eef5f0] text-emerald-900">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px]">
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Bobine</th>
                                 <th class="text-right font-bold px-2 py-1.5 border-b border-gray-200">Poids consommé</th>
                                 <th class="text-right font-bold px-2 py-1.5 border-b border-gray-200">Coût</th>
@@ -488,7 +596,7 @@
 
                         @if($isEdit && $o->relationLoaded('operations') && $o->operations->isNotEmpty())
                         <table class="w-full text-[12.5px] border border-gray-200">
-                            <thead><tr class="bg-[#eef5f0] text-emerald-900">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px]">
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Poste de charge</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Opérateur</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Statut</th>
@@ -515,7 +623,7 @@
                     <div class="p-4 space-y-4">
                         @if($isEdit && $o->attachments->isNotEmpty())
                         <table class="w-full text-[12.5px] border border-gray-200">
-                            <thead><tr class="bg-[#eef5f0] text-emerald-900">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px]">
                                 <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200 w-10">#</th>
                                 <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Fichier</th>
                                 <th class="text-left font-bold px-3 py-1.5 border-b border-gray-200">Type</th>
@@ -566,7 +674,7 @@
                     <div class="p-4">
                         @if($isEdit && $o->relationLoaded('qualityControls') && $o->qualityControls->isNotEmpty())
                         <table class="w-full text-[12.5px] border border-gray-200">
-                            <thead><tr class="bg-[#eef5f0] text-emerald-900">
+                            <thead><tr class="bg-[#3b4248] text-white text-[11px]">
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Contrôleur</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Résultat</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Date</th>
@@ -587,7 +695,225 @@
                     </div>
                 </section>
             </div>
+
+            @if($isEdit)
+            @php
+                $thd = 'text-left font-semibold px-2 py-1.5 text-[11px] uppercase whitespace-nowrap';
+                $fmtQ = fn ($v, $d = 2) => number_format((float) $v, $d, ',', ' ');
+            @endphp
+
+            {{-- ═══════════ ALLOCATION MATIÈRE (lecture) [X3 §9] ═══════════ --}}
+            <div id="sec-allocation" class="p-4 pt-0 scroll-mt-40">
+                <section class="border border-gray-200 rounded-[4px]">
+                    <div class="{{ $secH }}">Allocation matière — réservations &amp; consommations</div>
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <div class="text-[12px] font-bold text-gray-700 mb-1.5">Réservations de stock</div>
+                            @if($o->reservations->isNotEmpty())
+                            <table class="w-full text-[12.5px] border border-gray-200">
+                                <thead><tr class="bg-[#3b4248] text-white">
+                                    <th class="{{ $thd }}">Article</th>
+                                    <th class="{{ $thd }}">Dépôt</th>
+                                    <th class="{{ $thd }} text-right">Qté réservée</th>
+                                    <th class="{{ $thd }}">Statut</th>
+                                    <th class="{{ $thd }}">Réservé le</th>
+                                    <th class="{{ $thd }}">Libéré le</th>
+                                </tr></thead>
+                                <tbody>
+                                    @foreach($o->reservations as $r)
+                                    <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40">
+                                        <td class="px-2 py-1.5">{{ $r->product?->name ?? '—' }}</td>
+                                        <td class="px-2 py-1.5 text-gray-600">{{ $r->warehouse?->name ?? '—' }}</td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums font-semibold">{{ $fmtQ($r->quantity) }}</td>
+                                        <td class="px-2 py-1.5"><span class="inline-flex px-1.5 py-0.5 rounded-[2px] text-[10.5px] font-semibold {{ $r->status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">{{ ucfirst($r->status) }}</span></td>
+                                        <td class="px-2 py-1.5 text-gray-600 tabular-nums">{{ optional($r->reserved_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                                        <td class="px-2 py-1.5 text-gray-600 tabular-nums">{{ optional($r->released_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                            @else
+                            <p class="text-[13px] text-gray-400 italic">Aucune réservation matière. Utilisez « Réserver matière » sur la page de détail de l'OF.</p>
+                            @endif
+                        </div>
+                        <div>
+                            <div class="text-[12px] font-bold text-gray-700 mb-1.5">Consommations bobines / matière</div>
+                            @if($o->consumptions->isNotEmpty())
+                            <table class="w-full text-[12.5px] border border-gray-200">
+                                <thead><tr class="bg-[#3b4248] text-white">
+                                    <th class="{{ $thd }}">Bobine</th>
+                                    <th class="{{ $thd }}">Lot</th>
+                                    <th class="{{ $thd }} text-right">Poids conso (kg)</th>
+                                    <th class="{{ $thd }} text-right">Longueur (m)</th>
+                                    <th class="{{ $thd }} text-right">Coût</th>
+                                    <th class="{{ $thd }}">Consommé le</th>
+                                </tr></thead>
+                                <tbody>
+                                    @foreach($o->consumptions as $cons)
+                                    <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40">
+                                        <td class="px-2 py-1.5 font-mono text-[12px]">{{ $cons->coil?->reference ?? '—' }}</td>
+                                        <td class="px-2 py-1.5 font-mono text-[12px] text-gray-600">{{ $cons->coil?->lot_number ?? '—' }}</td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums">{{ $fmtQ($cons->weight_consumed) }}</td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums">{{ $cons->length_consumed ? $fmtQ($cons->length_consumed) : '—' }}</td>
+                                        <td class="px-2 py-1.5 text-right tabular-nums">{{ $fmtQ($cons->cost, 0) }} F</td>
+                                        <td class="px-2 py-1.5 text-gray-600 tabular-nums">{{ optional($cons->consumed_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot><tr class="bg-[#edf0f2] border-t-2 border-gray-300 font-semibold">
+                                    <td class="px-2 py-1.5" colspan="2">Total</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums">{{ $fmtQ($o->consumptions->sum('weight_consumed')) }}</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums">{{ $fmtQ($o->consumptions->sum('length_consumed')) }}</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums">{{ $fmtQ($o->consumptions->sum('cost'), 0) }} F</td>
+                                    <td></td>
+                                </tr></tfoot>
+                            </table>
+                            @else
+                            <p class="text-[13px] text-gray-400 italic">Aucune consommation matière enregistrée.</p>
+                            @endif
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {{-- ═══════════ COÛTS (lecture) [X3 §5] ═══════════ --}}
+            <div id="sec-couts" class="p-4 pt-0 scroll-mt-40">
+                <section class="border border-gray-200 rounded-[4px]">
+                    <div class="{{ $secH }}">Coût de revient — standard vs réel</div>
+                    <div class="p-4">
+                        @if($o->cost)
+                        <table class="w-full text-[12.5px] border border-gray-200 max-w-2xl">
+                            <thead><tr class="bg-[#3b4248] text-white">
+                                <th class="{{ $thd }}">Poste</th>
+                                <th class="{{ $thd }} text-right">Montant (F)</th>
+                            </tr></thead>
+                            <tbody>
+                                @foreach([
+                                    'Matière' => $o->cost->material_cost, 'Main-d\'œuvre' => $o->cost->labor_cost,
+                                    'Machine' => $o->cost->machine_cost, 'Énergie' => $o->cost->energy_cost,
+                                    'Maintenance' => $o->cost->maintenance_cost, 'Emballage' => $o->cost->packaging_cost,
+                                    'Frais indirects' => $o->cost->overhead_cost,
+                                ] as $poste => $montant)
+                                <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40">
+                                    <td class="px-2 py-1.5">{{ $poste }}</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums">{{ $fmtQ($montant, 0) }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-[#edf0f2] border-t-2 border-gray-300 font-bold">
+                                    <td class="px-2 py-1.5">Coût réel total</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums">{{ $fmtQ($o->cost->total_cost, 0) }}</td>
+                                </tr>
+                                <tr class="bg-[#edf0f2]">
+                                    <td class="px-2 py-1.5 text-gray-600">Coût standard</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums text-gray-600">{{ $fmtQ($o->cost->standard_total, 0) }}</td>
+                                </tr>
+                                <tr class="bg-[#edf0f2]">
+                                    <td class="px-2 py-1.5 font-semibold {{ (float) $o->cost->variance > 0 ? 'text-red-700' : 'text-emerald-700' }}">Écart</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums font-semibold {{ (float) $o->cost->variance > 0 ? 'text-red-700' : 'text-emerald-700' }}">{{ $fmtQ($o->cost->variance, 0) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-4 text-[13px] max-w-2xl">
+                            <div><p class="{{ $lbl }}">Coût / mètre</p><p class="font-mono font-semibold">{{ $fmtQ($o->cost->cost_per_meter, 0) }} F</p></div>
+                            <div><p class="{{ $lbl }}">Coût / unité</p><p class="font-mono font-semibold">{{ $fmtQ($o->cost->cost_per_unit, 0) }} F</p></div>
+                            <div><p class="{{ $lbl }}">Marge estimée</p><p class="font-mono font-semibold {{ (float) $o->cost->margin < 0 ? 'text-red-700' : 'text-emerald-700' }}">{{ $fmtQ($o->cost->margin, 0) }} F</p></div>
+                        </div>
+                        @else
+                        <p class="text-[13px] text-gray-400 italic">Coût de revient non encore calculé — il est généré à la clôture de l'OF (ou via l'action « Calculer coût » sur la page de détail).</p>
+                        @endif
+                    </div>
+                </section>
+            </div>
+
+            {{-- ═══════════ TRAÇABILITÉ (lecture) [X3 §5] ═══════════ --}}
+            <div id="sec-tracabilite" class="p-4 pt-0 scroll-mt-40">
+                <section class="border border-gray-200 rounded-[4px]">
+                    <div class="{{ $secH }}">Traçabilité — lots, bobines &amp; événements</div>
+                    <div class="p-4 space-y-4">
+                        @php
+                            $events = collect();
+                            $events->push(['date' => $o->created_at, 'type' => 'Création', 'detail' => 'OF créé' . ($o->createdBy?->name ? ' par ' . $o->createdBy->name : ''), 'ref' => $o->number]);
+                            if ($o->launched_at) $events->push(['date' => $o->launched_at, 'type' => 'Lancement', 'detail' => 'OF lancé en production', 'ref' => $o->number]);
+                            foreach ($o->consumptions as $cons) $events->push(['date' => $cons->consumed_at ?? $cons->created_at, 'type' => 'Consommation', 'detail' => 'Bobine ' . ($cons->coil?->reference ?? '?') . ' — ' . $fmtQ($cons->weight_consumed) . ' kg', 'ref' => $cons->coil?->lot_number]);
+                            foreach ($o->outputs as $out) $events->push(['date' => $out->produced_at ?? $out->created_at, 'type' => 'Déclaration', 'detail' => $fmtQ($out->quantity, 0) . ' pcs — ' . $fmtQ($out->total_meters) . ' m', 'ref' => $out->lot_number]);
+                            foreach ($o->batches as $b) $events->push(['date' => $b->produced_at ?? $b->created_at, 'type' => 'Lot PF', 'detail' => 'Lot produit fini — ' . $fmtQ($b->quantity, 0) . ' pcs (' . $b->status . ')', 'ref' => $b->batch_number]);
+                            if ($o->finished_at) $events->push(['date' => $o->finished_at, 'type' => 'Clôture', 'detail' => 'OF terminé', 'ref' => $o->number]);
+                            $events = $events->filter(fn ($e) => $e['date'])->sortBy('date')->values();
+                        @endphp
+                        @if($events->isNotEmpty())
+                        <table class="w-full text-[12.5px] border border-gray-200">
+                            <thead><tr class="bg-[#3b4248] text-white">
+                                <th class="{{ $thd }}">Date</th>
+                                <th class="{{ $thd }}">Événement</th>
+                                <th class="{{ $thd }}">Détail</th>
+                                <th class="{{ $thd }}">Lot / Référence</th>
+                            </tr></thead>
+                            <tbody>
+                                @foreach($events as $ev)
+                                <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40">
+                                    <td class="px-2 py-1.5 tabular-nums text-gray-600 whitespace-nowrap">{{ $ev['date']->format('d/m/Y H:i') }}</td>
+                                    <td class="px-2 py-1.5">
+                                        <span class="inline-flex px-1.5 py-0.5 rounded-[2px] text-[10.5px] font-semibold
+                                            @switch($ev['type'])
+                                                @case('Création') bg-gray-100 text-gray-600 @break
+                                                @case('Lancement') bg-blue-100 text-blue-700 @break
+                                                @case('Consommation') bg-amber-100 text-amber-700 @break
+                                                @case('Déclaration') bg-emerald-100 text-emerald-700 @break
+                                                @case('Lot PF') bg-teal-100 text-teal-700 @break
+                                                @default bg-gray-200 text-gray-700
+                                            @endswitch">{{ $ev['type'] }}</span>
+                                    </td>
+                                    <td class="px-2 py-1.5 text-gray-700">{{ $ev['detail'] }}</td>
+                                    <td class="px-2 py-1.5 font-mono text-[12px] text-gray-600">{{ $ev['ref'] ?? '—' }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                        @else
+                        <p class="text-[13px] text-gray-400 italic">Aucun événement tracé pour le moment.</p>
+                        @endif
+                    </div>
+                </section>
+            </div>
+            @endif
         </div>
     </form>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">OUTLB</span></span>
+        <span class="border-l border-white/10 pl-6">Document : <span class="text-white font-semibold">{{ $isEdit ? $o->number : 'OF (brouillon)' }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
+    </div>{{-- /form column --}}
+
+    {{-- ══ Barre d'icônes verticale droite [X3] ══ --}}
+    <aside class="hidden xl:flex flex-col gap-1 shrink-0 sticky top-4 bg-white border border-gray-300 rounded-[4px] p-1.5">
+        <button type="submit" form="of-form" class="{{ $railBtn }} text-emerald-700" title="Enregistrer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+        <a href="{{ route('production.orders.create') }}" class="{{ $railBtn }}" title="Nouveau">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </a>
+        @if($isEdit)
+        <a href="{{ route('production.orders.show', $o) }}" class="{{ $railBtn }}" title="Consulter la fiche">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </a>
+        @endif
+        <button type="button" onclick="window.print()" class="{{ $railBtn }}" title="Imprimer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+        </button>
+        <div class="border-t border-gray-100 my-0.5"></div>
+        <button type="button" @click="tab = 'documents'" class="{{ $railBtn }}" title="Pièces jointes">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+        </button>
+        <a href="{{ route('production.orders.index') }}" class="{{ $railBtn }}" title="Quitter">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </a>
+    </aside>
 </div>
 @endsection

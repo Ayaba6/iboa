@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-3" x-data="rfqForm()" x-init="init()">
+<div class="max-w-5xl mx-auto space-y-3" x-data="rfqForm()">
     <h1 class="text-[16px] font-bold text-gray-900">Nouvelle demande de devis</h1>
 
     @if($errors->any())

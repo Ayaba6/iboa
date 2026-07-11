@@ -12,7 +12,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-6xl">
+<div class="w-full">
 
     {{-- Archive form — OUTSIDE la fiche pour éviter la collision _method --}}
     <form id="archiveClientForm" action="{{ route('clients.destroy', $client) }}" method="POST"

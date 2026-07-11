@@ -70,9 +70,40 @@ class JournalEntryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->validate([
+            'documents'   => ['nullable', 'array', 'max:5'],
+            'documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
+        ]);
+
         $data = $this->validateEntryPayload($request);
 
         $entry = $this->service->create($data);
+
+        foreach ((array) $request->file('documents', []) as $file) {
+            $path = $file->store('attachments/journalentry/' . $entry->id, 'local');
+            $entry->attachments()->create([
+                'disk' => 'local', 'path' => $path,
+                'filename' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(), 'size' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+            ]);
+        }
+
+        // [Maquette X3] « Enregistrer + Valider » : tente la validation immédiate.
+        // (Sans effet sur une simulation — le service la refuse avec un message clair.)
+        if ($request->boolean('save_and_validate')) {
+            try {
+                $this->service->validate($entry);
+
+                return redirect()
+                    ->route('comptabilite.journaux.show', $entry)
+                    ->with('success', 'Écriture ' . $entry->number . ' créée et validée. Les soldes ont été mis à jour.');
+            } catch (\Exception $e) {
+                return redirect()
+                    ->route('comptabilite.journaux.show', $entry)
+                    ->with('error', 'Écriture ' . $entry->number . ' créée en brouillon, mais validation impossible : ' . $e->getMessage());
+            }
+        }
 
         return redirect()
             ->route('comptabilite.journaux.show', $entry)
@@ -120,15 +151,23 @@ class JournalEntryController extends Controller
     private function validateEntryPayload(Request $request): array
     {
         $data = $request->validate([
-            'journal_type_id'    => ['required', 'integer', 'exists:journal_types,id'],
-            'entry_date'         => ['required', 'date'],
-            'description'        => ['required', 'string', 'max:255'],
-            'reference'          => ['nullable', 'string', 'max:50'],
-            'lines'              => ['required', 'array', 'min:2'],
-            'lines.*.account_id' => ['required', 'integer', 'exists:accounts,id'],
-            'lines.*.label'      => ['nullable', 'string', 'max:255'],
-            'lines.*.debit'      => ['nullable', 'integer', 'min:0'],
-            'lines.*.credit'     => ['nullable', 'integer', 'min:0'],
+            'journal_type_id'       => ['required', 'integer', 'exists:journal_types,id'],
+            'entry_date'            => ['required', 'date'],
+            'value_date'            => ['nullable', 'date'],
+            'description'           => ['required', 'string', 'max:255'],
+            'reference'             => ['nullable', 'string', 'max:50'],
+            'partner_name'          => ['nullable', 'string', 'max:100'],
+            'is_simulation'         => ['nullable', 'boolean'],
+            'lines'                 => ['required', 'array', 'min:2'],
+            'lines.*.account_id'    => ['required', 'integer', 'exists:accounts,id'],
+            'lines.*.label'         => ['nullable', 'string', 'max:255'],
+            'lines.*.debit'         => ['nullable', 'integer', 'min:0'],
+            'lines.*.credit'        => ['nullable', 'integer', 'min:0'],
+            'lines.*.due_date'      => ['nullable', 'date'],
+            'lines.*.partner_name'       => ['nullable', 'string', 'max:100'],
+            'lines.*.cost_center'        => ['nullable', 'string', 'max:30'],
+            'lines.*.tax_code'           => ['nullable', 'string', 'max:10'],
+            'lines.*.reconciliation_ref' => ['nullable', 'string', 'max:50'],
         ]);
 
         $effective = [];

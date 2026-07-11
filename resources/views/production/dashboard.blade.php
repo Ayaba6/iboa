@@ -9,7 +9,7 @@
 
 @section('content')
 @php
-    $th = 'px-3 py-1.5 text-[11px] font-bold text-emerald-900 uppercase tracking-wide';
+    $th = 'px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide';
     $panelH = 'flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white';
     $panelT = 'text-[13px] font-bold text-gray-900';
     $foot = 'px-3 py-1.5 border-t border-gray-200 bg-[#f7faf8]';
@@ -72,7 +72,7 @@
         </div>
         <div class="border-l border-gray-200 pl-6">
             <p class="text-[11px] text-gray-500">Production mensuelle</p>
-            <p class="text-[17px] font-bold text-gray-900 tabular-nums">{{ number_format($kpis['meters'], 0, ',', ' ') }} m</p>
+            <p class="text-[22px] font-bold text-gray-900 leading-tight tabular-nums">{{ number_format($kpis['meters'], 0, ',', ' ') }} m</p>
             <p class="text-[11px] text-gray-400">du {{ \Illuminate\Support\Carbon::parse($from)->format('d/m') }} au {{ \Illuminate\Support\Carbon::parse($to)->format('d/m/Y') }}</p>
         </div>
         <div class="border-l border-gray-200 pl-6" x-data="{ time: '' }" x-init="setInterval(() => time = new Date().toLocaleTimeString('fr-FR'), 1000)">
@@ -125,6 +125,50 @@
         @endforeach
     </div>
 
+    {{-- KPI rangée 2 [X3 §4] : parc, bobines, qualité, coûts --}}
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+        @foreach([
+            ['label' => 'OF à lancer',       'value' => number_format($kpis['of_a_lancer'], 0, ',', ' '),                  'sub' => $kpis['of_termine'] . ' terminés (période)', 'alert' => false],
+            ['label' => 'Tonnage produit',   'value' => str_replace('.', ',', (string) $kpis['tonnage']) . ' t',           'sub' => 'sur la période',                            'alert' => false],
+            ['label' => 'Bobines',           'value' => number_format($kpis['coils_dispo'], 0, ',', ' ') . ' dispo',       'sub' => $kpis['coils_reservees'] . ' en production / réservées', 'alert' => false],
+            ['label' => 'Machines',          'value' => number_format($kpis['machines_dispo'], 0, ',', ' ') . ' dispo',    'sub' => $kpis['machines_panne'] . ' indisponible(s)', 'alert' => $kpis['machines_panne'] > 0],
+            ['label' => 'Qualité',           'value' => $kpis['nc_ouvertes'] . ' NC ouvertes',                             'sub' => $kpis['cq_attente'] . ' contrôles en attente', 'alert' => $kpis['nc_ouvertes'] > 0],
+            ['label' => 'Marge estimée',     'value' => number_format($kpis['marge_estimee'], 0, ',', ' ') . ' F',         'sub' => 'MO ' . number_format($kpis['cout_mo'], 0, ',', ' ') . ' F · machine ' . number_format($kpis['cout_machine'], 0, ',', ' ') . ' F', 'alert' => $kpis['marge_estimee'] < 0],
+        ] as $kpi)
+        <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
+            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">{{ $kpi['label'] }}</p>
+            <p class="text-[15px] font-bold {{ $kpi['alert'] ? 'text-red-600' : 'text-gray-900' }} tabular-nums mt-1">{{ $kpi['value'] }}</p>
+            <p class="text-[11px] text-gray-400 truncate" title="{{ $kpi['sub'] }}">{{ $kpi['sub'] }}</p>
+        </div>
+        @endforeach
+    </div>
+
+    {{-- Chaîne de production visuelle [X3 §4] --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 p-3">
+        <h2 class="text-[12px] font-bold text-gray-700 uppercase tracking-wide mb-2">Chaîne de production</h2>
+        <div class="flex items-stretch gap-0 overflow-x-auto pb-1">
+            @foreach($chaine as $i => $etape)
+            @php
+                $cc = match($etape['color']) {
+                    'blue'    => 'border-blue-300 bg-blue-50 text-blue-800',
+                    'amber'   => 'border-amber-300 bg-amber-50 text-amber-800',
+                    'emerald' => 'border-emerald-300 bg-emerald-50 text-emerald-800',
+                    'purple'  => 'border-purple-300 bg-purple-50 text-purple-800',
+                    'teal'    => 'border-teal-300 bg-teal-50 text-teal-800',
+                    'sky'     => 'border-sky-300 bg-sky-50 text-sky-800',
+                    'indigo'  => 'border-indigo-300 bg-indigo-50 text-indigo-800',
+                    default   => 'border-gray-300 bg-gray-50 text-gray-700',
+                };
+            @endphp
+            <a href="{{ $etape['url'] }}" class="shrink-0 border {{ $cc }} rounded-[4px] px-3 py-1.5 text-center hover:shadow-sm transition-shadow min-w-[92px]">
+                <p class="text-[15px] font-bold tabular-nums leading-tight">{{ number_format($etape['count'], 0, ',', ' ') }}</p>
+                <p class="text-[10.5px] font-semibold whitespace-nowrap">{{ $etape['label'] }}</p>
+            </a>
+            @if(! $loop->last)<span class="shrink-0 self-center text-gray-300 px-1 text-[13px]">→</span>@endif
+            @endforeach
+        </div>
+    </div>
+
     {{-- Rangée 1 : OF en cours / Suivi production / Alertes --}}
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
@@ -132,7 +176,7 @@
             <div class="{{ $panelH }}"><h2 class="{{ $panelT }}">Ordres de fabrication en cours</h2></div>
             <div class="overflow-x-auto">
                 <table class="w-full text-[12px]">
-                    <thead class="bg-[#eef5f0] border-b border-gray-300">
+                    <thead class="bg-[#3b4248] text-white">
                         <tr>
                             <th class="{{ $th }} text-left">Référence</th>
                             <th class="{{ $th }} text-left">Article</th>
@@ -166,7 +210,7 @@
             <div class="{{ $panelH }}"><h2 class="{{ $panelT }}">Suivi production du jour</h2></div>
             <div class="overflow-x-auto">
                 <table class="w-full text-[12px]">
-                    <thead class="bg-[#eef5f0] border-b border-gray-300">
+                    <thead class="bg-[#3b4248] text-white">
                         <tr>
                             <th class="{{ $th }} text-left">Date</th>
                             <th class="{{ $th }} text-left">OF</th>
@@ -226,7 +270,7 @@
         <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="{{ $panelH }}"><h2 class="{{ $panelT }}">Consommation matières</h2></div>
             <table class="w-full text-[12px]">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Article</th>
                         <th class="{{ $th }} text-right">Stock dispo.</th>
@@ -249,13 +293,13 @@
                     @endforelse
                 </tbody>
             </table>
-            <div class="{{ $foot }}"><a href="{{ route('production.coils.index') }}" class="{{ $lnk }}">Voir toutes les matières</a></div>
+            <div class="{{ $foot }}"><a href="{{ route('products.index') }}" class="{{ $lnk }}">Voir tous les articles matière</a></div>
         </div>
 
         <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="{{ $panelH }}"><h2 class="{{ $panelT }}">Performances machines</h2></div>
             <table class="w-full text-[12px]">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Machine</th>
                         <th class="{{ $th }} text-right">Disponibilité</th>
@@ -295,7 +339,7 @@
         <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="{{ $panelH }}"><h2 class="{{ $panelT }}">Contrôle qualité</h2></div>
             <table class="w-full text-[12px]">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248] text-white">
                     <tr>
                         <th class="{{ $th }} text-left">Date</th>
                         <th class="{{ $th }} text-left">OF</th>

@@ -14,7 +14,7 @@
 @section('content')
 <div class="flex items-start gap-4">
     @include('products._selector')
-    <div class="flex-1 min-w-0 max-w-6xl">
+    <div class="flex-1 min-w-0">
         @include('products._form')
     </div>
 </div>

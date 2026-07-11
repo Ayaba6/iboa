@@ -666,6 +666,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('parametres',  [\App\Http\Controllers\Accounting\AccountingSettingController::class, 'update'])->name('parametres.update');
         });
 
+        // [Maquette X3] Annuaire des tiers (clients + fournisseurs unifiés)
+        Route::get('tiers', [\App\Http\Controllers\Accounting\TiersController::class, 'index'])->name('tiers.index');
+        Route::get('tiers/releve-client', [\App\Http\Controllers\Accounting\ClientStatementController::class, 'show'])->name('tiers.releve-client');
+        Route::post('tiers/releve-client/envoyer', [\App\Http\Controllers\Accounting\ClientStatementController::class, 'send'])->name('tiers.releve-client.send');
+        Route::post('tiers/releve-client/commentaire', [\App\Http\Controllers\Accounting\ClientStatementController::class, 'comment'])->name('tiers.releve-client.comment');
+
+        // [Maquette X3] Budgets comptables par compte général
+        Route::get('budgets', [\App\Http\Controllers\Accounting\BudgetController::class, 'index'])->name('budgets.index');
+        Route::middleware('permission:accounting.manage')->group(function () {
+            Route::post('budgets',                                  [\App\Http\Controllers\Accounting\BudgetController::class, 'store'])->name('budgets.store');
+            Route::post('budgets/{budget}/lignes',                  [\App\Http\Controllers\Accounting\BudgetController::class, 'storeLine'])->name('budgets.lines.store');
+            Route::delete('budgets/{budget}/lignes/{line}',         [\App\Http\Controllers\Accounting\BudgetController::class, 'destroyLine'])->name('budgets.lines.destroy');
+            Route::post('budgets/{budget}/valider',                 [\App\Http\Controllers\Accounting\BudgetController::class, 'validateBudget'])->name('budgets.validate');
+        });
+
         Route::middleware('permission:accounting.view')->group(function () {
             // Plan comptable — extra routes must come BEFORE the resource to avoid {account} conflict
             Route::get('plan-comptable/export',   [\App\Http\Controllers\Accounting\ChartOfAccountsController::class, 'export'])  ->name('plan-comptable.export');
@@ -1386,6 +1401,8 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     // production uniquement (chef production / directeur usine).
     Route::middleware('permission:production.update')->group(function () {
         Route::get('planning', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'index'])->name('planning');
+        // [X3 §19] Déplacer OF / réaffecter ligne depuis le plan de charge
+        Route::post('planning/replan/{order}', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'replan'])->name('planning.replan');
         Route::get('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'index'])->name('cutting');
         Route::post('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'optimize'])->name('cutting.optimize');
         // [Maquette Optimisation de découpe] fiches persistées
@@ -1441,6 +1458,9 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     Route::post('orders/{order}/partial', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'partial'])->name('orders.partial');
     Route::post('orders/{order}/finish', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'finish'])->name('orders.finish');
     Route::post('orders/{order}/cancel', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'cancel'])->name('orders.cancel');
+    // [X3] Suspension / reprise d'OF
+    Route::post('orders/{order}/suspend', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'suspend'])->name('orders.suspend');
+    Route::post('orders/{order}/resume',  [\App\Modules\Production\Controllers\ProductionOrderController::class, 'resume'])->name('orders.resume');
     // §13.2 CDC — Validation financière DAF/DG avant lancement OF
     Route::post('orders/{order}/authorize-finance', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'authorizeFinance'])->name('orders.authorize-finance');
     // §13.3 CDC — Validation 2-niveaux avant lancement (Chef Atelier → Responsable Production)

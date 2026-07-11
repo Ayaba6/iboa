@@ -10,6 +10,8 @@ use Illuminate\View\View;
 
 class ProductionMachineController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct()
     {
         $this->middleware('permission:production.create');
@@ -61,22 +63,6 @@ class ProductionMachineController extends Controller
         $machine->update($data);
         $this->uploadDocuments($machine, $request);
         return redirect()->route('production.machines.index')->with('success', 'Machine mise à jour.');
-    }
-
-    /** Enregistre les pièces jointes de la machine. */
-    private function uploadDocuments(ProductionMachine $machine, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/machine/'.$machine->id, 'local');
-            $machine->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function destroy(ProductionMachine $machine): RedirectResponse

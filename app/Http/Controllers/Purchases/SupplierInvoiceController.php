@@ -15,6 +15,8 @@ use Illuminate\Http\Request;
 
 class SupplierInvoiceController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(private SupplierInvoiceService $service) {}
 
     public function index(Request $request)
@@ -92,22 +94,6 @@ class SupplierInvoiceController extends Controller
         return redirect()
             ->route('achats.factures-fournisseurs.show', $invoice)
             ->with('success', 'Facture fournisseur ' . $invoice->number . ' créée avec succès.');
-    }
-
-    /** Enregistre les pièces jointes de la facture fournisseur. */
-    private function uploadDocuments(SupplierInvoice $invoice, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/supplier_invoice/'.$invoice->id, 'local');
-            $invoice->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(SupplierInvoice $facturesFournisseur)

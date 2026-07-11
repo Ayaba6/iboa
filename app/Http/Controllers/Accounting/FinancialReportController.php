@@ -30,11 +30,15 @@ class FinancialReportController extends Controller
         $selectedFy  = $this->resolveSelectedFiscalYear($request, $fiscalYears);
         $compare     = $request->boolean('compare');
 
-        if ($selectedFy) {
+        // [Maquette X3] Date d'arrêté libre (défaut : fin d'exercice)
+        $dateArrete = $request->input('date_arrete')
+            ?: $selectedFy?->ends_at->toDateString();
+
+        if ($selectedFy || $dateArrete) {
             $accounts = $this->loadAccountsWithMovements(
                 ['1%', '2%', '3%', '4%', '5%'],
                 null,
-                $selectedFy->ends_at->toDateString()
+                $dateArrete
             );
         } else {
             $accounts = $this->loadCumulativeAccounts(['1%', '2%', '3%', '4%', '5%']);
@@ -47,27 +51,110 @@ class FinancialReportController extends Controller
 
         [$actif, $passif, $totalActif, $totalPassif] = $this->buildBilanSections($accounts, $netResult);
 
-        // [COMPTA-PRO-04] Comparatif N vs N-1
-        $prevFy = null; $prevTotals = null;
-        if ($compare && $selectedFy) {
-            $prevFy = $this->resolvePreviousFiscalYear($selectedFy);
-            if ($prevFy) {
-                $prevAccounts = $this->loadAccountsWithMovements(
-                    ['1%', '2%', '3%', '4%', '5%'],
-                    null,
-                    $prevFy->ends_at->toDateString()
-                );
-                $prevAccounts->each(fn ($a) => $a->net = $a->debit_balance - $a->credit_balance);
-                $prevNetResult = $this->computeNetResult($prevFy);
-                $prevTotals = $this->sectionTotalsForBilan($prevAccounts, $prevNetResult);
-            }
+        // [Maquette X3] Soldes N-1 par compte (colonne Net N-1 / Montant N-1)
+        // — calculés dès qu'un exercice précédent existe, sans checkbox.
+        $prevFy = $selectedFy ? $this->resolvePreviousFiscalYear($selectedFy) : null;
+        $prevNets = collect();
+        $prevTotals = null;
+        if ($prevFy) {
+            $prevAccounts = $this->loadAccountsWithMovements(
+                ['1%', '2%', '3%', '4%', '5%'],
+                null,
+                $prevFy->ends_at->toDateString()
+            );
+            $prevAccounts->each(fn ($a) => $a->net = $a->debit_balance - $a->credit_balance);
+            $prevNets = $prevAccounts->keyBy('code')->map(fn ($a) => (int) $a->net);
+            $prevNetResult = $this->computeNetResult($prevFy);
+            $prevNets->put('13', (int) $prevNetResult); // résultat virtuel N-1
+            $prevTotals = $this->sectionTotalsForBilan($prevAccounts, $prevNetResult);
+        }
+
+        // [Maquette X3] Trésorerie nette = disponibilités (5x débiteurs) − banques créditrices
+        $tresoActive  = (int) $accounts->filter(fn ($a) => str_starts_with($a->code, '5') && $a->net >= 0)->sum('net');
+        $tresoPassive = (int) abs($accounts->filter(fn ($a) => str_starts_with($a->code, '5') && $a->net < 0)->sum('net'));
+        $tresoNette   = $tresoActive - $tresoPassive;
+
+        // [Maquette X3] Postes agrégés SYSCOHADA + N-1 par poste
+        [$actifX3, $passifX3] = $this->buildBilanX3($accounts, $netResult);
+        $actifX3Prev = null; $passifX3Prev = null;
+        if ($prevFy && isset($prevAccounts)) {
+            [$actifX3Prev, $passifX3Prev] = $this->buildBilanX3($prevAccounts, (int) ($prevNetResult ?? 0));
         }
 
         return view('comptabilite.rapports.bilan', compact(
             'actif', 'passif', 'totalActif', 'totalPassif', 'netResult',
-            'fiscalYears', 'selectedFy',
-            'compare', 'prevFy', 'prevTotals'
+            'fiscalYears', 'selectedFy', 'dateArrete',
+            'compare', 'prevFy', 'prevTotals', 'prevNets', 'tresoNette',
+            'actifX3', 'passifX3', 'actifX3Prev', 'passifX3Prev'
         ));
+    }
+
+    /**
+     * [Maquette X3] Agrégation par postes SYSCOHADA (pas par compte).
+     * Retourne [actif, passif] :
+     *   actif  : rubrique => ['postes' => [label => [brut, amort, net, indent]], ...]
+     *   passif : rubrique => ['postes' => [label => [montant, indent]], ...]
+     */
+    private function buildBilanX3(Collection $accounts, int $netResult): array
+    {
+        $sum = fn ($prefixes, $cond = null) => (int) $accounts
+            ->filter(fn ($a) => collect((array) $prefixes)->contains(fn ($p) => str_starts_with($a->code, $p)))
+            ->when($cond, fn ($c) => $c->filter($cond))
+            ->sum('net');
+
+        // ── ACTIF : [brut, amort/prov (positif), indent]
+        $amortIncorp = abs($sum(['281', '291']));
+        $amortCorp   = abs($sum(['282', '283', '284', '292', '293', '294']));
+        $amortFin    = abs($sum(['285', '286', '287', '288', '295', '296', '297', '298']));
+        $isClient    = fn ($a) => str_starts_with($a->code, '411') || str_starts_with($a->code, '416') || str_starts_with($a->code, '418');
+
+        $actif = [
+            'ACTIF IMMOBILISÉ' => [
+                'Immobilisations incorporelles' => [$sum(['20', '21']), $amortIncorp, 0],
+                'Immobilisations corporelles'   => [$sum(['22', '23', '24']), $amortCorp, 0],
+                'Immobilisations financières'   => [$sum(['25', '26', '27']), $amortFin, 0],
+            ],
+            'ACTIF CIRCULANT' => [
+                'Stocks et encours'             => [$sum(['30','31','32','33','34','35','36','37','38']), abs($sum(['39'])), 0],
+                'Clients'                       => [(int) $accounts->filter(fn ($a) => $isClient($a) && $a->net > 0)->sum('net'), abs($sum(['491'])), 1],
+                'Autres créances'               => [(int) $accounts->filter(fn ($a) => str_starts_with($a->code, '4') && ! $isClient($a) && ! str_starts_with($a->code, '476') && ! str_starts_with($a->code, '49') && $a->net > 0)->sum('net'), abs($sum(['492','493','494','495','496','497','498'])), 1],
+                'Charges constatées d\'avance'  => [$sum(['476']), 0, 0],
+            ],
+            'TRÉSORERIE ACTIF' => [
+                'Valeurs mobilières de placement' => [$sum(['50']), 0, 0],
+                'Disponibilités'                  => [(int) $accounts->filter(fn ($a) => str_starts_with($a->code, '5') && ! str_starts_with($a->code, '50') && ! str_starts_with($a->code, '59') && $a->net >= 0)->sum('net'), abs($sum(['59'])), 0],
+            ],
+        ];
+
+        // ── PASSIF : [montant (positif au passif), indent]
+        $cr = fn ($prefixes) => (int) abs($accounts
+            ->filter(fn ($a) => collect((array) $prefixes)->contains(fn ($p) => str_starts_with($a->code, $p)) && $a->net < 0)
+            ->sum('net'));
+
+        $passif = [
+            'CAPITAUX PROPRES' => [
+                'Capital social ou personnel'    => [abs($sum(['10'])), 0],
+                'Réserves et primes liées'       => [abs($sum(['11'])), 0],
+                'Report à nouveau'               => [$sum(['12']) * -1, 0],
+                'Résultat net de l\'exercice'    => [$netResult, 0],
+                'Subventions et prov. réglem.'   => [abs($sum(['14', '15'])), 0],
+            ],
+            'DETTES FINANCIÈRES' => [
+                'Emprunts et dettes assimilées'  => [abs($sum(['16', '17'])), 0],
+                'Autres dettes financières'      => [abs($sum(['18', '19'])), 0],
+            ],
+            'PASSIF CIRCULANT' => [
+                'Fournisseurs et comptes rattachés' => [$cr(['40']), 0],
+                'Dettes fiscales et sociales'       => [$cr(['42', '43', '44']), 0],
+                'Autres dettes'                     => [$cr(['41', '45', '46', '47', '48']) - $cr(['477']), 0],
+                'Produits constatés d\'avance'      => [$cr(['477']), 0],
+            ],
+            'TRÉSORERIE PASSIF' => [
+                'Banques créditrices' => [(int) abs($accounts->filter(fn ($a) => str_starts_with($a->code, '5') && $a->net < 0)->sum('net')), 0],
+            ],
+        ];
+
+        return [$actif, $passif];
     }
 
     /** GET comptabilite/bilan/pdf */
@@ -622,20 +709,16 @@ class FinancialReportController extends Controller
      */
     private function buildBilanSections(Collection $accounts, int $netResult = 0): array
     {
-        // ACTIF sections
+        // ACTIF sections — [BILAN-COHÉRENCE] alignées sur le filtre de totalActif :
+        // TOUT compte 4x débiteur figure à l'actif (clients, TVA récupérable, avances
+        // fournisseurs…), sinon les sous-totaux affichés ne recoupent pas le total.
+        $isClient = fn ($a) => str_starts_with($a->code, '411') || str_starts_with($a->code, '416') || str_starts_with($a->code, '418');
         $actif = [
             'Immobilisations'         => $accounts->filter(fn ($a) => str_starts_with($a->code, '2')),
             'Stocks'                  => $accounts->filter(fn ($a) => str_starts_with($a->code, '3')),
-            'Créances clients'        => $accounts->filter(fn ($a) =>
-                str_starts_with($a->code, '411') || str_starts_with($a->code, '416') || str_starts_with($a->code, '418')
-            ),
+            'Créances clients'        => $accounts->filter(fn ($a) => $isClient($a) && $a->net > 0),
             'Autres créances'         => $accounts->filter(fn ($a) =>
-                str_starts_with($a->code, '4')
-                && ! str_starts_with($a->code, '40')
-                && ! str_starts_with($a->code, '41')
-                && ! str_starts_with($a->code, '44')
-                && ! str_starts_with($a->code, '45')
-                && $a->net > 0
+                str_starts_with($a->code, '4') && ! $isClient($a) && $a->net > 0
             ),
             'Trésorerie active'       => $accounts->filter(fn ($a) => str_starts_with($a->code, '5') && $a->net >= 0),
         ];
@@ -661,18 +744,16 @@ class FinancialReportController extends Controller
             $capitauxPropres = $capitauxPropres->push($resultatVirtual);
         }
 
-        // PASSIF sections
+        // PASSIF sections — [BILAN-COHÉRENCE] seuls les comptes 4x créditeurs (net <= 0)
+        // figurent au passif ; un 44x débiteur (TVA récupérable) est à l'actif.
+        $isFourn = fn ($a) => str_starts_with($a->code, '401') || str_starts_with($a->code, '408');
+        $isFisc  = fn ($a) => str_starts_with($a->code, '44') || str_starts_with($a->code, '45');
         $passif = [
             'Capitaux propres'        => $capitauxPropres,
-            'Dettes fournisseurs'     => $accounts->filter(fn ($a) => str_starts_with($a->code, '401') || str_starts_with($a->code, '408')),
-            'Dettes fiscales & soc.'  => $accounts->filter(fn ($a) => str_starts_with($a->code, '44') || str_starts_with($a->code, '45')),
+            'Dettes fournisseurs'     => $accounts->filter(fn ($a) => $isFourn($a) && $a->net <= 0 && $a->net != 0),
+            'Dettes fiscales & soc.'  => $accounts->filter(fn ($a) => $isFisc($a) && $a->net <= 0 && $a->net != 0),
             'Autres dettes'           => $accounts->filter(fn ($a) =>
-                str_starts_with($a->code, '4')
-                && ! str_starts_with($a->code, '40')
-                && ! str_starts_with($a->code, '41')
-                && ! str_starts_with($a->code, '44')
-                && ! str_starts_with($a->code, '45')
-                && $a->net <= 0
+                str_starts_with($a->code, '4') && ! $isFourn($a) && ! $isFisc($a) && $a->net < 0
             ),
             'Trésorerie passive'      => $accounts->filter(fn ($a) => str_starts_with($a->code, '5') && $a->net < 0),
         ];

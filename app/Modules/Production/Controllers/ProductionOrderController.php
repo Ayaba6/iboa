@@ -19,6 +19,8 @@ use Illuminate\View\View;
 
 class ProductionOrderController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(private ProductionService $service)
     {
         $this->middleware('permission:production.view')->only(['index', 'show']);
@@ -27,6 +29,7 @@ class ProductionOrderController extends Controller
         $this->middleware('permission:production.launch')->only(['launch', 'start']);
         $this->middleware('permission:production.validate')->only(['finish']);
         $this->middleware('permission:production.cancel')->only(['cancel']);
+        $this->middleware('permission:production.launch')->only(['suspend', 'resume']);
         $this->middleware('permission:production.approve_financial')->only(['authorizeFinance']);
         $this->middleware('permission:production.modify_launched')->only(['requestModification']);
         $this->middleware('permission:production.submit_validation')->only(['submitForValidation']);
@@ -43,24 +46,44 @@ class ProductionOrderController extends Controller
 
     public function index(Request $request): View
     {
-        $orders = ProductionOrder::with(['client', 'product', 'productionLine'])
+        // [X3] Vues rapides : en_retard / a_lancer / clotures
+        $vue = $request->input('vue');
+
+        $orders = ProductionOrder::with(['client:id,name,trade_name', 'product:id,name,reference', 'productionLine:id,name', 'order:id,number', 'responsible:id,name'])
+            ->withSum('lines as total_meters', 'total_meters')
             ->when($request->input('status'), fn ($q, $v) => $q->where('status', $v))
             ->when($request->input('client_id'), fn ($q, $v) => $q->where('client_id', $v))
+            ->when($request->input('product_id'), fn ($q, $v) => $q->where('product_id', $v))
+            ->when($request->input('production_line_id'), fn ($q, $v) => $q->where('production_line_id', $v))
+            ->when($request->input('responsible_id'), fn ($q, $v) => $q->where('responsible_id', $v))
+            ->when($request->input('priorite'), fn ($q, $v) => $q->where('priorite', $v))
+            ->when($request->input('origin'), fn ($q, $v) => $q->where('origin', $v))
+            ->when($request->input('commande'), fn ($q, $v) => $q->whereHas('order', fn ($s) => $s->where('number', 'like', "%$v%")))
+            ->when($request->input('from'), fn ($q, $v) => $q->whereDate('date_fabrication_prevue', '>=', $v))
+            ->when($request->input('to'), fn ($q, $v) => $q->whereDate('date_fabrication_prevue', '<=', $v))
             ->when($request->input('q'), fn ($q, $v) => $q->where('number', 'like', "%$v%"))
+            ->when($vue === 'en_retard', fn ($q) => $q->enRetard())
+            ->when($vue === 'a_lancer', fn ($q) => $q->aLancer())
+            ->when($vue === 'clotures', fn ($q) => $q->whereIn('status', ['termine', 'annule']))
             ->orderByDesc('id')->paginate(25)->withQueryString();
 
         $stats = [
             'brouillon' => ProductionOrder::where('status', 'brouillon')->count(),
             'en_cours'  => ProductionOrder::whereIn('status', ['lance', 'en_cours'])->count(),
+            'en_retard' => ProductionOrder::enRetard()->count(),
             'termine'   => ProductionOrder::where('status', 'termine')->count(),
             'metres'    => (float) \App\Modules\Production\Models\ProductionOrderLine::whereHas(
                             'productionOrder', fn ($q) => $q->where('status', 'termine')
                         )->sum('total_meters'),
         ];
 
-        $clients = Client::orderBy('name')->get(['id', 'name', 'trade_name']);
+        $clients      = Client::orderBy('name')->get(['id', 'name', 'trade_name']);
+        $produits     = Product::where('is_manufacturable', true)->orderBy('name')->get(['id', 'name', 'reference']);
+        $lignes       = ProductionLine::orderBy('name')->get(['id', 'name']);
+        $responsables = User::whereIn('id', ProductionOrder::whereNotNull('responsible_id')->distinct()->pluck('responsible_id'))
+            ->orderBy('name')->get(['id', 'name']);
 
-        return view('production.orders.index', compact('orders', 'stats', 'clients'));
+        return view('production.orders.index', compact('orders', 'stats', 'clients', 'produits', 'lignes', 'responsables'));
     }
 
     public function create(Request $request): View
@@ -78,6 +101,10 @@ class ProductionOrderController extends Controller
                 $order->quantity_requested = (float) $src->items->sum('quantity');
             }
         }
+
+        // [X3] Pré-remplit les dépôts / ligne / responsable par défaut (transparence : l'utilisateur
+        // voit les valeurs qui seront enregistrées, modifiables avant validation).
+        $this->service->fillDefaultsForForm($order);
 
         return view('production.orders.form', $this->formData($order));
     }
@@ -98,22 +125,6 @@ class ProductionOrderController extends Controller
         }
 
         return redirect()->route('production.orders.show', $order)->with('success', 'Ordre de fabrication créé : ' . $order->number);
-    }
-
-    /** Enregistre les pièces jointes (documents) de l'OF. */
-    private function uploadDocuments(ProductionOrder $order, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/productionorder/'.$order->id, 'local');
-            $order->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
     }
 
     public function show(ProductionOrder $order): View
@@ -193,7 +204,17 @@ class ProductionOrderController extends Controller
     public function edit(ProductionOrder $order): View
     {
         abort_unless($order->isEditable() || $order->isEditableViaModification(), 403, 'OF non modifiable.');
-        $order->load('lines');
+        // [X3] Onglets Allocation matière / Coûts / Traçabilité (lecture)
+        $order->load([
+            'lines',
+            'reservations.product:id,name,reference', 'reservations.warehouse:id,code,name',
+            'consumptions.coil:id,reference,lot_number,remaining_weight',
+            'cost',
+            'outputs' => fn ($q) => $q->latest('produced_at'),
+            'batches',
+            'timeLogs',
+            'createdBy:id,name',
+        ]);
 
         return view('production.orders.form', $this->formData($order));
     }
@@ -275,6 +296,37 @@ class ProductionOrderController extends Controller
         $this->service->cancel($order, $request->input('reason'));
 
         return back()->with('success', 'OF annulé.');
+    }
+
+    /** [X3] Suspension d'un OF lancé — bloque déclarations/consommations jusqu'à reprise. */
+    public function suspend(Request $request, ProductionOrder $order): RedirectResponse
+    {
+        abort_unless($order->isSuspendable(), 422, 'Seul un OF lancé ou en cours peut être suspendu.');
+        $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
+
+        $order->update([
+            'suspended_from' => $order->status,
+            'suspended_at'   => now(),
+            'status'         => 'suspendu',
+            'notes'          => trim(($order->notes ? $order->notes . "\n" : '')
+                . '[Suspension ' . now()->format('d/m/Y H:i') . '] ' . ($request->input('reason') ?: 'sans motif')),
+        ]);
+
+        return back()->with('success', 'OF suspendu — reprise possible à tout moment.');
+    }
+
+    /** [X3] Reprise d'un OF suspendu — restaure le statut d'origine. */
+    public function resume(ProductionOrder $order): RedirectResponse
+    {
+        abort_unless($order->status === 'suspendu', 422, 'Cet OF n\'est pas suspendu.');
+
+        $order->update([
+            'status'         => $order->suspended_from ?: 'lance',
+            'suspended_from' => null,
+            'suspended_at'   => null,
+        ]);
+
+        return back()->with('success', 'OF repris (' . $order->statusLabel() . ').');
     }
 
     /**
@@ -425,7 +477,28 @@ class ProductionOrderController extends Controller
             'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'machines'  => \App\Modules\Production\Models\ProductionMachine::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'bomData'   => $this->bomData(),
+            'byproducts' => $this->byproductsData(),
+            // [X3] Panneau sélecteur gauche : OF récents
+            'selectorOrders' => ProductionOrder::orderByDesc('id')->limit(30)->get(['id', 'number', 'status', 'site_production']),
         ];
+    }
+
+    /**
+     * [X3 « Articles lancés »] Sous-produits (avarié / chute) déclarés en même temps
+     * que l'article fabriqué. Map produit → { ref, name, avarie, chute } pour le
+     * tableau réactif « Articles lancés » du formulaire.
+     */
+    private function byproductsData(): array
+    {
+        return Product::whereNotNull('article_avarie_id')->orWhereNotNull('article_chute_id')
+            ->with(['articleAvarie:id,reference,name', 'articleChute:id,reference,name'])
+            ->get(['id', 'reference', 'name', 'article_avarie_id', 'article_chute_id'])
+            ->mapWithKeys(fn ($p) => [$p->id => [
+                'ref'    => $p->reference,
+                'name'   => $p->name,
+                'avarie' => $p->articleAvarie ? ['ref' => $p->articleAvarie->reference, 'name' => $p->articleAvarie->name] : null,
+                'chute'  => $p->articleChute ? ['ref' => $p->articleChute->reference, 'name' => $p->articleChute->name] : null,
+            ]])->all();
     }
 
     /**

@@ -21,6 +21,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class InvoiceController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     use ManagesEditLock;
 
     public function __construct(
@@ -95,7 +97,7 @@ class InvoiceController extends Controller
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
 
         // Taux TVA de type 'tva' pour le sélecteur (exclut les retenues)
-        $taxRatesVente = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
         return view('ventes.factures.create', compact('clients', 'products', 'selectedClient', 'clientWithholding', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
     }
@@ -156,22 +158,6 @@ class InvoiceController extends Controller
         ];
     }
 
-    /** Enregistre les pièces jointes (documents) de la facture. */
-    private function uploadDocuments(Invoice $invoice, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/invoice/'.$invoice->id, 'local');
-            $invoice->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
-    }
-
     public function show(Invoice $facture)
     {
         $this->authorize('view', $facture);
@@ -216,7 +202,7 @@ class InvoiceController extends Controller
             ])->values(),
         ]);
         $clientExemptions  = $clients->pluck('is_tax_exempt', 'id');
-        $taxRatesVente     = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente     = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
         $editLock = $lock; // déjà le verrou actif pour ce user
         return view('ventes.factures.edit', compact('invoice', 'clients', 'products', 'clientWithholding', 'clientExemptions', 'taxRatesVente', 'editLock') + $this->maquetteFormData());
@@ -327,7 +313,7 @@ class InvoiceController extends Controller
             fn($v) => $v !== '' && $v !== null
         );
 
-        $company = \App\Models\currentCompany();
+        $company = currentCompany();
 
         $invoices = Invoice::with(['client'])
             ->when(!empty($filters['client_id']), fn($q) => $q->where('client_id', $filters['client_id']))

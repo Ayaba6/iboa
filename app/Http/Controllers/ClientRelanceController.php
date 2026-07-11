@@ -152,7 +152,7 @@ class ClientRelanceController extends Controller
             'mise_en_demeure' => 'Mise en demeure',
         ];
 
-        $company  = \App\Models\currentCompany();
+        $company  = currentCompany();
         $totalDu  = (float) $invoices->sum('remaining_amount');
         $typeLabel = $typeLabels[$request->type];
         $message   = $request->message;

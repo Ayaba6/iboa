@@ -17,6 +17,8 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(
         private OrderService                $service,
         private CommercialWorkflowService   $workflow,
@@ -57,7 +59,7 @@ class OrderController extends Controller
         $products         = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
         $selectedClient   = $request->query('client_id');
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
-        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
         $warehouses       = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_sale']);
         $currencies       = ['XOF', 'XAF', 'EUR', 'USD'];
 
@@ -103,22 +105,6 @@ class OrderController extends Controller
             ->with('success', 'Commande ' . $order->number . ' créée avec succès.');
     }
 
-    /** Enregistre les pièces jointes (documents) de la commande. */
-    private function uploadDocuments(Order $order, Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/order/'.$order->id, 'local');
-            $order->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
-    }
-
     public function show(Order $commande)
     {
         $this->authorize('view', $commande);
@@ -138,7 +124,7 @@ class OrderController extends Controller
         $clients          = Client::active()->orderBy('name')->get(['id', 'name', 'trade_name', 'is_tax_exempt']);
         $products         = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
-        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate']);
+        $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
         $warehouses       = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_sale']);
         $currencies       = ['XOF', 'XAF', 'EUR', 'USD'];
         $order->load('attachments');

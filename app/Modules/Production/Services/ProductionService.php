@@ -37,12 +37,65 @@ class ProductionService
             $data['number']         = $this->sequences->nextNumber($company, 'ordre_fabrication');
             $data['status']         = 'brouillon';
 
+            // [X3] Héritage des dépôts / ligne quand ils ne sont pas fournis
+            // (OF manuel sans saisie, ou OF auto MTO depuis commande).
+            $this->applyDefaults($data);
+
             $order = ProductionOrder::create($data);
             $this->syncLines($order, $lines);
             $this->recomputeQuantities($order);
 
             return $order->fresh('lines');
         });
+    }
+
+    /**
+     * [X3] Renseigne les dépôts / ligne / site manquants à partir de l'article
+     * puis des dépôts typés, pour qu'un OF soit exploitable sans ressaisie.
+     * Ne remplace jamais une valeur déjà fournie (saisie manuelle prioritaire).
+     */
+    /** [X3] Pré-remplit un OF non persisté (formulaire création) avec les dépôts / ligne par défaut. */
+    public function fillDefaultsForForm(ProductionOrder $order): ProductionOrder
+    {
+        $data = $order->getAttributes();
+        $this->applyDefaults($data);
+        foreach (['depot_matiere_id', 'depot_produit_fini_id', 'depot_qualite_id', 'production_line_id', 'responsible_id'] as $k) {
+            if (empty($order->$k) && ! empty($data[$k])) {
+                $order->$k = $data[$k];
+            }
+        }
+
+        return $order;
+    }
+
+    private function applyDefaults(array &$data): void
+    {
+        $product = ! empty($data['product_id']) ? \App\Models\Product::find($data['product_id']) : null;
+
+        $filled = fn (string $k) => ! empty($data[$k]);
+        $warehouseByType = fn (string $type) => \App\Models\Warehouse::where('is_active', true)->where('type', $type)->value('id');
+
+        // Dépôt matière : article (dépôt production) → dépôt matière première
+        if (! $filled('depot_matiere_id')) {
+            $data['depot_matiere_id'] = $product?->production_warehouse_id ?: $warehouseByType('matiere_premiere');
+        }
+        // Dépôt produit fini : article (dépôt vente) → dépôt produit fini
+        if (! $filled('depot_produit_fini_id')) {
+            $data['depot_produit_fini_id'] = $product?->sale_warehouse_id ?: $warehouseByType('produit_fini');
+        }
+        // Dépôt qualité : article (dépôt qualité)
+        if (! $filled('depot_qualite_id') && $product?->quality_warehouse_id) {
+            $data['depot_qualite_id'] = $product->quality_warehouse_id;
+        }
+        // Ligne de production : ligne dédiée à l'article, sinon première ligne active
+        if (! $filled('production_line_id')) {
+            $data['production_line_id'] = ($product ? \App\Modules\Production\Models\ProductionLine::where('is_active', true)->where('product_id', $product->id)->value('id') : null)
+                ?: \App\Modules\Production\Models\ProductionLine::where('is_active', true)->value('id');
+        }
+        // Responsable : à défaut, l'utilisateur courant
+        if (! $filled('responsible_id')) {
+            $data['responsible_id'] = Auth::id();
+        }
     }
 
     /** Met à jour un OF éditable (brouillon/lancé) + ses lignes. */

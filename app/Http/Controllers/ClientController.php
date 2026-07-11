@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class ClientController extends Controller
 {
+    use \App\Http\Controllers\Concerns\UploadsDocuments;
+
     public function __construct(private ClientService $service) {}
 
     public function index(Request $request)
@@ -59,22 +61,6 @@ class ClientController extends Controller
         ];
     }
 
-    /** Enregistre les pièces jointes (documents) du client. */
-    private function uploadDocuments(Client $client, \Illuminate\Http\Request $request): void
-    {
-        foreach ((array) $request->file('documents', []) as $file) {
-            $path = $file->store('attachments/client/'.$client->id, 'local');
-            $client->attachments()->create([
-                'disk'        => 'local',
-                'path'        => $path,
-                'filename'    => $file->getClientOriginalName(),
-                'mime_type'   => $file->getMimeType(),
-                'size'        => $file->getSize(),
-                'uploaded_by' => \Illuminate\Support\Facades\Auth::id(),
-            ]);
-        }
-    }
-
     public function show(Client $client)
     {
         $this->authorize('view', $client);
@@ -106,7 +92,21 @@ class ClientController extends Controller
     {
         $this->authorize('update', $client);
         $client->load(['contacts', 'addresses', 'taxRates', 'attachments']);
-        return view('clients.edit', array_merge(['client' => $client], $this->formRefs()));
+
+        // [CDC OA-12 r.7] Liste consolidée des documents liés au client (5 derniers par type)
+        $clientDocs = [
+            'devis' => \App\Models\Quote::where('client_id', $client->id)
+                ->latest('issued_at')->latest('id')->limit(5)
+                ->get(['id', 'number', 'issued_at', 'total_ttc', 'status']),
+            'commandes' => \App\Models\Order::where('client_id', $client->id)
+                ->latest('issued_at')->latest('id')->limit(5)
+                ->get(['id', 'number', 'issued_at', 'total_ttc', 'status']),
+            'factures' => \App\Models\Invoice::where('client_id', $client->id)
+                ->latest('issued_at')->latest('id')->limit(5)
+                ->get(['id', 'number', 'issued_at', 'total_ttc', 'remaining_amount', 'status']),
+        ];
+
+        return view('clients.edit', array_merge(['client' => $client, 'clientDocs' => $clientDocs], $this->formRefs()));
     }
 
     public function update(UpdateClientRequest $request, Client $client)

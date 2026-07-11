@@ -81,6 +81,8 @@ class Product extends Model
         'last_purchase_price',
         'weighted_avg_cost',
         'sale_price',
+        'bande',
+        'metrage',
         'min_sale_price',
         'margin_rate_target',
         'stock_min',
@@ -118,6 +120,8 @@ class Product extends Model
         'gross_weight_per_us'  => 'decimal:4',
         'net_weight_per_us'    => 'decimal:4',
         'thickness'            => 'decimal:2',
+        'bande'                => 'decimal:2',
+        'metrage'              => 'decimal:2',
         'linear_meters'        => 'decimal:2',
         'density'              => 'decimal:3',
         'largeur_utile'        => 'decimal:2',
@@ -277,6 +281,12 @@ class Product extends Model
     public function stockLots(): HasMany
     {
         return $this->hasMany(StockLot::class);
+    }
+
+    /** Bobines physiques rattachées à cet article matière (1 bobine = 1 lot physique). */
+    public function coils(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Production\Models\Coil::class);
     }
 
     // -------------------------------------------------------------------------

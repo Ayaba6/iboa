@@ -61,7 +61,7 @@ class PaymentPromiseController extends Controller
             }
         }
 
-        $data['company_id'] = \App\Models\currentCompany()->id;
+        $data['company_id'] = currentCompany()->id;
         $data['status']     = 'en_attente';
 
         PaymentPromise::create($data);

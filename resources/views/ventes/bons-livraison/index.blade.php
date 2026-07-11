@@ -33,18 +33,24 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Bons de livraison</h1>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Bons de livraison</h1>
             <p class="text-sm text-gray-500 mt-0.5">{{ $deliveryNotes->total() }} bon(s)</p>
         </div>
     </div>
 
     {{-- Filters --}}
     <form method="GET" data-autosubmit class="bg-white rounded-[4px] border border-gray-300 p-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        @php $lblX = 'block text-[11px] font-bold text-gray-700 mb-1'; @endphp
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <div>
+            <label class="{{ $lblX }}">Rechercher</label>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
-                   placeholder="Numéro, client..."
-                   class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                   placeholder="Numéro, client…"
+                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            </div>
 
+            <div>
+            <label class="{{ $lblX }}">Statut</label>
             <select name="status" class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon"             {{ ($filters['status'] ?? '') === 'brouillon'             ? 'selected' : '' }}>Brouillon</option>
@@ -53,6 +59,7 @@
                 <option value="livre"     {{ ($filters['status'] ?? '') === 'livre'     ? 'selected' : '' }}>Livré</option>
                 <option value="annule"    {{ ($filters['status'] ?? '') === 'annule'    ? 'selected' : '' }}>Annulé</option>
             </select>
+            </div>
 
             <div class="flex gap-2 sm:col-span-2 lg:col-span-2">
                 <button type="submit"
@@ -73,14 +80,14 @@
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-[#eef5f0] border-b border-gray-300">
+                <thead class="bg-[#3b4248]">
                     <tr>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Numéro</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Client</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Commande</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden md:table-cell">Date</th>
-                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide hidden lg:table-cell">Entrepôt</th>
-                        <th class="px-3 py-1.5 text-center text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Statut</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Numéro</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Client</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Commande</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Date</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">Entrepôt</th>
+                        <th class="px-3 py-1.5 text-center text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Statut</th>
                         <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
@@ -160,6 +167,15 @@
             {{ $deliveryNotes->appends($filters)->links() }}
         </div>
         @endif
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Filtre actif : <span class="text-white font-semibold">{{ array_filter($filters ?? []) ? implode(', ', array_keys(array_filter($filters))) : 'Aucun' }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 
 </div>

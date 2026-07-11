@@ -64,6 +64,24 @@ class ProductionDashboardController extends Controller
         $kpis['ventes_jour'] = (int) Invoice::whereDate('issued_at', today())
             ->where('status', '!=', 'annulee')->sum('total_ttc');
 
+        // [X3 §4] KPIs complémentaires — parc machines, bobines, qualité, coûts
+        $kpis['of_a_lancer'] = ProductionOrder::aLancer()->count();
+        $kpis['tonnage'] = round(((float) ProductionOutput::whereBetween('produced_at', [$f, $t])
+            ->join('production_orders as po2', 'po2.id', '=', 'production_outputs.production_order_id')
+            ->selectRaw('COALESCE(SUM(production_outputs.total_meters * COALESCE(po2.poids_par_metre, 0)), 0) kg')
+            ->value('kg')) / 1000, 2);
+        $kpis['coils_dispo']     = Coil::where('status', 'disponible')->count();
+        $kpis['coils_reservees'] = Coil::whereIn('status', ['reservee', 'en_production'])->count();
+        $kpis['machines_dispo']  = \App\Modules\Production\Models\ProductionMachine::where('is_active', true)
+            ->whereNotIn('status', ['en_panne', 'maintenance', 'indisponible', 'arretee'])->count();
+        $kpis['machines_panne']  = \App\Modules\Production\Models\ProductionMachine::whereIn('status', ['en_panne', 'maintenance', 'indisponible', 'arretee'])->count();
+        $kpis['nc_ouvertes']     = \App\Modules\Quality\Models\NonConformity::whereNotIn('status', ['cloturee', 'annulee', 'cloture'])->count();
+        $kpis['cq_attente']      = QualityInspection::whereNotIn('status', ['conforme', 'non_conforme'])->count();
+        $costPeriode             = ProductionCost::whereBetween('created_at', [$f, $t]);
+        $kpis['cout_mo']         = (float) (clone $costPeriode)->sum('labor_cost');
+        $kpis['cout_machine']    = (float) (clone $costPeriode)->sum('machine_cost');
+        $kpis['marge_estimee']   = (float) (clone $costPeriode)->sum('margin');
+
         // Stock disponible par dépôt
         $stockParDepot = ProductStock::join('warehouses', 'warehouses.id', '=', 'product_stocks.warehouse_id')
             ->selectRaw('warehouses.name n, warehouses.type t, SUM(product_stocks.quantity - product_stocks.reserved_quantity) dispo')
@@ -232,12 +250,25 @@ class ProductionDashboardController extends Controller
         $controlesQualite = QualityInspection::with(['productionOrder:id,number', 'controller'])
             ->orderByDesc('inspected_at')->limit(5)->get();
 
+        // [X3 §4] Chaîne de production visuelle — comptages par étape du flux
+        $chaine = [
+            ['label' => 'Commande client',    'count' => Order::whereIn('status', ['confirme', 'en_preparation'])->count(),                     'url' => route('ventes.commandes.index'),        'color' => 'blue'],
+            ['label' => 'OF à lancer',        'count' => $kpis['of_a_lancer'],                                                                   'url' => route('production.orders.index', ['vue' => 'a_lancer']), 'color' => 'amber'],
+            ['label' => 'Réservation matière','count' => \App\Models\StockReservation::where('status', 'active')->whereNotNull('production_order_id')->count(), 'url' => route('production.orders.index'), 'color' => 'amber'],
+            ['label' => 'Production',         'count' => $kpis['of_en_cours'],                                                                   'url' => route('production.orders.index', ['status' => 'en_cours']), 'color' => 'emerald'],
+            ['label' => 'Contrôle qualité',   'count' => $kpis['cq_attente'],                                                                    'url' => route('qualite.inspections.index'),     'color' => 'purple'],
+            ['label' => 'Stock PF',           'count' => (int) $kpis['pf_disponibles'],                                                          'url' => route('stocks.index'),                  'color' => 'teal'],
+            ['label' => 'Livraison',          'count' => \App\Models\DeliveryNote::whereIn('status', ['en_attente_validation', 'brouillon'])->count(), 'url' => route('ventes.bons-livraison.index'), 'color' => 'sky'],
+            ['label' => 'Facture',            'count' => Invoice::whereIn('status', ['emise', 'partiellement_payee'])->count(),                  'url' => route('ventes.factures.index'),         'color' => 'indigo'],
+            ['label' => 'Encaissement',       'count' => (int) \App\Models\ClientPayment::whereBetween('payment_date', [$f, $t])->count(),      'url' => route('tresorerie.encaissements.index'), 'color' => 'emerald'],
+        ];
+
         return view('production.dashboard', compact(
             'kpis', 'chartDaily', 'byStatus', 'topClients', 'avgCost',
             'stockParDepot', 'from', 'to', 'trs', 'coutComparaison',
             'toBacAutorisees', 'toBacEnAttente',
             'pendingCount', 'prod7Days', 'ofEnCours', 'suiviJour', 'suiviUsers',
-            'alertes', 'consoMatieres', 'perfMachines', 'controlesQualite'
+            'alertes', 'consoMatieres', 'perfMachines', 'controlesQualite', 'chaine'
         ));
     }
 

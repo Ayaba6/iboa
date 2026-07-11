@@ -13,8 +13,7 @@
 
 @section('content')
 <div class="max-w-4xl mx-auto space-y-3"
-     x-data="purchaseRequestEditForm()"
-     x-init="init()">
+     x-data="purchaseRequestEditForm()">
 
     <div class="flex items-center justify-between">
         <div>
