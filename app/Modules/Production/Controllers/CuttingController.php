@@ -5,6 +5,7 @@ namespace App\Modules\Production\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Production\Models\CuttingOptimization;
 use App\Modules\Production\Services\CuttingOptimizerService;
+use App\Modules\Production\Services\CuttingRemnantService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,8 +13,10 @@ use Illuminate\View\View;
 
 class CuttingController extends Controller
 {
-    public function __construct(private CuttingOptimizerService $optimizer)
-    {
+    public function __construct(
+        private CuttingOptimizerService $optimizer,
+        private CuttingRemnantService $remnants,
+    ) {
         $this->middleware('permission:production.view')->only(['index', 'optimize']);
         $this->middleware('permission:production.create')->except(['index', 'optimize']);
     }
@@ -129,6 +132,29 @@ class CuttingController extends Controller
         $yield = $plan['combined_yield'] ?? $plan['yield'];
 
         return back()->with('success', 'Optimisation calculée — rendement '.number_format($yield, 1, ',', ' ').' %.');
+    }
+
+    /**
+     * Clôture la découpe : fige le plan et ré-entre en stock la chute réutilisable
+     * (dépôt dédié « Chutes », valorisée au PMP de la matière). Idempotent.
+     */
+    public function close(CuttingOptimization $optimization): RedirectResponse
+    {
+        if ($optimization->status === 'cloturee') {
+            return back()->with('error', 'Découpe déjà clôturée.');
+        }
+        if (! in_array($optimization->status, ['optimisee', 'validee', 'planifiee'], true)) {
+            return back()->with('error', 'Lancez l\'optimisation avant de clôturer la découpe.');
+        }
+
+        $movement = $this->remnants->reenter($optimization);
+        $optimization->update(['status' => 'cloturee']);
+
+        if ($movement) {
+            return back()->with('success', 'Découpe clôturée — '.number_format((float) $optimization->reusable_offcut_m, 2, ',', ' ').' m de chute réutilisable ré-entrés en stock (dépôt Chutes).');
+        }
+
+        return back()->with('success', 'Découpe clôturée.');
     }
 
     /**

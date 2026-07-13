@@ -1453,6 +1453,7 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
         Route::put('cutting/{optimization}', [\App\Modules\Production\Controllers\CuttingController::class, 'update'])->name('cutting.update');
         Route::delete('cutting/{optimization}', [\App\Modules\Production\Controllers\CuttingController::class, 'destroyOptimization'])->name('cutting.destroy');
         Route::post('cutting/{optimization}/run', [\App\Modules\Production\Controllers\CuttingController::class, 'run'])->name('cutting.run');
+        Route::post('cutting/{optimization}/cloturer', [\App\Modules\Production\Controllers\CuttingController::class, 'close'])->name('cutting.close');
     });
 
     // Maintenance machines

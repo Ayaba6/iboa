@@ -13,7 +13,7 @@ use Spatie\Permission\Models\Role;
 
 uses(\Tests\Concerns\RefreshDatabase::class);
 
-function cutAdmin(): User
+function cutRunAdmin(): User
 {
     $fy = FiscalYear::firstOrCreate(['label' => '2026'], ['starts_at' => '2026-01-01', 'ends_at' => '2026-12-31', 'status' => 'ouvert', 'is_current' => true]);
     $co = Company::firstOrCreate(['name' => 'CUT'], ['email' => 'cut@x.io', 'current_fiscal_year_id' => $fy->id]);
@@ -25,7 +25,7 @@ function cutAdmin(): User
 }
 
 it('exécute run() en mode 2D et persiste refente + chutes', function () {
-    $this->actingAs(cutAdmin());
+    $this->actingAs(cutRunAdmin());
 
     $opt = CuttingOptimization::create([
         'company_id' => currentCompany()->id, 'code' => 'OPT-1', 'status' => 'brouillon',
@@ -47,7 +47,7 @@ it('exécute run() en mode 2D et persiste refente + chutes', function () {
 });
 
 it('reste en 1D si les largeurs ne sont pas saisies', function () {
-    $this->actingAs(cutAdmin());
+    $this->actingAs(cutRunAdmin());
 
     $opt = CuttingOptimization::create([
         'company_id' => currentCompany()->id, 'code' => 'OPT-2', 'status' => 'brouillon',

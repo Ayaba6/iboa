@@ -162,6 +162,13 @@
                             @if($o->exists)
                             <button type="submit" form="run-form" class="text-[12px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1 rounded-[3px]">▶ Lancer optimisation</button>
                             @endif
+                            @if($o->exists && in_array($o->status, ['optimisee','validee','planifiee']))
+                            <button type="submit" form="close-form"
+                                    onclick="return confirm('Clôturer la découpe ?{{ $o->valorize_offcuts && (float) $o->reusable_offcut_m > 0 ? ' '.number_format((float) $o->reusable_offcut_m, 2, ',', ' ').' m de chute réutilisable seront ré-entrés en stock (dépôt Chutes).' : '' }}');"
+                                    class="text-[12px] font-semibold text-white bg-[#3b4248] hover:bg-black px-3 py-1 rounded-[3px]">✔ Clôturer</button>
+                            @elseif($o->status === 'cloturee')
+                            <span class="text-[12px] font-semibold text-emerald-700">✔ Clôturée</span>
+                            @endif
                         </div>
                     </div>
                     <div class="p-4 overflow-x-auto">
@@ -353,6 +360,7 @@
 
     @if($o->exists)
     <form id="run-form" method="POST" action="{{ route('production.cutting.run', $o) }}">@csrf</form>
+    @if($o->exists)<form id="close-form" method="POST" action="{{ route('production.cutting.close', $o) }}">@csrf</form>@endif
     @endif
 </div>
 @endsection
