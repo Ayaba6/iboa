@@ -216,7 +216,7 @@
                     <input type="text" name="lot_number" maxlength="60" value="{{ old('lot_number') }}" class="{{ $inp }} font-mono">
                 </div>
                 <div class="col-span-12">
-                    <p class="text-[12px] text-gray-500">La déclaration entre le produit fini en stock et consomme automatiquement les composants de la nomenclature. Visa chef d'équipe requis avant clôture de l'OF.</p>
+                    <p class="text-[12px] text-gray-500">La déclaration fait entrer le produit fini en stock et consomme automatiquement les composants de la nomenclature. Visa chef d'équipe requis avant clôture de l'OF.</p>
                 </div>
             </div>
         </section>
