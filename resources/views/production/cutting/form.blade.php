@@ -239,6 +239,8 @@
                                 ['Rebut', number_format((float) $o->scrap_m, 2, ',', ' ').' m', 'text-orange-600'],
                                 ['Nombre de coupes', number_format((int) $o->cuts_count, 0, ',', ' '), 'text-gray-900'],
                                 ['Bobines utilisées', number_format((int) $o->coils_used, 0, ',', ' '), 'text-gray-900'],
+                                ['Bandes / bobine (refente)', (int) $o->strips_per_coil ?: '—', 'text-gray-900'],
+                                ['Rendement largeur', (float) $o->width_yield > 0 ? number_format((float) $o->width_yield, 1, ',', ' ').' %' : '—', 'text-emerald-700'],
                             ] as [$kl, $kv, $kc])
                             <div class="border border-gray-200 rounded-[4px] px-2 py-2">
                                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide leading-tight">{{ $kl }}</p>

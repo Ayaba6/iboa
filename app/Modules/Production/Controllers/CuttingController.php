@@ -87,13 +87,26 @@ class CuttingController extends Controller
             return back()->with('error', 'Aucune demande valide à optimiser.');
         }
 
+        $threshold = $optimization->valorize_offcuts ? (float) $optimization->min_reusable_offcut : 0;
+        // Refente 2D si largeurs bobine + utile saisies, sinon découpe 1D longueur.
+        $is2D = (float) $optimization->coil_width > 0 && (float) $optimization->useful_width > 0;
+
         try {
-            $plan = $this->optimizer->optimize(
-                (float) $optimization->standard_length,
-                (float) $optimization->cut_tolerance_mm / 1000, // mm → m
-                $items,
-                $optimization->valorize_offcuts ? (float) $optimization->min_reusable_offcut : 0,
-            );
+            $plan = $is2D
+                ? $this->optimizer->optimize2D(
+                    (float) $optimization->standard_length,
+                    (float) $optimization->coil_width,
+                    (float) $optimization->useful_width,
+                    (float) $optimization->cut_tolerance_mm / 1000, // mm → m
+                    $items,
+                    $threshold,
+                )
+                : $this->optimizer->optimize(
+                    (float) $optimization->standard_length,
+                    (float) $optimization->cut_tolerance_mm / 1000,
+                    $items,
+                    $threshold,
+                );
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->with('error', collect($e->errors())->flatten()->first());
         }
@@ -101,17 +114,21 @@ class CuttingController extends Controller
         $optimization->update([
             'total_requested_m' => collect($items)->sum(fn ($i) => $i['length'] * $i['quantity']),
             'optimized_m'       => $plan['used'],
-            'material_yield'    => $plan['yield'],
+            'material_yield'    => $plan['combined_yield'] ?? $plan['yield'],
             'estimated_waste_m' => $plan['waste'],
             'reusable_offcut_m' => $plan['reusable_offcut'] ?? 0,
             'scrap_m'           => $plan['scrap'] ?? $plan['waste'],
             'cuts_count'        => collect($plan['bars'])->sum(fn ($b) => count($b['cuts'])),
-            'coils_used'        => $plan['bars_count'],
+            'coils_used'        => $plan['coils_needed'] ?? $plan['bars_count'],
+            'strips_per_coil'   => $plan['strips_per_coil'] ?? 0,
+            'width_yield'       => $plan['width_yield'] ?? 0,
             'plan'              => $plan,
             'status'            => 'optimisee',
         ]);
 
-        return back()->with('success', 'Optimisation calculée — rendement '.number_format($plan['yield'], 1, ',', ' ').' %.');
+        $yield = $plan['combined_yield'] ?? $plan['yield'];
+
+        return back()->with('success', 'Optimisation calculée — rendement '.number_format($yield, 1, ',', ' ').' %.');
     }
 
     /**
