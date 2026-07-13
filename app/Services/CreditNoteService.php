@@ -41,6 +41,7 @@ class CreditNoteService
                 'status'           => 'brouillon',
                 'issued_at'        => $data['issued_at'] ?? now()->toDateString(),
                 'reason'           => $data['reason'] ?? null,
+                'is_replacement'   => (bool) ($data['is_replacement'] ?? false),
                 'currency_code'    => $invoice->currency_code,
                 'subtotal_ht'      => $subtotal,
                 'total_tax'        => $taxTotal,
@@ -79,6 +80,13 @@ class CreditNoteService
             if ($warehouseId) {
                 foreach ($creditNote->items as $item) {
                     if (!$item->product_id || !($item->product?->is_stockable ?? true) || $item->quantity <= 0) {
+                        continue;
+                    }
+
+                    // [VEN Retour] Ligne mise au rebut : les biens ne réintègrent PAS le
+                    // stock vendable (ils sont déjà sortis à la vente d'origine et sont
+                    // détruits). Seules les lignes 'restock' génèrent un retour_client.
+                    if (($item->disposition ?? 'restock') === 'rebut') {
                         continue;
                     }
 
@@ -196,6 +204,73 @@ class CreditNoteService
     }
 
     // -------------------------------------------------------------------------
+    // [VEN Retour] Remplacement : génère un BL brouillon des biens à réexpédier
+    // -------------------------------------------------------------------------
+    /**
+     * Crée un bon de livraison de remplacement (brouillon, sans commande) reprenant
+     * les articles stockables de l'avoir. Le magasinier le valide ensuite par le
+     * circuit BL normal, qui gère la sortie de stock et la traçabilité.
+     *
+     * Le BL de remplacement expédie de NOUVELLES unités saines : il concerne donc
+     * toutes les lignes stockables, quelle que soit leur disposition (restock/rebut).
+     */
+    public function createReplacementDelivery(CreditNote $creditNote): \App\Models\DeliveryNote
+    {
+        if ($creditNote->status === 'brouillon') {
+            throw new \RuntimeException("L'avoir doit être validé avant de générer un remplacement.");
+        }
+        if ($creditNote->replacement_delivery_id) {
+            throw new \RuntimeException('Un bon de livraison de remplacement existe déjà pour cet avoir.');
+        }
+
+        return DB::transaction(function () use ($creditNote) {
+            $creditNote->loadMissing('items.product');
+            $company     = currentCompany();
+            $warehouseId = $this->resolveReturnWarehouse($creditNote);
+
+            $dn = \App\Models\DeliveryNote::create([
+                'company_id'    => $company->id,
+                'client_id'     => $creditNote->client_id,
+                'order_id'      => null,
+                'number'        => $this->sequenceService->nextNumber($company, 'bon_livraison'),
+                'issued_at'     => now()->toDateString(),
+                'status'        => 'brouillon',
+                'warehouse_id'  => $warehouseId,
+                'currency_code' => $creditNote->currency_code,
+                'notes'         => 'Remplacement — avoir '.$creditNote->number,
+                'created_by'    => Auth::id(),
+            ]);
+
+            $totalQty = 0;
+            $sort     = 0;
+            foreach ($creditNote->items as $item) {
+                if (!$item->product_id || !($item->product?->is_stockable ?? true) || $item->quantity <= 0) {
+                    continue;
+                }
+                $dn->items()->create([
+                    'order_item_id' => null,
+                    'product_id'    => $item->product_id,
+                    'description'   => $item->description,
+                    'unit_id'       => $item->unit_id,
+                    'quantity'      => $item->quantity,
+                    'unit_price'    => $item->unit_price,
+                    'sort_order'    => $sort++,
+                ]);
+                $totalQty += (float) $item->quantity;
+            }
+
+            $dn->update(['total_quantity' => $totalQty]);
+
+            $creditNote->update([
+                'is_replacement'          => true,
+                'replacement_delivery_id' => $dn->id,
+            ]);
+
+            return $dn;
+        });
+    }
+
+    // -------------------------------------------------------------------------
     // Delete (brouillon only)
     // -------------------------------------------------------------------------
     public function delete(CreditNote $creditNote): bool
@@ -221,6 +296,8 @@ class CreditNoteService
 
             $creditNote->items()->create([
                 'product_id'     => $item['product_id']     ?? null,
+                'disposition'    => in_array($item['disposition'] ?? 'restock', ['restock', 'rebut'], true)
+                    ? ($item['disposition'] ?? 'restock') : 'restock',
                 'description'    => $item['description']    ?? '',
                 'unit_id'        => $item['unit_id']        ?? null,
                 'quantity'       => $qty,

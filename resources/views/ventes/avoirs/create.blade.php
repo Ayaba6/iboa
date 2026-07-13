@@ -66,6 +66,14 @@ window._creditNoteFormData = {
                     @error('reason')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div class="sm:col-span-3">
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="is_replacement" value="0">
+                        <input type="checkbox" name="is_replacement" value="1" @checked(old('is_replacement'))
+                               class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                        <span>Avoir avec <span class="font-semibold">remplacement</span> (un BL de remplacement pourra être généré après validation)</span>
+                    </label>
+                </div>
+                <div class="sm:col-span-3">
                     <label class="block text-xs font-medium text-gray-700 mb-1">Notes internes</label>
                     <textarea name="notes" rows="2"
                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-purple-500 focus:border-purple-500">{{ old('notes') }}</textarea>
@@ -91,6 +99,7 @@ window._creditNoteFormData = {
                             <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-20">Qté</th>
                             <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-28">Prix Unit.</th>
                             <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-20">TVA%</th>
+                            <th class="px-3 py-2.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-36">Sort du retour</th>
                             <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-28">Total HT</th>
                             <th class="px-3 py-2.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-28">Total TTC</th>
                             <th class="px-3 py-2.5 w-10"></th>
@@ -122,6 +131,14 @@ window._creditNoteFormData = {
                                     <input type="number" :name="'items[' + index + '][tax_rate_value]'"
                                            x-model.number="item.tax_rate_value" min="0" max="100" step="1" inputmode="numeric"
                                            class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:ring-1 focus:ring-purple-500">
+                                </td>
+                                <td class="px-3 py-2">
+                                    <select :name="'items[' + index + '][disposition]'" x-model="item.disposition"
+                                            class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500"
+                                            :class="item.disposition === 'rebut' ? 'text-red-700 font-medium' : ''">
+                                        <option value="restock">Remis en stock</option>
+                                        <option value="rebut">Rebut</option>
+                                    </select>
                                 </td>
                                 <td class="px-3 py-2 text-right tabular-nums text-gray-700 font-medium text-xs whitespace-nowrap"
                                     x-text="fmt(lineHt(item))"></td>
@@ -182,7 +199,7 @@ window._creditNoteFormData = {
 function creditNoteForm() {
     const { invoice } = window._creditNoteFormData;
     return {
-        items: [{ product_id: null, unit_id: null, tax_rate_id: null, description: '', quantity: 1, unit_price: 0, tax_rate_value: 18 }],
+        items: [{ product_id: null, unit_id: null, tax_rate_id: null, description: '', quantity: 1, unit_price: 0, tax_rate_value: 18, disposition: 'restock' }],
 
         get subtotalHt() { return this.items.reduce((s, i) => s + this.lineHt(i), 0); },
         get totalTax()   { return this.items.reduce((s, i) => s + Math.round(this.lineHt(i) * i.tax_rate_value / 100), 0); },
@@ -191,7 +208,7 @@ function creditNoteForm() {
         lineHt(item)   { return Math.round(item.quantity * item.unit_price); },
         lineTtc(item)  { return Math.round(this.lineHt(item) * (1 + item.tax_rate_value / 100)); },
 
-        addItem()       { this.items.push({ product_id: null, unit_id: null, tax_rate_id: null, description: '', quantity: 1, unit_price: 0, tax_rate_value: 18 }); },
+        addItem()       { this.items.push({ product_id: null, unit_id: null, tax_rate_id: null, description: '', quantity: 1, unit_price: 0, tax_rate_value: 18, disposition: 'restock' }); },
         removeItem(i)   { this.items.splice(i, 1); },
 
         prefillFromInvoice() {
@@ -204,6 +221,7 @@ function creditNoteForm() {
                 quantity:       parseInt(i.quantity, 10) || 1,
                 unit_price:     parseFloat(i.unit_price)     || 0,
                 tax_rate_value: parseFloat(i.tax_rate_value) || 18,
+                disposition:    'restock',
             }));
         },
 

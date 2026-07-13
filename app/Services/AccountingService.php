@@ -699,6 +699,10 @@ class AccountingService
             $product = $item->product;
             if (!$product || !$product->is_stockable) continue;
 
+            // [VEN Retour] Les lignes mises au rebut ne réintègrent pas le stock :
+            // pas d'entrée d'actif au grand livre (biens détruits, déjà sortis à la vente).
+            if (($item->disposition ?? 'restock') === 'rebut') continue;
+
             $cost = (int) round((float) $item->quantity * (float) ($product->purchase_price ?? 0));
             if ($cost <= 0) continue;
 

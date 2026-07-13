@@ -457,6 +457,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('permission:credit_notes.create')->group(function () {
             Route::post('avoirs/{avoir}/validate', [\App\Http\Controllers\Sales\CreditNoteController::class, 'validateNote'])->name('avoirs.validate');
             Route::post('avoirs/{avoir}/apply', [\App\Http\Controllers\Sales\CreditNoteController::class, 'applyToInvoice'])->name('avoirs.apply');
+            // [VEN Retour] Génère un BL de remplacement depuis un avoir validé
+            Route::post('avoirs/{avoir}/remplacement', [\App\Http\Controllers\Sales\CreditNoteController::class, 'replacement'])->name('avoirs.replacement');
         });
         // ── Workflow de validation interne — avoirs ─────────────────────────────
         Route::middleware('permission:sales.submit')->group(function () {

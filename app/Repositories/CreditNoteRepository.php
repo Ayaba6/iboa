@@ -43,6 +43,7 @@ class CreditNoteRepository extends BaseRepository
             'items.unit',
             'createdBy',
             'validatedBy',
+            'replacementDelivery',
         ])->findOrFail($id);
     }
 }

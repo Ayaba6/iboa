@@ -9,9 +9,16 @@ class CreditNoteItem extends Model
 {
     protected $table = 'credit_note_items';
 
+    /** [VEN Retour] Sort des biens retournés. */
+    public const DISPOSITIONS = [
+        'restock' => 'Remis en stock',
+        'rebut'   => 'Rebut (non remis en stock)',
+    ];
+
     protected $fillable = [
         'credit_note_id',
         'product_id',
+        'disposition',
         'description',
         'unit_id',
         'quantity',

@@ -100,6 +100,20 @@ class CreditNoteController extends Controller
         }
     }
 
+    /** [VEN Retour] Génère un BL de remplacement (brouillon) depuis un avoir validé. */
+    public function replacement(CreditNote $avoir)
+    {
+        $this->authorize('update', $avoir);
+        try {
+            $dn = $this->service->createReplacementDelivery($avoir);
+            return redirect()
+                ->route('ventes.bons-livraison.show', $dn)
+                ->with('success', 'Bon de livraison de remplacement ' . $dn->number . ' créé (brouillon).');
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function destroy(CreditNote $avoir)
     {
         $this->authorize('delete', $avoir);

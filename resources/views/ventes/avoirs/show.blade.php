@@ -160,6 +160,23 @@
                 </form>
                 @endif
 
+                {{-- [VEN Retour] Générer un BL de remplacement --}}
+                @if(in_array($creditNote->status, ['valide', 'applique'], true) && !$creditNote->replacement_delivery_id)
+                @can('update', $creditNote)
+                <form action="{{ route('ventes.avoirs.replacement', $creditNote) }}" method="POST"
+                      onsubmit="return confirm('Générer un bon de livraison de remplacement (brouillon) pour ce client ?')">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-[4px] text-sm font-medium hover:bg-amber-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Générer un remplacement
+                    </button>
+                </form>
+                @endcan
+                @endif
+
                 <a href="{{ route('ventes.avoirs.index') }}"
                    class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,6 +302,7 @@
                         <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Qté</th>
                         <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Prix Unit.</th>
                         <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">TVA%</th>
+                        <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Sort du retour</th>
                         <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total HT</th>
                         <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Total TTC</th>
                     </tr>
@@ -297,12 +315,19 @@
                         <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
                         <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
                         <td class="px-3 py-1.5 text-right text-gray-600 tabular-nums">{{ number_format($item->tax_rate_value, 2, ',', ' ') }}%</td>
+                        <td class="px-3 py-1.5">
+                            @if(($item->disposition ?? 'restock') === 'rebut')
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[10px] font-semibold bg-red-100 text-red-700">Rebut</span>
+                            @else
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[10px] font-semibold bg-emerald-100 text-emerald-700">Remis en stock</span>
+                            @endif
+                        </td>
                         <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums font-medium">{{ number_format($item->line_total_ht, 0, ',', ' ') }} FCFA</td>
                         <td class="px-3 py-1.5 text-right text-purple-700 tabular-nums font-semibold">{{ number_format($item->line_total_ttc, 0, ',', ' ') }} FCFA</td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-10 text-center text-gray-400 text-sm">Aucune ligne.</td>
+                        <td colspan="8" class="px-4 py-10 text-center text-gray-400 text-sm">Aucune ligne.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -348,6 +373,15 @@
                     'badgeColor' => 'blue',
                 ];
             }
+        }
+        if ($creditNote->replacementDelivery) {
+            $relatedLinks[] = [
+                'icon'       => '🔁',
+                'label'      => 'BL remplacement ' . $creditNote->replacementDelivery->number,
+                'href'       => route('ventes.bons-livraison.show', $creditNote->replacementDelivery),
+                'badge'      => $creditNote->replacementDelivery->status_label ?? ucfirst($creditNote->replacementDelivery->status),
+                'badgeColor' => 'amber',
+            ];
         }
     @endphp
     @if(count($relatedLinks))
