@@ -83,6 +83,7 @@
             <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $fmt($margin['marge']) }} <span class="text-xs text-gray-400">FCFA</span></p>
             <p class="text-[11px] text-gray-400 mt-1">Taux : <span class="font-semibold {{ $margin['taux'] >= 25 ? 'text-emerald-600' : 'text-amber-600' }}">{{ number_format($margin['taux'], 2, ',', ' ') }} %</span></p>
             <div id="spark-marge" class="mt-1 h-8"></div>
+            <a href="{{ route('ventes.marges') }}" class="mt-1 inline-block text-[11px] font-medium text-emerald-700 hover:underline">Par commercial / site →</a>
         </div>
         {{-- Devis en cours --}}
         <a href="{{ route('ventes.devis.index') }}" class="bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-4 flex items-start justify-between gap-2 transition-colors">

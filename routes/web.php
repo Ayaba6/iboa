@@ -301,6 +301,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // [VENTES-PRO] Tableau de bord ventes (KPIs, top clients, pipeline)
         Route::middleware('permission:invoices.view')->group(function () {
             Route::get('/', [\App\Http\Controllers\Sales\SalesDashboardController::class, 'index'])->name('dashboard');
+            // [VEN Marge] Rapport marge brute par commercial / par site
+            Route::get('marges', [\App\Http\Controllers\Sales\SalesMarginController::class, 'index'])->name('marges');
         });
 
         Route::middleware('permission:quotes.view')->group(function () {

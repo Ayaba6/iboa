@@ -402,4 +402,82 @@ class SalesInsightsService
         $marge = $ca - (float) ($r->cost ?? 0);
         return ['ca' => $ca, 'marge' => $marge, 'taux' => $ca > 0 ? round($marge / $ca * 100, 2) : 0];
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // [VEN Marge] Ventilation de la marge brute par commercial et par site/dépôt.
+    // CA HT − coût de revient (unit_cost × quantité) des lignes facturées.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Marge brute par commercial (sales_rep_id) sur N mois.
+     * Retour : lignes {rep_id, rep_name, invoices, ca, cost, marge, taux}, triées par marge décroissante.
+     */
+    public function marginBySalesRep(int $months = 12): Collection
+    {
+        $from = Carbon::now()->subMonths($months)->startOfMonth();
+
+        return DB::table('invoice_items as ii')
+            ->join('invoices as i', 'i.id', '=', 'ii.invoice_id')
+            ->leftJoin('users as u', 'u.id', '=', 'i.sales_rep_id')
+            ->where('i.company_id', currentCompany()->id)
+            ->whereNotIn('i.status', ['brouillon', 'annulee'])
+            ->where('i.type', '!=', 'avoir')
+            ->where('i.issued_at', '>=', $from)
+            ->selectRaw('
+                i.sales_rep_id                          as rep_id,
+                COALESCE(u.name, "— Non affecté")        as rep_name,
+                COUNT(DISTINCT i.id)                     as invoices,
+                SUM(ii.line_total_ht)                    as ca,
+                SUM(ii.unit_cost * ii.quantity)          as cost
+            ')
+            ->groupBy('i.sales_rep_id', 'u.name')
+            ->get()
+            ->map(fn ($r) => $this->decorateMarginRow($r))
+            ->sortByDesc('marge')
+            ->values();
+    }
+
+    /**
+     * Marge brute par site / dépôt (warehouse_id) sur N mois.
+     * Retour : lignes {site_id, site_name, invoices, ca, cost, marge, taux}, triées par marge décroissante.
+     */
+    public function marginBySite(int $months = 12): Collection
+    {
+        $from = Carbon::now()->subMonths($months)->startOfMonth();
+
+        return DB::table('invoice_items as ii')
+            ->join('invoices as i', 'i.id', '=', 'ii.invoice_id')
+            ->leftJoin('warehouses as w', 'w.id', '=', 'i.warehouse_id')
+            ->where('i.company_id', currentCompany()->id)
+            ->whereNotIn('i.status', ['brouillon', 'annulee'])
+            ->where('i.type', '!=', 'avoir')
+            ->where('i.issued_at', '>=', $from)
+            ->selectRaw('
+                i.warehouse_id                          as site_id,
+                COALESCE(w.name, "— Non affecté")        as site_name,
+                COUNT(DISTINCT i.id)                     as invoices,
+                SUM(ii.line_total_ht)                    as ca,
+                SUM(ii.unit_cost * ii.quantity)          as cost
+            ')
+            ->groupBy('i.warehouse_id', 'w.name')
+            ->get()
+            ->map(fn ($r) => $this->decorateMarginRow($r))
+            ->sortByDesc('marge')
+            ->values();
+    }
+
+    /** Ajoute marge + taux à une ligne d'agrégat CA/coût. */
+    private function decorateMarginRow(object $r): array
+    {
+        $ca   = (float) ($r->ca ?? 0);
+        $cost = (float) ($r->cost ?? 0);
+        $marge = $ca - $cost;
+
+        return array_merge((array) $r, [
+            'ca'    => $ca,
+            'cost'  => $cost,
+            'marge' => $marge,
+            'taux'  => $ca > 0 ? round($marge / $ca * 100, 1) : 0.0,
+        ]);
+    }
 }
