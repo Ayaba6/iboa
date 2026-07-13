@@ -1566,6 +1566,8 @@ Route::middleware(['auth', 'verified', 'permission:direction.view'])
 Route::middleware(['auth', 'verified', 'permission:quality.view'])->prefix('qualite')->name('qualite.')->group(function () {
     Route::resource('inspections', \App\Modules\Quality\Controllers\QualityInspectionController::class)->except('show');
     Route::resource('non-conformities', \App\Modules\Quality\Controllers\NonConformityController::class)->except('show')->parameters(['non-conformities' => 'nonConformity']);
+    // [QUA-01] Plans de contrôle
+    Route::resource('plans-controle', \App\Modules\Quality\Controllers\ControlPlanController::class)->parameters(['plans-controle' => 'controlPlan'])->names('control-plans');
     // [QUA-05] Actions correctives / préventives (CAPA)
     Route::get('actions-correctives', [\App\Modules\Quality\Controllers\CorrectiveActionController::class, 'index'])->name('corrective-actions.index');
     Route::get('non-conformities/{nonConformity}/actions', [\App\Modules\Quality\Controllers\CorrectiveActionController::class, 'forNc'])->name('corrective-actions.nc');
