@@ -216,7 +216,7 @@ class ProductionOrderController extends Controller
         $order->load([
             'client', 'order', 'product.unit', 'product.articleAvarie.unit', 'product.articleChute.unit',
             'billOfMaterial.lines.product.unit', 'productionLine.machine', 'responsible', 'depotProduitFini',
-            'lines.product.unit', 'lines.unit', 'consumptions.coil.product.unit',
+            'lines.unit', 'consumptions.coil.product.unit',
             'outputs.product.unit', 'outputs.warehouse', 'wastes', 'cost', 'qualityControls.controller',
         ]);
 
