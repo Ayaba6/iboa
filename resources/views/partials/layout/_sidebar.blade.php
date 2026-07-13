@@ -949,6 +949,13 @@ request()->routeIs('achats.*')                                                  
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Société
                         </a>
+                        @php $sub = request()->routeIs('pilotage.alertes*'); @endphp
+                        <a href="{{ route('pilotage.alertes.index') }}"
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                                  {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
+                            <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
+                            Alertes par seuil
+                        </a>
                         @endcan
                         @php $sub = request()->routeIs('units*'); @endphp
                         <a href="{{ route('units.index') }}"

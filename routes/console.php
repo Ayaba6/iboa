@@ -47,3 +47,6 @@ Schedule::command('validations:remind')->dailyAt('08:15');
 Schedule::command('backup:clean')->dailyAt('01:30')->onOneServer();
 Schedule::command('backup:run --only-db')->dailyAt('02:00')->onOneServer();
 Schedule::command('backup:monitor')->dailyAt('07:00')->onOneServer();
+
+// [PIL-04] Évaluation horaire des alertes par seuil → notification des rôles cibles.
+Schedule::command('alerts:run')->hourly();

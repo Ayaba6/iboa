@@ -39,6 +39,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Endpoint JSON polling — actualisation automatique KPIs (60s cache)
     Route::get('/dashboard/kpis', [DashboardController::class, 'kpisJson'])->name('dashboard.kpis');
 
+    // [PIL-04] Alertes par seuil (config + évaluation) — perm gérée dans le contrôleur
+    Route::prefix('pilotage')->name('pilotage.')->group(function () {
+        Route::get('alertes',                 [\App\Http\Controllers\AlertRuleController::class, 'index'])->name('alertes.index');
+        Route::post('alertes',                [\App\Http\Controllers\AlertRuleController::class, 'store'])->name('alertes.store');
+        Route::put('alertes/{alerte}',        [\App\Http\Controllers\AlertRuleController::class, 'update'])->whereNumber('alerte')->name('alertes.update');
+        Route::delete('alertes/{alerte}',     [\App\Http\Controllers\AlertRuleController::class, 'destroy'])->whereNumber('alerte')->name('alertes.destroy');
+        Route::post('alertes/evaluer',        [\App\Http\Controllers\AlertRuleController::class, 'run'])->name('alertes.run');
+    });
+
     // [CDC §Workflow] « Mes validations » — tout ce qui attend l'action de
     // l'utilisateur selon ses habilitations (le contrôleur filtre par permission).
     Route::get('/mes-validations', [\App\Http\Controllers\MyValidationsController::class, 'index'])->name('validations.index');
