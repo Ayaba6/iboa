@@ -1084,6 +1084,16 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::delete('/{formation}/participants/{participant}', [\App\Http\Controllers\HR\TrainingController::class, 'destroyParticipant'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('participants.destroy');
     });
 
+    // ── [RH-13] Départs & solde de tout compte ────────────────────────────────
+    Route::middleware('permission:rh.employees.view')->prefix('departs')->name('departs.')->group(function () {
+        Route::get('/',           [\App\Http\Controllers\HR\DepartureController::class, 'index'])->name('index');
+        Route::get('/creer',      [\App\Http\Controllers\HR\DepartureController::class, 'create'])->middleware('permission:rh.employees.manage')->name('create');
+        Route::post('/',          [\App\Http\Controllers\HR\DepartureController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
+        Route::get('/{depart}',   [\App\Http\Controllers\HR\DepartureController::class, 'show'])->whereNumber('depart')->name('show');
+        Route::put('/{depart}',   [\App\Http\Controllers\HR\DepartureController::class, 'update'])->whereNumber('depart')->middleware('permission:rh.employees.manage')->name('update');
+        Route::post('/{depart}/cloturer', [\App\Http\Controllers\HR\DepartureController::class, 'finalize'])->whereNumber('depart')->middleware('permission:rh.employees.manage')->name('finalize');
+    });
+
     // ── Départements ──────────────────────────────────────────────────────────
     Route::middleware('permission:rh.employees.view')->prefix('departements')->name('departments.')->group(function () {
         Route::get('/',  [\App\Http\Controllers\HR\EmployeeController::class, 'departments'])->name('index');
