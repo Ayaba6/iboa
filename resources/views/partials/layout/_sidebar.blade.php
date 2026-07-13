@@ -374,6 +374,7 @@ request()->routeIs('achats.*')                                                  
                             auth()->user()->can('inventory.view')  ? [route('stocks.inventaires.index'),  'Inventaires',       'stocks.inventaires*']                    : null,
                             auth()->user()->can('stocks.adjust')   ? [route('stocks.seuils'),             'Seuils min / max',  'stocks.seuils']                          : null,
                             auth()->user()->can('stocks.view')     ? [route('stocks.lots'),               'Lots & Traçabilité','stocks.lots']                            : null,
+                            auth()->user()->can('stocks.view')     ? [route('stocks.pertes.index'),       'Pertes & casses',   'stocks.pertes*']                         : null,
                             auth()->user()->can('stocks.adjust')   ? [route('stocks.warehouses.index'),   'Entrepôts',         'stocks.warehouses*']                     : null,
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs(...explode(',', $match)); @endphp
@@ -708,6 +709,7 @@ request()->routeIs('achats.*')                                                  
                             $rhUser->can('rh.employees.view') ? [route('rh.evaluations.index'), 'Évaluations',         'rh.evaluations*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.formations.index'),  'Formation',           'rh.formations*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.departs.index'),     'Départs & STC',       'rh.departs*'] : null,
+                            $rhUser->can('rh.employees.view') ? [route('rh.frais.index'),       'Notes de frais',      'rh.frais*'] : null,
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"

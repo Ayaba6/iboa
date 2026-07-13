@@ -606,7 +606,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // §8 CDC — Traçabilité inverse : lot → OF → clients impactés
             Route::get('lots/{lot}/traceabilite', [\App\Http\Controllers\Stock\StockController::class, 'lotTraceability'])->name('lots.traceability');
             Route::get('valorisation', [\App\Http\Controllers\Stock\StockController::class, 'valuation'])->name('valuation');
+            // [STO-12] Pertes & casses (lecture + déclaration)
+            Route::get('pertes',              [\App\Http\Controllers\Stock\StockLossController::class, 'index'])->name('pertes.index');
+            Route::get('pertes/creer',        [\App\Http\Controllers\Stock\StockLossController::class, 'create'])->name('pertes.create');
+            Route::post('pertes',             [\App\Http\Controllers\Stock\StockLossController::class, 'store'])->name('pertes.store');
+            Route::get('pertes/{perte}',      [\App\Http\Controllers\Stock\StockLossController::class, 'show'])->whereNumber('perte')->name('pertes.show');
+            Route::get('pertes/{perte}/photo', [\App\Http\Controllers\Stock\StockLossController::class, 'photo'])->whereNumber('perte')->name('pertes.photo');
             Route::get('produit/{product}', [\App\Http\Controllers\Stock\StockController::class, 'show'])->name('show');
+        });
+
+        // [STO-12] Validation d'une perte → sortie de stock (au PMP)
+        Route::middleware('permission:stocks.adjust')->group(function () {
+            Route::post('pertes/{perte}/valider', [\App\Http\Controllers\Stock\StockLossController::class, 'validateLoss'])->whereNumber('perte')->name('pertes.validate');
+            Route::post('pertes/{perte}/rejeter', [\App\Http\Controllers\Stock\StockLossController::class, 'reject'])->whereNumber('perte')->name('pertes.reject');
         });
 
         Route::middleware('permission:stocks.adjust')->group(function () {
@@ -1082,6 +1094,20 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::post('/{formation}/participants', [\App\Http\Controllers\HR\TrainingController::class, 'storeParticipant'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('participants.store');
         Route::put('/{formation}/participants/{participant}', [\App\Http\Controllers\HR\TrainingController::class, 'updateParticipant'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('participants.update');
         Route::delete('/{formation}/participants/{participant}', [\App\Http\Controllers\HR\TrainingController::class, 'destroyParticipant'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('participants.destroy');
+    });
+
+    // ── [RH-09] Notes de frais ────────────────────────────────────────────────
+    Route::middleware('permission:rh.employees.view')->prefix('frais')->name('frais.')->group(function () {
+        Route::get('/',            [\App\Http\Controllers\HR\ExpenseReportController::class, 'index'])->name('index');
+        Route::get('/creer',       [\App\Http\Controllers\HR\ExpenseReportController::class, 'create'])->middleware('permission:rh.employees.manage')->name('create');
+        Route::post('/',           [\App\Http\Controllers\HR\ExpenseReportController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
+        Route::get('/{frais}',     [\App\Http\Controllers\HR\ExpenseReportController::class, 'show'])->whereNumber('frais')->name('show');
+        Route::get('/{frais}/modifier', [\App\Http\Controllers\HR\ExpenseReportController::class, 'edit'])->whereNumber('frais')->middleware('permission:rh.employees.manage')->name('edit');
+        Route::put('/{frais}',     [\App\Http\Controllers\HR\ExpenseReportController::class, 'update'])->whereNumber('frais')->middleware('permission:rh.employees.manage')->name('update');
+        Route::post('/{frais}/soumettre', [\App\Http\Controllers\HR\ExpenseReportController::class, 'submit'])->whereNumber('frais')->middleware('permission:rh.employees.manage')->name('submit');
+        Route::post('/{frais}/approuver', [\App\Http\Controllers\HR\ExpenseReportController::class, 'approve'])->whereNumber('frais')->middleware('permission:rh.employees.manage')->name('approve');
+        Route::post('/{frais}/rejeter',   [\App\Http\Controllers\HR\ExpenseReportController::class, 'reject'])->whereNumber('frais')->middleware('permission:rh.employees.manage')->name('reject');
+        Route::post('/{frais}/rembourser', [\App\Http\Controllers\HR\ExpenseReportController::class, 'reimburse'])->whereNumber('frais')->middleware('permission:rh.employees.manage')->name('reimburse');
     });
 
     // ── [RH-13] Départs & solde de tout compte ────────────────────────────────
