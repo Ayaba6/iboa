@@ -1055,6 +1055,13 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::post('/{recrutement}/candidats/{candidate}/statut', [\App\Http\Controllers\HR\RecruitmentController::class, 'advanceCandidate'])->whereNumber('recrutement')->middleware('permission:rh.employees.manage')->name('candidates.advance');
     });
 
+    // ── [RH-05] Mouvements & carrière ─────────────────────────────────────────
+    Route::middleware('permission:rh.employees.view')->prefix('carriere')->name('carriere.')->group(function () {
+        Route::get('/',       [\App\Http\Controllers\HR\CareerEventController::class, 'index'])->name('index');
+        Route::get('/creer',  [\App\Http\Controllers\HR\CareerEventController::class, 'create'])->middleware('permission:rh.employees.manage')->name('create');
+        Route::post('/',      [\App\Http\Controllers\HR\CareerEventController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
+    });
+
     // ── Départements ──────────────────────────────────────────────────────────
     Route::middleware('permission:rh.employees.view')->prefix('departements')->name('departments.')->group(function () {
         Route::get('/',  [\App\Http\Controllers\HR\EmployeeController::class, 'departments'])->name('index');

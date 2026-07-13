@@ -45,6 +45,7 @@ class Employee extends Model
     public function allowances(): HasMany      { return $this->hasMany(EmployeeAllowance::class); }
     public function payrollItems(): HasMany    { return $this->hasMany(PayrollItem::class); }
     public function payrollVariables(): HasMany{ return $this->hasMany(PayrollVariable::class); }
+    public function careerEvents(): HasMany     { return $this->hasMany(CareerEvent::class)->orderByDesc('effective_date')->orderByDesc('id'); }
     public function salaryAdvances(): HasMany  { return $this->hasMany(SalaryAdvance::class); }
     public function leaveRequests(): HasMany   { return $this->hasMany(LeaveRequest::class); }
     public function leaveBalances(): HasMany   { return $this->hasMany(LeaveBalance::class); }
