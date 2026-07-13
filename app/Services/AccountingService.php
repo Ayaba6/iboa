@@ -626,7 +626,6 @@ class AccountingService
         $invoice->loadMissing('items.product.family.stockAccount');
 
         $defaultStockAccount = $this->account($company, 'stocks');
-        $variationAccount    = $this->account($company, 'variation_stocks');
 
         $buckets = [];
         $totalCost = 0;
@@ -645,17 +644,37 @@ class AccountingService
 
         if ($totalCost <= 0) return null;
 
+        // [SYSCOHADA] Compte de variation adossé au compte de stock (par bucket) :
+        //   321 MP → 6032, 361 PF → 736, 3111 marchandises → 6031.
         $lines = [];
         foreach ($buckets as $accountId => $amount) {
             $lines[] = $this->lineByAccountId($accountId, 'Entrée stock '.$invoice->number, $amount, 0);
+            $lines[] = $this->line($this->variationForStock($company, (int) $accountId), 'Entrée stock '.$invoice->number, 0, $amount);
         }
-        $lines[] = $this->line($variationAccount, 'Entrée stock '.$invoice->number, 0, $totalCost);
 
         return $this->post($company, 'operations_diverses', [
             'entry_date'  => $invoice->received_at ?? today(),
             'reference'   => $invoice->number.'-STK',
             'description' => 'Entrée de stock sur fact. fournisseur '.$invoice->number,
         ], $lines);
+    }
+
+    /**
+     * Compte de variation de stock adossé à un compte de stock (SYSCOHADA) :
+     *   321  Stocks matières premières → 6032 Variation MP
+     *   361  Produits finis            → 736  Production stockée
+     *   3111 Marchandises (défaut)     → 6031 Variation marchandises
+     */
+    private function variationForStock(Company $company, int $stockAccountId): \App\Models\Account
+    {
+        $code = \App\Models\Account::find($stockAccountId)?->code;
+        $key = match ($code) {
+            '321'   => 'variation_stocks_matieres',
+            '361'   => 'production_stockee',
+            default => 'variation_stocks',
+        };
+
+        return $this->account($company, $key);
     }
 
     /**
