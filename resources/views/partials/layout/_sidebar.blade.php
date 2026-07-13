@@ -697,6 +697,7 @@ request()->routeIs('achats.*')                                                  
                             $rhUser->can('rh.employees.view') ? [route('rh.contrats.index'),    'Contrats',            'rh.contrats*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.departments.index'), 'Départements',        'rh.departments*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.postes.index'),      'Postes & grades',     'rh.postes*'] : null,
+                            $rhUser->can('rh.employees.view') ? [route('rh.recrutement.index'), 'Recrutement',         'rh.recrutement*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.presences.index'),   'Présences & absences','rh.presences*'] : null,
                             $rhUser->can('rh.leaves.view')    ? [route('rh.conges.index'),      'Congés',              'rh.conges*'] : null,
                         ]) as [$href, $label, $match])

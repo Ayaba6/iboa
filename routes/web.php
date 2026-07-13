@@ -1042,6 +1042,19 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::delete('/{poste}', [\App\Http\Controllers\HR\JobPositionController::class, 'destroy'])->whereNumber('poste')->middleware('permission:rh.employees.manage')->name('destroy');
     });
 
+    // ── [RH-03] Recrutement & onboarding ──────────────────────────────────────
+    Route::middleware('permission:rh.employees.view')->prefix('recrutement')->name('recrutement.')->group(function () {
+        Route::get('/',            [\App\Http\Controllers\HR\RecruitmentController::class, 'index'])->name('index');
+        Route::get('/creer',       [\App\Http\Controllers\HR\RecruitmentController::class, 'create'])->middleware('permission:rh.employees.manage')->name('create');
+        Route::post('/',           [\App\Http\Controllers\HR\RecruitmentController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
+        Route::get('/{recrutement}', [\App\Http\Controllers\HR\RecruitmentController::class, 'show'])->whereNumber('recrutement')->name('show');
+        Route::get('/{recrutement}/modifier', [\App\Http\Controllers\HR\RecruitmentController::class, 'edit'])->whereNumber('recrutement')->middleware('permission:rh.employees.manage')->name('edit');
+        Route::put('/{recrutement}',    [\App\Http\Controllers\HR\RecruitmentController::class, 'update'])->whereNumber('recrutement')->middleware('permission:rh.employees.manage')->name('update');
+        Route::delete('/{recrutement}', [\App\Http\Controllers\HR\RecruitmentController::class, 'destroy'])->whereNumber('recrutement')->middleware('permission:rh.employees.manage')->name('destroy');
+        Route::post('/{recrutement}/candidats', [\App\Http\Controllers\HR\RecruitmentController::class, 'storeCandidate'])->whereNumber('recrutement')->middleware('permission:rh.employees.manage')->name('candidates.store');
+        Route::post('/{recrutement}/candidats/{candidate}/statut', [\App\Http\Controllers\HR\RecruitmentController::class, 'advanceCandidate'])->whereNumber('recrutement')->middleware('permission:rh.employees.manage')->name('candidates.advance');
+    });
+
     // ── Départements ──────────────────────────────────────────────────────────
     Route::middleware('permission:rh.employees.view')->prefix('departements')->name('departments.')->group(function () {
         Route::get('/',  [\App\Http\Controllers\HR\EmployeeController::class, 'departments'])->name('index');
@@ -1074,6 +1087,11 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::get('/{run}/iuts-xlsx',           [\App\Http\Controllers\HR\PayrollRunController::class, 'iutsXlsx'])->whereNumber('run')->name('iuts-xlsx');
         Route::get('/{run}/avances-pdf',         [\App\Http\Controllers\HR\PayrollRunController::class, 'avancesPdf'])->whereNumber('run')->name('avances-pdf');
         Route::get('/{run}/prets-pdf',           [\App\Http\Controllers\HR\PayrollRunController::class, 'pretsPdf'])->whereNumber('run')->name('prets-pdf');
+        // [PAI-07] Virements — suivi ligne par ligne
+        Route::get('/{run}/virements',                 [\App\Http\Controllers\HR\PayrollPaymentController::class, 'index'])->whereNumber('run')->name('virements.index');
+        Route::get('/{run}/virements/fichier-bancaire',[\App\Http\Controllers\HR\PayrollPaymentController::class, 'bankFile'])->whereNumber('run')->name('virements.bank-file');
+        // [PAI-08] Archive des déclarations CNSS/IUTS
+        Route::get('/declarations', [\App\Http\Controllers\HR\PayrollDeclarationController::class, 'index'])->name('declarations.index');
     });
     Route::middleware('permission:rh.payroll.manage')->prefix('paie')->name('paie.')->group(function () {
         Route::get('/creer',                         [\App\Http\Controllers\HR\PayrollRunController::class, 'create'])->name('create');
@@ -1081,11 +1099,19 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::post('/{run}/calculer',               [\App\Http\Controllers\HR\PayrollRunController::class, 'calculate'])->whereNumber('run')->name('calculate');
         Route::post('/{run}/variables',              [\App\Http\Controllers\HR\PayrollVariableController::class, 'store'])->whereNumber('run')->name('variables.store');
         Route::delete('/{run}/variables/{variable}', [\App\Http\Controllers\HR\PayrollVariableController::class, 'destroy'])->whereNumber('run')->name('variables.destroy');
+        // [PAI-08] Déclarations — figeage + suivi
+        Route::post('/{run}/declarations/generer',   [\App\Http\Controllers\HR\PayrollDeclarationController::class, 'generate'])->whereNumber('run')->name('declarations.generate');
+        Route::post('/declarations/{declaration}/deposer', [\App\Http\Controllers\HR\PayrollDeclarationController::class, 'markDeposited'])->whereNumber('declaration')->name('declarations.deposit');
+        Route::post('/declarations/{declaration}/payer',   [\App\Http\Controllers\HR\PayrollDeclarationController::class, 'markPaid'])->whereNumber('declaration')->name('declarations.pay');
     });
     Route::middleware('permission:rh.payroll.validate')->prefix('paie')->name('paie.')->group(function () {
         Route::post('/{run}/valider',      [\App\Http\Controllers\HR\PayrollRunController::class, 'approuver'])->whereNumber('run')->name('validate');
         Route::post('/{run}/payer',        [\App\Http\Controllers\HR\PayrollRunController::class, 'markPaid'])->whereNumber('run')->name('mark-paid');
         Route::post('/{run}/comptabiliser',[\App\Http\Controllers\HR\PayrollRunController::class, 'journalize'])->whereNumber('run')->name('journalize');
+        // [PAI-07] Virements — génération & rapprochement
+        Route::post('/{run}/virements/generer',        [\App\Http\Controllers\HR\PayrollPaymentController::class, 'generate'])->whereNumber('run')->name('virements.generate');
+        Route::post('/{run}/virements/payer-tout',     [\App\Http\Controllers\HR\PayrollPaymentController::class, 'markRunPaid'])->whereNumber('run')->name('virements.pay-all');
+        Route::post('/{run}/virements/{payment}/payer',[\App\Http\Controllers\HR\PayrollPaymentController::class, 'markPaid'])->whereNumber('run')->whereNumber('payment')->name('virements.pay');
     });
 
     // ── Avances sur salaire ───────────────────────────────────────────────────
