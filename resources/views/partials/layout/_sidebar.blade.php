@@ -510,7 +510,9 @@ request()->routeIs('achats.*')                                                  
             @endcanany
 
             {{-- ── TRÉSORERIE ───────────────────────────── --}}
-            @canany(['payments.view', 'cash_accounts.view', 'treasury.write', 'treasury.validate'])
+            {{-- [RBAC] Accès module réservé au profil trésorerie (treasury.view) : le
+                 commercial (payments.view pour les ventes) ne voit pas ce menu. --}}
+            @canany(['treasury.view'])
             @php $gId = 'tresorerie'; $gActive = request()->routeIs('tresorerie.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
@@ -694,6 +696,7 @@ request()->routeIs('achats.*')                                                  
                             $rhUser->can('rh.employees.view') ? [route('rh.employes.index'),    'Employés',            'rh.employes*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.contrats.index'),    'Contrats',            'rh.contrats*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.departments.index'), 'Départements',        'rh.departments*'] : null,
+                            $rhUser->can('rh.employees.view') ? [route('rh.postes.index'),      'Postes & grades',     'rh.postes*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.presences.index'),   'Présences & absences','rh.presences*'] : null,
                             $rhUser->can('rh.leaves.view')    ? [route('rh.conges.index'),      'Congés',              'rh.conges*'] : null,
                         ]) as [$href, $label, $match])

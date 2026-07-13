@@ -826,7 +826,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // ── Trésorerie / Module 8 ───────────────────────────────────────────────────
-    Route::prefix('tresorerie')->name('tresorerie.')->group(function () {
+    // [RBAC] Accès module réservé au profil trésorerie (treasury.view). Le commercial,
+    // qui possède payments.view pour la visibilité des règlements ventes, n'entre PAS
+    // dans le module Trésorerie. Gate au niveau du groupe → couvre aussi le dashboard.
+    Route::prefix('tresorerie')->name('tresorerie.')->middleware('permission:treasury.view')->group(function () {
 
         // Dashboard
         Route::get('/', \App\Http\Controllers\Treasury\TresorerieDashboardController::class)->name('dashboard');
@@ -1026,6 +1029,17 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::delete('/{employe}/documents/{document}',   [\App\Http\Controllers\HR\EmployeeDocumentController::class, 'destroy'])->whereNumber('employe')->name('documents.destroy');
         // Photo (mise à jour)
         Route::post('/{employe}/photo',   [\App\Http\Controllers\HR\EmployeeDocumentController::class, 'updatePhoto'])->whereNumber('employe')->name('photo.update');
+    });
+
+    // ── Postes / grades / emplois [RH-01] ──────────────────────────────────────
+    Route::middleware('permission:rh.employees.view')->prefix('postes')->name('postes.')->group(function () {
+        Route::get('/',        [\App\Http\Controllers\HR\JobPositionController::class, 'index'])->name('index');
+        Route::get('/creer',   [\App\Http\Controllers\HR\JobPositionController::class, 'create'])->middleware('permission:rh.employees.manage')->name('create');
+        Route::post('/',       [\App\Http\Controllers\HR\JobPositionController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
+        Route::get('/{poste}', [\App\Http\Controllers\HR\JobPositionController::class, 'show'])->whereNumber('poste')->name('show');
+        Route::get('/{poste}/modifier', [\App\Http\Controllers\HR\JobPositionController::class, 'edit'])->whereNumber('poste')->middleware('permission:rh.employees.manage')->name('edit');
+        Route::put('/{poste}',    [\App\Http\Controllers\HR\JobPositionController::class, 'update'])->whereNumber('poste')->middleware('permission:rh.employees.manage')->name('update');
+        Route::delete('/{poste}', [\App\Http\Controllers\HR\JobPositionController::class, 'destroy'])->whereNumber('poste')->middleware('permission:rh.employees.manage')->name('destroy');
     });
 
     // ── Départements ──────────────────────────────────────────────────────────
@@ -1452,6 +1466,7 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     Route::post('sales/{commande}/reserve-stock', [\App\Modules\Production\Controllers\ProductionReservationController::class, 'reserveStock'])->name('sales.reserve-stock');
 
     // Ordres de fabrication — workflow
+    Route::get('orders/{order}/pdf', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'pdf'])->name('orders.pdf');
     Route::post('orders/{order}/allocate', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'allocateMaterial'])->name('orders.allocate');
     Route::post('orders/{order}/launch', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'launch'])->name('orders.launch');
     Route::post('orders/{order}/start',  [\App\Modules\Production\Controllers\ProductionOrderController::class, 'start'])->name('orders.start');
