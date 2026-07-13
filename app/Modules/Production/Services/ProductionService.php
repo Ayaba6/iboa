@@ -344,12 +344,16 @@ class ProductionService
         if (! $force) {
             $shortages = $this->materialShortages($order);
             if ($shortages) {
-                $msg = collect($shortages)->map(fn ($s) => sprintf(
-                    '%s (besoin %s / dispo %s)',
-                    $s['product'],
-                    number_format($s['need'], 0, ',', ' '),
-                    number_format($s['available'], 0, ',', ' ')
-                ))->implode(' · ');
+                $msg = collect($shortages)->map(function ($s) {
+                    $base = sprintf('%s (besoin %s / dispo %s)', $s['product'],
+                        number_format($s['need'], 0, ',', ' '), number_format($s['available'], 0, ',', ' '));
+                    if (! empty($s['substitute']) && ! empty($s['substitute_covers'])) {
+                        $base .= sprintf(' — substitut « %s » disponible (%s)', $s['substitute'],
+                            number_format($s['substitute_available'], 0, ',', ' '));
+                    }
+
+                    return $base;
+                })->implode(' · ');
 
                 throw ValidationException::withMessages([
                     'material' => "Lancement bloqué — matière insuffisante : {$msg}. Réapprovisionnez le stock ou lancez en dérogation.",
@@ -382,7 +386,7 @@ class ProductionService
      */
     public function materialShortages(ProductionOrder $order): array
     {
-        $order->loadMissing('billOfMaterial.lines.product');
+        $order->loadMissing('billOfMaterial.lines.product', 'billOfMaterial.lines.substitute');
         $bom = $order->billOfMaterial;
         $qty = (float) ($order->quantity_requested ?: 0);
         if (! $bom || $qty <= 0) {
@@ -402,7 +406,20 @@ class ProductionService
             $available = (float) $rows->sum(fn ($s) => (float) $s->quantity - (float) $s->reserved_quantity);
             $need = (float) $line->quantity_per_meter * $qty;
             if ($need > $available) {
-                $shortages[] = ['product' => $product->name, 'need' => round($need, 2), 'available' => round($available, 2)];
+                $row = ['product' => $product->name, 'need' => round($need, 2), 'available' => round($available, 2)];
+
+                // [PRO-05] Remplacement contrôlé : si un substitut est défini sur la ligne
+                // de nomenclature, on remonte sa disponibilité pour éclairer l'allocation.
+                if ($line->substitute) {
+                    $subRows = \App\Models\ProductStock::where('product_id', $line->substitute_product_id)
+                        ->get(['quantity', 'reserved_quantity']);
+                    $subAvail = (float) $subRows->sum(fn ($s) => (float) $s->quantity - (float) $s->reserved_quantity);
+                    $row['substitute'] = $line->substitute->name;
+                    $row['substitute_available'] = round($subAvail, 2);
+                    $row['substitute_covers'] = $subAvail >= $need;
+                }
+
+                $shortages[] = $row;
             }
         }
 
