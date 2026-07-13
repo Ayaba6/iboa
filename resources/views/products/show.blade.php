@@ -62,7 +62,7 @@
         </div>
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-                <h1 class="text-[16px] font-bold text-gray-900 truncate">{{ $product->name }}</h1>
+                <h1 class="text-[22px] font-bold text-gray-900 leading-tight truncate">{{ $product->name }}</h1>
                 @if($product->is_active)
                     <span class="bg-green-50 text-green-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">Actif</span>
                 @else
@@ -349,6 +349,16 @@
         <div x-show="tab === 'documents'" x-cloak class="p-6 text-center text-gray-400 text-[12.5px]">
             Aucun document attaché.
         </div>
+    </div>
+
+    {{-- ── Barre de contexte X3 ─────────────────────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Article : <span class="text-white font-semibold font-mono">{{ $product->code_article ?? $product->reference }}</span></span>
+        <span class="border-l border-white/10 pl-6">Statut : <span class="text-white font-semibold">{{ $product->is_active ? 'Actif' : 'Inactif' }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 
 </div>

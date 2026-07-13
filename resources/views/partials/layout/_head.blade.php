@@ -32,6 +32,14 @@
 {{-- Désactive le prefetch automatique de Turbo 8 sur hover (source de NetworkError
      quand le serveur répond lentement). Turbo vérifie cette meta à chaque tentative. --}}
 <meta name="turbo-prefetch" content="false">
+{{-- [FIX Turbo/CSRF] Formulaires create/edit : pas de snapshot cache Turbo. Une page de
+     formulaire restaurée depuis le cache Turbo porte un token @csrf figé au moment du
+     cache ; après régénération de session (login), la soumission part avec un token
+     périmé → 419 silencieux (rechargement, rien enregistré, aucun message). `no-cache`
+     force un rendu frais avec token courant. Ciblé aux routes de saisie. --}}
+@if(request()->routeIs('*.create') || request()->routeIs('*.edit'))
+<meta name="turbo-cache-control" content="no-cache">
+@endif
 <title>@yield('title', 'Dashboard') — {{ config('app.name') }}</title>
 {{-- Favicon en SVG inline (data URI) — évite tout 404 quel que soit le sous-chemin --}}
 <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234f46e5%22/&gt;&lt;text x=%2250%22 y=%2270%22 font-size=%2270%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22 text-anchor=%22middle%22&gt;A&lt;/text&gt;&lt;/svg&gt;">

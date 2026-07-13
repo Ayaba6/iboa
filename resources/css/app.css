@@ -3,6 +3,24 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   [FIX lisibilité formulaires] @tailwindcss/forms applique py-2 (8px) par
+   défaut aux inputs. Dans un champ compact h-8 (32px), 8+8 de padding
+   + line-height 24px = 40px de contenu → texte coupé / décentré verticalement.
+   On force py-0 sur tous les champs h-8/h-7 : le texte se centre naturellement
+   (même piège déjà corrigé au cas par cas sur les selects — règle globale ici).
+═══════════════════════════════════════════════════════════════════════════ */
+@layer base {
+    input.h-8:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    select.h-8,
+    input.h-7:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    select.h-7 {
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: 1.25;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    DESIGN TOKENS — Système ERP pro 2025
    Variables centralisées : couleurs, élévations, transitions, radius.
    Modifier ici impacte toute l'app.
@@ -360,7 +378,10 @@
     /* Animation fade-in-up (utilisée dans le dashboard) */
     @keyframes fade-in-up {
         from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
+        /* [FIX modales] Terminer sur `none` (pas translateY(0)) : avec animation-fill-mode
+           `both`, l'élément conserve sinon un `transform` résiduel qui fait de lui le bloc
+           conteneur de tous ses descendants `position: fixed` → modales dimensionnées 0×0. */
+        to   { opacity: 1; transform: none; }
     }
     .animate-fade-in-up { animation: fade-in-up 280ms cubic-bezier(0.4, 0, 0.2, 1) both; }
 

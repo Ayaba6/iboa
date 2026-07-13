@@ -30,8 +30,19 @@ class SalesDashboardController extends Controller
         $workflowKpis = $this->workflow->getDashboardKpis();
         $prodKpis     = app(\App\Modules\Production\Services\SalesProductionService::class)->dashboardKpis();
 
+        // [VENTES X3] Widgets Sage X3 : répartition, statuts, échéances, activités, alertes, marge.
+        $caByFamily   = $this->insights->caByFamily(12);
+        $ordersStatus = $this->insights->ordersByStatus();
+        $deliveries   = $this->insights->deliveriesByBucket();
+        $activities   = $this->insights->salesActivities(30);
+        $alerts       = $this->insights->salesAlerts();
+        $margin       = $this->insights->grossMargin();
+        $caComparison = $this->insights->caMonthlyComparison(12);
+        $ordersValue  = $this->insights->ordersValueYear();
+
         return view('ventes.dashboard', compact(
-            'kpis', 'dueSoon', 'topClients', 'topProducts', 'monthly', 'pipeline', 'workflowKpis', 'prodKpis'
+            'kpis', 'dueSoon', 'topClients', 'topProducts', 'monthly', 'pipeline', 'workflowKpis', 'prodKpis',
+            'caByFamily', 'ordersStatus', 'deliveries', 'activities', 'alerts', 'margin', 'caComparison', 'ordersValue'
         ));
     }
 }

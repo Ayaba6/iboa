@@ -8,342 +8,353 @@
 @endsection
 
 @section('content')
-@php $fmt = fn($n) => number_format((int) $n, 0, ',', ' '); @endphp
+@php
+    $fmt = fn ($n) => number_format((int) $n, 0, ',', ' ');
+    // Objectif CA estimé : max(CA N-1 +10%, CA courant) arrondi — barre de progression.
+    $objCa   = max((float) ($kpis['ca_prev_year'] ?? 0) * 1.1, (float) $kpis['ca_year'], 1);
+    $pctCa   = min(100, round($kpis['ca_year'] / $objCa * 100, 1));
+    // Devis en cours (brouillon + envoyé) depuis le pipeline.
+    $devisEnCours = ($pipeline['brouillon']['count'] ?? 0) + ($pipeline['envoye']['count'] ?? 0);
+    $devisMontant = ($pipeline['brouillon']['total'] ?? 0) + ($pipeline['envoye']['total'] ?? 0);
+    $cmdALivrer   = array_sum($deliveries);
+    $objCmd       = max((float) $ordersValue * 1.15, $objCa, 1);
+    $pctCmd       = min(100, round($ordersValue / $objCmd * 100, 1));
+@endphp
 
 <div class="space-y-3">
 
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    {{-- ── Entête + onglets ─────────────────────────────────────────────────── --}}
+    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Tableau de bord Ventes</h1>
-            <p class="text-sm text-gray-500">Indicateurs clés · pipeline · top clients/articles · échéances</p>
+            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Tableau de bord ventes</h1>
+            <div class="flex flex-wrap gap-4 mt-2 text-[13px] font-medium border-b border-gray-200 -mb-px">
+                <span class="pb-1.5 border-b-2 border-emerald-600 text-emerald-700">Synthèse</span>
+                <a href="{{ route('ventes.commandes.index') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Activité</a>
+                <a href="{{ route('reports.ca') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Performance</a>
+                <a href="{{ route('ventes.devis.index') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Pipeline</a>
+                <a href="{{ route('reports.margins') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Analyse</a>
+                <a href="{{ route('ventes.commandes.index') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Prévisions</a>
+            </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('ventes.devis.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px]">📋 Devis</a>
-            <a href="{{ route('ventes.commandes.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px]">📦 Commandes</a>
-            <a href="{{ route('ventes.factures.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-2.5 py-1.5 rounded-[4px]">🧾 Factures</a>
+            <a href="{{ route('ventes.devis.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-[4px]">Devis</a>
+            <a href="{{ route('ventes.commandes.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-[4px]">Commandes</a>
             @can('quotes.create')
-            <a href="{{ route('ventes.devis.create') }}" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-2.5 py-1.5 rounded-[4px]">+ Devis</a>
+            <a href="{{ route('ventes.devis.create') }}" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">+ Devis</a>
             @endcan
         </div>
     </div>
 
-    {{-- ── KPIs Production (Vente ↔ Production) ───────────────────────────── --}}
-    @if(isset($prodKpis))
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <a href="{{ route('production.orders.index', ['status' => 'en_cours']) }}" class="bg-sky-50 border border-sky-200 rounded-[4px] p-4 hover:bg-sky-100 transition-colors">
-            <p class="text-xs font-medium text-sky-600 uppercase tracking-wider">Commandes en production</p>
-            <p class="text-[16px] font-bold text-sky-800 mt-1">{{ $prodKpis['en_production'] }}</p>
-        </a>
-        <div class="bg-green-50 border border-green-200 rounded-[4px] p-4">
-            <p class="text-xs font-medium text-green-600 uppercase tracking-wider">Prêtes à livrer</p>
-            <p class="text-[16px] font-bold text-green-800 mt-1">{{ $prodKpis['pretes_a_livrer'] }}</p>
-            <p class="text-xs text-gray-400 mt-0.5">PF produit, non livré</p>
-        </div>
-        <div class="bg-amber-50 border border-amber-200 rounded-[4px] p-4">
-            <p class="text-xs font-medium text-amber-600 uppercase tracking-wider">Livrées non facturées</p>
-            <p class="text-[16px] font-bold text-amber-800 mt-1">{{ $prodKpis['livrees_non_facturees'] }}</p>
-        </div>
-        <div class="bg-[#eef5f0] border border-emerald-200 rounded-[4px] p-4">
-            <p class="text-xs font-medium text-emerald-700 uppercase tracking-wider">Transfo devis → commande</p>
-            <p class="text-[16px] font-bold text-emerald-900 tabular-nums mt-1">{{ number_format($prodKpis['taux_transfo'], 1, ',', ' ') }} %</p>
-        </div>
+    {{-- ── Barre de filtres (visuelle) ──────────────────────────────────────── --}}
+    <div class="bg-white border border-gray-200 rounded-[4px] p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Période</label>
+            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50">Cette année</div></div>
+        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Du</label>
+            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50 tabular-nums">{{ now()->startOfYear()->format('d/m/Y') }}</div></div>
+        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Au</label>
+            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50 tabular-nums">{{ now()->format('d/m/Y') }}</div></div>
+        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Site</label>
+            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50">Tous</div></div>
+        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Équipe commerciale</label>
+            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50">Tous</div></div>
     </div>
-    @endif
 
-    {{-- ── KPIs Workflow Validation — alertes temps réel ───────────────────── --}}
-    @if($workflowKpis['total_pending'] > 0 || $workflowKpis['recently_rejected'] > 0)
-    <div class="rounded-[4px] border-2 border-yellow-300 bg-yellow-50 p-4">
-        <div class="flex items-center gap-2 mb-3">
-            <span class="text-yellow-600 text-lg">🔒</span>
-            <h2 class="text-sm font-semibold text-yellow-800">Validation interne — Documents en attente</h2>
-            @if($workflowKpis['total_pending'] > 0)
-                <span class="ml-auto inline-flex items-center rounded-full bg-yellow-500 px-2.5 py-0.5 text-xs font-semibold text-white animate-pulse">
-                    {{ $workflowKpis['total_pending'] }} en attente
-                </span>
-            @endif
+    {{-- ── 6 KPI cards ──────────────────────────────────────────────────────── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {{-- CA HT + objectif --}}
+        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Chiffre d'affaires HT</p>
+            <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-700">{{ $fmt($kpis['ca_year']) }} <span class="text-xs text-gray-400">FCFA</span></p>
+            <p class="text-[11px] text-gray-400 mt-1">Objectif : {{ $fmt($objCa) }} FCFA</p>
+            <div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded bg-emerald-500" style="width: {{ $pctCa }}%"></div></div>
+            <p class="text-[11px] font-semibold text-emerald-600 mt-0.5 tabular-nums">{{ $pctCa }} %</p>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            @if($workflowKpis['quotes_en_attente'] > 0)
-            <a href="{{ route('ventes.devis.index', ['status' => 'en_attente_validation']) }}" class="rounded-[4px] bg-white border border-yellow-200 p-3 text-center hover:border-yellow-400 transition-colors">
-                <div class="text-[17px] font-bold text-yellow-700">{{ $workflowKpis['quotes_en_attente'] }}</div>
-                <div class="text-xs text-yellow-600 mt-0.5">Devis</div>
-            </a>
-            @endif
-            @if($workflowKpis['orders_en_attente'] > 0)
-            <a href="{{ route('ventes.commandes.index', ['status' => 'en_attente_validation']) }}" class="rounded-[4px] bg-white border border-yellow-200 p-3 text-center hover:border-yellow-400 transition-colors">
-                <div class="text-[17px] font-bold text-yellow-700">{{ $workflowKpis['orders_en_attente'] }}</div>
-                <div class="text-xs text-yellow-600 mt-0.5">Commandes</div>
-            </a>
-            @endif
-            @if($workflowKpis['deliveries_en_attente'] > 0)
-            <a href="{{ route('ventes.bons-livraison.index', ['status' => 'en_attente_validation']) }}" class="rounded-[4px] bg-white border border-yellow-200 p-3 text-center hover:border-yellow-400 transition-colors">
-                <div class="text-[17px] font-bold text-yellow-700">{{ $workflowKpis['deliveries_en_attente'] }}</div>
-                <div class="text-xs text-yellow-600 mt-0.5">BL</div>
-            </a>
-            @endif
-            @if($workflowKpis['invoices_en_attente'] > 0)
-            <a href="{{ route('ventes.factures.index', ['status' => 'en_attente_validation']) }}" class="rounded-[4px] bg-white border border-yellow-200 p-3 text-center hover:border-yellow-400 transition-colors">
-                <div class="text-[17px] font-bold text-yellow-700">{{ $workflowKpis['invoices_en_attente'] }}</div>
-                <div class="text-xs text-yellow-600 mt-0.5">Factures</div>
-            </a>
-            @endif
-            @if($workflowKpis['credit_notes_en_attente'] > 0)
-            <a href="{{ route('ventes.avoirs.index', ['status' => 'en_attente_validation']) }}" class="rounded-[4px] bg-white border border-yellow-200 p-3 text-center hover:border-yellow-400 transition-colors">
-                <div class="text-[17px] font-bold text-yellow-700">{{ $workflowKpis['credit_notes_en_attente'] }}</div>
-                <div class="text-xs text-yellow-600 mt-0.5">Avoirs</div>
-            </a>
-            @endif
-            @if($workflowKpis['recently_rejected'] > 0)
-            <div class="rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-center">
-                <div class="text-[17px] font-bold text-orange-700">{{ $workflowKpis['recently_rejected'] }}</div>
-                <div class="text-xs text-orange-600 mt-0.5">Refusés (7j)</div>
+        {{-- Commandes HT + objectif --}}
+        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Commandes HT</p>
+            <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $fmt($ordersValue) }} <span class="text-xs text-gray-400">FCFA</span></p>
+            <p class="text-[11px] text-gray-400 mt-1">Objectif : {{ $fmt($objCmd) }} FCFA</p>
+            <div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded bg-sky-500" style="width: {{ $pctCmd }}%"></div></div>
+            <p class="text-[11px] font-semibold text-sky-600 mt-0.5 tabular-nums">{{ $pctCmd }} %</p>
+        </div>
+        {{-- Marge brute + sparkline --}}
+        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Marge brute</p>
+            <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $fmt($margin['marge']) }} <span class="text-xs text-gray-400">FCFA</span></p>
+            <p class="text-[11px] text-gray-400 mt-1">Taux : <span class="font-semibold {{ $margin['taux'] >= 25 ? 'text-emerald-600' : 'text-amber-600' }}">{{ number_format($margin['taux'], 2, ',', ' ') }} %</span></p>
+            <div id="spark-marge" class="mt-1 h-8"></div>
+        </div>
+        {{-- Devis en cours --}}
+        <a href="{{ route('ventes.devis.index') }}" class="bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-4 flex items-start justify-between gap-2 transition-colors">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Devis en cours</p>
+                <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $devisEnCours }}</p>
+                <p class="text-[11px] text-gray-400 mt-1">Montant : {{ $fmt($devisMontant) }} FCFA</p>
             </div>
-            @endif
-        </div>
+            <span class="w-9 h-9 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4.5 h-4.5 w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </span>
+        </a>
+        {{-- Commandes à livrer --}}
+        <a href="{{ route('ventes.commandes.index') }}" class="bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-4 flex items-start justify-between gap-2 transition-colors">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Commandes à livrer</p>
+                <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $cmdALivrer }}</p>
+                <p class="text-[11px] text-gray-400 mt-1">Dont {{ $deliveries['en_retard'] }} en retard</p>
+            </div>
+            <span class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a2 2 0 104 0m-4 0a2 2 0 11-4 0m10 0a2 2 0 104 0"/></svg>
+            </span>
+        </a>
+        {{-- Factures impayées --}}
+        <a href="{{ route('ventes.factures.index') }}" class="bg-white rounded-[4px] border {{ $alerts['invoices_unpaid'] > 0 ? 'border-orange-200' : 'border-gray-200' }} hover:border-orange-300 p-4 flex items-start justify-between gap-2 transition-colors">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Factures impayées</p>
+                <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $alerts['invoices_unpaid'] }}</p>
+                <p class="text-[11px] text-gray-400 mt-1">Montant : {{ $fmt($kpis['outstanding']) }} FCFA</p>
+            </div>
+            <span class="w-9 h-9 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
+                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </span>
+        </a>
+    </div>
+
+    {{-- ── Validation interne (si en attente) ───────────────────────────────── --}}
+    @if($workflowKpis['total_pending'] > 0)
+    <div class="rounded-[4px] border border-yellow-300 bg-yellow-50 px-4 py-2 flex items-center gap-3 text-[13px]">
+        <span class="font-semibold text-yellow-800">Validation interne :</span>
+        <span class="text-yellow-700">{{ $workflowKpis['total_pending'] }} document(s) en attente</span>
+        <a href="{{ route('ventes.bons-livraison.index', ['status' => 'en_attente_validation']) }}" class="ml-auto text-yellow-800 font-semibold hover:underline">Traiter →</a>
     </div>
     @endif
 
-    {{-- KPIs principaux --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-[4px] border border-gray-200 p-5">
-            <p class="text-xs font-medium text-gray-500 uppercase">CA HT {{ now()->translatedFormat('F Y') }}</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-gray-900">{{ $fmt($kpis['ca_month']) }}</p>
-            @if($kpis['ca_variation_pct'] !== null)
-                @php $up = $kpis['ca_variation_pct'] >= 0; @endphp
-                <p class="text-xs mt-0.5 {{ $up ? 'text-emerald-600' : 'text-red-600' }}">
-                    {{ $up ? '↑' : '↓' }} {{ abs($kpis['ca_variation_pct']) }} % vs mois précédent
-                </p>
+    {{-- ── Rangée 1 : Évolution CA · Répartition famille · Top clients ───────── --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-5 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Évolution du chiffre d'affaires (HT)</h2>
+            <div id="chart-ca-evolution" class="h-[260px]"></div>
+        </div>
+        <div class="lg:col-span-4 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Répartition du CA par famille d'articles</h2>
+            @if($caByFamily->isEmpty())
+                <div class="h-[240px] flex items-center justify-center text-gray-400 text-sm">Aucune vente.</div>
             @else
-                <p class="text-xs text-gray-400 mt-0.5">FCFA</p>
+                <div id="chart-famille" class="h-[240px]"></div>
             @endif
         </div>
-
-        <a href="{{ route('ventes.factures.index') }}" class="bg-white rounded-[4px] border-2 border-orange-200 hover:border-orange-300 p-5 transition-colors block">
-            <p class="text-xs font-medium text-orange-600 uppercase">💰 Encours clients</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-orange-700">{{ $fmt($kpis['outstanding']) }}</p>
-            <p class="text-xs text-orange-500 mt-0.5">FCFA non payés</p>
-        </a>
-
-        <div class="bg-white rounded-[4px] border-2 {{ $kpis['overdue_amount'] > 0 ? 'border-red-300' : 'border-gray-200' }} p-5">
-            <p class="text-xs font-medium {{ $kpis['overdue_amount'] > 0 ? 'text-red-600' : 'text-gray-500' }} uppercase">⏰ En retard</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums {{ $kpis['overdue_amount'] > 0 ? 'text-red-700' : 'text-gray-900' }}">{{ $fmt($kpis['overdue_amount']) }}</p>
-            <p class="text-xs {{ $kpis['overdue_amount'] > 0 ? 'text-red-500' : 'text-gray-400' }} mt-0.5">{{ $kpis['overdue_count'] }} facture(s)</p>
-        </div>
-
-        <div class="bg-white rounded-[4px] border border-gray-200 p-5">
-            <p class="text-xs font-medium text-gray-500 uppercase">📅 DSO</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-gray-900">{{ $kpis['dso_days'] }} j</p>
-            <p class="text-xs text-gray-400 mt-0.5">délai moyen de paiement</p>
-        </div>
-
-        <div class="bg-white rounded-[4px] border border-gray-200 p-5">
-            <p class="text-xs font-medium text-gray-500 uppercase">🎯 Conversion devis</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums {{ $kpis['conversion_rate'] >= 50 ? 'text-emerald-700' : ($kpis['conversion_rate'] >= 25 ? 'text-amber-700' : 'text-red-700') }}">
-                {{ $kpis['conversion_rate'] }} %
-            </p>
-            <p class="text-xs text-gray-400 mt-0.5">{{ $kpis['quotes_accepted'] }} / {{ $kpis['quotes_sent'] }} acceptés</p>
-        </div>
-
-        <a href="{{ route('ventes.commandes.index') }}" class="bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-5 transition-colors block">
-            <p class="text-xs font-medium text-blue-600 uppercase">📦 Commandes actives</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-blue-700">{{ $kpis['orders_in_progress'] }}</p>
-            <p class="text-xs text-blue-500 mt-0.5">à livrer/facturer</p>
-        </a>
-
-        @if($kpis['draft_invoices'] > 0)
-        <a href="{{ route('ventes.factures.index', ['status' => 'brouillon']) }}" class="bg-white rounded-[4px] border-2 border-amber-200 hover:border-amber-300 p-5 transition-colors block">
-            <p class="text-xs font-medium text-amber-600 uppercase">📝 Brouillons à valider</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-amber-700">{{ $kpis['draft_invoices'] }}</p>
-            <p class="text-xs text-amber-500 mt-0.5">factures en attente</p>
-        </a>
-        @else
-        <div class="bg-white rounded-[4px] border border-emerald-200 p-5">
-            <p class="text-xs font-medium text-emerald-600 uppercase">✓ Brouillons</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-emerald-700">0</p>
-            <p class="text-xs text-emerald-500 mt-0.5">aucune en attente</p>
-        </div>
-        @endif
-
-        <div class="bg-white rounded-[4px] border border-gray-200 p-5">
-            <p class="text-xs font-medium text-gray-500 uppercase">CA HT mois -1</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-gray-700">{{ $fmt($kpis['ca_prev_month']) }}</p>
-            <p class="text-xs text-gray-400 mt-0.5">référence comparative</p>
-        </div>
-
-        {{-- CA Année en cours --}}
-        <div class="bg-white rounded-[4px] border border-emerald-200 p-5">
-            <p class="text-xs font-medium text-emerald-700 uppercase">📊 CA HT {{ now()->year }}</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-emerald-900">{{ $fmt($kpis['ca_year']) }}</p>
-            @if($kpis['ca_year_variation'] !== null)
-                @php $yearUp = $kpis['ca_year_variation'] >= 0; @endphp
-                <p class="text-xs mt-0.5 {{ $yearUp ? 'text-emerald-600' : 'text-red-600' }}">
-                    {{ $yearUp ? '↑' : '↓' }} {{ abs($kpis['ca_year_variation']) }} % vs {{ now()->year - 1 }}
-                </p>
-            @else
-                <p class="text-xs text-emerald-500 mt-0.5">cumulé depuis le 1er janv.</p>
-            @endif
-        </div>
-
-        {{-- Panier moyen --}}
-        <div class="bg-white rounded-[4px] border border-gray-200 p-5">
-            <p class="text-xs font-medium text-gray-500 uppercase">🛒 Panier moyen</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums text-gray-900">{{ $fmt($kpis['avg_basket_month']) }}</p>
-            <p class="text-xs text-gray-400 mt-0.5">FCFA TTC · ce mois</p>
-        </div>
-
-        {{-- Nouveaux clients --}}
-        <div class="bg-white rounded-[4px] border border-gray-200 p-5">
-            <p class="text-xs font-medium text-gray-500 uppercase">👥 Nouveaux clients</p>
-            <p class="mt-1 text-[16px] font-bold tabular-nums {{ $kpis['new_clients_month'] > 0 ? 'text-emerald-700' : 'text-gray-400' }}">
-                {{ $kpis['new_clients_month'] }}
-            </p>
-            <p class="text-xs text-gray-400 mt-0.5">ce mois</p>
+        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
+            <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Top 5 clients (CA HT)</h2></div>
+            <table class="w-full text-sm">
+                <tbody class="divide-y divide-gray-50">
+                    @forelse($topClients as $i => $c)
+                    <tr>
+                        <td class="px-3 py-2 text-gray-400 tabular-nums w-6">{{ $i + 1 }}</td>
+                        <td class="px-2 py-2">{{ $c->name }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums font-medium">{{ $fmt($c->total_ht) }}</td>
+                    </tr>
+                    @empty
+                    <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
+                    @endforelse
+                </tbody>
+                @if($topClients->isNotEmpty())
+                <tfoot><tr class="border-t-2 border-gray-200 bg-gray-50/60">
+                    <td class="px-3 py-2 font-bold" colspan="2">Total</td>
+                    <td class="px-3 py-2 text-right tabular-nums font-bold">{{ $fmt($topClients->sum('total_ht')) }}</td>
+                </tr></tfoot>
+                @endif
+            </table>
         </div>
     </div>
 
-    {{-- Pipeline devis --}}
-    <div class="bg-white rounded-[4px] border border-gray-200 overflow-hidden">
-        <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]">
-            <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Pipeline devis — répartition par statut</h2>
+    {{-- ── Rangée 2 : Statut · Échéance · Pipeline · Top articles ────────────── --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes par statut</h2>
+            @if($ordersStatus->isEmpty())
+                <div class="h-[220px] flex items-center justify-center text-gray-400 text-sm">Aucune commande.</div>
+            @else
+                <div id="chart-statut" class="h-[220px]"></div>
+            @endif
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-7 gap-2 p-4">
-            @foreach($pipeline as $key => $stage)
-                @php
-                    $colors = [
-                        'brouillon' => 'gray', 'envoye' => 'blue', 'accepte' => 'emerald',
-                        'converti'  => 'violet', 'refuse' => 'red', 'expire' => 'amber', 'annule' => 'red',
-                    ];
-                    $c = $colors[$key] ?? 'gray';
-                @endphp
-                <div class="text-center p-3 rounded-[4px] bg-{{ $c }}-50 border border-{{ $c }}-200">
-                    <p class="text-xs text-{{ $c }}-700 font-medium">{{ $stage['label'] }}</p>
-                    <p class="text-[16px] font-bold tabular-nums text-{{ $c }}-800 mt-1">{{ $stage['count'] }}</p>
-                    <p class="text-xs text-{{ $c }}-600 mt-0.5">{{ $fmt($stage['total']) }}</p>
+        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes à livrer par échéance</h2>
+            <div id="chart-echeance" class="h-[220px]"></div>
+        </div>
+        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Devis par statut (pipeline)</h2>
+            <div id="chart-pipeline" class="h-[220px]"></div>
+        </div>
+        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
+            <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Top 5 articles (CA HT)</h2></div>
+            <table class="w-full text-sm">
+                <tbody class="divide-y divide-gray-50">
+                    @forelse($topProducts as $i => $p)
+                    <tr>
+                        <td class="px-3 py-2 text-gray-400 tabular-nums w-6">{{ $i + 1 }}</td>
+                        <td class="px-2 py-2">{{ $p->name }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums font-medium">{{ $fmt($p->total_ht) }}</td>
+                    </tr>
+                    @empty
+                    <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
+                    @endforelse
+                </tbody>
+                @if($topProducts->isNotEmpty())
+                <tfoot><tr class="border-t-2 border-gray-200 bg-gray-50/60">
+                    <td class="px-3 py-2 font-bold" colspan="2">Total</td>
+                    <td class="px-3 py-2 text-right tabular-nums font-bold">{{ $fmt($topProducts->sum('total_ht')) }}</td>
+                </tr></tfoot>
+                @endif
+            </table>
+        </div>
+    </div>
+
+    {{-- ── Rangée 3 : Activités · Alertes ───────────────────────────────────── --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-3">Activités commerciales <span class="text-[11px] font-normal text-gray-400">— 30 jours</span></h2>
+            @php
+                // Classes complètes (pas d'interpolation : Tailwind JIT purgerait)
+                $actIcons = [
+                    'Visites clients' => ['bg-emerald-50 text-emerald-600', 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z'],
+                    'Appels'          => ['bg-sky-50 text-sky-600', 'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z'],
+                    'Emails'          => ['bg-amber-50 text-amber-600', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+                    'Rendez-vous'     => ['bg-violet-50 text-violet-600', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+                    'Tâches en cours' => ['bg-teal-50 text-teal-600', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'],
+                ];
+                $actVals = ['Visites clients' => $activities['visites'], 'Appels' => $activities['appels'], 'Emails' => $activities['emails'], 'Rendez-vous' => $activities['rdv'], 'Tâches en cours' => $activities['taches']];
+            @endphp
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                @foreach($actVals as $lab => $val)
+                @php [$cls, $path] = $actIcons[$lab]; @endphp
+                <div class="flex items-center gap-2 p-2">
+                    <span class="w-9 h-9 rounded-full {{ $cls }} flex items-center justify-center flex-shrink-0">
+                        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $path }}"/></svg>
+                    </span>
+                    <div>
+                        <div class="text-[11px] text-gray-500 leading-tight">{{ $lab }}</div>
+                        <div class="text-lg font-bold tabular-nums text-gray-800 leading-tight">{{ $val }}</div>
+                    </div>
                 </div>
-            @endforeach
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {{-- Échéances --}}
-        <div class="bg-white rounded-[4px] border border-gray-200 overflow-hidden">
-            <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0] flex items-center justify-between">
-                <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Échéances 30 prochains jours</h2>
-                <a href="{{ route('ventes.factures.index') }}" class="text-xs text-blue-600 hover:underline">Tout →</a>
+                @endforeach
             </div>
-            @if($dueSoon->isEmpty())
-                <div class="p-6 text-center text-emerald-700 text-sm">✓ Aucune échéance proche.</div>
-            @else
-            <table class="w-full text-sm">
-                <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
-                    <tr><th class="px-3 py-1.5 text-left">Facture</th><th class="px-3 py-1.5 text-left">Client</th><th class="px-3 py-1.5 text-right">Reste dû</th><th class="px-3 py-1.5 text-right">Échéance</th></tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @foreach($dueSoon as $inv)
-                    <tr class="{{ $inv->is_overdue ? 'bg-red-50/40' : '' }}">
-                        <td class="px-3 py-1.5 font-mono text-xs"><a href="{{ route('ventes.factures.show', $inv->id) }}" class="text-blue-700 hover:underline">{{ $inv->number }}</a></td>
-                        <td class="px-3 py-1.5 text-xs">{{ $inv->client_name }}</td>
-                        <td class="px-3 py-1.5 text-right tabular-nums font-medium {{ $inv->is_overdue ? 'text-red-700' : 'text-orange-700' }}">{{ $fmt($inv->remaining_amount) }}</td>
-                        <td class="px-3 py-1.5 text-right text-xs {{ $inv->is_overdue ? 'text-red-700 font-semibold' : 'text-gray-600' }}">
-                            {{ $inv->due_at ? \Carbon\Carbon::parse($inv->due_at)->format('d/m/Y') : '—' }}
-                            @if($inv->is_overdue) <span class="block text-xs text-red-500">+{{ abs((int) $inv->days_to_due) }} j</span>
-                            @elseif($inv->days_to_due !== null) <span class="block text-xs text-gray-400">{{ (int) $inv->days_to_due }} j</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            @endif
         </div>
-
-        {{-- Top clients --}}
-        <div class="bg-white rounded-[4px] border border-gray-200 overflow-hidden">
-            <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Top clients — 12 mois</h2></div>
-            @if($topClients->isEmpty())
-                <div class="p-6 text-center text-gray-400 text-sm">Aucune vente sur 12 mois.</div>
-            @else
-            <table class="w-full text-sm">
-                <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
-                    <tr><th class="px-3 py-1.5 text-left">Client</th><th class="px-3 py-1.5 text-right">CA HT</th><th class="px-3 py-1.5 text-right">Encours</th></tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @foreach($topClients as $c)
-                    <tr>
-                        <td class="px-3 py-1.5">
-                            <p class="text-sm">{{ $c->name }}</p>
-                            <p class="text-xs text-gray-500">{{ $c->invoices_count }} facture(s)</p>
-                        </td>
-                        <td class="px-3 py-1.5 text-right tabular-nums font-medium">{{ $fmt($c->total_ht) }}</td>
-                        <td class="px-3 py-1.5 text-right tabular-nums {{ $c->outstanding > 0 ? 'text-orange-700' : 'text-gray-400' }}">{{ $fmt($c->outstanding) }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            @endif
+        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-3">Alertes</h2>
+            <ul class="space-y-2 text-[13px]">
+                <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500"></span>{{ $alerts['orders_late'] }} commande(s) en retard de livraison</li>
+                <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span>{{ $alerts['invoices_unpaid'] }} facture(s) impayée(s)</li>
+                <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-orange-500"></span>Stock faible sur {{ $alerts['low_stock'] }} article(s)</li>
+            </ul>
+            <div class="mt-3 text-right">
+                <a href="{{ route('ventes.factures.index') }}" class="text-[12px] font-semibold text-emerald-700 hover:underline">Voir toutes les alertes →</a>
+            </div>
         </div>
     </div>
 
-    {{-- Top articles + Évolution --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        <div class="bg-white rounded-[4px] border border-gray-200 overflow-hidden">
-            <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Top articles vendus — 12 mois</h2></div>
-            @if($topProducts->isEmpty())
-                <div class="p-6 text-center text-gray-400 text-sm">Aucune vente.</div>
-            @else
-            <table class="w-full text-sm">
-                <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
-                    <tr><th class="px-3 py-1.5 text-left">Article</th><th class="px-3 py-1.5 text-right">Quantité</th><th class="px-3 py-1.5 text-right">CA HT</th></tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @foreach($topProducts as $p)
-                    <tr>
-                        <td class="px-3 py-1.5">
-                            <span class="font-mono text-xs text-blue-700">{{ $p->reference }}</span>
-                            <p class="text-sm">{{ $p->name }}</p>
-                        </td>
-                        <td class="px-3 py-1.5 text-right tabular-nums">{{ number_format($p->qty_sold, 2, ',', ' ') }}</td>
-                        <td class="px-3 py-1.5 text-right tabular-nums font-medium">{{ $fmt($p->total_ht) }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            @endif
-        </div>
-
-        <div class="bg-white rounded-[4px] border border-gray-200 overflow-hidden">
-            <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Évolution mensuelle — 12 mois</h2></div>
-            @if($monthly->isEmpty())
-                <div class="p-6 text-center text-gray-400 text-sm">Pas de données.</div>
-            @else
-            <table class="w-full text-sm">
-                <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
-                    <tr><th class="px-3 py-1.5 text-left">Mois</th><th class="px-3 py-1.5 text-right">CA HT</th><th class="px-3 py-1.5 text-right"># factures</th></tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @php $maxCa = $monthly->max('total_ht') ?: 1; @endphp
-                    @foreach($monthly as $m)
-                    @php $pct = $m->total_ht > 0 ? round($m->total_ht / $maxCa * 100, 0) : 0; @endphp
-                    <tr>
-                        <td class="px-3 py-1.5 text-xs">
-                            {{ \Carbon\Carbon::createFromFormat('Y-m', $m->month)->translatedFormat('M Y') }}
-                        </td>
-                        <td class="px-3 py-1.5 text-right">
-                            <div class="inline-flex items-center gap-2 justify-end">
-                                <div class="w-16 bg-gray-200 rounded h-1.5"><div class="h-1.5 rounded bg-blue-500" style="width: {{ $pct }}%"></div></div>
-                                <span class="tabular-nums text-xs font-medium">{{ $fmt($m->total_ht) }}</span>
-                            </div>
-                        </td>
-                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ $m->invoices_count }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            @endif
-        </div>
+    {{-- ── Barre de contexte X3 ─────────────────────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">CA HT {{ now()->year }} : <span class="text-white font-semibold tabular-nums">{{ $fmt($kpis['ca_year']) }} FCFA</span></span>
+        <span class="border-l border-white/10 pl-6">Marge : <span class="text-white font-semibold tabular-nums">{{ number_format($margin['taux'], 1, ',', ' ') }} %</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(window.__pendingApex = window.__pendingApex || []).push(function () {
+    const fmt   = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v || 0);
+    const green = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5'];
+    const multi = ['#059669', '#2563eb', '#f59e0b', '#8b5cf6', '#14b8a6', '#9ca3af'];
+    window.__turboCleanups = window.__turboCleanups || [];
+    const mount = (sel, opt) => { const el = document.querySelector(sel); if (!el) return; const c = new ApexCharts(el, opt); c.render(); window.__turboCleanups.push(() => { try { c.destroy(); } catch (e) {} }); };
+
+    // Évolution CA — barres CA HT + barres N-1 + courbe de tendance (maquette X3)
+    mount('#chart-ca-evolution', {
+        chart: { height: 260, toolbar: { show: false }, fontFamily: 'inherit' },
+        series: [
+            { name: 'CA HT', type: 'column', data: @json($caComparison['current']) },
+            { name: 'CA HT année précédente', type: 'column', data: @json($caComparison['previous']) },
+            { name: 'Tendance', type: 'line', data: @json($caComparison['current']) },
+        ],
+        xaxis: { categories: @json($caComparison['labels']), labels: { style: { fontSize: '10px', colors: '#94a3b8' } } },
+        yaxis: { labels: { style: { fontSize: '10px', colors: '#94a3b8' }, formatter: fmt } },
+        colors: ['#059669', '#cbd5e1', '#34d399'],
+        stroke: { width: [0, 0, 2.5], curve: 'smooth' },
+        markers: { size: [0, 0, 3], strokeWidth: 0 },
+        plotOptions: { bar: { borderRadius: 3, columnWidth: '58%' } },
+        dataLabels: { enabled: false }, grid: { borderColor: '#f1f5f9', strokeDashArray: 3 },
+        legend: { position: 'top', fontSize: '11px', markers: { radius: 2 } },
+        tooltip: { shared: true, y: { formatter: v => fmt(v) + ' F' } },
+    });
+
+    @if($caByFamily->isNotEmpty())
+    mount('#chart-famille', {
+        chart: { type: 'donut', height: 240, fontFamily: 'inherit' },
+        series: @json($caByFamily->pluck('ca')->map(fn($v) => (int) $v)),
+        labels: @json($caByFamily->pluck('famille')),
+        colors: multi, legend: { position: 'right', fontSize: '11px' }, dataLabels: { enabled: true, formatter: v => Math.round(v) + ' %' },
+        plotOptions: { pie: { donut: { size: '62%' } } },
+    });
+    @endif
+
+    @if($ordersStatus->isNotEmpty())
+    // Légende maquette : « Libellé   n (xx,x %) »
+    const stCounts = @json($ordersStatus->pluck('count'));
+    const stTotal  = stCounts.reduce((a, b) => a + b, 0) || 1;
+    mount('#chart-statut', {
+        chart: { type: 'donut', height: 220, fontFamily: 'inherit' },
+        series: stCounts,
+        labels: @json($ordersStatus->pluck('label')),
+        colors: multi, dataLabels: { enabled: false },
+        legend: {
+            position: 'right', fontSize: '11px',
+            formatter: (name, opts) => {
+                const v = opts.w.globals.series[opts.seriesIndex];
+                return name + '  ' + v + ' (' + (v / stTotal * 100).toFixed(2).replace('.', ',') + ' %)';
+            },
+        },
+        plotOptions: { pie: { donut: { size: '62%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '12px' } } } } },
+    });
+    @endif
+
+    mount('#chart-echeance', {
+        chart: { type: 'bar', height: 220, toolbar: { show: false }, fontFamily: 'inherit' },
+        series: [{ name: 'Commandes', data: [{{ $deliveries['en_retard'] }}, {{ $deliveries['aujourd_hui'] }}, {{ $deliveries['cette_semaine'] }}, {{ $deliveries['semaine_prochaine'] }}, {{ $deliveries['plus_tard'] }}] }],
+        xaxis: { categories: ['En retard', 'Aujourd\'hui', 'Cette semaine', 'Semaine proch.', 'Plus tard'], labels: { style: { fontSize: '10px', colors: '#94a3b8' } } },
+        colors: ['#ef4444'], plotOptions: { bar: { horizontal: true, borderRadius: 3, distributed: true, barHeight: '60%' } },
+        colors: ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#9ca3af'],
+        dataLabels: { enabled: true }, legend: { show: false }, grid: { borderColor: '#f1f5f9' },
+    });
+
+    const pipeLabels = @json(collect($pipeline)->map(fn($s) => $s['label'])->values());
+    const pipeData   = @json(collect($pipeline)->map(fn($s) => $s['count'])->values());
+    const pipeTotal  = pipeData.reduce((a, b) => a + b, 0);
+    if (pipeTotal > 0) mount('#chart-pipeline', {
+        chart: { type: 'donut', height: 220, fontFamily: 'inherit' },
+        series: pipeData, labels: pipeLabels, colors: multi,
+        dataLabels: { enabled: false },
+        legend: {
+            position: 'right', fontSize: '11px',
+            formatter: (name, opts) => {
+                const v = opts.w.globals.series[opts.seriesIndex];
+                return name + '  ' + v + ' (' + (v / pipeTotal * 100).toFixed(2).replace('.', ',') + ' %)';
+            },
+        },
+        plotOptions: { pie: { donut: { size: '62%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '12px' } } } } },
+    });
+
+    mount('#spark-marge', {
+        chart: { type: 'area', height: 32, sparkline: { enabled: true } },
+        series: [{ data: @json($monthly->pluck('total_ht')->map(fn($v) => (int) $v)) }],
+        stroke: { curve: 'smooth', width: 1.5 }, colors: ['#059669'],
+        fill: { type: 'gradient', gradient: { opacityFrom: 0.3, opacityTo: 0 } },
+        tooltip: { enabled: false },
+    });
+});
+</script>
+@endpush
