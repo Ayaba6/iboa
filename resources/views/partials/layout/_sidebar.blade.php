@@ -707,6 +707,7 @@ request()->routeIs('achats.*')                                                  
                             $rhUser->can('rh.leaves.view')    ? [route('rh.conges.index'),      'Congés',              'rh.conges*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.evaluations.index'), 'Évaluations',         'rh.evaluations*'] : null,
                             $rhUser->can('rh.employees.view') ? [route('rh.formations.index'),  'Formation',           'rh.formations*'] : null,
+                            $rhUser->can('rh.employees.view') ? [route('rh.departs.index'),     'Départs & STC',       'rh.departs*'] : null,
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
