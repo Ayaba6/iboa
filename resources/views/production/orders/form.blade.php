@@ -289,7 +289,7 @@
 
                 {{-- ═══════════ [X3] 3. ALLOCATION MATIÈRE (composants nomenclature) ═══════════ --}}
                 <section class="border border-gray-200 rounded-[4px]" x-show="bomId && comps.length" x-cloak>
-                    <button type="button" @click="sections.allocation = !sections.allocation" class="{{ $secH }} w-full flex items-center justify-between"><span>3. Allocation matière</span><svg class="w-4 h-4 transition-transform" :class="sections.allocation ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></button>
+                    <button type="button" @click="sections.allocation = !sections.allocation" class="{{ $secH }} w-full flex items-center justify-between"><span x-text="(2 + (launched.length?1:0)) + '. Allocation matière'">3. Allocation matière</span><svg class="w-4 h-4 transition-transform" :class="sections.allocation ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></button>
                     <div x-show="sections.allocation" class="p-4">
                         <table class="w-full text-[12.5px] border border-gray-200">
                             <thead><tr class="bg-[#3b4248] text-white text-[11px] font-semibold uppercase whitespace-nowrap">
@@ -322,7 +322,7 @@
                 </section>
 
                 <section class="border border-gray-200 rounded-[4px]">
-                    <div class="{{ $secH }}">4. Caractéristiques tôle</div>
+                    <div class="{{ $secH }}" x-text="(2 + (launched.length?1:0) + ((bomId && comps.length)?1:0)) + '. Caractéristiques tôle'">4. Caractéristiques tôle</div>
                     <div class="p-4 grid grid-cols-2 sm:grid-cols-6 gap-4">
                         <div><label class="{{ $lbl }}">Type de tôle</label><input type="text" name="sheet_type" maxlength="60" value="{{ old('sheet_type', $o->sheet_type) }}" class="{{ $inp }}"></div>
                         <div>
@@ -373,7 +373,7 @@
 
                 <section class="border border-gray-200 rounded-[4px]">
                     <button type="button" @click="sections.params = !sections.params" class="{{ $secH }} w-full flex items-center justify-between">
-                        <span>5. Paramètres de production</span>
+                        <span x-text="(3 + (launched.length?1:0) + ((bomId && comps.length)?1:0)) + '. Paramètres de production'">5. Paramètres de production</span>
                         <svg class="w-4 h-4 transition-transform" :class="sections.params ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <div x-show="sections.params" class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -444,7 +444,7 @@
                 {{-- Détail des coupes (éditable) --}}
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }} flex items-center justify-between">
-                        <span>6. Détail des coupes</span>
+                        <span x-text="(4 + (launched.length?1:0) + ((bomId && comps.length)?1:0)) + '. Détail des coupes'">6. Détail des coupes</span>
                         <button type="button" @click="lines.push({length:'',quantity:'',unit_id:'',label:''})" class="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-[3px]">+ Ajouter</button>
                     </div>
                     <div class="p-4">
