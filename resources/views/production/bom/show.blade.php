@@ -105,6 +105,7 @@
                 <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
                         <th class="{{ $th }} text-left">Article</th>
+                        <th class="{{ $th }} text-left">Substitut</th>
                         <th class="{{ $th }} text-left">Libellé</th>
                         <th class="{{ $th }} text-right">Qté / mètre</th>
                         <th class="{{ $th }} text-left">Unité</th>
@@ -115,6 +116,7 @@
                     @forelse($bom->lines as $l)
                     <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
                         <td class="px-3 py-1.5 text-gray-900">{{ $l->product?->name ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-gray-500">{{ $l->substitute?->name ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-gray-600">{{ $l->label ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-right font-mono tabular-nums text-gray-900">{{ number_format($l->quantity_per_meter,4,',',' ') }}</td>
                         <td class="px-3 py-1.5 text-gray-600">{{ $l->unit?->abbreviation ?? $l->unit?->name ?? '—' }}</td>

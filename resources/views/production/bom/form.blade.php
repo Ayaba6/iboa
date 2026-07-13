@@ -14,7 +14,7 @@
     $b = $bom;
     $initialLines = old('lines', $bom->exists ? $bom->lines->map(fn($l)=>[
         'sequence'=>$l->sequence,'groupe'=>$l->groupe,'type_composant'=>$l->type_composant,
-        'product_id'=>$l->product_id,'label'=>$l->label,'unit_id'=>$l->unit_id,
+        'product_id'=>$l->product_id,'substitute_product_id'=>$l->substitute_product_id,'label'=>$l->label,'unit_id'=>$l->unit_id,
         'quantity_per_meter'=>$l->quantity_per_meter,'coef'=>$l->coef,'waste_rate'=>$l->waste_rate,
         'depot_sortie_id'=>$l->depot_sortie_id,'lot_obligatoire'=>(bool)$l->lot_obligatoire,'statut'=>$l->statut,
     ])->values()->all() : []);
@@ -215,7 +215,7 @@
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }} flex items-center justify-between">
                         <span>Composants</span>
-                        <button type="button" @click="lines.push({sequence:(lines.length+1)*10,groupe:'',type_composant:'matiere',product_id:'',label:'',unit_id:'',quantity_per_meter:'',coef:1,waste_rate:'',depot_sortie_id:'',lot_obligatoire:false,statut:'actif'})"
+                        <button type="button" @click="lines.push({sequence:(lines.length+1)*10,groupe:'',type_composant:'matiere',product_id:'',substitute_product_id:'',label:'',unit_id:'',quantity_per_meter:'',coef:1,waste_rate:'',depot_sortie_id:'',lot_obligatoire:false,statut:'actif'})"
                                 class="text-[12px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-[3px]">+ Ajouter</button>
                     </div>
                     <div class="p-4 overflow-x-auto">
@@ -225,6 +225,7 @@
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200 w-16">Groupe</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200 w-28">Type</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Composant</th>
+                                <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Substitut</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200">Désignation</th>
                                 <th class="text-left font-bold px-2 py-1.5 border-b border-gray-200 w-16">Unité</th>
                                 <th class="text-right font-bold px-2 py-1.5 border-b border-gray-200 w-20">Qté nécess.</th>
@@ -249,6 +250,11 @@
                                                 <option value="">—</option>@foreach($products as $p)<option value="{{ $p->id }}">{{ $p->name }}</option>@endforeach
                                             </select>
                                         </td>
+                                        <td class="px-1 py-1">
+                                            <select :name="`lines[${i}][substitute_product_id]`" x-model="line.substitute_product_id" class="{{ $inp }} h-7" title="Article de remplacement autorisé">
+                                                <option value="">— aucun —</option>@foreach($products as $p)<option value="{{ $p->id }}">{{ $p->name }}</option>@endforeach
+                                            </select>
+                                        </td>
                                         <td class="px-1 py-1"><input type="text" :name="`lines[${i}][label]`" x-model="line.label" class="{{ $inp }} h-7"></td>
                                         <td class="px-1 py-1">
                                             <select :name="`lines[${i}][unit_id]`" x-model="line.unit_id" class="{{ $inp }} h-7">
@@ -267,7 +273,7 @@
                                         <td class="px-1 py-1 text-center"><button type="button" @click="lines.splice(i,1)" class="text-red-500 hover:text-red-700">✕</button></td>
                                     </tr>
                                 </template>
-                                <tr x-show="lines.length === 0"><td colspan="12" class="px-3 py-4 text-center text-gray-400 text-[12px]">Aucun composant — cliquez « + Ajouter ».</td></tr>
+                                <tr x-show="lines.length === 0"><td colspan="13" class="px-3 py-4 text-center text-gray-400 text-[12px]">Aucun composant — cliquez « + Ajouter ».</td></tr>
                             </tbody>
                         </table>
                     </div>

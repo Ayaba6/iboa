@@ -89,7 +89,9 @@ class BillOfMaterialController extends Controller
                 continue;
             }
             $bom->lines()->create([
-                'product_id'         => $row['product_id'] ?? null,
+                'product_id'            => $row['product_id'] ?? null,
+                'substitute_product_id' => ($row['substitute_product_id'] ?? '') ?: null,
+                'substitute_note'       => $row['substitute_note'] ?? null,
                 'label'              => $row['label'] ?? null,
                 'quantity_per_meter' => $row['quantity_per_meter'] ?? 0,
                 'unit_id'            => $row['unit_id'] ?? null,
