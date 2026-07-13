@@ -36,6 +36,7 @@ class ProductionReportController extends Controller
         'qualite'      => 'Contrôles qualité',
         'non_conformites' => 'Non-conformités',
         'of_retard'    => 'OF en retard',
+        'respect_programme' => 'Respect du programme',
         'of_statut'    => 'OF par statut',
         'perf_ligne'   => 'Performance par ligne',
         'stock_mp_pf'  => 'Stock matière / produit fini',
@@ -90,6 +91,7 @@ class ProductionReportController extends Controller
             'qualite'      => $this->qualite($f, $t),
             'non_conformites' => $this->nonConformites(),
             'of_retard'    => $this->ofEnRetard(),
+            'respect_programme' => $this->respectProgramme($f, $t),
             'of_statut'    => $this->ofParStatut(),
             'perf_ligne'   => $this->performanceLigne($f, $t),
             'stock_mp_pf'  => $this->stockMpPf(),
@@ -116,6 +118,49 @@ class ProductionReportController extends Controller
             'headers' => ['N° OF', 'Client', 'Article', 'Statut', 'Fin prévue', 'Retard (j)', 'Qté demandée', 'Qté produite'],
             'rows'    => $data,
             'numeric' => [5, 6, 7],
+            'totals'  => null,
+        ];
+    }
+
+    /**
+     * [PRO Respect du programme] OF clôturés sur la période : fin réelle vs fin prévue,
+     * ponctualité (à l'heure/en retard) et écart en jours. Le titre porte le taux de respect.
+     */
+    private function respectProgramme(Carbon $f, Carbon $t): array
+    {
+        $orders = ProductionOrder::with(['client:id,name', 'product:id,name'])
+            ->termineEntre($f, $t)
+            ->orderByDesc('finished_at')->get();
+
+        $measured = $orders->filter(fn ($o) => $o->scheduleDelayDays() !== null);
+        $onTime   = $measured->filter(fn ($o) => $o->finishedOnTime())->count();
+        $late     = $measured->count() - $onTime;
+        $rate     = $measured->count() > 0 ? round($onTime / $measured->count() * 100, 1) : 0;
+        $avgDelay = $late > 0
+            ? round($measured->filter(fn ($o) => ! $o->finishedOnTime())->avg(fn ($o) => $o->scheduleDelayDays()), 1)
+            : 0;
+
+        $data = $orders->map(function ($o) {
+            $delay = $o->scheduleDelayDays();
+            return [
+                $o->number,
+                $o->client?->name ?? '—',
+                $o->product?->name ?? '—',
+                $o->date_fin_prevue?->format('d/m/Y') ?? '—',
+                $o->finished_at?->format('d/m/Y') ?? '—',
+                $delay === null ? '—' : $delay,
+                $delay === null ? 'Non planifié' : ($delay <= 0 ? 'À l\'heure' : 'En retard'),
+            ];
+        })->all();
+
+        return [
+            'title'   => sprintf(
+                'Respect du programme — taux de ponctualité %s %% (%d/%d à l\'heure, retard moyen %s j)',
+                number_format($rate, 1, ',', ' '), $onTime, $measured->count(), number_format($avgDelay, 1, ',', ' ')
+            ),
+            'headers' => ['N° OF', 'Client', 'Article', 'Fin prévue', 'Fin réelle', 'Écart (j)', 'Ponctualité'],
+            'rows'    => $data,
+            'numeric' => [5],
             'totals'  => null,
         ];
     }

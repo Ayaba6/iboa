@@ -118,6 +118,32 @@ class ProductionOrder extends Model
     /** [Dédoublonnage] OF pas encore lancé (brouillon + circuit de validation). */
     public function scopeALancer($q) { return $q->whereIn('status', ['brouillon', 'matiere_allouee', 'attente_chef', 'attente_responsable']); }
 
+    /** [PRO Respect programme] OF clôturés (terminés) sur la période, avec fin réelle. */
+    public function scopeTermineEntre($q, $from, $to)
+    {
+        return $q->whereIn('status', ['termine', 'termine_partiellement'])
+            ->whereNotNull('finished_at')->whereBetween('finished_at', [$from, $to]);
+    }
+
+    /**
+     * [PRO Respect programme] Écart en jours entre la fin réelle et la fin prévue.
+     * > 0 = retard, ≤ 0 = à l'heure/avance. Null si l'une des dates manque.
+     */
+    public function scheduleDelayDays(): ?int
+    {
+        if (! $this->finished_at || ! $this->date_fin_prevue) {
+            return null;
+        }
+        return (int) $this->date_fin_prevue->startOfDay()->diffInDays($this->finished_at->startOfDay(), false);
+    }
+
+    /** OF clôturé dans les délais (fin réelle ≤ fin prévue). Null si non mesurable. */
+    public function finishedOnTime(): ?bool
+    {
+        $d = $this->scheduleDelayDays();
+        return $d === null ? null : $d <= 0;
+    }
+
     protected static function newFactory()
     {
         return \Database\Factories\ProductionOrderFactory::new();
