@@ -206,6 +206,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::resource('clients', ClientController::class);
             Route::post('clients/{client}/interactions', [ClientController::class, 'storeInteraction'])->name('clients.interactions.store');
+            // [VEN Crédit client] Historique & décisions de crédit
+            Route::get('clients/{client}/credit',  [\App\Http\Controllers\CreditDecisionController::class, 'index'])->name('clients.credit.index');
+            Route::post('clients/{client}/credit', [\App\Http\Controllers\CreditDecisionController::class, 'store'])->name('clients.credit.store');
             Route::get('relances', [\App\Http\Controllers\ClientRelanceController::class, 'index'])->name('relances.index');
             Route::post('relances/send', [\App\Http\Controllers\ClientRelanceController::class, 'send'])->name('relances.send');
             Route::get('relances/lettre', [\App\Http\Controllers\ClientRelanceController::class, 'letter'])->name('relances.letter');

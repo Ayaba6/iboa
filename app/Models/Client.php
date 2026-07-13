@@ -180,6 +180,12 @@ class Client extends Model
         return $this->hasMany(Order::class);
     }
 
+    /** [VEN Crédit] Historique des décisions de crédit. */
+    public function creditDecisions(): HasMany
+    {
+        return $this->hasMany(CreditDecision::class)->orderByDesc('created_at')->orderByDesc('id');
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
