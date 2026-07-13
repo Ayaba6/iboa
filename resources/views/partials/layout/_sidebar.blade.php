@@ -435,6 +435,7 @@ request()->routeIs('achats.*')                                                  
                             $puser->can('production.update') ? [route('production.planning'), 'Plan de charge',       'production.planning'] : null,
                             $puser->can('production.update') ? [route('production.cutting'),  'Optimisation découpe', 'production.cutting'] : null,
                             /* Qualité : profils qualité */
+                            $puser->can('quality.view') ? [route('qualite.dashboard'),              'Indicateurs qualité', 'qualite.dashboard'] : null,
                             $puser->can('quality.view') ? [route('qualite.control-plans.index'),    'Plans de contrôle', 'qualite.control-plans*'] : null,
                             $puser->can('quality.view') ? [route('qualite.inspections.index'),      'Contrôles qualité', 'qualite.inspections*'] : null,
                             $puser->can('quality.view') ? [route('qualite.non-conformities.index'), 'Non-conformités',   'qualite.non-conformities*'] : null,
