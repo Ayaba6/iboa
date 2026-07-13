@@ -83,7 +83,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Trésorerie
             'payments.view', 'payments.create', 'payments.edit',
             'cash_accounts.view', 'cash_accounts.manage',
-            'treasury.write', 'treasury.validate',
+            'treasury.write', 'treasury.validate', 'treasury.view',
             // Rapports
             'reports.view', 'reports.export',
             // Comptabilité SYSCOHADA
@@ -155,7 +155,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'credit_notes.view', 'credit_notes.create',
             'payments.view', 'payments.create', 'payments.edit',
             'cash_accounts.view', 'cash_accounts.manage',
-            'treasury.write', 'treasury.validate',
+            'treasury.write', 'treasury.validate', 'treasury.view',
             'reports.view', 'reports.export',
             'accounting.view', 'accounting.write', 'accounting.validate', 'accounting.manage',
             // Intégrations : consulter + déclarer la TVA à la DGI (gestion des clés réservée au directeur)
@@ -213,7 +213,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Trésorerie
             'payments.view', 'payments.create', 'payments.edit',
             'cash_accounts.view', 'cash_accounts.manage',
-            'treasury.write', 'treasury.validate',
+            'treasury.write', 'treasury.validate', 'treasury.view',
             // Factures/avoirs
             'invoices.view', 'invoices.validate', 'invoices.create', 'invoices.edit',
             'supplier_invoices.view', 'supplier_invoices.create', 'supplier_invoices.edit',
@@ -378,7 +378,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'payments.view', 'payments.create', 'payments.edit',
             'bon_preparations.view', // [CDC §cash] consulter les BP créés après paiement
             'cash_accounts.view', 'cash_accounts.manage',
-            'treasury.write',
+            'treasury.write', 'treasury.view',
             'reports.view',
         ]);
 
@@ -390,7 +390,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'deliveries.view', 'credit_notes.view',
             'purchase_orders.view', 'receptions.view', 'supplier_invoices.view',
             'stocks.view', 'inventory.view',
-            'payments.view', 'cash_accounts.view',
+            'payments.view', 'cash_accounts.view', 'treasury.view',
             'accounting.view',
             'reports.view',
             'production.view', 'quality.view', 'maintenance.view',
