@@ -24,5 +24,11 @@ class ProductionBatch extends Model
 
     public function statusLabel(): string { return match($this->status) { 'cloture' => 'Clôturé', 'conforme' => 'Conforme', default => 'En cours' }; }
 
+    /** [QUA-07] Décision de libération qualité du lot. */
+    public function qualityRelease(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(\App\Modules\Quality\Models\QualityRelease::class); }
+
+    /** Lot libéré qualité (libéré ou sous dérogation). */
+    public function isQualityReleased(): bool { return (bool) $this->qualityRelease?->isReleased(); }
+
     protected static function newFactory() { return \Database\Factories\ProductionBatchFactory::new(); }
 }
