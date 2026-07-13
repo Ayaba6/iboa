@@ -1062,6 +1062,28 @@ Route::middleware(['auth', 'verified'])->prefix('rh')->name('rh.')->group(functi
         Route::post('/',      [\App\Http\Controllers\HR\CareerEventController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
     });
 
+    // ── [RH-11] Évaluations & performance ─────────────────────────────────────
+    Route::middleware('permission:rh.employees.view')->prefix('evaluations')->name('evaluations.')->group(function () {
+        Route::get('/',              [\App\Http\Controllers\HR\AppraisalController::class, 'index'])->name('index');
+        Route::get('/creer',         [\App\Http\Controllers\HR\AppraisalController::class, 'create'])->middleware('permission:rh.employees.manage')->name('create');
+        Route::post('/',             [\App\Http\Controllers\HR\AppraisalController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
+        Route::get('/{evaluation}',  [\App\Http\Controllers\HR\AppraisalController::class, 'show'])->whereNumber('evaluation')->name('show');
+        Route::put('/{evaluation}',  [\App\Http\Controllers\HR\AppraisalController::class, 'update'])->whereNumber('evaluation')->middleware('permission:rh.employees.manage')->name('update');
+        Route::post('/{evaluation}/finaliser', [\App\Http\Controllers\HR\AppraisalController::class, 'finalize'])->whereNumber('evaluation')->middleware('permission:rh.employees.manage')->name('finalize');
+    });
+
+    // ── [RH-10] Formation & compétences ───────────────────────────────────────
+    Route::middleware('permission:rh.employees.view')->prefix('formations')->name('formations.')->group(function () {
+        Route::get('/',             [\App\Http\Controllers\HR\TrainingController::class, 'index'])->name('index');
+        Route::get('/creer',        [\App\Http\Controllers\HR\TrainingController::class, 'create'])->middleware('permission:rh.employees.manage')->name('create');
+        Route::post('/',            [\App\Http\Controllers\HR\TrainingController::class, 'store'])->middleware('permission:rh.employees.manage')->name('store');
+        Route::get('/{formation}',  [\App\Http\Controllers\HR\TrainingController::class, 'show'])->whereNumber('formation')->name('show');
+        Route::put('/{formation}',  [\App\Http\Controllers\HR\TrainingController::class, 'update'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('update');
+        Route::post('/{formation}/participants', [\App\Http\Controllers\HR\TrainingController::class, 'storeParticipant'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('participants.store');
+        Route::put('/{formation}/participants/{participant}', [\App\Http\Controllers\HR\TrainingController::class, 'updateParticipant'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('participants.update');
+        Route::delete('/{formation}/participants/{participant}', [\App\Http\Controllers\HR\TrainingController::class, 'destroyParticipant'])->whereNumber('formation')->middleware('permission:rh.employees.manage')->name('participants.destroy');
+    });
+
     // ── Départements ──────────────────────────────────────────────────────────
     Route::middleware('permission:rh.employees.view')->prefix('departements')->name('departments.')->group(function () {
         Route::get('/',  [\App\Http\Controllers\HR\EmployeeController::class, 'departments'])->name('index');
