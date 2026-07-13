@@ -108,8 +108,13 @@ class ProductionCostService
             ? (int) $opts['packaging_cost']
             : (int) round((float) ($bom->packaging_per_unit ?? 0) * $quantity);
 
+        // 6bis. Sous-traitance — opérations externalisées (saisie manuelle)
+        $subcontract = array_key_exists('subcontract_cost', $opts) && $opts['subcontract_cost'] !== null
+            ? (int) $opts['subcontract_cost']
+            : 0;
+
         // 7. Frais indirects — taux % sur la somme des coûts directs
-        $direct = $material + $labor + $machine + $energy + $maintenance + $packaging;
+        $direct = $material + $labor + $machine + $energy + $maintenance + $packaging + $subcontract;
         if (array_key_exists('overhead_cost', $opts) && $opts['overhead_cost'] !== null) {
             $overhead = (int) $opts['overhead_cost'];
         } else {
@@ -156,6 +161,7 @@ class ProductionCostService
                 'maintenance_cost' => $maintenance,
                 'packaging_cost'   => $packaging,
                 'overhead_cost'    => $overhead,
+                'subcontract_cost' => $subcontract,
                 'total_cost'       => $total,
                 'standard_total'   => $standardTotal,
                 'variance'         => $variance,

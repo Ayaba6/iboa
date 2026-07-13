@@ -25,6 +25,7 @@ class ProductionCostController extends Controller
             'maintenance_cost' => ['nullable', 'integer', 'min:0'],
             'packaging_cost'   => ['nullable', 'integer', 'min:0'],
             'overhead_cost'    => ['nullable', 'integer', 'min:0'],
+            'subcontract_cost' => ['nullable', 'integer', 'min:0'],
             'overhead_rate'    => ['nullable', 'numeric', 'min:0', 'max:100'],
             'revenue'          => ['nullable', 'numeric', 'min:0'],
         ]);

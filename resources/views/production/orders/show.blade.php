@@ -762,6 +762,10 @@
             <form method="POST" action="{{ route('production.orders.cost', $order) }}" class="flex items-end gap-2">
                 @csrf
                 <div>
+                    <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Sous-traitance F</label>
+                    <input type="number" name="subcontract_cost" step="1" min="0" value="{{ $cost->subcontract_cost ?? 0 }}" class="w-24 border border-gray-300 rounded-[4px] px-2 py-1 text-sm text-right font-mono">
+                </div>
+                <div>
                     <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Frais indirects %</label>
                     <input type="number" name="overhead_rate" step="0.1" min="0" max="100" value="0" class="w-20 border border-gray-300 rounded-[4px] px-2 py-1 text-sm text-right font-mono">
                 </div>
@@ -772,13 +776,14 @@
         @if($cost)
         <div class="p-6">
             {{-- [CDC coût de revient industriel] Décomposition complète : matière, MO, machine, énergie, maintenance, emballage, indirects --}}
-            <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-5">
+            <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-4 mb-5">
                 <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Matière</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->material_cost,0,',',' ') }} F</p></div>
                 <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Main-d'œuvre</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->labor_cost,0,',',' ') }} F</p></div>
                 <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Machine</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->machine_cost,0,',',' ') }} F</p></div>
                 <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Énergie</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->energy_cost ?? 0,0,',',' ') }} F</p></div>
                 <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Maintenance</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->maintenance_cost ?? 0,0,',',' ') }} F</p></div>
                 <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Emballage</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->packaging_cost ?? 0,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Sous-traitance</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->subcontract_cost ?? 0,0,',',' ') }} F</p></div>
                 <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Frais indirects</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->overhead_cost,0,',',' ') }} F</p></div>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
