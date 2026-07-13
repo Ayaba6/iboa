@@ -1566,6 +1566,12 @@ Route::middleware(['auth', 'verified', 'permission:direction.view'])
 Route::middleware(['auth', 'verified', 'permission:quality.view'])->prefix('qualite')->name('qualite.')->group(function () {
     Route::resource('inspections', \App\Modules\Quality\Controllers\QualityInspectionController::class)->except('show');
     Route::resource('non-conformities', \App\Modules\Quality\Controllers\NonConformityController::class)->except('show')->parameters(['non-conformities' => 'nonConformity']);
+    // [QUA-05] Actions correctives / préventives (CAPA)
+    Route::get('actions-correctives', [\App\Modules\Quality\Controllers\CorrectiveActionController::class, 'index'])->name('corrective-actions.index');
+    Route::get('non-conformities/{nonConformity}/actions', [\App\Modules\Quality\Controllers\CorrectiveActionController::class, 'forNc'])->name('corrective-actions.nc');
+    Route::post('non-conformities/{nonConformity}/actions', [\App\Modules\Quality\Controllers\CorrectiveActionController::class, 'store'])->name('corrective-actions.store');
+    Route::post('actions-correctives/{action}/statut', [\App\Modules\Quality\Controllers\CorrectiveActionController::class, 'changeStatus'])->name('corrective-actions.status');
+    Route::post('actions-correctives/{action}/verifier', [\App\Modules\Quality\Controllers\CorrectiveActionController::class, 'verify'])->name('corrective-actions.verify');
     // Certificats qualité (§8 Traçabilité + §10 Qualité)
     Route::resource('certificats', \App\Http\Controllers\Quality\QualityCertificateController::class)->parameters(['certificats' => 'certificat']);
     Route::post('certificats/{certificat}/approve', [\App\Http\Controllers\Quality\QualityCertificateController::class, 'approve'])->name('certificats.approve')->middleware('permission:quality.manage');

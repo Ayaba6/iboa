@@ -110,6 +110,7 @@
                         <td class="px-3 py-1.5 text-gray-600 text-[12px] hidden md:table-cell whitespace-nowrap">{{ $nc->responsible?->full_name ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-gray-500 text-[12px] hidden md:table-cell whitespace-nowrap">{{ optional($nc->due_date)->format('d/m/Y') ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-right whitespace-nowrap">
+                            <a href="{{ route('qualite.corrective-actions.nc', $nc) }}" class="text-blue-700 hover:text-blue-900 hover:underline text-[12px] font-semibold mr-3">CAPA</a>
                             @can('production.update')
                             <a href="{{ route('qualite.non-conformities.edit', $nc) }}" class="text-emerald-700 hover:text-emerald-900 hover:underline text-[12px] font-semibold">Traiter</a>
                             @endcan

@@ -47,6 +47,16 @@ class NonConformity extends Model
     public function detectedBy(): BelongsTo { return $this->belongsTo(Employee::class, 'detected_by_id'); }
     public function dispositionResponsible(): BelongsTo { return $this->belongsTo(Employee::class, 'disposition_responsible_id'); }
     public function characteristics(): \Illuminate\Database\Eloquent\Relations\HasMany { return $this->hasMany(NonConformityCharacteristic::class)->orderBy('sort_order'); }
+    public function correctiveActions(): \Illuminate\Database\Eloquent\Relations\HasMany { return $this->hasMany(CorrectiveAction::class); }
+
+    /** [QUA-05] CAPA soldée : au moins une action et toutes vérifiées efficaces. */
+    public function capaComplete(): bool
+    {
+        $actions = $this->correctiveActions()->get();
+
+        return $actions->isNotEmpty()
+            && $actions->every(fn ($a) => $a->status === 'verifiee' && $a->is_effective === true);
+    }
 
     public function severityLabel(): string { return match($this->severity){ 'mineure'=>'Mineure','majeure'=>'Majeure','critique'=>'Critique',default=>$this->severity }; }
     public function statusLabel(): string { return match($this->status){ 'ouverte'=>'Ouverte','en_cours'=>'En cours','cloturee'=>'Clôturée',default=>$this->status }; }

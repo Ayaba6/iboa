@@ -437,6 +437,7 @@ request()->routeIs('achats.*')                                                  
                             /* Qualité : profils qualité */
                             $puser->can('quality.view') ? [route('qualite.inspections.index'),      'Contrôles qualité', 'qualite.inspections*'] : null,
                             $puser->can('quality.view') ? [route('qualite.non-conformities.index'), 'Non-conformités',   'qualite.non-conformities*'] : null,
+                            $puser->can('quality.view') ? [route('qualite.corrective-actions.index'), 'Actions correctives', 'qualite.corrective-actions*'] : null,
                             $puser->can('quality.view') ? [route('qualite.certificats.index'),      'Certificats qualité', 'qualite.certificats*'] : null,
                             $puser->can('production.update') ? [route('production.mrp'), 'Réappro (MRP)', 'production.mrp'] : null,
                             $puser->can('production.cost.view') ? [route('production.treasury'), 'Prévision trésorerie', 'production.treasury'] : null,
