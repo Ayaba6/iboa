@@ -92,6 +92,7 @@ class CuttingController extends Controller
                 (float) $optimization->standard_length,
                 (float) $optimization->cut_tolerance_mm / 1000, // mm → m
                 $items,
+                $optimization->valorize_offcuts ? (float) $optimization->min_reusable_offcut : 0,
             );
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->with('error', collect($e->errors())->flatten()->first());
@@ -102,6 +103,8 @@ class CuttingController extends Controller
             'optimized_m'       => $plan['used'],
             'material_yield'    => $plan['yield'],
             'estimated_waste_m' => $plan['waste'],
+            'reusable_offcut_m' => $plan['reusable_offcut'] ?? 0,
+            'scrap_m'           => $plan['scrap'] ?? $plan['waste'],
             'cuts_count'        => collect($plan['bars'])->sum(fn ($b) => count($b['cuts'])),
             'coils_used'        => $plan['bars_count'],
             'plan'              => $plan,

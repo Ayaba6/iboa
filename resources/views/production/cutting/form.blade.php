@@ -235,7 +235,8 @@
                                 ['Métrage demandé total', number_format((float) $o->total_requested_m, 2, ',', ' ').' m', 'text-gray-900'],
                                 ['Métrage optimisé', number_format((float) $o->optimized_m, 2, ',', ' ').' m', 'text-gray-900'],
                                 ['Rendement matière', number_format((float) $o->material_yield, 1, ',', ' ').' %', 'text-emerald-700'],
-                                ['Chute estimée', number_format((float) $o->estimated_waste_m, 2, ',', ' ').' m', 'text-orange-600'],
+                                ['Chute réutilisable', number_format((float) $o->reusable_offcut_m, 2, ',', ' ').' m', 'text-blue-600'],
+                                ['Rebut', number_format((float) $o->scrap_m, 2, ',', ' ').' m', 'text-orange-600'],
                                 ['Nombre de coupes', number_format((int) $o->cuts_count, 0, ',', ' '), 'text-gray-900'],
                                 ['Bobines utilisées', number_format((int) $o->coils_used, 0, ',', ' '), 'text-gray-900'],
                             ] as [$kl, $kv, $kc])
@@ -262,7 +263,10 @@
                                     <td class="px-2 py-1.5 text-right tabular-nums">{{ number_format((float) ($o->coil_width ?: 0), 0, ',', ' ') }}</td>
                                     <td class="px-2 py-1.5 text-right tabular-nums">{{ number_format((float) $plan['stock_length'], 2, ',', ' ') }}</td>
                                     <td class="px-2 py-1.5 text-right tabular-nums font-semibold">{{ number_format((float) $bar['used'], 2, ',', ' ') }}</td>
-                                    <td class="px-2 py-1.5 text-right tabular-nums {{ $bar['waste'] > 0 ? 'text-orange-600' : 'text-emerald-600' }}">{{ number_format((float) $bar['waste'], 2, ',', ' ') }}</td>
+                                    <td class="px-2 py-1.5 text-right tabular-nums {{ ($bar['offcut_type'] ?? '') === 'reutilisable' ? 'text-blue-600' : ($bar['waste'] > 0 ? 'text-orange-600' : 'text-emerald-600') }}">
+                                        {{ number_format((float) $bar['waste'], 2, ',', ' ') }}
+                                        @if(($bar['offcut_type'] ?? '') === 'reutilisable')<span class="text-[10px] text-blue-500">♻</span>@endif
+                                    </td>
                                 </tr>
                                 @endforeach
                                 @if(count($plan['bars'] ?? []) > 10)

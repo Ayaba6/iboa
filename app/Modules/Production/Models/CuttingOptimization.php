@@ -23,6 +23,7 @@ class CuttingOptimization extends Model
         'allow_order_mixing', 'min_reusable_offcut', 'cut_tolerance_mm', 'respect_client_lot',
         'group_by_color', 'optimize_by_delivery_date', 'valorize_offcuts',
         'total_requested_m', 'optimized_m', 'material_yield', 'estimated_waste_m',
+        'reusable_offcut_m', 'scrap_m',
         'cuts_count', 'coils_used', 'plan', 'created_by',
     ];
     protected $casts = [
@@ -32,7 +33,8 @@ class CuttingOptimization extends Model
         'cut_tolerance_mm' => 'decimal:2', 'respect_client_lot' => 'boolean',
         'group_by_color' => 'boolean', 'optimize_by_delivery_date' => 'boolean', 'valorize_offcuts' => 'boolean',
         'total_requested_m' => 'decimal:2', 'optimized_m' => 'decimal:2', 'material_yield' => 'decimal:2',
-        'estimated_waste_m' => 'decimal:2', 'cuts_count' => 'integer', 'coils_used' => 'integer',
+        'estimated_waste_m' => 'decimal:2', 'reusable_offcut_m' => 'decimal:2', 'scrap_m' => 'decimal:2',
+        'cuts_count' => 'integer', 'coils_used' => 'integer',
         'plan' => 'array',
     ];
 
