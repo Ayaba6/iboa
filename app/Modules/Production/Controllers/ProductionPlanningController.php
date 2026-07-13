@@ -23,7 +23,9 @@ class ProductionPlanningController extends Controller
         $horizon = (int) $request->input('horizon', 7);
         $horizon = max(1, min(60, $horizon));
 
-        $plan = $this->planning->loadByWorkCenter($horizon);
+        $plan       = $this->planning->loadByWorkCenter($horizon);
+        $planMachine = $this->planning->loadByMachine($horizon);
+        $planTeam    = $this->planning->loadByTeam($horizon);
 
         // [X3 §19] Replanification : OF actifs déplaçables (dates / ligne)
         $ofActifs = ProductionOrder::with(['product:id,name', 'productionLine:id,name', 'client:id,name,trade_name'])
@@ -33,7 +35,7 @@ class ProductionPlanningController extends Controller
 
         $lignes = ProductionLine::where('is_active', true)->orderBy('name')->get(['id', 'name', 'status']);
 
-        return view('production.planning.index', compact('plan', 'horizon', 'ofActifs', 'lignes'));
+        return view('production.planning.index', compact('plan', 'planMachine', 'planTeam', 'horizon', 'ofActifs', 'lignes'));
     }
 
     /**

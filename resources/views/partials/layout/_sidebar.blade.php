@@ -434,6 +434,7 @@ request()->routeIs('achats.*')                                                  
                             $puser->can('maintenance.view') ? [route('production.maintenance.index'), 'Maintenance', 'production.maintenance*'] : null,
                             /* Pilotage : chef production / directeur usine */
                             $puser->can('production.update') ? [route('production.planning'), 'Plan de charge',       'production.planning'] : null,
+                            $puser->can('production.update') ? [route('production.downtimes'), 'Temps d\'arrêt',       'production.downtimes'] : null,
                             $puser->can('production.update') ? [route('production.cutting'),  'Optimisation découpe', 'production.cutting'] : null,
                             /* Qualité : profils qualité */
                             $puser->can('quality.view') ? [route('qualite.dashboard'),              'Indicateurs qualité', 'qualite.dashboard'] : null,

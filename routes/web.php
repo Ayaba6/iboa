@@ -1524,6 +1524,12 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
         Route::get('planning', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'index'])->name('planning');
         // [X3 §19] Déplacer OF / réaffecter ligne depuis le plan de charge
         Route::post('planning/replan/{order}', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'replan'])->name('planning.replan');
+        // [PRO Temps d'arrêt] Suivi + déclaration des arrêts de production
+        Route::get('temps-arret', [\App\Modules\Production\Controllers\ProductionDowntimeController::class, 'index'])->name('downtimes');
+        Route::post('temps-arret', [\App\Modules\Production\Controllers\ProductionDowntimeController::class, 'store'])->name('downtimes.store');
+        Route::post('temps-arret/{downtime}/cloturer', [\App\Modules\Production\Controllers\ProductionDowntimeController::class, 'close'])->name('downtimes.close');
+        Route::delete('temps-arret/{downtime}', [\App\Modules\Production\Controllers\ProductionDowntimeController::class, 'destroy'])->name('downtimes.destroy');
+
         Route::get('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'index'])->name('cutting');
         Route::post('cutting', [\App\Modules\Production\Controllers\CuttingController::class, 'optimize'])->name('cutting.optimize');
         // [Maquette Optimisation de découpe] fiches persistées

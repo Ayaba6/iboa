@@ -54,39 +54,41 @@
         @endforeach
     </div>
 
-    {{-- Table --}}
-    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
-            <h2 class="text-[13px] font-bold text-gray-900">Charge par centre de travail</h2>
+    {{-- Table — onglets Centre / Machine / Équipe --}}
+    @php
+        $barClass = fn ($s) => match($s){ 'surcharge'=>'bg-red-500','charge'=>'bg-amber-500','libre'=>'bg-gray-300',default=>'bg-emerald-500' };
+        $occCell = function ($r) use ($barClass) {
+            $b = $barClass($r['status']); $o = $r['occupation'];
+            return '<div class="flex items-center gap-2"><div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full '.$b.'" style="width: '.min(100,$o).'%"></div></div><span class="text-[11.5px] tabular-nums w-12 text-right '.($r['status']==='surcharge'?'text-red-600 font-semibold':'text-gray-600').'">'.number_format($o,0,',',' ').' %</span></div>';
+        };
+    @endphp
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden" x-data="{ tab: 'centre' }">
+        <div class="px-3 pt-2 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center gap-1">
+            @foreach(['centre' => 'Par centre de travail', 'machine' => 'Par machine', 'equipe' => 'Par équipe'] as $k => $lbl)
+            <button type="button" @click="tab = '{{ $k }}'"
+                    class="px-3 py-1.5 text-[12.5px] font-semibold rounded-t-[4px] -mb-px border-b-2 transition-colors"
+                    :class="tab === '{{ $k }}' ? 'border-emerald-600 text-emerald-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $lbl }}</button>
+            @endforeach
         </div>
-        <div class="overflow-x-auto">
+
+        {{-- Centre --}}
+        <div x-show="tab === 'centre'" class="overflow-x-auto">
             <table class="w-full text-[12.5px] border-collapse">
-                <thead class="bg-[#3b4248] text-white">
-                    <tr>
-                        <th class="{{ $th }} text-left">Centre</th>
-                        <th class="{{ $th }} text-right">Opérations</th>
-                        <th class="{{ $th }} text-right">Charge</th>
-                        <th class="{{ $th }} text-right">Capacité</th>
-                        <th class="{{ $th }} text-left w-1/3">Occupation</th>
-                    </tr>
-                </thead>
+                <thead class="bg-[#3b4248] text-white"><tr>
+                    <th class="{{ $th }} text-left">Centre</th>
+                    <th class="{{ $th }} text-right">Opérations</th>
+                    <th class="{{ $th }} text-right">Charge</th>
+                    <th class="{{ $th }} text-right">Capacité</th>
+                    <th class="{{ $th }} text-left w-1/3">Occupation</th>
+                </tr></thead>
                 <tbody>
                     @forelse($plan['rows'] as $r)
                     <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
-                        <td class="px-3 py-1.5">
-                            <span class="font-medium text-gray-900">{{ $r['name'] }}</span>
-                            <span class="text-emerald-800 font-mono text-[11px] ml-1">{{ $r['code'] }}</span>
-                        </td>
+                        <td class="px-3 py-1.5"><span class="font-medium text-gray-900">{{ $r['name'] }}</span><span class="text-emerald-800 font-mono text-[11px] ml-1">{{ $r['code'] }}</span></td>
                         <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ $r['ops'] }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums font-semibold text-gray-900">{{ number_format($r['planned_h'], 1, ',', ' ') }} h</td>
                         <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ number_format($r['capacity_h'], 1, ',', ' ') }} h</td>
-                        <td class="px-3 py-1.5">
-                            @php $bar = match($r['status']){ 'surcharge'=>'bg-red-500','charge'=>'bg-amber-500','libre'=>'bg-gray-300',default=>'bg-emerald-500' }; @endphp
-                            <div class="flex items-center gap-2">
-                                <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full {{ $bar }}" style="width: {{ min(100, $r['occupation']) }}%"></div></div>
-                                <span class="text-[11.5px] tabular-nums w-12 text-right {{ $r['status']==='surcharge' ? 'text-red-600 font-semibold' : 'text-gray-600' }}">{{ number_format($r['occupation'], 0, ',', ' ') }} %</span>
-                            </div>
-                        </td>
+                        <td class="px-3 py-1.5">{!! $occCell($r) !!}</td>
                     </tr>
                     @empty
                     <tr><td colspan="5" class="px-4 py-16 text-center text-gray-400 text-sm">Aucun centre de travail. Créez-en + affectez des gammes.</td></tr>
@@ -94,8 +96,64 @@
                 </tbody>
             </table>
         </div>
+
+        {{-- Machine --}}
+        <div x-show="tab === 'machine'" x-cloak class="overflow-x-auto">
+            <table class="w-full text-[12.5px] border-collapse">
+                <thead class="bg-[#3b4248] text-white"><tr>
+                    <th class="{{ $th }} text-left">Machine</th>
+                    <th class="{{ $th }} text-right">Charge</th>
+                    <th class="{{ $th }} text-right">Capacité brute</th>
+                    <th class="{{ $th }} text-right" title="Temps d'arrêt déclaré sur l'horizon">Arrêts</th>
+                    <th class="{{ $th }} text-right">Capacité nette</th>
+                    <th class="{{ $th }} text-left w-1/4">Occupation</th>
+                </tr></thead>
+                <tbody>
+                    @forelse($planMachine['rows'] as $r)
+                    <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                        <td class="px-3 py-1.5"><span class="font-medium text-gray-900">{{ $r['name'] }}</span><span class="text-emerald-800 font-mono text-[11px] ml-1">{{ $r['code'] }}</span></td>
+                        <td class="px-3 py-1.5 text-right tabular-nums font-semibold text-gray-900">{{ number_format($r['planned_h'], 1, ',', ' ') }} h</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ number_format($r['capacity_h'], 1, ',', ' ') }} h</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums {{ $r['downtime_h'] > 0 ? 'text-red-600' : 'text-gray-400' }}">{{ number_format($r['downtime_h'], 1, ',', ' ') }} h</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-700">{{ number_format($r['net_capacity_h'], 1, ',', ' ') }} h</td>
+                        <td class="px-3 py-1.5">{!! $occCell($r) !!}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="6" class="px-4 py-16 text-center text-gray-400 text-sm">Aucune machine rattachée à un centre de travail.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Équipe --}}
+        <div x-show="tab === 'equipe'" x-cloak class="overflow-x-auto">
+            <table class="w-full text-[12.5px] border-collapse">
+                <thead class="bg-[#3b4248] text-white"><tr>
+                    <th class="{{ $th }} text-left">Équipe</th>
+                    <th class="{{ $th }} text-right">Centres</th>
+                    <th class="{{ $th }} text-right">Charge</th>
+                    <th class="{{ $th }} text-right">Capacité</th>
+                    <th class="{{ $th }} text-left w-1/3">Occupation</th>
+                </tr></thead>
+                <tbody>
+                    @forelse($planTeam['rows'] as $r)
+                    <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
+                        <td class="px-3 py-1.5 font-medium text-gray-900">{{ $r['name'] }}</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ $r['centers'] }}</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums font-semibold text-gray-900">{{ number_format($r['planned_h'], 1, ',', ' ') }} h</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ number_format($r['capacity_h'], 1, ',', ' ') }} h</td>
+                        <td class="px-3 py-1.5">{!! $occCell($r) !!}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="5" class="px-4 py-16 text-center text-gray-400 text-sm">Aucune équipe définie sur les centres de travail.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
         <div class="px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
-            {{ count($plan['rows']) }} centre(s) — charge {{ number_format($plan['total_planned_h'], 1, ',', ' ') }} h / capacité {{ number_format($plan['total_capacity_h'], 1, ',', ' ') }} h — Charge = temps prévu des opérations non terminées sur OF lancés/en cours. Capacité = capacité journalière × rendement × horizon.
+            Charge = temps prévu des opérations non terminées sur OF lancés/en cours. Capacité = capacité journalière × rendement × horizon.
+            La capacité nette machine déduit les <a href="{{ route('production.downtimes') }}" class="text-emerald-700 hover:underline">temps d'arrêt</a> déclarés.
         </div>
     </div>
 
