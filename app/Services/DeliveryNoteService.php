@@ -230,6 +230,24 @@ class DeliveryNoteService
                 if ($remaining <= 0) {
                     break;
                 }
+
+                // [FIX désynchro dépôt] release() décrémente reserved_quantity AU dépôt
+                // stocké sur la réservation. Si ce dépôt diverge du dépôt réellement livré
+                // (ex. stock PF déplacé par une fusion/transfert de dépôts sans repointer
+                // la réservation), release() décrémenterait le mauvais dépôt et laisserait
+                // le réservé du dépôt livré intact → sa propre livraison se bloquerait sur
+                // « 0 disponible ». On réaligne la réservation sur le dépôt livré quand
+                // c'est bien lui qui détient le stock réservé.
+                if ((int) $r->warehouse_id !== $warehouseId) {
+                    $hasReservedHere = ProductStock::where('product_id', $productId)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('reserved_quantity', '>', 0)
+                        ->exists();
+                    if ($hasReservedHere) {
+                        $r->update(['warehouse_id' => $warehouseId]);
+                    }
+                }
+
                 $reservationService->release($r);   // ferme la ligne + décrémente reserved_quantity
                 $remaining -= (float) $r->quantity;
             }

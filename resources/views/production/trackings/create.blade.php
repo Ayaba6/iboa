@@ -57,8 +57,15 @@
 
         {{-- Tabs --}}
         <nav class="flex items-stretch border-b border-gray-200 gap-1 -mt-1">
-            @foreach(['entete' => '⌂', 'operations' => 'Opérations', 'production' => 'Production', 'composants' => 'Composants'] as $tk => $tl)
-            <button type="button" @click="tab = '{{ $tk }}'; $refs['sec_{{ $tk }}']?.scrollIntoView({behavior: 'smooth', block: 'start'})"
+            @php $tabFlag = ['operations' => 'trackOps', 'production' => 'trackProd', 'composants' => 'trackMat']; @endphp
+            @foreach(['entete' => 'Entête', 'operations' => 'Opérations', 'production' => 'Production', 'composants' => 'Composants'] as $tk => $tl)
+            @php
+                // Activer un onglet coche aussi sa case de suivi → la section correspondante s'affiche.
+                $click = "tab = '{$tk}';";
+                if (isset($tabFlag[$tk])) $click .= " {$tabFlag[$tk]} = true;";
+                $click .= " \$nextTick(() => \$refs['sec_{$tk}']?.scrollIntoView({behavior:'smooth',block:'start'}))";
+            @endphp
+            <button type="button" x-on:click="{!! $click !!}"
                     class="px-3 py-2 text-[14px] font-semibold border-b-2 transition-colors whitespace-nowrap"
                     :class="tab === '{{ $tk }}' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-gray-500 hover:text-gray-700'">{{ $tl }}</button>
             @endforeach

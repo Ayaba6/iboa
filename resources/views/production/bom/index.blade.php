@@ -21,7 +21,7 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Nomenclatures de fabrication</h1>
-            <p class="text-[12px] text-gray-500">Recettes tôle bac : consommation/m, taux de chute, temps machine</p>
+            <p class="text-[12px] text-gray-500">Recettes tôle bac & fer à béton : consommation/m, taux de chute, temps machine</p>
         </div>
         @can('production.create')
         <a href="{{ route('production.bom.create') }}"

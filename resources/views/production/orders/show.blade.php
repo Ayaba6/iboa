@@ -31,7 +31,7 @@
     $navOff = 'inline-flex items-center justify-center w-8 h-8 rounded-[4px] text-gray-300 cursor-default';
     $sideLn = 'flex items-center gap-2 w-full text-left px-3 py-1.5 text-[12.5px] text-gray-600 hover:text-emerald-800 hover:bg-emerald-50/60 rounded-[3px] transition-colors';
 @endphp
-<div class="w-full space-y-3 of-sage" x-data="{ cancelOpen: false, tab: 'gestion', autresOpen: false }">
+<div class="w-full space-y-3 of-sage" x-data="{ cancelOpen: false, tab: 'gestion' }">
 
     {{-- ══ En-tête X3 : titre type + navigation fiches + actions ══ --}}
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -58,28 +58,9 @@
             <span class="w-px h-6 bg-gray-200 mx-2"></span>
 
             <button type="button" onclick="window.print()" class="border border-emerald-600 text-emerald-700 text-[13px] font-semibold px-4 py-1.5 rounded-[4px] hover:bg-emerald-50 transition-colors">Imprimer</button>
-            <div class="relative">
-                <button type="button" @click="autresOpen = !autresOpen" @click.outside="autresOpen = false"
-                        class="border border-emerald-600 text-emerald-700 text-[13px] font-semibold px-4 py-1.5 rounded-[4px] hover:bg-emerald-50 transition-colors">Autres ▾</button>
-                <div x-show="autresOpen" x-cloak class="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-[4px] shadow-lg z-30 py-1">
-                    @if($order->isEditable())@can('production.create')
-                    <a href="{{ route('production.orders.edit', $order) }}" class="{{ $sideLn }}">Modifier l'OF</a>
-                    @endcan @endif
-                    @if($order->isSuspendable())@can('production.launch')
-                    <form method="POST" action="{{ route('production.orders.suspend', $order) }}" onsubmit="return confirm('Suspendre cet OF ?');">@csrf
-                        <button class="{{ $sideLn }} text-orange-700">Suspendre l'OF</button>
-                    </form>
-                    @endcan @endif
-                    @if($order->status === 'suspendu')@can('production.launch')
-                    <form method="POST" action="{{ route('production.orders.resume', $order) }}">@csrf
-                        <button class="{{ $sideLn }}">Reprendre l'OF</button>
-                    </form>
-                    @endcan @endif
-                    @if(!in_array($order->status, ['termine','annule']))@can('production.cancel')
-                    <button type="button" @click="cancelOpen = true; autresOpen = false" class="{{ $sideLn }} text-red-600">Annuler l'OF</button>
-                    @endcan @endif
-                </div>
-            </div>
+            <a href="{{ route('production.orders.pdf', $order) }}" class="border border-orange-600 text-orange-700 text-[13px] font-semibold px-4 py-1.5 rounded-[4px] hover:bg-orange-50 transition-colors">Télécharger PDF</a>
+            {{-- [UI] Bouton « Autres » retiré : ses actions (Modifier / Suspendre /
+                 Reprendre / Annuler) sont déjà toutes présentes dans le rail latéral droit. --}}
             @can('production.create')
             <a href="{{ route('production.orders.create') }}" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold px-5 py-1.5 rounded-[4px] transition-colors">Créer</a>
             @endcan
@@ -110,7 +91,7 @@
         @endphp
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3">
             <div class="space-y-3">
-                <div><span class="{{ $xl }}">Site de production <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $order->site_production ?? 'OUTLB' }}</div><p class="{{ $xs }}">Usine de production</p></div>
+                <div><span class="{{ $xl }}">Site de production <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $order->site_production ?? '01' }}</div><p class="{{ $xs }}">Usine de production</p></div>
                 <div><span class="{{ $xl }}">Numéro OF <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center font-semibold">{{ $order->number }}</div></div>
                 <div><span class="{{ $xl }}">Type <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $typeCode }}</div><p class="{{ $xs }}">{{ $typeLabel }}</p></div>
                 <div><span class="{{ $xl }}">Statut <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ strtoupper(substr($order->status, 0, 2)) }}</div><p class="{{ $xs }}">{{ $order->statusLabel() }}</p></div>
@@ -126,8 +107,8 @@
             <div class="space-y-3">
                 <div><span class="{{ $xl }}">Nomenclature {{ $order->product?->is_manufacturable ? '' : '' }}<span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center truncate">{{ $order->billOfMaterial?->code ?? '—' }}</div><p class="{{ $xs }} truncate">{{ $order->billOfMaterial?->name }}</p></div>
                 <div><span class="{{ $xl }}">Version nomenclature</span><div class="{{ $xf }} flex items-center">{{ $order->bom_version ?: ($order->billOfMaterial ? $order->billOfMaterial->version_majeure . '.' . $order->billOfMaterial->version_mineure : '—') }}</div></div>
-                <div><span class="{{ $xl }}">Gamme</span><div class="{{ $xf }} flex items-center truncate">{{ $order->billOfMaterial?->routings?->first()?->code ?? ($order->operations->isNotEmpty() ? 'Gamme chargée' : '—') }}</div><p class="{{ $xs }}">{{ $order->routing_version ? 'v' . $order->routing_version : '' }}</p></div>
-                <div><span class="{{ $xl }}">Site planification <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $order->site_planification ?? ($order->site_production ?? 'OUTLB') }}</div><p class="{{ $xs }}">Usine de production</p></div>
+                <div><span class="{{ $xl }}">Gamme</span><div class="{{ $xf }} flex items-center truncate">{{ $order->billOfMaterial?->routing?->code ?? ($order->operations->isNotEmpty() ? 'Gamme chargée' : '—') }}</div><p class="{{ $xs }}">{{ $order->routing_version ? 'v' . $order->routing_version : '' }}</p></div>
+                <div><span class="{{ $xl }}">Site planification <span class="text-red-500">*</span></span><div class="{{ $xf }} flex items-center">{{ $order->site_planification ?? ($order->site_production ?? '01') }}</div><p class="{{ $xs }}">Usine de production</p></div>
                 <div><span class="{{ $xl }}">Ligne de production</span><div class="{{ $xf }} flex items-center truncate">{{ $order->productionLine?->name ?? '—' }}</div></div>
             </div>
             <div class="space-y-3">

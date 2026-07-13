@@ -45,7 +45,9 @@ class ProductionTrackingController extends Controller
 
     public function create(Request $request): View
     {
-        $orders = ProductionOrder::whereIn('status', ['en_cours', 'termine_partiellement'])
+        // [FIX] Un OF « lancé » (avant démarrage) doit déjà être suivable :
+        // pointage d'opérations et déclaration possibles dès le lancement.
+        $orders = ProductionOrder::whereIn('status', ['lance', 'en_cours', 'termine_partiellement'])
             ->orderByDesc('id')->get(['id', 'number', 'quantity_requested', 'quantity_produced', 'length', 'site_production']);
 
         $order = null;

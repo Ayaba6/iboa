@@ -87,15 +87,56 @@ class ProductionService
         if (! $filled('depot_qualite_id') && $product?->quality_warehouse_id) {
             $data['depot_qualite_id'] = $product->quality_warehouse_id;
         }
-        // Ligne de production : ligne dédiée à l'article, sinon première ligne active
+        // Ligne de production : ligne dédiée à l'article → ligne du type d'article
+        // (fer à béton vs tôle bac) → première ligne active.
         if (! $filled('production_line_id')) {
-            $data['production_line_id'] = ($product ? \App\Modules\Production\Models\ProductionLine::where('is_active', true)->where('product_id', $product->id)->value('id') : null)
-                ?: \App\Modules\Production\Models\ProductionLine::where('is_active', true)->value('id');
+            $data['production_line_id'] = $this->defaultLineId($product);
+        }
+        // Nomenclature : rattache la BOM active de l'article (sinon la fiche affiche « — »
+        // et l'allocation matière n'a pas de composants).
+        if (! $filled('bill_of_material_id') && $product) {
+            $data['bill_of_material_id'] = \App\Modules\Production\Models\BillOfMaterial::where('is_active', true)
+                ->where('product_id', $product->id)->orderByDesc('id')->value('id');
         }
         // Responsable : à défaut, l'utilisateur courant
         if (! $filled('responsible_id')) {
             $data['responsible_id'] = Auth::id();
         }
+    }
+
+    /**
+     * Ligne de production par défaut selon l'article :
+     *   1. ligne explicitement dédiée à l'article (production_lines.product_id) ;
+     *   2. ligne du bon type — fer à béton (code *FAB / nom « FER ») vs tôle bac ;
+     *   3. repli : première ligne active.
+     * Les lignes n'ont pas de colonne « type » → détection par nom/code.
+     */
+    private function defaultLineId(?\App\Models\Product $product): ?int
+    {
+        $Line = \App\Modules\Production\Models\ProductionLine::query()->where('is_active', true);
+
+        if ($product) {
+            if ($dedicated = (clone $Line)->where('product_id', $product->id)->value('id')) {
+                return $dedicated;
+            }
+
+            $code  = strtoupper((string) $product->code_article);
+            $name  = strtoupper((string) $product->name);
+            $isFer = str_contains($code, 'FAB') || str_contains($name, 'FER');
+            $needles = $isFer ? ['%fer%', 'LIGNE-FER%'] : ['%bac%', '%tôle%', '%tole%'];
+
+            $typed = (clone $Line)->where(function ($w) use ($needles) {
+                foreach ($needles as $p) {
+                    $w->orWhere('name', 'like', $p)->orWhere('code', 'like', $p);
+                }
+            })->orderBy('id')->value('id');
+
+            if ($typed) {
+                return $typed;
+            }
+        }
+
+        return (clone $Line)->orderBy('id')->value('id');
     }
 
     /** Met à jour un OF éditable (brouillon/lancé) + ses lignes. */

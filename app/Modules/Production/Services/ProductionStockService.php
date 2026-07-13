@@ -7,6 +7,7 @@ use App\Modules\Production\Models\ProductionOrder;
 use App\Modules\Production\Models\ProductionOutput;
 use App\Modules\Production\Models\ProductionWaste;
 use App\Models\Warehouse;
+use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -62,7 +63,7 @@ class ProductionStockService
         return DB::transaction(function () use ($order, $data, $length, $quantity) {
             $totalMeters = round($length * $quantity, 2);
             $productId   = $data['product_id'] ?? $order->product_id;
-            $warehouseId = $data['warehouse_id'] ?? $this->defaultWarehouseId($order);
+            $warehouseId = $data['warehouse_id'] ?? $this->defaultWarehouseId($order, $productId);
             $unitCost    = (float) ($data['unit_cost'] ?? 0);
 
             // [Sync ERP] L'output est créé d'abord ; l'entrée stock est ensuite
@@ -347,10 +348,25 @@ class ProductionStockService
             ->value('warehouse_id');
     }
 
-    private function defaultWarehouseId(ProductionOrder $order): ?int
+    /**
+     * Dépôt d'entrée par défaut d'une déclaration de production.
+     *
+     * [FIX BUG-2 dépôt PF] Priorité : dépôt de l'article produit (main_warehouse_id —
+     * le PF va dans « Produits Finis », l'avarié/la chute dans leur propre dépôt),
+     * puis le dépôt produit fini paramétré sur l'OF, enfin le dépôt société par défaut.
+     * Évite l'entrée systématique en « Dépôt Central » qui créait un écart avec le
+     * dépôt attendu par la commande/le BL (ruptures artificielles).
+     */
+    private function defaultWarehouseId(ProductionOrder $order, ?int $productId = null): ?int
     {
-        return Warehouse::where('company_id', $order->company_id)
-            ->orderByDesc('is_default')->orderBy('id')->value('id');
+        $productWarehouse = $productId
+            ? Product::where('id', $productId)->value('main_warehouse_id')
+            : null;
+
+        return $productWarehouse
+            ?? $order->depot_produit_fini_id
+            ?? Warehouse::where('company_id', $order->company_id)
+                ->orderByDesc('is_default')->orderBy('id')->value('id');
     }
 
     /** Coût moyen au kg réellement consommé sur l'OF (sinon 0). */

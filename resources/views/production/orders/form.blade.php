@@ -157,13 +157,13 @@
                         <svg class="w-4 h-4 transition-transform" :class="sections.entete ? '' : '-rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <div x-show="sections.entete" class="p-4 grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
-                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Site planification</label><input type="text" name="site_planification" maxlength="20" value="{{ old('site_planification', $o->site_planification) }}" class="{{ $inp }} font-mono uppercase" placeholder="OUTLB"></div>
-                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Site production</label><input type="text" name="site_production" maxlength="20" value="{{ old('site_production', $o->site_production) }}" class="{{ $inp }} font-mono uppercase" placeholder="OUTLB"></div>
+                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Site planification</label><input type="text" name="site_planification" maxlength="20" value="{{ old('site_planification', $o->site_planification) }}" class="{{ $inp }} font-mono uppercase" placeholder="01"></div>
+                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Site production</label><input type="text" name="site_production" maxlength="20" value="{{ old('site_production', $o->site_production) }}" class="{{ $inp }} font-mono uppercase" placeholder="01"></div>
                         <div class="sm:col-span-3"><label class="{{ $lbl }}">Numéro O.F.</label><input type="text" value="{{ $o->number ?: 'Auto à la création' }}" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly></div>
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Numéro optimisation</label><input type="text" name="numero_optimisation" maxlength="30" value="{{ old('numero_optimisation', $o->numero_optimisation) }}" class="{{ $inp }} font-mono"></div>
                         <div class="sm:col-span-3"><label class="{{ $lbl }}">Préparation fabrication</label><input type="text" name="prepa_fabrication" maxlength="60" value="{{ old('prepa_fabrication', $o->prepa_fabrication) }}" class="{{ $inp }}"></div>
 
-                        <div class="sm:col-span-5"><label class="{{ $lbl }}">Désignation 1</label><input type="text" name="designation" maxlength="200" value="{{ old('designation', $o->designation) }}" class="{{ $inp }} font-medium" placeholder="TÔLE BAC ALU PUR DE 70/100 AL6"></div>
+                        <div class="sm:col-span-5"><label class="{{ $lbl }}">Désignation 1</label><input type="text" name="designation" maxlength="200" value="{{ old('designation', $o->designation) }}" class="{{ $inp }} font-medium" placeholder="Désignation de l'article fabriqué"></div>
                         <div class="sm:col-span-3"><label class="{{ $lbl }}">Référence OF</label><input type="text" name="reference_of" maxlength="60" value="{{ old('reference_of', $o->reference_of) }}" class="{{ $inp }} font-mono"></div>
                         <div class="sm:col-span-2">
                             <label class="{{ $lbl }}">Mode lancement</label>
@@ -219,7 +219,7 @@
                                 @endforeach
                             </select>{!! $caret !!}</div>
                         </div>
-                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Atelier</label><input type="text" name="atelier" maxlength="60" value="{{ old('atelier', $o->atelier) }}" class="{{ $inp }}" placeholder="Atelier profilage"></div>
+                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Atelier</label><input type="text" name="atelier" maxlength="60" value="{{ old('atelier', $o->atelier) }}" class="{{ $inp }}" placeholder="Atelier de production"></div>
                         <div class="sm:col-span-3">
                             <label class="{{ $lbl }}">Responsable atelier</label>
                             <div class="relative"><select name="responsable_atelier_id" class="{{ $lk }}"><option value="">—</option>@foreach($users as $u)<option value="{{ $u->id }}" @selected(old('responsable_atelier_id',$o->responsable_atelier_id)==$u->id)>{{ $u->name }}</option>@endforeach</select>{!! $caret !!}</div>
@@ -884,7 +884,7 @@
     {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
     <div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
         <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
-        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">OUTLB</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">{{ $o->site_production ?: '01' }}</span></span>
         <span class="border-l border-white/10 pl-6">Document : <span class="text-white font-semibold">{{ $isEdit ? $o->number : 'OF (brouillon)' }}</span></span>
         <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
         <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
