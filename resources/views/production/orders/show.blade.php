@@ -33,6 +33,19 @@
 @endphp
 <div class="w-full space-y-3 of-sage" x-data="{ cancelOpen: false, tab: 'gestion' }">
 
+    {{-- [FIX rapport MTO #3] « Clôture (écart) » laisse l'OF actif (reliquat à
+         produire) : sans bannière, l'utilisateur croit l'OF verrouillé et ne
+         comprend pas que ses saisies de suivi continuent d'être acceptées. --}}
+    @if($order->status === 'termine_partiellement')
+    <div class="rounded-[4px] border border-teal-300 bg-teal-50 px-4 py-3 text-[12.5px] text-teal-900">
+        <span class="font-semibold">OF terminé partiellement</span> —
+        reliquat à produire : {{ rtrim(rtrim(number_format(max(0, (float) $order->quantity_requested - (float) $order->quantity_produced), 2, ',', ' '), '0'), ',') }}
+        sur {{ rtrim(rtrim(number_format((float) $order->quantity_requested, 2, ',', ' '), '0'), ',') }} demandées.
+        Les saisies de suivi (consommation matière, déclarations, chutes) restent possibles sur cet OF
+        jusqu'à sa clôture définitive (« Terminer »). Pour abandonner le reliquat, clôturez avec écart assumé.
+    </div>
+    @endif
+
     {{-- ══ En-tête X3 : titre type + navigation fiches + actions ══ --}}
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>

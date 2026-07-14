@@ -143,7 +143,7 @@ class ProductionStockService
             // [Cohérence stock] Ré-entrée des composants consommés lors de la
             // déclaration annulée (symétrique de consumeBomComponents).
             if ($order) {
-                $this->restoreBomComponents($order, (float) $output->quantity);
+                $this->restoreBomComponents($order, $output);
                 $order->decrement('quantity_produced', $output->quantity);
             }
             $output->delete();
@@ -239,17 +239,28 @@ class ProductionStockService
             return;
         }
 
-        $order->loadMissing('billOfMaterial.lines.product');
+        $order->loadMissing('billOfMaterial.lines.product', 'consumptions.coil');
         $bom = $order->billOfMaterial;
         if (! $bom) {
             return; // OF sans nomenclature : rien à consommer
         }
+
+        // [FIX rapport MTO #2 — anti double comptage STOCK] Un composant dont la
+        // matière a déjà été consommée en réel sur cet OF via une bobine (coils =
+        // source de vérité, lot + poids) ne doit PAS être backflushé en plus dans
+        // product_stocks : double sortie physique, et blocage de la déclaration si
+        // le stock théorique du dépôt BOM est insuffisant alors que la matière
+        // réelle est déjà sortie. Même règle que le dédoublonnage du coût matière.
+        $coilProductIds = $order->consumptions->pluck('coil.product_id')->filter()->unique();
 
         foreach ($bom->lines as $line) {
             $product = $line->product;
             $per     = (float) $line->quantity_per_meter;
             if (! $product || $per <= 0) {
                 continue;
+            }
+            if ($coilProductIds->contains($product->id)) {
+                continue; // matière déjà consommée en réel (bobine) — pas de backflush
             }
 
             $need = round($per * $quantityProduced, 4);
@@ -272,64 +283,60 @@ class ProductionStockService
             $unitCost = (float) \App\Models\ProductStock::where('product_id', $product->id)
                 ->where('warehouse_id', $warehouseId)->value('avg_cost');
 
-            $this->stock->recordMovement([
-                'company_id'     => $order->company_id,
-                'product_id'     => $product->id,
-                'warehouse_id'   => $warehouseId,
-                'type'           => 'sortie',
-                'quantity'       => $need,
-                'unit_cost'      => $unitCost,
-                'allow_negative' => (bool) $product->allow_negative_stock,
-                'reference_type' => ProductionOutput::class,
-                'reference_id'   => $output->id,
-                'notes'          => 'Consommation composant OF ' . $order->number,
-            ]);
+            // [FIX rapport MTO #2 — message actionnable] Le message générique du
+            // module stock (« Stock insuffisant : X dispo, Y demandée ») ne nomme
+            // ni le composant ni le dépôt : l'opérateur croit à un bug d'unités.
+            // On contextualise : composant, dépôt, et quoi faire.
+            try {
+                $this->stock->recordMovement([
+                    'company_id'     => $order->company_id,
+                    'product_id'     => $product->id,
+                    'warehouse_id'   => $warehouseId,
+                    'type'           => 'sortie',
+                    'quantity'       => $need,
+                    'unit_cost'      => $unitCost,
+                    'allow_negative' => (bool) $product->allow_negative_stock,
+                    'reference_type' => ProductionOutput::class,
+                    'reference_id'   => $output->id,
+                    'notes'          => 'Consommation composant OF ' . $order->number,
+                ]);
+            } catch (ValidationException $e) {
+                $warehouseName = Warehouse::where('id', $warehouseId)->value('name') ?? ('dépôt #' . $warehouseId);
+                throw ValidationException::withMessages([
+                    'quantity' => sprintf(
+                        'Déclaration refusée — consommation automatique du composant « %s » impossible : %s (dépôt de sortie nomenclature : %s). Réapprovisionnez ce dépôt, corrigez le dépôt de sortie de la nomenclature, ou déclarez la consommation bobine avant la déclaration de production.',
+                        $product->name,
+                        collect($e->errors())->flatten()->first() ?? 'stock insuffisant',
+                        $warehouseName
+                    ),
+                ]);
+            }
         }
     }
 
     /**
      * Ré-entrée des composants consommés (annulation d'une déclaration).
-     * Symétrique de consumeBomComponents : entrée `entree` au coût CMP courant.
+     *
+     * [FIX rapport MTO #2] Contre-passe les mouvements de sortie RÉELLEMENT
+     * générés par cette déclaration (référence ProductionOutput) plutôt que de
+     * recalculer depuis la nomenclature : si le backflush d'un composant a été
+     * sauté (matière consommée via bobine), le recalcul créerait du stock fantôme.
      */
-    private function restoreBomComponents(ProductionOrder $order, float $quantityProduced): void
+    private function restoreBomComponents(ProductionOrder $order, ProductionOutput $output): void
     {
-        if ($quantityProduced <= 0) {
-            return;
-        }
+        $moves = \App\Models\StockMovement::where('reference_type', ProductionOutput::class)
+            ->where('reference_id', $output->id)
+            ->where('type', 'sortie')
+            ->get();
 
-        $order->loadMissing('billOfMaterial.lines.product');
-        $bom = $order->billOfMaterial;
-        if (! $bom) {
-            return;
-        }
-
-        foreach ($bom->lines as $line) {
-            $product = $line->product;
-            $per     = (float) $line->quantity_per_meter;
-            if (! $product || $per <= 0) {
-                continue;
-            }
-
-            $need = round($per * $quantityProduced, 4);
-            if ($need <= 0) {
-                continue;
-            }
-
-            $warehouseId = $this->componentWarehouseId($line, (int) $product->id, $order);
-            if (! $warehouseId) {
-                continue;
-            }
-
-            $avgCost = (float) \App\Models\ProductStock::where('product_id', $product->id)
-                ->where('warehouse_id', $warehouseId)->value('avg_cost');
-
+        foreach ($moves as $move) {
             $this->stock->recordMovement([
                 'company_id'     => $order->company_id,
-                'product_id'     => $product->id,
-                'warehouse_id'   => $warehouseId,
+                'product_id'     => $move->product_id,
+                'warehouse_id'   => $move->warehouse_id,
                 'type'           => 'entree',
-                'quantity'       => $need,
-                'unit_cost'      => $avgCost,
+                'quantity'       => (float) $move->quantity,
+                'unit_cost'      => (float) $move->unit_cost,
                 'reference_type' => ProductionOrder::class,
                 'reference_id'   => $order->id,
                 'notes'          => 'Ré-entrée composant (annulation déclaration) OF ' . $order->number,

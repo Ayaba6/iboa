@@ -59,16 +59,39 @@ class DeliveryNoteService
 
             $totalQty = 0;
             foreach ($order->items as $i => $item) {
+                // [FIX rapport MTO #4] Quantité proposée = reliquat non livré,
+                // plafonné au stock réellement disponible pour cette commande au
+                // dépôt du BL (dispo général + réservations propres de la commande).
+                // Évite de proposer 50 quand 40 seulement sont en stock (survente
+                // si l'utilisateur valide sans corriger). La ligne reste éditable.
+                $remaining = max(0, (float) $item->quantity - (float) $item->delivered_quantity);
+                $qty       = $remaining;
+
+                if ($item->product_id && $dn->warehouse_id) {
+                    $stock = ProductStock::where('product_id', $item->product_id)
+                        ->where('warehouse_id', $dn->warehouse_id)->first();
+                    if ($stock) {
+                        $ownReserved = (float) StockReservation::where('order_id', $order->id)
+                            ->where('product_id', $item->product_id)
+                            ->where('warehouse_id', $dn->warehouse_id)
+                            ->where('status', 'reserved')->sum('quantity');
+                        $available = max(0, (float) $stock->quantity - (float) $stock->reserved_quantity) + $ownReserved;
+                        if ($available > 0 && $available < $remaining) {
+                            $qty = round($available, 4);
+                        }
+                    }
+                }
+
                 $dn->items()->create([
                     'order_item_id' => $item->id,
                     'product_id'    => $item->product_id,
                     'description'   => $item->description,
                     'unit_id'       => $item->unit_id,
-                    'quantity'      => $item->quantity,
+                    'quantity'      => $qty,
                     'unit_price'    => $item->unit_price,
                     'sort_order'    => $i,
                 ]);
-                $totalQty += (float) $item->quantity;
+                $totalQty += $qty;
             }
 
             $dn->update(['total_quantity' => $totalQty]);

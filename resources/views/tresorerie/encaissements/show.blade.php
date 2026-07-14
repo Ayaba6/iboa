@@ -143,6 +143,13 @@
         <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Factures imputées</h2>
 
+            {{-- [FIX rapport MTO #5] Les imputations pointant une facture supprimée
+                 sont exclues du tableau ET du total (elles gonflaient « Total imputé »
+                 d'un montant fantôme). Signalées à part pour l'audit. --}}
+            @php
+                $validAllocations  = $payment->allocations->filter(fn ($a) => $a->invoice);
+                $orphanAllocations = $payment->allocations->reject(fn ($a) => $a->invoice);
+            @endphp
             @if($payment->allocations->count() > 0)
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -155,23 +162,19 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @foreach($payment->allocations as $alloc)
+                        @foreach($validAllocations as $alloc)
                         <tr class="hover:bg-gray-50">
                             <td class="py-3 pr-4">
-                                @if($alloc->invoice)
-                                    <a href="{{ route('ventes.factures.show', $alloc->invoice) }}"
-                                       class="font-mono font-semibold text-emerald-700 hover:text-emerald-900">
-                                        {{ $alloc->invoice->number }}
-                                    </a>
-                                @else
-                                    <span class="text-gray-400">Facture supprimée</span>
-                                @endif
+                                <a href="{{ route('ventes.factures.show', $alloc->invoice) }}"
+                                   class="font-mono font-semibold text-emerald-700 hover:text-emerald-900">
+                                    {{ $alloc->invoice->number }}
+                                </a>
                             </td>
                             <td class="py-3 pr-4 text-gray-600 hidden md:table-cell">
-                                {{ $alloc->invoice?->issued_at?->format('d/m/Y') ?? '—' }}
+                                {{ $alloc->invoice->issued_at?->format('d/m/Y') ?? '—' }}
                             </td>
                             <td class="py-3 pr-4 text-right tabular-nums text-gray-700">
-                                {{ number_format($alloc->invoice?->total_ttc ?? 0, 0, ',', ' ') }} FCFA
+                                {{ number_format($alloc->invoice->total_ttc ?? 0, 0, ',', ' ') }} FCFA
                             </td>
                             <td class="py-3 text-right tabular-nums font-semibold text-green-700">
                                 {{ number_format($alloc->amount, 0, ',', ' ') }} FCFA
@@ -183,12 +186,19 @@
                         <tr class="border-t-2 border-gray-200">
                             <td colspan="3" class="pt-3 text-sm font-semibold text-gray-700 text-right pr-4">Total imputé :</td>
                             <td class="pt-3 text-right tabular-nums font-bold text-green-700">
-                                {{ number_format($payment->allocations->sum('amount'), 0, ',', ' ') }} FCFA
+                                {{ number_format($validAllocations->sum('amount'), 0, ',', ' ') }} FCFA
                             </td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
+            @if($orphanAllocations->isNotEmpty())
+            <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                {{ $orphanAllocations->count() }} imputation(s) liée(s) à des factures supprimées
+                ({{ number_format($orphanAllocations->sum('amount'), 0, ',', ' ') }} FCFA) —
+                exclue(s) du total ci-dessus.
+            </p>
+            @endif
 
             {{-- Summary bar --}}
             @php

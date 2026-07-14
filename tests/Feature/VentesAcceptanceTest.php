@@ -232,7 +232,13 @@ it('refuse la livraison quand le stock est insuffisant (contrôle + impact stock
     $order->update(['status' => 'confirme']);
     $dn = app(OrderService::class)->createDeliveryNote($order->fresh());
 
-    expect(fn () => app(DeliveryNoteService::class)->validate($dn))
+    // [FIX rapport MTO #4] La création plafonne désormais la quantité proposée au
+    // stock disponible (5). Le contrôle testé ici est la garde à la VALIDATION :
+    // on simule l'utilisateur qui remonte manuellement la ligne à 40 (> stock).
+    expect((float) $dn->items()->first()->quantity)->toBe(5.0);
+    $dn->items()->first()->update(['quantity' => 40]);
+
+    expect(fn () => app(DeliveryNoteService::class)->validate($dn->fresh()))
         ->toThrow(\Illuminate\Validation\ValidationException::class);
 });
 

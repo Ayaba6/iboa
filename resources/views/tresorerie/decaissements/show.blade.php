@@ -194,6 +194,12 @@
         <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-4">
             <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Factures fournisseur imputées</h2>
 
+            {{-- [FIX rapport MTO #5] Imputations vers factures supprimées exclues
+                 du tableau et du total — signalées à part pour l'audit. --}}
+            @php
+                $validAllocations  = $payment->allocations->filter(fn ($a) => $a->supplierInvoice);
+                $orphanAllocations = $payment->allocations->reject(fn ($a) => $a->supplierInvoice);
+            @endphp
             @if($payment->allocations->count() > 0)
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -207,26 +213,22 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @foreach($payment->allocations as $alloc)
+                        @foreach($validAllocations as $alloc)
                         <tr class="hover:bg-gray-50">
                             <td class="py-3 pr-4">
-                                @if($alloc->supplierInvoice)
-                                    <a href="{{ route('achats.factures-fournisseurs.show', $alloc->supplierInvoice) }}"
-                                       class="font-mono font-semibold text-red-600 hover:text-red-800">
-                                        {{ $alloc->supplierInvoice->number }}
-                                    </a>
-                                @else
-                                    <span class="text-gray-400">Facture supprimée</span>
-                                @endif
+                                <a href="{{ route('achats.factures-fournisseurs.show', $alloc->supplierInvoice) }}"
+                                   class="font-mono font-semibold text-red-600 hover:text-red-800">
+                                    {{ $alloc->supplierInvoice->number }}
+                                </a>
                             </td>
                             <td class="py-3 pr-4 text-gray-600 text-xs font-mono hidden md:table-cell">
-                                {{ $alloc->supplierInvoice?->supplier_invoice_number ?? '—' }}
+                                {{ $alloc->supplierInvoice->supplier_invoice_number ?? '—' }}
                             </td>
                             <td class="py-3 pr-4 text-gray-600 hidden md:table-cell">
-                                {{ $alloc->supplierInvoice?->received_at?->format('d/m/Y') ?? '—' }}
+                                {{ $alloc->supplierInvoice->received_at?->format('d/m/Y') ?? '—' }}
                             </td>
                             <td class="py-3 pr-4 text-right tabular-nums text-gray-700">
-                                {{ number_format($alloc->supplierInvoice?->total_ttc ?? 0, 0, ',', ' ') }} FCFA
+                                {{ number_format($alloc->supplierInvoice->total_ttc ?? 0, 0, ',', ' ') }} FCFA
                             </td>
                             <td class="py-3 text-right tabular-nums font-semibold text-red-700">
                                 {{ number_format($alloc->amount, 0, ',', ' ') }} FCFA
@@ -238,12 +240,19 @@
                         <tr class="border-t-2 border-gray-200">
                             <td colspan="4" class="pt-3 text-sm font-semibold text-gray-700 text-right pr-4">Total imputé :</td>
                             <td class="pt-3 text-right tabular-nums font-bold text-red-700">
-                                {{ number_format($payment->allocations->sum('amount'), 0, ',', ' ') }} FCFA
+                                {{ number_format($validAllocations->sum('amount'), 0, ',', ' ') }} FCFA
                             </td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
+            @if($orphanAllocations->isNotEmpty())
+            <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                {{ $orphanAllocations->count() }} imputation(s) liée(s) à des factures supprimées
+                ({{ number_format($orphanAllocations->sum('amount'), 0, ',', ' ') }} FCFA) —
+                exclue(s) du total ci-dessus.
+            </p>
+            @endif
 
             @php
                 $allocated = $payment->allocated_amount;
