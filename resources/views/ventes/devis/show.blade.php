@@ -14,9 +14,13 @@
 
     {{-- ── Workflow bar ──────────────────────────────────────────────────────── --}}
     @include('partials._workflow-ventes', [
-        'currentStep' => 'devis',
-        'quote'       => $quote,
-        'order'       => $quote->convertedOrder ?? null,
+        'currentStep'  => 'devis',
+        'quote'        => $quote,
+        'order'        => $quote->convertedOrder ?? null,
+        {{-- [FIX chaîne devis] BL/Facture/Paiement restaient vides sur un devis
+             converti alors que la commande est livrée/facturée/payée. --}}
+        'deliveryNote' => $quote->convertedOrder?->deliveryNotes->first(),
+        'invoice'      => $quote->convertedOrder?->invoices->first(),
     ])
 
     {{-- ================================================================
