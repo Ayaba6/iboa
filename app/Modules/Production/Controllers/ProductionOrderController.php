@@ -136,7 +136,7 @@ class ProductionOrderController extends Controller
     {
         $order->load([
             'client', 'order', 'product', 'billOfMaterial', 'productionLine.machine', 'responsible', 'lines.unit',
-            'consumptions.coil', 'outputs.product', 'outputs.warehouse', 'wastes.machine', 'wastes.operator',
+            'consumptions.coil.supplier', 'outputs.product', 'outputs.warehouse', 'wastes.machine', 'wastes.operator',
             'cost', 'qualityControls.controller', 'reservations.product', 'timeLogs.employee',
             'operations.workCenter', 'operations.operator', 'batches',
         ]);

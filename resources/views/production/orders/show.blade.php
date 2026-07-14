@@ -1009,6 +1009,156 @@
     </div>
 
 <div x-show="tab === 'tracabilite'" x-cloak>
+
+{{-- ══════════════════════════════════════════════════════════════════════════
+     [Traçabilité & Rendement] Vue industrielle consolidée : rendement matière,
+     traçabilité des bobines (lot → fournisseur), chutes/rebuts et contrôle
+     qualité — côte à côte, comme attendu d'un dossier de fabrication tôle bac.
+     ══════════════════════════════════════════════════════════════════════════ --}}
+@php
+    $trConsumed = (float) $metrics['consumed_weight'];
+    $trWaste    = (float) $metrics['waste_weight'];
+    $trReusable = (float) $order->wastes->where('type', 'reutilisable')->sum('weight');
+    $trRebut    = (float) $order->wastes->whereIn('type', ['rebut', 'non_reutilisable'])->sum('weight');
+    $trQc       = $order->qualityControls->sortByDesc('id')->first();
+@endphp
+
+{{-- Bandeau rendement --}}
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-3">
+    @php $trCard = 'bg-white rounded-[4px] border border-gray-300 px-3 py-2'; @endphp
+    <div class="{{ $trCard }}"><p class="text-[10px] text-gray-500 uppercase tracking-wide">Matière consommée</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($trConsumed, 2, ',', ' ') }} kg</p></div>
+    <div class="{{ $trCard }}"><p class="text-[10px] text-gray-500 uppercase tracking-wide">Produit conforme</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($metrics['output_meters'], 2, ',', ' ') }} m</p></div>
+    <div class="{{ $trCard }}"><p class="text-[10px] text-emerald-600 uppercase tracking-wide">Chute réutilisable</p><p class="text-[15px] font-bold text-emerald-700 tabular-nums">{{ number_format($trReusable, 2, ',', ' ') }} kg</p></div>
+    <div class="{{ $trCard }}"><p class="text-[10px] text-red-600 uppercase tracking-wide">Rebut</p><p class="text-[15px] font-bold text-red-700 tabular-nums">{{ number_format($trRebut, 2, ',', ' ') }} kg</p></div>
+    <div class="{{ $trCard }}"><p class="text-[10px] text-gray-500 uppercase tracking-wide">Valeur pertes</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($metrics['waste_value'], 0, ',', ' ') }} F</p></div>
+    <div class="{{ $trCard }} {{ ($metrics['yield'] ?? 0) >= 90 ? 'ring-1 ring-emerald-300' : '' }}"><p class="text-[10px] text-emerald-600 uppercase tracking-wide">Rendement matière</p><p class="text-[15px] font-bold text-emerald-800 tabular-nums">{{ $metrics['yield'] !== null ? number_format($metrics['yield'], 1, ',', ' ').' %' : '—' }}</p></div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-3">
+    {{-- Traçabilité bobines : lot → fournisseur --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+            <h2 class="text-[13px] font-bold text-gray-900">Traçabilité matière (bobines)</h2>
+            <p class="text-[11px] text-gray-500">Lot, caractéristiques contrôlées, poids et fournisseur d'origine.</p>
+        </div>
+        <div class="tbl-scroll">
+            <table class="tbl w-full text-[12px]">
+                <thead><tr>
+                    <th class="text-left">Bobine / Lot</th>
+                    <th class="text-left">Caract.</th>
+                    <th class="text-right">Consommé</th>
+                    <th class="text-right">Restant</th>
+                    <th class="text-left">Fournisseur</th>
+                </tr></thead>
+                <tbody>
+                    @forelse($order->consumptions as $c)
+                        @php $coil = $c->coil; @endphp
+                        <tr>
+                            <td>
+                                <span class="font-mono text-emerald-700">{{ $coil->reference ?? '—' }}</span>
+                                @if($coil?->lot_number)<span class="block text-[10px] text-gray-500">Lot {{ $coil->lot_number }}</span>@endif
+                            </td>
+                            <td class="text-gray-600 text-[11px]">
+                                {{ collect([$coil?->color, $coil?->nuance, $coil?->thickness ? $coil->thickness.' mm' : null, $coil?->width ? $coil->width.' mm' : null])->filter()->implode(' · ') ?: '—' }}
+                            </td>
+                            <td class="text-right tabular-nums">{{ number_format((float) $c->weight_consumed, 2, ',', ' ') }} kg</td>
+                            <td class="text-right tabular-nums {{ (float)($coil->remaining_weight ?? 0) > 0 ? 'text-emerald-700' : 'text-gray-400' }}">{{ $coil ? number_format((float) $coil->remaining_weight, 2, ',', ' ').' kg' : '—' }}</td>
+                            <td class="text-gray-700 text-[11px]">
+                                {{ $coil?->supplier?->name ?? '—' }}
+                                @if($coil?->supplier_reference)<span class="block text-[10px] text-gray-400">Réf. {{ $coil->supplier_reference }}</span>@endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Aucune bobine consommée.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- Contrôle qualité + chutes/rebuts --}}
+    <div class="space-y-3">
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+            <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
+                <h2 class="text-[13px] font-bold text-gray-900">Contrôle qualité</h2>
+                @if($trQc)
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-semibold {{ $trQc->status === 'conforme' ? 'bg-emerald-100 text-emerald-700' : ($trQc->status === 'non_conforme' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') }}">{{ ucfirst(str_replace('_', ' ', $trQc->status)) }}</span>
+                @endif
+            </div>
+            <div class="p-3">
+                @if($trQc)
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                        @foreach(['thickness_ok' => 'Épaisseur', 'length_ok' => 'Longueur', 'color_ok' => 'Couleur', 'visual_ok' => 'Visuel'] as $f => $lbl)
+                        <div class="text-center border border-gray-100 rounded-[3px] py-1.5">
+                            <p class="text-[10px] text-gray-500 uppercase">{{ $lbl }}</p>
+                            <p class="text-[13px] font-bold {{ $trQc->$f ? 'text-emerald-600' : 'text-red-600' }}">{{ $trQc->$f ? '✓' : '✕' }}</p>
+                        </div>
+                        @endforeach
+                    </div>
+                    <div class="text-[11px] text-gray-500 flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span>Contrôleur : <span class="text-gray-800">{{ $trQc->controller?->name ?? '—' }}</span></span>
+                        <span>Le : <span class="text-gray-800 tabular-nums">{{ optional($trQc->controlled_at)->format('d/m/Y H:i') ?? '—' }}</span></span>
+                        @if($trQc->rejected_quantity)<span class="text-red-600">Rejeté : {{ number_format((float) $trQc->rejected_quantity, 2, ',', ' ') }}</span>@endif
+                    </div>
+                    @if($trQc->reason)<p class="text-[11px] text-red-600 mt-1">Motif : {{ $trQc->reason }}</p>@endif
+                @else
+                    <p class="text-[12px] text-gray-400 py-3 text-center">Aucun contrôle qualité enregistré.</p>
+                @endif
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+            <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white">
+                <h2 class="text-[13px] font-bold text-gray-900">Chutes &amp; rebuts</h2>
+            </div>
+            <div class="tbl-scroll">
+                <table class="tbl w-full text-[12px]">
+                    <thead><tr><th class="text-left">Type</th><th class="text-right">Poids</th><th class="text-right">Valeur</th><th class="text-left">Cause</th></tr></thead>
+                    <tbody>
+                        @forelse($order->wastes as $w)
+                        <tr>
+                            <td>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[10px] font-semibold {{ $w->type === 'reutilisable' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">{{ $w->type === 'reutilisable' ? 'Réutilisable' : ($w->type === 'rebut' ? 'Rebut' : 'Non réutilisable') }}</span>
+                            </td>
+                            <td class="text-right tabular-nums">{{ number_format((float) $w->weight, 2, ',', ' ') }} kg</td>
+                            <td class="text-right tabular-nums text-gray-600">{{ number_format((float) $w->value, 0, ',', ' ') }} F</td>
+                            <td class="text-gray-600 text-[11px]">{{ $w->cause ?? $w->reason ?? '—' }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">Aucune chute ni rebut.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Chaîne de traçabilité : Client → Commande → OF → Bobine → Fournisseur --}}
+<div class="bg-white rounded-[4px] border border-gray-300 p-3 mb-3">
+    <h2 class="text-[13px] font-bold text-gray-900 mb-2">Chaîne de traçabilité</h2>
+    @php
+        $trChain = array_values(array_filter([
+            $order->client ? ['Client', $order->client->name] : null,
+            $order->order ? ['Commande', $order->order->number] : null,
+            ['OF', $order->number],
+            ['Produit', $order->product?->name ?? '—'],
+            $order->consumptions->isNotEmpty() ? ['Bobine(s)', $order->consumptions->map(fn ($c) => $c->coil?->reference)->filter()->unique()->implode(', ') ?: '—'] : null,
+            $order->consumptions->pluck('coil.supplier.name')->filter()->unique()->isNotEmpty()
+                ? ['Fournisseur', $order->consumptions->pluck('coil.supplier.name')->filter()->unique()->implode(', ')] : null,
+        ]));
+    @endphp
+    <div class="flex flex-wrap items-center gap-1 text-[12px]">
+        @foreach($trChain as $i => $node)
+            <div class="inline-flex flex-col px-2.5 py-1 rounded-[4px] bg-[#eef5f0] border border-emerald-100">
+                <span class="text-[9px] uppercase tracking-wide text-emerald-700">{{ $node[0] }}</span>
+                <span class="font-medium text-gray-900">{{ $node[1] }}</span>
+            </div>
+            @if(!$loop->last)<span class="text-gray-300">→</span>@endif
+        @endforeach
+    </div>
+</div>
+
 {{-- ══ Lots de fabrication (traçabilité) ══ --}}
     @if($order->batches->isNotEmpty() || in_array($order->status, ['lance','en_cours','termine'], true))
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
