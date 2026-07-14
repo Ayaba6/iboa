@@ -147,12 +147,16 @@ class ProductionOrderController extends Controller
         // [Cohérence KPI] Coût matière = bobines (consumptions) + composants BOM
         // sortis du stock à la déclaration (même formule que ProductionCostService).
         // Sans ça un OF consommant uniquement des composants affiche « 0 F ».
+        // [FIX A1] Anti double comptage : les sorties backflush du MÊME produit
+        // qu'une bobine consommée sont exclues du coût (le réel bobine prime).
+        $coilProductIds = $order->consumptions->pluck('coil.product_id')->filter()->unique();
         $outputIds = $order->outputs->pluck('id');
         $componentMoves = $outputIds->isNotEmpty()
             ? \App\Models\StockMovement::with('product:id,name,unit_id', 'product.unit:id,name,abbreviation')
                 ->where('type', 'sortie')
                 ->where('reference_type', \App\Modules\Production\Models\ProductionOutput::class)
                 ->whereIn('reference_id', $outputIds)
+                ->when($coilProductIds->isNotEmpty(), fn ($q) => $q->whereNotIn('product_id', $coilProductIds))
                 ->orderBy('id')->get()
             : collect();
         $componentCost = (float) $componentMoves->sum('total_cost');
