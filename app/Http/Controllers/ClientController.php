@@ -88,6 +88,31 @@ class ClientController extends Controller
         return view('clients.show', compact('client', 'totalInvoiced', 'totalPaid', 'balance'));
     }
 
+    /**
+     * [Dossier client] Synthèse commerciale bout-en-bout : chaque document porte
+     * SON propre statut (devis / commande / OF / BL / facture / avoir), jamais un
+     * statut « payé » global. Matérialise le parcours réel du dossier client.
+     */
+    public function dossier(Client $client)
+    {
+        $this->authorize('view', $client);
+
+        $orders = $client->orders()
+            ->with(['quote:id,number,status', 'productionOrders:id,order_id,number,status,quantity_produced', 'deliveryNotes:id,order_id,number,status', 'invoices:id,order_id,number,status,total_ttc,paid_amount,remaining_amount'])
+            ->latest()->limit(50)->get();
+
+        $invoices    = $client->invoices()->latest()->limit(100)->get();
+        $creditNotes = $client->creditNotes()->latest()->limit(50)->get();
+        $quotes      = $client->quotes()->latest()->limit(50)->get();
+
+        // Synthèse financière — statuts corrects
+        $totalInvoiced = (float) $invoices->whereNotIn('status', ['brouillon', 'annulee'])->where('type', '!=', 'avoir')->sum('total_ttc');
+        $outstanding   = (float) $invoices->whereIn('status', ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])->sum('remaining_amount');
+        $overdue       = (float) $invoices->where('status', 'en_retard')->sum('remaining_amount');
+
+        return view('gestion.clients.dossier', compact('client', 'orders', 'invoices', 'creditNotes', 'quotes', 'totalInvoiced', 'outstanding', 'overdue'));
+    }
+
     public function edit(Client $client)
     {
         $this->authorize('update', $client);

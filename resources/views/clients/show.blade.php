@@ -61,10 +61,16 @@
                 @if($client->city)<span>{{ $client->city }}</span>@endif
             </div>
         </div>
-        <a href="{{ route('clients.edit', $client) }}"
-           class="flex-shrink-0 bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-semibold px-4 py-1.5 rounded-[4px] transition-colors">
-            Modifier
-        </a>
+        <div class="flex-shrink-0 flex items-center gap-2">
+            <a href="{{ route('clients.dossier', $client) }}"
+               class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-[12px] font-semibold px-4 py-1.5 rounded-[4px] transition-colors">
+                Dossier
+            </a>
+            <a href="{{ route('clients.edit', $client) }}"
+               class="bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-semibold px-4 py-1.5 rounded-[4px] transition-colors">
+                Modifier
+            </a>
+        </div>
     </div>
 
     {{-- ═══ Bandeau KPI ═══════════════════════════════════════════════════════ --}}
