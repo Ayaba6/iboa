@@ -1,0 +1,474 @@
+<html><head><meta charset='utf-8'><style>body{font-family:DejaVu Sans,Arial,sans-serif;font-size:9.5pt;color:#111}h1{font-size:15pt;border-bottom:2px solid #14532d;color:#14532d}h2{font-size:12pt;color:#14532d;margin-top:14px}h3{font-size:10.5pt}table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid #999;padding:3px 5px;font-size:8.5pt;text-align:left}th{background:#eef5f0}blockquote{border-left:3px solid #14532d;margin:6px 0;padding-left:8px;font-style:italic}</style></head><body><h1>GUIDE D'UTILISATION DU CYCLE DE VENTE ET DE FABRICATION</h1>
+<h2>OA METAL INDUSTRIE — ERP A3/IBOA</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Logo</strong></td>
+<td>[Capture 00 — logo OA METAL INDUSTRIE en tête de l'ERP]</td>
+</tr>
+<tr>
+<td><strong>ERP</strong></td>
+<td>A3/IBOA</td>
+</tr>
+<tr>
+<td><strong>Titre</strong></td>
+<td>Guide d'utilisation du cycle de vente et de fabrication</td>
+</tr>
+<tr>
+<td><strong>Version</strong></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>14/07/2026</td>
+</tr>
+<tr>
+<td><strong>Auteur</strong></td>
+<td>Cellule Test ERP</td>
+</tr>
+<tr>
+<td><strong>Diffusion</strong></td>
+<td>Document interne</td>
+</tr>
+</tbody>
+</table>
+<h3>Historique des versions</h3>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Auteur</th>
+<th>Modification</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.0</td>
+<td>14/07/2026</td>
+<td>Cellule Test ERP</td>
+<td>Création — basé sur le test réel DEV-2026-00036 → ENC-2026-012</td>
+<td>À valider par la Direction</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Sommaire</h2>
+<ol>
+<li><a href="#1-introduction">Introduction</a></li>
+<li><a href="#2-prérequis">Prérequis</a></li>
+<li><a href="#3-guide-pas-à-pas">Guide pas à pas</a> (34 opérations)</li>
+<li><a href="#4-gestion-des-cas-particuliers">Gestion des cas particuliers</a></li>
+<li><a href="#5-foire-aux-questions">Foire aux questions</a></li>
+<li><a href="#6-messages-derreur">Messages d'erreur</a></li>
+<li><a href="#7-glossaire">Glossaire</a></li>
+</ol>
+<hr />
+<h2>1. Introduction</h2>
+<p>Le module <strong>Ventes</strong> pilote la relation commerciale : devis, commandes, bons de préparation, bons de livraison, factures et avoirs. Pour un produit <strong>fabriqué à la commande</strong> (tôle bac), il est relié automatiquement aux autres modules :</p>
+<ul>
+<li><strong>Production</strong> : la validation d'une commande d'un article fabriqué sans stock crée automatiquement un <strong>ordre de fabrication</strong> (OF).</li>
+<li><strong>Stock</strong> : la production entre le produit fini en stock ; la validation du BL le sort ; la matière première (bobine) est décomptée à la déclaration.</li>
+<li><strong>Qualité</strong> : chaque OF porte un contrôle qualité ; une non-conformité <strong>bloque la livraison</strong>.</li>
+<li><strong>Livraison</strong> : le bon de préparation doit être <strong>chargé</strong> avant de créer le BL (§13.7).</li>
+<li><strong>Facturation</strong> : la facture se génère depuis le BL validé ; sa validation crée l'écriture de vente.</li>
+<li><strong>Trésorerie</strong> : l'encaissement s'impute sur la facture et met à jour la banque et l'encours client.</li>
+<li><strong>Comptabilité</strong> : écritures SYSCOHADA automatiques (411/7011/4431 puis 521/411) et <strong>lettrage</strong> du compte client.</li>
+</ul>
+<h2>2. Prérequis</h2>
+<p><strong>Droits utilisateurs</strong> (rôle → actions principales) :</p>
+<table>
+<thead>
+<tr>
+<th>Rôle</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>commercial</td>
+<td>Devis (créer, soumettre), conversion en commande, soumission de commande</td>
+</tr>
+<tr>
+<td>directeur / responsable commercial</td>
+<td>Validation devis et commandes, création BL, génération facture depuis BL</td>
+</tr>
+<tr>
+<td>chef_production</td>
+<td>Allocation matière, soumission OF, validation Responsable Production, lancement, consommation, déclaration, chutes, contrôle qualité OF, clôture</td>
+</tr>
+<tr>
+<td>directeur_usine / chef_atelier</td>
+<td>Validation Chef Atelier de l'OF</td>
+</tr>
+<tr>
+<td>daf</td>
+<td>Autorisation financière de l'OF (client à crédit)</td>
+</tr>
+<tr>
+<td>magasinier</td>
+<td>Chargement du bon de préparation, validation du BL</td>
+</tr>
+<tr>
+<td>comptable</td>
+<td>Validation de facture, encaissement, imputation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Données nécessaires avant de commencer</strong> : client actif avec plafond de crédit ; article fabriqué en mode « Fabrication à la commande » avec prix de vente et unité ml ; nomenclature active (bobine, kg/m, taux de perte) ; ligne/machine de profilage active ; dépôts MP et PF ; bobine compatible disponible (couleur, épaisseur, largeur, poids) ; taux de TVA 18 % ; journaux Ventes et Banque ; comptes 411/70x/4431/521.</p>
+<p><strong>Conventions de saisie</strong> : montants en FCFA entiers ; quantités de tôle bac en <strong>mètres linéaires</strong> ; le détail « nombre de feuilles × longueur » se saisit dans les lignes de coupe de l'OF et en note de déclaration ; ne jamais utiliser le compte administrateur pour les opérations courantes.</p>
+<h2>3. Guide pas à pas</h2>
+<blockquote>
+<p>Chaque opération indique : profil, menu, actions, contrôles automatiques, statut obtenu et l'emplacement de capture correspondant.</p>
+</blockquote>
+<h3>3.1 Se connecter à l'ERP</h3>
+<p>Profil : tous. Ouvrir l'URL de l'ERP, saisir e-mail + mot de passe, <strong>Se connecter</strong>. <code>[Capture 01 — écran de connexion A3 ERP]</code></p>
+<h3>3.2 Accéder au module Ventes</h3>
+<p>Menu latéral <strong>Ventes</strong> → tableau de bord ventes (KPIs, échéances, pipeline). <code>[Capture 02 — tableau de bord Ventes]</code></p>
+<h3>3.3 Rechercher ou créer un client</h3>
+<p><strong>Gestion → Clients</strong>. Vérifier sur la fiche : statut actif, <strong>plafond de crédit</strong>, encours, mode de règlement, conditions de paiement. Exemple du test : CLIENT TEST GUIDE SARL, plafond 10 000 000 F, encours 0. <code>[Capture 03 — fiche client, encadré crédit]</code></p>
+<h3>3.4 Créer un devis</h3>
+<p>Profil : commercial. <strong>Ventes → Devis → Nouveau devis.</strong>
+Champs : Client* (liste), Adresse de livraison, Devise (XOF), Date, <strong>Durée de validité 30 jours</strong> (date calculée automatiquement), TVA par défaut 18 %, <strong>Entrepôt/Dépôt = DEP-PF</strong>, Conditions de paiement <strong>30 jours</strong>, Mode de paiement <strong>Virement bancaire</strong>. <code>[Capture 04 — entête du devis rempli]</code></p>
+<h3>3.5 Ajouter une ligne de tôle bac</h3>
+<p>Dans <strong>Détail des articles</strong>, cliquer le sélecteur <strong>— Produit —</strong>, rechercher « TOLE BAC PRELAQUEE BEIGE 27/100 4 ONDES ». Le PU HT (4 000) et la TVA se remplissent depuis la fiche article. <code>[Capture 05 — sélecteur produit ouvert]</code></p>
+<h3>3.6–3.8 Feuilles, longueur, mètres linéaires</h3>
+<p>La quantité du devis s'exprime en <strong>mètres linéaires</strong> (unité de vente). Pour 20 feuilles de 5 m : saisir <strong>Qté = 100</strong>. Indiquer « 20 feuilles × 5 m » dans la désignation ou les observations ; le plan de coupe détaillé (20 × 5 m) sera visible sur l'OF (lignes de coupe). Contrôle : 20 × 5 = 100 ml.</p>
+<h3>3.9 Vérifier prix et taxes</h3>
+<p>Bas de page : <strong>Total HT 400 000 · Total TVA 72 000 · Total TTC 472 000</strong>. Tout écart = erreur de saisie (PU ou quantité). <code>[Capture 06 — bloc totaux 400 000 / 72 000 / 472 000]</code></p>
+<h3>3.10 Enregistrer le devis</h3>
+<p>Bouton <strong>Enregistrer</strong>. L'ERP attribue le numéro automatiquement (ex. <strong>DEV-2026-00036</strong>) ; statut <strong>Brouillon</strong> ; créateur et date tracés dans « Suivi ». <code>[Capture 07 — devis créé, numéro + statut Brouillon]</code></p>
+<h3>3.11 Imprimer le devis</h3>
+<p>Fiche devis → <strong>PDF</strong> (téléchargement ou aperçu). Vérifier logo, mentions légales et totaux. <code>[Capture 08 — PDF du devis]</code></p>
+<h3>3.12 Soumettre à validation</h3>
+<p>Fiche devis → <strong>Soumettre à validation</strong> → confirmation. Statut : <strong>En attente de validation</strong> ; une notification part au valideur (cloche + « Mes validations »). <code>[Capture 09 — statut En attente + notification]</code></p>
+<h3>3.13 Valider ou rejeter le devis</h3>
+<p>Profil : directeur. Ouvrir le devis (via <strong>Mes validations</strong>) → <strong>Valider</strong> (ou <strong>Refuser</strong> avec motif obligatoire). Statut : <strong>Validé</strong>, nom du valideur et horodatage tracés. Les champs sensibles sont verrouillés. <code>[Capture 10 — devis Validé, encart validation]</code></p>
+<h3>3.14 Transformer le devis en commande</h3>
+<p>Profil : commercial. Fiche du devis validé → <strong>Transformer en commande</strong>. Une commande (ex. <strong>CMD-2026-046</strong>) reprend à l'identique client, lignes, prix, TVA, conditions ; le devis passe <strong>Converti</strong> et ne peut plus être reconverti. <code>[Capture 11 — commande créée liée au devis]</code></p>
+<h3>3.15 Vérifier le crédit client</h3>
+<p>Le contrôle est <strong>automatique à la soumission</strong> : si l'encours dépasse le plafond, la commande est <strong>bloquée</strong> et le responsable notifié. Récapitulatif du test : plafond 10 000 000 · encours avant 0 · commande TTC 472 000 · encours prévisionnel 472 000 · crédit disponible 9 528 000 · <strong>décision : autorisée automatiquement</strong>. Consultez <strong>Gestion → Clients → Crédit</strong> pour le détail et l'historique des décisions. <code>[Capture 12 — écran Crédit client]</code></p>
+<h3>3.16 Valider la commande</h3>
+<p>Commercial : <strong>Soumettre</strong>. Directeur : <strong>Valider</strong>. Statut <strong>Confirmée</strong>. Pour un article fabriqué sans stock, l'ERP crée <strong>automatiquement l'OF</strong> (ex. <strong>OF-2026-0151</strong>) lié à la commande, avec nomenclature et ligne de production pré-affectées. <code>[Capture 13 — commande Confirmée + OF auto en documents liés]</code></p>
+<h3>3.17 Créer l'OF</h3>
+<p>Cas MTO : <strong>automatique</strong> (voir 3.16). Cas manuel : <strong>Production → Ordres de fabrication → Nouveau</strong> en renseignant commande, produit, quantité (ml), lignes de coupe (20 × 5 m), dates, priorité, ligne/machine, nomenclature, dépôts. <code>[Capture 14 — fiche OF, onglet Gestion]</code></p>
+<h3>3.18 Réserver une bobine</h3>
+<p>Profil : chef de production. Fiche OF → <strong>Allouer la matière</strong> : l'ERP vérifie la disponibilité du composant (bobine beige 27/100 — poids requis ≈ qté × 1,7513 kg/m × 1,035). Statut OF : <strong>Matière allouée</strong>. En cas de manque : blocage avec liste des manquants et substituts proposés. ⚠ L'allocation est un engagement logique ; le poids précis de la bobine est décompté à la consommation (voir réserve A4 du rapport). <code>[Capture 15 — OF Matière allouée]</code></p>
+<h3>3.19 Lancer la fabrication</h3>
+<p>Circuit de validation : <strong>Soumettre validation</strong> (chef prod.) → <strong>Validation Chef Atelier</strong> (directeur d'usine) → <strong>Validation Responsable Production</strong> (chef prod.) → <strong>Autorisation financière</strong> (DAF — obligatoire pour une commande à crédit ; décision motivée tracée) → <strong>Lancer l'OF</strong> puis <strong>Démarrer</strong>. Statut : <strong>En cours</strong>, date/heure de démarrage tracées. <code>[Capture 16 — chaîne de validation OF + statut En cours]</code></p>
+<h3>3.20 Déclarer la consommation</h3>
+<p>Fiche OF → onglet <strong>Suivi</strong> → bloc consommation : choisir la <strong>bobine</strong> (BOB-TEST-GUIDE-001), saisir <strong>poids consommé</strong> (182 kg) et longueur déroulée (101 m). Effets : poids restant bobine 500 → <strong>318 kg</strong>, statut bobine « en production », coût matière tracé (182 × 850 = 154 700 F). <code>[Capture 17 — consommation bobine enregistrée]</code></p>
+<h3>3.21 Déclarer la production</h3>
+<p>Onglet <strong>Suivi</strong> → <strong>Déclaration de production</strong> : produit, <strong>dépôt PF</strong>, <strong>quantité en ml (100)</strong>, coût unitaire, <strong>n° de lot</strong> (LOT-PF-TEST-GUIDE-001), note « 20 feuilles × 5 m ». Effets : <strong>entrée stock PF +100 ml</strong>, sortie automatique du composant BOM (175,13 kg), lot tracé. <code>[Capture 18 — déclaration 100 ml + lot]</code></p>
+<h3>3.22 Enregistrer chutes et rebuts</h3>
+<p>Onglet <strong>Clôture</strong> → <strong>Chutes &amp; pertes</strong> : type (<strong>Réutilisable</strong> / <strong>Rebut</strong>), poids, valeur, motif. Test : chute réutilisable 0,9 kg (765 F) « fin de bobine » + rebut 1,8 kg (1 530 F) « amorce de réglage ». <code>[Capture 19 — tableau chutes]</code></p>
+<h3>3.23 Effectuer le contrôle qualité</h3>
+<p>Fiche OF → bloc <strong>Contrôle qualité</strong> : cocher <strong>Épaisseur / Longueur / Couleur / Visuel</strong>, verdict <strong>Conforme</strong> (ou Non conforme avec quantité rejetée et motif), contrôleur, date. Une <strong>non-conformité bloque la livraison</strong>. <code>[Capture 20 — QC conforme 4 critères]</code></p>
+<h3>3.24 Entrée du produit fini en stock</h3>
+<p>Réalisée <strong>automatiquement</strong> par la déclaration (3.21). Vérification : <strong>Stocks → Mouvements</strong> — mouvement « Production OF-2026-0151 » +100 au dépôt PF. <code>[Capture 21 — mouvement d'entrée production]</code></p>
+<h3>3.25 Clôturer l'OF</h3>
+<p>Après visa du chef sur la déclaration (<strong>Valider</strong> sur la ligne de déclaration) : bouton <strong>Terminer l'OF</strong>. Contrôles bloquants : déclarations visées, quantité produite ≥ demandée (sinon « Terminer partiellement »), matière consommée, contrôle qualité présent. Effets : statut <strong>Terminé</strong>, <strong>lot de fabrication auto</strong>, <strong>réservation du produit fini pour le client (100 ml)</strong>, calcul du <strong>coût réel</strong>, écritures de production. Un OF terminé n'est plus modifiable librement. <code>[Capture 22 — OF Terminé + panneau Traçabilité &amp; Rendement]</code></p>
+<h3>3.26 Créer le bon de préparation</h3>
+<p>Le BP est <strong>généré automatiquement</strong> à la confirmation de la commande (ex. <strong>BP-2026-0028</strong>, statut « En attente »). <strong>Ventes → Bons de préparation</strong>. <code>[Capture 23 — liste BP]</code></p>
+<h3>3.27 Contrôler le chargement</h3>
+<p>Profil : magasinier. Fiche BP → <strong>Démarrer le chargement</strong> puis <strong>Terminer le chargement</strong>. Statut : <strong>Chargé</strong>. Sans cela, la création du BL est <strong>refusée</strong> (§13.7). <code>[Capture 24 — BP Chargé]</code></p>
+<h3>3.28 Créer et valider le BL</h3>
+<p>Création (profil direction/responsable commercial) : fiche commande → <strong>Générer le bon de livraison</strong> (ex. <strong>BL-2026-025</strong>, brouillon, dépôt PF, 100 ml). Validation (profil magasinier) : fiche BL → <strong>Valider</strong>. Effets : <strong>sortie stock −100</strong>, réservation client soldée, quantité livrée mise à jour, commande <strong>Livrée</strong>. <code>[Capture 25 — BL validé + stock PF à 0]</code></p>
+<h3>3.29 Créer la facture</h3>
+<p>Fiche BL validé → <strong>Générer la facture</strong> (ex. <strong>FA-2026-018</strong>, brouillon) : reprise du BL (client, 100 ml × 4 000), <strong>HT 400 000 / TVA 72 000 / TTC 472 000</strong>, échéance +30 j. Toute seconde génération pour le même BL est <strong>refusée</strong>. <code>[Capture 26 — facture générée]</code></p>
+<h3>3.30 Valider et envoyer la facture</h3>
+<p>Profil : comptable. Fiche facture → <strong>Valider</strong>. Effets : statut <strong>Envoyée</strong>, montants verrouillés, <strong>écriture de vente</strong> générée (D 411 = 472 000 ; C 7011 = 400 000 ; C 4431 = 72 000). PDF : bouton <strong>PDF</strong> (contrôler logo, IFU, coordonnées bancaires). L'envoi e-mail nécessite un serveur SMTP configuré. <code>[Capture 27 — facture validée + écriture]</code></p>
+<h3>3.31 Enregistrer le paiement</h3>
+<p>Profil : comptable. <strong>Trésorerie → Encaissements → Nouveau</strong> : client, <strong>compte bancaire</strong> (Compte Coris Bank), <strong>montant 472 000</strong>, date, <strong>référence VIR-TEST-GUIDE-001</strong>, imputation sur FA-2026-018 = 472 000. <code>[Capture 28 — formulaire encaissement]</code></p>
+<h3>3.32 Imputer le paiement</h3>
+<p>L'imputation saisie en 3.31 est appliquée à l'enregistrement (imputation a posteriori possible via <strong>Imputer</strong> sur l'encaissement). Effets : facture <strong>Payée</strong>, écriture <strong>D 521 / C 411 = 472 000</strong>, <strong>lettrage automatique</strong> du compte client (lettre commune facture/règlement), solde banque mis à jour (+472 000). <code>[Capture 29 — encaissement imputé + lettrage]</code></p>
+<h3>3.33 Vérifier le solde</h3>
+<p>Fiche facture : reste à payer <strong>0</strong> ; fiche client : encours <strong>0</strong> ; toute tentative de re-validation de la facture réglée est <strong>refusée (verrouillée)</strong>. <code>[Capture 30 — facture Payée, reste 0]</code></p>
+<h3>3.34 Consulter l'historique complet</h3>
+<p><strong>Gestion → Clients → fiche → Dossier</strong> : chaîne documentaire avec le <strong>statut propre de chaque document</strong> — Devis <em>Converti</em> → Commande <em>Facturée</em> → OF <em>Terminé</em> → BL <em>Livré</em> → Facture <em>Payée</em> → Reste dû 0. Historique d'audit détaillé (créé/soumis/validé par, horodaté) au bas de chaque document. <code>[Capture 31 — Dossier client, chaîne complète]</code></p>
+<h2>4. Gestion des cas particuliers</h2>
+<table>
+<thead>
+<tr>
+<th>Cas</th>
+<th>Conduite à tenir (comportement vérifié)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Client dépassant son plafond</strong></td>
+<td>La soumission de commande est bloquée avec message explicite ; le responsable commercial/directeur est notifié ; passer par <strong>Clients → Crédit</strong> (relèvement de plafond ou dérogation tracée) avant de re-soumettre.</td>
+</tr>
+<tr>
+<td><strong>Produit fini déjà disponible</strong></td>
+<td>Aucun OF n'est créé à la validation : la commande passe directement au circuit préparation/livraison.</td>
+</tr>
+<tr>
+<td><strong>Bobine insuffisante</strong></td>
+<td>La consommation supérieure au restant est <strong>refusée</strong> (« Poids demandé supérieur au restant ») ; au lancement, les manquants bloquent avec proposition de <strong>substituts</strong> de nomenclature ; sinon approvisionner (module Achats).</td>
+</tr>
+<tr>
+<td><strong>Bobine non conforme</strong></td>
+<td>Ne pas consommer ; déclarer la non-conformité (module Qualité), statut bobine « bloquée », retour fournisseur le cas échéant.</td>
+</tr>
+<tr>
+<td><strong>Production partielle</strong></td>
+<td>Bouton <strong>Terminer partiellement</strong> : l'OF garde le reliquat à produire ; la clôture définitive avec écart exige une dérogation explicite.</td>
+</tr>
+<tr>
+<td><strong>Production supérieure à la commande</strong></td>
+<td>Déclarer le réel ; l'excédent reste en stock PF disponible (non réservé).</td>
+</tr>
+<tr>
+<td><strong>Livraison partielle / reliquat</strong></td>
+<td>Modifier la quantité du BL ; la commande passe <strong>Partiellement livrée</strong> ; un second BL solde le reliquat (comportement vérifié par test automatisé).</td>
+</tr>
+<tr>
+<td><strong>Produit non conforme</strong></td>
+<td>QC <strong>Non conforme</strong> → livraison bloquée ; déclarer le <strong>rebut</strong> (validation chef + qualité) ; reprise de fabrication via nouvel OF ou reliquat.</td>
+</tr>
+<tr>
+<td><strong>Reprise de fabrication</strong></td>
+<td>Créer un OF de reprise lié à la commande ; consommer la matière additionnelle ; re-contrôler.</td>
+</tr>
+<tr>
+<td><strong>Annulation d'un OF</strong></td>
+<td>Bouton <strong>Annuler</strong> (motif obligatoire) tant que non terminé ; les consommations saisies peuvent être annulées ligne à ligne (restitution du poids bobine).</td>
+</tr>
+<tr>
+<td><strong>Modification d'une commande validée</strong></td>
+<td>Circuit de <strong>demande de modification</strong> à 4 avis (chef production → commercial → finance → DG) sur l'OF lié ; la commande confirmée n'est pas modifiable librement.</td>
+</tr>
+<tr>
+<td><strong>Retour client / avoir</strong></td>
+<td><strong>Ventes → Avoirs → Nouveau</strong> depuis la facture : par ligne, choisir le <strong>sort du retour</strong> (« Remis en stock » ré-entre le stock ; « Rebut » ne ré-entre rien) ; possibilité de générer un <strong>BL de remplacement</strong> depuis l'avoir validé.</td>
+</tr>
+<tr>
+<td><strong>Paiement partiel</strong></td>
+<td>Imputer le montant reçu : facture <strong>Partiellement payée</strong>, solde suivi en échéancier/relances.</td>
+</tr>
+<tr>
+<td><strong>Paiement supérieur</strong></td>
+<td>L'excédent reste <strong>non imputé</strong> sur l'encaissement (imputable plus tard ou en acompte).</td>
+</tr>
+<tr>
+<td><strong>Facture impayée</strong></td>
+<td>Suivi via échéancier, relances et balance âgée (module Relances/Comptabilité).</td>
+</tr>
+<tr>
+<td><strong>Annulation / extourne d'un paiement</strong></td>
+<td>Annuler l'encaissement : contre-passation de l'écriture et dé-lettrage ; la facture redevient due.</td>
+</tr>
+</tbody>
+</table>
+<h2>5. Foire aux questions</h2>
+<ol>
+<li><strong>Le devis ne calcule pas 472 000 TTC ?</strong> Vérifiez PU = 4 000, Qté = 100, TVA ligne = 18 %.</li>
+<li><strong>Le bouton Valider n'apparaît pas ?</strong> Votre profil n'a pas le droit de validation — le document doit être traité par le valideur notifié.</li>
+<li><strong>Pourquoi la commande est bloquée à la soumission ?</strong> Plafond de crédit dépassé ou client bloqué : voir écran Crédit client.</li>
+<li><strong>L'OF ne s'est pas créé ?</strong> L'article n'est pas en mode « Fabrication à la commande » ou du stock PF disponible couvrait la commande.</li>
+<li><strong>« Lancer l'OF » est grisé ?</strong> Circuit de validation incomplet (chef atelier, responsable production) ou autorisation financière absente, ou matière manquante.</li>
+<li><strong>Pourquoi une autorisation DAF ?</strong> Toute commande à crédit exige un visa financier avant lancement de la fabrication — décision motivée et tracée.</li>
+<li><strong>La consommation bobine est refusée ?</strong> Poids demandé &gt; restant, ou l'OF n'est pas « En cours ».</li>
+<li><strong>Dans quelle unité déclarer la production ?</strong> En <strong>mètres linéaires</strong> (unité de vente) ; notez « X feuilles × Y m » en commentaire.</li>
+<li><strong>Où voir le reste de la bobine ?</strong> Fiche OF onglet <strong>Traçabilité</strong> (poids consommé/restant, lot, fournisseur) ou fiche bobine.</li>
+<li><strong>Peut-on livrer sans contrôle qualité ?</strong> Non si le contrôle est exigé ; une non-conformité bloque la livraison.</li>
+<li><strong>Pourquoi la clôture de l'OF est refusée ?</strong> Déclaration non visée par le chef, quantité produite &lt; demandée, aucune matière consommée, ou QC obligatoire absent.</li>
+<li><strong>À quoi sert le bon de préparation ?</strong> Il matérialise préparation + contrôle du chargement ; le BL est refusé tant qu'il n'est pas « Chargé ».</li>
+<li><strong>Qui valide le BL ?</strong> Le magasinier (droit deliveries.validate) ; la sortie de stock se fait à cette validation.</li>
+<li><strong>Peut-on facturer deux fois un BL ?</strong> Non — la seconde génération est refusée.</li>
+<li><strong>La facture affiche « Envoyée » sans e-mail ?</strong> Le statut est posé à la validation ; l'envoi réel dépend du serveur SMTP configuré.</li>
+<li><strong>Comment imputer un règlement sur plusieurs factures ?</strong> Dans l'encaissement, ajoutez plusieurs lignes d'imputation (une par facture).</li>
+<li><strong>Qu'est-ce que le lettrage ?</strong> Le rapprochement facture/règlement sur le compte 411 — automatique ici (lettre commune).</li>
+<li><strong>Peut-on modifier une facture payée ?</strong> Non — verrouillée ; passer par un avoir.</li>
+<li><strong>Où suivre tout le dossier d'un client ?</strong> Fiche client → bouton <strong>Dossier</strong> (chaîne documentaire, statuts par document, reste dû).</li>
+<li><strong>Que faire si le stock PF affiche 0 avant livraison ?</strong> Vérifier que la déclaration de production a été faite <strong>en ml</strong> au bon dépôt et visée.</li>
+<li><strong>Comment traiter un retour partiel ?</strong> Avoir sur la facture avec disposition par ligne (remis en stock / rebut), puis remplacement éventuel.</li>
+</ol>
+<h2>6. Messages d'erreur</h2>
+<table>
+<thead>
+<tr>
+<th>Message affiché</th>
+<th>Cause probable</th>
+<th>Vérification</th>
+<th>Solution</th>
+<th>Contact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>« Commande bloquée : la limite de crédit du client … est dépassée »</td>
+<td>Encours + commande &gt; plafond</td>
+<td>Écran Crédit client</td>
+<td>Relèvement/dérogation tracée puis re-soumettre</td>
+<td>Responsable commercial / DAF</td>
+</tr>
+<tr>
+<td>« Poids demandé (…) supérieur au restant de la bobine »</td>
+<td>Bobine insuffisante</td>
+<td>Fiche bobine (poids restant)</td>
+<td>Choisir une autre bobine ou approvisionner</td>
+<td>Magasinier / Achats</td>
+</tr>
+<tr>
+<td>« La consommation n'est possible que sur un OF “en cours” »</td>
+<td>OF non démarré ou terminé</td>
+<td>Statut de l'OF</td>
+<td>Lancer/démarrer l'OF</td>
+<td>Chef de production</td>
+</tr>
+<tr>
+<td>« … déclaration(s) de production en attente du visa chef d'équipe — clôture impossible »</td>
+<td>Déclaration non visée</td>
+<td>Onglet Suivi</td>
+<td>Faire viser la déclaration</td>
+<td>Chef d'atelier</td>
+</tr>
+<tr>
+<td>« Quantité produite (…) inférieure à la quantité demandée — clôture définitive bloquée »</td>
+<td>Production incomplète</td>
+<td>Quantités OF</td>
+<td>« Terminer partiellement » ou dérogation</td>
+<td>Chef de production</td>
+</tr>
+<tr>
+<td>« Bon de préparation … : le chargement doit être terminé avant de créer le bon de livraison »</td>
+<td>BP non chargé</td>
+<td>Statut du BP</td>
+<td>Démarrer puis terminer le chargement</td>
+<td>Magasinier</td>
+</tr>
+<tr>
+<td>« Livraison bloquée : contrôle qualité non conforme sur l'OF … »</td>
+<td>QC non conforme</td>
+<td>Bloc Qualité de l'OF</td>
+<td>Reprise/tri puis nouveau contrôle conforme</td>
+<td>Qualité</td>
+</tr>
+<tr>
+<td>« Stock insuffisant : X disponible(s), Y demandée(s) »</td>
+<td>Sortie &gt; disponible</td>
+<td>Niveaux de stock</td>
+<td>Corriger la quantité ou produire/réapprovisionner</td>
+<td>Magasinier</td>
+</tr>
+<tr>
+<td>« Une facture a déjà été générée pour ce bon de livraison »</td>
+<td>Double facturation</td>
+<td>Documents liés du BL</td>
+<td>Utiliser la facture existante</td>
+<td>Comptable</td>
+</tr>
+<tr>
+<td>« Seules les factures … peuvent être validées » / 403 sur facture payée</td>
+<td>Facture verrouillée (réglée)</td>
+<td>Statut facture</td>
+<td>Passer par un avoir</td>
+<td>Comptable</td>
+</tr>
+<tr>
+<td>« Cette action n'est pas autorisée » (403)</td>
+<td>Droit manquant pour votre profil</td>
+<td>Matrice des rôles (§2)</td>
+<td>Faire réaliser l'action par le bon profil</td>
+<td>Administrateur</td>
+</tr>
+</tbody>
+</table>
+<h2>7. Glossaire</h2>
+<table>
+<thead>
+<tr>
+<th>Terme</th>
+<th>Définition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Devis</strong></td>
+<td>Proposition commerciale chiffrée, à valider puis convertir en commande.</td>
+</tr>
+<tr>
+<td><strong>Commande</strong></td>
+<td>Engagement client ; sa validation déclenche préparation et, en MTO, la fabrication.</td>
+</tr>
+<tr>
+<td><strong>OF (Ordre de fabrication)</strong></td>
+<td>Document pilotant la production : quantités, plan de coupe, matière, contrôles, coûts.</td>
+</tr>
+<tr>
+<td><strong>Make-to-Order (MTO)</strong></td>
+<td>Fabrication déclenchée par la commande client, sans stock préalable.</td>
+</tr>
+<tr>
+<td><strong>Bobine</strong></td>
+<td>Matière première en rouleau (couleur, épaisseur, largeur, poids), tracée par lot.</td>
+</tr>
+<tr>
+<td><strong>Nomenclature (BOM)</strong></td>
+<td>Recette de l'article : composants, kg par mètre, taux de perte, substituts.</td>
+</tr>
+<tr>
+<td><strong>Gamme</strong></td>
+<td>Suite d'opérations de fabrication avec postes de charge et temps.</td>
+</tr>
+<tr>
+<td><strong>Mètre linéaire (ml)</strong></td>
+<td>Unité de vente de la tôle bac (longueur produite/vendue).</td>
+</tr>
+<tr>
+<td><strong>Produit fini (PF)</strong></td>
+<td>Article fabriqué prêt à livrer, stocké au dépôt PF.</td>
+</tr>
+<tr>
+<td><strong>Chute</strong></td>
+<td>Reste de matière ; « réutilisable » (revalorisable) ou non.</td>
+</tr>
+<tr>
+<td><strong>Rebut</strong></td>
+<td>Production non conforme éliminée, valorisée en perte.</td>
+</tr>
+<tr>
+<td><strong>Contrôle qualité</strong></td>
+<td>Vérification (épaisseur, longueur, couleur, visuel…) conditionnant la libération.</td>
+</tr>
+<tr>
+<td><strong>BP / BL</strong></td>
+<td>Bon de préparation (préparation + chargement) / Bon de livraison (sortie de stock, remise client).</td>
+</tr>
+<tr>
+<td><strong>Facture</strong></td>
+<td>Pièce de vente comptabilisée (411/70x/4431), porteuse de l'échéance.</td>
+</tr>
+<tr>
+<td><strong>Encaissement</strong></td>
+<td>Règlement client (banque/caisse/mobile money) enregistré en trésorerie.</td>
+</tr>
+<tr>
+<td><strong>Imputation</strong></td>
+<td>Affectation d'un encaissement à une ou plusieurs factures.</td>
+</tr>
+<tr>
+<td><strong>Lettrage</strong></td>
+<td>Rapprochement des lignes 411 facture/règlement par une lettre commune.</td>
+</tr>
+<tr>
+<td><strong>Encours</strong></td>
+<td>Total dû par le client (factures non soldées).</td>
+</tr>
+<tr>
+<td><strong>Plafond de crédit</strong></td>
+<td>Encours maximal autorisé ; au-delà, commande bloquée.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Pied de page : ERP A3/IBOA — Guide cycle Vente &amp; Fabrication v1.0 — OA METAL INDUSTRIE — Document interne.</em></p></body></html>

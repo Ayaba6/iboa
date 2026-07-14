@@ -1,0 +1,485 @@
+<html><head><meta charset='utf-8'><style>body{font-family:DejaVu Sans,Arial,sans-serif;font-size:9.5pt;color:#111}h1{font-size:15pt;border-bottom:2px solid #14532d;color:#14532d}h2{font-size:12pt;color:#14532d;margin-top:14px}h3{font-size:10.5pt}table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid #999;padding:3px 5px;font-size:8.5pt;text-align:left}th{background:#eef5f0}blockquote{border-left:3px solid #14532d;margin:6px 0;padding-left:8px;font-style:italic}</style></head><body><h1>RAPPORT DE TEST FONCTIONNEL — CYCLE DE VENTE ET DE FABRICATION MAKE-TO-ORDER</h1>
+<p><strong>ERP A3/IBOA — OA METAL INDUSTRIE</strong>
+Version du document : 1.0 · Date : 14/07/2026 · Auteur : Cellule Test ERP (assistée) · Document interne</p>
+<hr />
+<h2>1. Résumé exécutif</h2>
+<p>Le scénario complet de fabrication à la commande (Make-to-Order) d'une tôle bac prélaquée beige 27/100 — du devis à l'encaissement intégral — a été <strong>exécuté réellement dans l'application</strong>, avec vérification en base de données après chaque étape et rotation des profils utilisateurs (commercial, directeur, chef de production, directeur d'usine, DAF, magasinier, comptable).</p>
+<p><strong>Décision finale : TEST RÉUSSI AVEC RÉSERVES.</strong>
+Le parcours nominal fonctionne de bout en bout : tous les documents sont générés, liés, aux bons montants (400 000 HT / 72 000 TVA / 472 000 TTC), les stocks matière et produit fini sont mouvementés correctement, les écritures comptables SYSCOHADA sont équilibrées, le compte client est lettré et la facture réglée est verrouillée. Neuf anomalies ont été relevées (1 majeure, 3 moyennes, 5 mineures/informatives) — voir §18.</p>
+<h2>2. Objectif du test</h2>
+<ol>
+<li>Vérifier l'exécution réelle du processus métier Devis → Validation → Commande → Contrôle crédit → OF → Réservation matière → Production → Qualité → Entrée stock → Clôture OF → Préparation → BL → Facture → Encaissement → Lettrage.</li>
+<li>Contrôler les effets de chaque étape dans les modules liés (stock, comptabilité, trésorerie, crédit client).</li>
+<li>Alimenter le manuel d'utilisation (document joint).</li>
+</ol>
+<h2>3. Périmètre testé</h2>
+<p>Modules : Ventes (devis, commandes, BP, BL, factures), Production (OF, consommation bobine, déclaration, chutes, qualité, clôture), Stock (MP, PF, mouvements, réservations), Comptabilité (écritures, lettrage), Trésorerie (encaissement), Gestion (client, crédit, dossier client). Environnement : local (Laragon), société <strong>OA METAL INDUSTRIE</strong>, base réelle avec <strong>données de test exclusivement identifiées « TEST GUIDE »</strong>.</p>
+<h2>4. Données utilisées</h2>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client</td>
+<td>CLIENT TEST GUIDE SARL (id 16) — actif, crédit, plafond 10 000 000 F, encours initial 0, virement, 30 jours</td>
+</tr>
+<tr>
+<td>Produit</td>
+<td>TOLE BAC PRELAQUEE BEIGE 27/100 4 ONDES [TEST GUIDE] (id 28) — fabriqué, <strong>MTO</strong>, unité ml, 4 000 F/ml</td>
+</tr>
+<tr>
+<td>Nomenclature</td>
+<td>NOM-TEST-GUIDE (BOM 9) — bobine beige 27/100, 1,7513 kg/m, taux de perte 3,5 %</td>
+</tr>
+<tr>
+<td>Bobine</td>
+<td><strong>BOB-TEST-GUIDE-001</strong> / lot <strong>LOT-TEST-GUIDE-001</strong> — beige, 0,27 mm, larg. 1 000 mm, 500 kg, 850 F/kg, fournisseur Métal Bobines Sahel, dépôt MP</td>
+</tr>
+<tr>
+<td>Commande</td>
+<td>100 mètres linéaires (= 20 feuilles × 5 m), 4 000 F/ml, TVA 18 %</td>
+</tr>
+<tr>
+<td>Montants attendus</td>
+<td>HT 400 000 · TVA 72 000 · TTC 472 000 F</td>
+</tr>
+</tbody>
+</table>
+<h2>5. Utilisateurs et rôles (séparation des responsabilités)</h2>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Utilisateur</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Devis (création, soumission), conversion commande</td>
+<td>Aminata Sawadogo — commercial@iboa.bf</td>
+<td>commercial</td>
+</tr>
+<tr>
+<td>Validation devis + commande, création BL, génération facture</td>
+<td>Moussa Kaboré — directeur@iboa.bf</td>
+<td>directeur</td>
+</tr>
+<tr>
+<td>Soumission OF, validation Responsable Prod., lancement, exécution, QC, clôture</td>
+<td>chef.production@iboa.bf</td>
+<td>chef_production</td>
+</tr>
+<tr>
+<td>Validation Chef Atelier de l'OF</td>
+<td>directeur.usine@iboa.bf</td>
+<td>directeur_usine</td>
+</tr>
+<tr>
+<td>Autorisation financière de l'OF</td>
+<td>daf@iboa.bf</td>
+<td>daf</td>
+</tr>
+<tr>
+<td>Chargement bon de préparation, validation BL</td>
+<td>magasinier@iboa.bf</td>
+<td>magasinier</td>
+</tr>
+<tr>
+<td>Validation facture, encaissement</td>
+<td>comptable@iboa.bf</td>
+<td>comptable</td>
+</tr>
+</tbody>
+</table>
+<p>Aucune étape n'a été réalisée avec le compte administrateur.</p>
+<h2>6. Chronologie du test (14/07/2026)</h2>
+<table>
+<thead>
+<tr>
+<th>Heure</th>
+<th>Événement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15:20</td>
+<td>Création devis DEV-2026-00036 (commercial)</td>
+</tr>
+<tr>
+<td>15:22</td>
+<td>Soumission à validation (+1 notification au valideur)</td>
+</tr>
+<tr>
+<td>15:23</td>
+<td>Validation du devis (directeur) puis conversion → CMD-2026-046</td>
+</tr>
+<tr>
+<td>15:24–15:25</td>
+<td>Soumission commande (contrôle crédit passé) puis validation → <strong>confirmée</strong> ; <strong>OF-2026-0151 généré automatiquement</strong> (MTO, stock PF = 0)</td>
+</tr>
+<tr>
+<td>15:27–15:29</td>
+<td>Allocation matière ; circuit OF : soumission → validation Chef Atelier → validation Responsable Production</td>
+</tr>
+<tr>
+<td>15:31</td>
+<td><strong>Autorisation financière DAF : approuvée</strong> (client dans son plafond : 472 000 / 10 000 000)</td>
+</tr>
+<tr>
+<td>15:33</td>
+<td>Lancement + démarrage OF (<strong>en cours</strong>)</td>
+</tr>
+<tr>
+<td>15:36</td>
+<td>Consommation bobine 182 kg / 101 m ; déclaration 100 ml (lot LOT-PF-TEST-GUIDE-001) ; chute réutilisable 0,9 kg ; rebut 1,8 kg</td>
+</tr>
+<tr>
+<td>15:40</td>
+<td>Contrôle qualité <strong>conforme</strong> (épaisseur, longueur, couleur, visuel) ; visa chef sur la déclaration ; <strong>clôture OF (terminé)</strong> ; lot auto LOT-OF-2026-0151-01 ; réservation PF 100 ml pour le client</td>
+</tr>
+<tr>
+<td>15:43</td>
+<td>Bon de préparation BP-2026-0028 (auto) → <strong>chargé</strong> (magasinier)</td>
+</tr>
+<tr>
+<td>15:45</td>
+<td>BL-2026-025 créé puis <strong>validé</strong> → sortie stock −100 ; commande <strong>livrée</strong></td>
+</tr>
+<tr>
+<td>15:47</td>
+<td>Facture FA-2026-018 générée depuis le BL ; tentative de double génération <strong>refusée</strong></td>
+</tr>
+<tr>
+<td>15:48</td>
+<td>Validation facture (comptable) → écriture de vente comptabilisée</td>
+</tr>
+<tr>
+<td>15:50</td>
+<td>Encaissement ENC-2026-012 — virement VIR-TEST-GUIDE-001, 472 000 F, imputation intégrale → facture <strong>payée</strong>, compte client <strong>lettré</strong>, facture <strong>verrouillée</strong> (re-validation refusée 403)</td>
+</tr>
+</tbody>
+</table>
+<h2>7–8. Documents générés et numéros</h2>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Numéro</th>
+<th>Statut final</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Devis</td>
+<td><strong>DEV-2026-00036</strong></td>
+<td>Converti</td>
+</tr>
+<tr>
+<td>Commande client</td>
+<td><strong>CMD-2026-046</strong></td>
+<td>Facturée (après livrée)</td>
+</tr>
+<tr>
+<td>Ordre de fabrication</td>
+<td><strong>OF-2026-0151</strong></td>
+<td>Terminé</td>
+</tr>
+<tr>
+<td>Bobine consommée</td>
+<td><strong>BOB-TEST-GUIDE-001</strong> (lot LOT-TEST-GUIDE-001)</td>
+<td>En production (reste 318 kg)</td>
+</tr>
+<tr>
+<td>Lot produit fini</td>
+<td><strong>LOT-PF-TEST-GUIDE-001</strong> + lot fabrication auto <strong>LOT-OF-2026-0151-01</strong></td>
+<td>Conforme</td>
+</tr>
+<tr>
+<td>Bon de préparation</td>
+<td><strong>BP-2026-0028</strong></td>
+<td>Chargé</td>
+</tr>
+<tr>
+<td>Bon de livraison</td>
+<td><strong>BL-2026-025</strong></td>
+<td>Livré (validé)</td>
+</tr>
+<tr>
+<td>Facture</td>
+<td><strong>FA-2026-018</strong></td>
+<td>Payée (verrouillée)</td>
+</tr>
+<tr>
+<td>Encaissement</td>
+<td><strong>ENC-2026-012</strong> (réf. VIR-TEST-GUIDE-001)</td>
+<td>Imputé</td>
+</tr>
+<tr>
+<td>Écritures</td>
+<td>FA-2026-018 · ENC-2026-012 · OF-2026-0151-CONS · OF-2026-0151-PROD</td>
+<td>Équilibrées</td>
+</tr>
+</tbody>
+</table>
+<h2>9–10. Résultats obtenus et montants vérifiés</h2>
+<ul>
+<li>Devis : HT <strong>400 000</strong> / TVA <strong>72 000</strong> / TTC <strong>472 000</strong> — calcul automatique exact, PU 4 000 repris du catalogue, numérotation automatique.</li>
+<li>Reprise à l'identique devis → commande → BL → facture (mêmes montants, même client, mêmes conditions 30 j / virement).</li>
+<li>Échéance facture : 13/08/2026 (30 jours) ✔.</li>
+<li>Encaissement : 472 000 imputés, solde facture <strong>0</strong>, encours client <strong>0</strong>, solde banque 1 091 500 → <strong>1 563 500</strong> (+472 000) ✔.</li>
+</ul>
+<h2>11. Mouvements de stock (chaîne complète observée)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Type</th>
+<th>Article</th>
+<th>Dépôt</th>
+<th>Qté</th>
+<th>Référence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>24</td>
+<td>Entrée</td>
+<td>Bobine (MP)</td>
+<td>DEP-MP</td>
+<td>+500 kg</td>
+<td>Approvisionnement bobine test</td>
+</tr>
+<tr>
+<td>29</td>
+<td>Entrée</td>
+<td>Tôle bac PF</td>
+<td>DEP-PF</td>
+<td><strong>+100 ml</strong></td>
+<td>Production OF-2026-0151</td>
+</tr>
+<tr>
+<td>30</td>
+<td>Sortie</td>
+<td>Bobine (MP)</td>
+<td>DEP-MP</td>
+<td>−175,13 kg</td>
+<td>Consommation composant (backflush BOM)</td>
+</tr>
+<tr>
+<td>31</td>
+<td>Sortie</td>
+<td>Tôle bac PF</td>
+<td>DEP-PF</td>
+<td><strong>−100 ml</strong></td>
+<td>BL-2026-025</td>
+</tr>
+</tbody>
+</table>
+<p>Les deux opérations distinctes exigées — <strong>entrée production +100</strong> puis <strong>sortie livraison −100</strong> — sont présentes ; le stock PF termine à 0 et la réservation client est soldée. Une correction en cours de test (annulation/redéclaration) a été <strong>auto-contre-passée proprement</strong> par le système (mouvements 25–28).</p>
+<h2>12. Consommation de bobine (traçabilité)</h2>
+<p>BOB-TEST-GUIDE-001 (lot LOT-TEST-GUIDE-001, beige 0,27 × 1 000 mm, fournisseur Métal Bobines Sahel) : poids initial 500 kg → consommé <strong>182 kg / 101 m</strong> (besoin théorique 181,3 kg = 100 × 1,7513 × 1,035) → <strong>reste 318 kg</strong>, statut « en production ». Chaîne : Client → CMD-2026-046 → OF-2026-0151 → BOB-TEST-GUIDE-001 → Métal Bobines Sahel (visible dans l'onglet <strong>Traçabilité</strong> de la fiche OF).</p>
+<h2>13. Production réalisée</h2>
+<p>Prévu 100 ml — produit <strong>100 ml conformes</strong> (20 feuilles × 5 m, documentées en notes et lignes de coupe de l'OF) ; chute réutilisable 0,9 kg (765 F) ; rebut 1,8 kg (1 530 F) ; rendement matière ≈ <strong>98,5 %</strong>.</p>
+<h2>14. Contrôle qualité</h2>
+<p>Verdict <strong>conforme</strong> — critères épaisseur / longueur / couleur / visuel tous OK, horodaté, motif détaillé saisi. La livraison est bloquée par le système en cas de non-conformité (garde-fou vérifié par les tests automatisés <code>ProductionDegradedPathTest</code>).</p>
+<h2>15. Coût de revient de l'OF</h2>
+<p>Coût total calculé : <strong>323 560 F</strong> (matière 303 560, MO/machine 20 000). ⚠ Voir anomalie n°4 : la composante matière additionne la consommation bobine (154 700) <strong>et</strong> le backflush BOM (148 860) qui tracent la même matière → coût matière surévalué (~×2).</p>
+<h2>16. Écritures comptables (toutes équilibrées débit = crédit)</h2>
+<p><strong>Facture FA-2026-018</strong> — journal des ventes :</p>
+<table>
+<thead>
+<tr>
+<th>Compte</th>
+<th>Libellé</th>
+<th>Débit</th>
+<th>Crédit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>411</td>
+<td>Clients</td>
+<td>472 000</td>
+<td></td>
+</tr>
+<tr>
+<td>7011</td>
+<td>Ventes de marchandises</td>
+<td></td>
+<td>400 000</td>
+</tr>
+<tr>
+<td>4431</td>
+<td>TVA facturée sur ventes</td>
+<td></td>
+<td>72 000</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Encaissement ENC-2026-012</strong> — banque :</p>
+<table>
+<thead>
+<tr>
+<th>Compte</th>
+<th>Libellé</th>
+<th>Débit</th>
+<th>Crédit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>521</td>
+<td>Banque principale</td>
+<td>472 000</td>
+<td></td>
+</tr>
+<tr>
+<td>411</td>
+<td>Clients</td>
+<td></td>
+<td>472 000</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Production</strong> : OF-2026-0151-CONS (154 700 / 154 700) et OF-2026-0151-PROD (160 000 / 160 000).
+<strong>Lettrage</strong> : les deux lignes 411 (facture + règlement) portent la lettre <strong>« D »</strong> — compte client lettré ✔.</p>
+<h2>17. Encaissement</h2>
+<p>ENC-2026-012 · virement bancaire · Compte Coris Bank · 472 000 F · référence <strong>VIR-TEST-GUIDE-001</strong> · imputation intégrale sur FA-2026-018 · solde restant 0 · facture <strong>Payée</strong> et <strong>verrouillée</strong> (toute re-validation renvoie 403).</p>
+<h2>18–19. Anomalies détectées</h2>
+<table>
+<thead>
+<tr>
+<th>N°</th>
+<th>Module</th>
+<th>Étape</th>
+<th>Anomalie</th>
+<th>Attendu</th>
+<th>Obtenu</th>
+<th>Gravité</th>
+<th>Recommandation</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>Production/Coût</td>
+<td>Clôture OF</td>
+<td>Coût matière = conso bobine <strong>+</strong> backflush BOM de la même matière (154 700 + 148 860)</td>
+<td>Matière comptée une fois (~154 700)</td>
+<td>303 560</td>
+<td><strong>Majeure</strong></td>
+<td>Ne compter qu'un des deux flux quand bobine et composant BOM tracent la même matière</td>
+<td>À corriger</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Production/Droits</td>
+<td>Déclaration</td>
+<td>L'opérateur (production.declare) reçoit <strong>403</strong> sur consommation/déclaration/chutes (routes exigent production.update)</td>
+<td>Opérateur déclare sa production</td>
+<td>Seul chef production/atelier peut</td>
+<td>Moyenne</td>
+<td>Ouvrir consume/output/waste à production.declare</td>
+<td>À corriger</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>Qualité/Droits</td>
+<td>Contrôle qualité OF</td>
+<td>Le responsable qualité reçoit <strong>403</strong> sur le QC de l'OF (exige production.update)</td>
+<td>Qualité saisit le contrôle</td>
+<td>Fait par la production</td>
+<td>Moyenne</td>
+<td>Permission qualité dédiée sur ProductionQualityController</td>
+<td>À corriger</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>Stock</td>
+<td>Réservation matière</td>
+<td>L'« allocation matière » est un statut logique ; aucun poids de bobine n'est réservé fermement avant lancement (pas de blocage inter-OF)</td>
+<td>Réservation dure de la matière</td>
+<td>Statut seul</td>
+<td>Moyenne</td>
+<td>Réservation ferme du poids bobine à l'allocation</td>
+<td>À évaluer</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>Production</td>
+<td>Déclaration</td>
+<td>Pas de double unité feuilles + ml sur la déclaration : saisie en unité de vente (ml), les feuilles passent en notes/lignes de coupe</td>
+<td>Saisie 20 feuilles × 5 m native</td>
+<td>quantity=100 ml + note</td>
+<td>Mineure</td>
+<td>Champ « nb feuilles × longueur » sur la déclaration alimentant quantité et total_meters</td>
+<td>À évaluer</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>Audit</td>
+<td>OF</td>
+<td>Les transitions de statut OF ne sont pas journalisées dans audit_logs (devis/commande/facture le sont)</td>
+<td>Historique OF dans l'audit</td>
+<td>Workflow + notifications seulement</td>
+<td>Mineure</td>
+<td>Ajouter l'observer d'audit sur ProductionOrder</td>
+<td>À évaluer</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>Ventes</td>
+<td>Envoi facture</td>
+<td>Envoi e-mail non testé (pas de SMTP local) ; le statut « Envoyée » est posé à la validation</td>
+<td>Envoi + accusé</td>
+<td>Statut sans envoi réel</td>
+<td>Mineure</td>
+<td>Tester en environnement doté d'un SMTP</td>
+<td>Hors périmètre local</td>
+</tr>
+<tr>
+<td>A8</td>
+<td>Ventes/Droits</td>
+<td>Création BL/facture</td>
+<td>Créer le BL et générer la facture depuis le BL exigent orders.edit_validated / policy update (direction), pas le commercial ni le magasinier ni le comptable</td>
+<td>Rôles métier dédiés</td>
+<td>Direction requise</td>
+<td>Info</td>
+<td>Confirmer la répartition voulue ou l'assouplir</td>
+<td>À arbitrer</td>
+</tr>
+<tr>
+<td>A9</td>
+<td>Infra test</td>
+<td>Devis</td>
+<td>Une expiration de session (proxy navigateur) a fait échouer la 1ʳᵉ soumission (aucun enregistrement créé — echec propre)</td>
+<td>—</td>
+<td>Reconnexion puis succès</td>
+<td>Info</td>
+<td>—</td>
+<td>Clos</td>
+</tr>
+</tbody>
+</table>
+<h2>20. Recommandations</h2>
+<ol>
+<li>Corriger A1 (coût de revient) en priorité — impact direct sur la marge industrielle.</li>
+<li>Revoir la matrice des droits d'exécution atelier et de qualité (A2, A3).</li>
+<li>Étudier la réservation ferme de bobine (A4) et la saisie feuilles × longueur (A5).</li>
+<li>Étendre l'audit aux OF (A6) et tester l'envoi e-mail en pré-production (A7).</li>
+</ol>
+<h2>21. Conclusion</h2>
+<p>Le cycle Make-to-Order complet est <strong>opérationnel de bout en bout</strong> dans A3/IBOA pour OA METAL INDUSTRIE : chaîne documentaire liée, quantités et montants exacts, TVA correcte, stock matière décrémenté, produit fini entré puis sorti, bobine traçable jusqu'au fournisseur, contrôle qualité bloquant, chutes et rebuts enregistrés, OF clôturé avec coût, BL décrémentant le stock, facture conforme au BL, paiement soldant la facture, encours client à jour, écritures équilibrées, lettrage automatique, historique horodaté et facture réglée verrouillée. Les réserves listées ne bloquent pas l'exploitation du scénario nominal mais doivent être traitées avant une mise en production complète (notamment A1).</p>
+<h2>22. Décision finale</h2>
+<blockquote>
+<p><strong>TEST RÉUSSI AVEC RÉSERVES</strong> (1 anomalie majeure — coût matière ; 3 moyennes — droits atelier/qualité et réservation matière ; 5 mineures/informatives).</p>
+</blockquote>
+<hr />
+<h3>Note sur les captures d'écran</h3>
+<p>Le test a été piloté dans le navigateur intégré ; les vérifications visuelles ont été faites en séance mais <strong>l'environnement d'exécution ne permet pas d'exporter les captures en fichiers image</strong>. Le guide utilisateur référence des emplacements de capture numérotés <code>[Capture NN]</code> avec la description exacte de l'écran à photographier lors d'une passe de documentation sur poste standard.</p></body></html>
