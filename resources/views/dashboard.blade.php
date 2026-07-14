@@ -328,7 +328,11 @@
             window.__turboCleanups = window.__turboCleanups || [];
             window.__turboCleanups.push(() => charts.forEach(c => { try { c.destroy(); } catch (e) {} }));
         }
-        if (window.ApexCharts) { run(); } else { document.addEventListener('turbo:load', run, { once: true }); }
+        // [FIX charts vides] File d'attente canonique de app.js : exécute run()
+        // dès qu'ApexCharts est bundlé, que le script inline s'exécute avant ou
+        // après le module Vite (l'ancien couple ApexCharts/turbo:load ratait le
+        // hard-load quand le module n'était pas encore évalué).
+        (window.__pendingApex = window.__pendingApex || []).push(run);
     }());
     </script>
 

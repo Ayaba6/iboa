@@ -227,13 +227,10 @@ window.caChart = function (data7, labels7, data30, labels30, monthly) {
         window.__turboCleanups.push(() => charts.forEach(c => { try { c.destroy(); } catch(e) {} }));
     }
 
-    // Hard load : app.js (module ES) n'a pas encore tourné → attendre turbo:load.
-    // Turbo navigation : window.ApexCharts est déjà défini → exécuter immédiatement.
-    if (window.ApexCharts) {
-        run();
-    } else {
-        document.addEventListener('turbo:load', run, { once: true });
-    }
+    // [FIX charts vides] File d'attente canonique de app.js (__pendingApex) :
+    // exécute run() dès qu'ApexCharts est bundlé — hard-load comme navigation Turbo
+    // (l'ancien couple window.ApexCharts/turbo:load ratait certains hard-loads).
+    (window.__pendingApex = window.__pendingApex || []).push(run);
 
 }()); // fin IIFE sparklines
 
