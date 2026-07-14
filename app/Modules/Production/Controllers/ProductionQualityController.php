@@ -13,7 +13,10 @@ class ProductionQualityController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:production.update');
+        // [FIX A3 — rapport de test MTO] L'enregistrement du contrôle qualité de l'OF
+        // est ouvert au Responsable Qualité (quality.manage) en plus de la production.
+        $this->middleware('permission:production.update|quality.manage')->only('store');
+        $this->middleware('permission:production.update')->except('store');
     }
 
     public function store(Request $request, ProductionOrder $order): RedirectResponse

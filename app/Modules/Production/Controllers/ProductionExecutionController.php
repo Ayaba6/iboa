@@ -30,7 +30,13 @@ class ProductionExecutionController extends Controller
         // (production.declare / quality.manage) — Chef Atelier et Responsable
         // Qualité n'ont pas production.update et ne doivent pas en avoir besoin
         // pour valider un rebut.
-        $this->middleware('permission:production.update')->except(['validateChef', 'validateQuality', 'validateOutput']);
+        // [FIX A2 — rapport de test MTO] La saisie atelier (consommation, déclaration,
+        // chutes, sous-produits) est ouverte à l'opérateur (production.declare) EN PLUS
+        // de l'encadrement ; corrections/annulations restent réservées à production.update.
+        $this->middleware('permission:production.declare|production.update')
+            ->only(['consume', 'output', 'waste', 'byproduct']);
+        $this->middleware('permission:production.update')
+            ->except(['consume', 'output', 'waste', 'byproduct', 'validateChef', 'validateQuality', 'validateOutput']);
         // [CDC §13.3] Visa chef d'équipe sur les déclarations de production.
         $this->middleware('permission:production.validate_declaration')->only('validateOutput');
     }

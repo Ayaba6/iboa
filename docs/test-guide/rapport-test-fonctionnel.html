@@ -386,7 +386,7 @@ Le parcours nominal fonctionne de bout en bout : tous les documents sont génér
 <td>Seul chef production/atelier peut</td>
 <td>Moyenne</td>
 <td>Ouvrir consume/output/waste à production.declare</td>
-<td>À corriger</td>
+<td><strong>CORRIGÉE le 14/07/2026</strong> — saisie atelier ouverte à production.declare (corrections/annulations restent à production.update) ; test <code>ProductionExecutionRightsTest</code></td>
 </tr>
 <tr>
 <td>A3</td>
@@ -397,7 +397,7 @@ Le parcours nominal fonctionne de bout en bout : tous les documents sont génér
 <td>Fait par la production</td>
 <td>Moyenne</td>
 <td>Permission qualité dédiée sur ProductionQualityController</td>
-<td>À corriger</td>
+<td><strong>CORRIGÉE le 14/07/2026</strong> — le contrôle qualité de l'OF accepte quality.manage en plus de production.update</td>
 </tr>
 <tr>
 <td>A4</td>
@@ -408,7 +408,7 @@ Le parcours nominal fonctionne de bout en bout : tous les documents sont génér
 <td>Statut seul</td>
 <td>Moyenne</td>
 <td>Réservation ferme du poids bobine à l'allocation</td>
-<td>À évaluer</td>
+<td><strong>CORRIGÉE le 14/07/2026</strong> — l'allocation pose une réservation ferme des composants BOM suivis en stock (libérée au backflush, à la clôture et à l'annulation) ; les bobines hors product_stocks restent contrôlées par materialShortages</td>
 </tr>
 <tr>
 <td>A5</td>

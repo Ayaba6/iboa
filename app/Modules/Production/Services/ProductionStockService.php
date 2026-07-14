@@ -262,6 +262,11 @@ class ProductionStockService
                 continue; // composant non suivi en product_stocks (bobine…) — ignoré
             }
 
+            // [FIX A4] Libérer la réservation matière de CET OF pour ce composant
+            // AVANT la sortie : sinon sa propre réservation réduit le disponible
+            // (qté − réservé) et bloque son propre backflush quand le stock est juste.
+            app(ReservationService::class)->releaseMaterialReservations($order, (int) $product->id);
+
             // [Coût de revient] Valoriser la sortie au CMP courant du composant, sinon
             // le mouvement porte total_cost=0 et le coût matière de l'OF est sous-évalué.
             $unitCost = (float) \App\Models\ProductStock::where('product_id', $product->id)

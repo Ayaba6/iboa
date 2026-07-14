@@ -1607,23 +1607,18 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     Route::post('orders/{order}/modification-approve-dg', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'modificationDgApprove'])->name('orders.modification-approve-dg');
     Route::post('orders/{order}/modification-reject', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'modificationReject'])->name('orders.modification-reject');
 
-    // Exécution : consommation matière, sorties PF, chutes
-    Route::post('orders/{order}/consume', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'consume'])->name('orders.consume');
+    // Exécution — corrections/annulations et visa chef : encadrement (production.update)
     Route::delete('consumptions/{consumption}', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'destroyConsumption'])->name('consumptions.destroy');
-    Route::post('orders/{order}/output', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'output'])->name('orders.output');
     Route::delete('outputs/{output}', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'destroyOutput'])->name('outputs.destroy');
     // [CDC §13.3] Visa chef d'équipe sur déclaration de production
     Route::post('outputs/{output}/validate', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'validateOutput'])->name('outputs.validate');
-    Route::post('orders/{order}/waste', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'waste'])->name('orders.waste');
-    Route::post('orders/{order}/byproduct', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'byproduct'])->name('orders.byproduct');
     Route::delete('wastes/{waste}', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'destroyWaste'])->name('wastes.destroy');
     // [§13.9 CDC] Validation rebuts : Chef Atelier → Responsable Qualité → GL
     Route::post('wastes/{waste}/validate-chef',    [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'validateChef'])->middleware('permission:production.declare')->name('wastes.validate-chef');
     Route::post('wastes/{waste}/validate-quality', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'validateQuality'])->middleware('permission:quality.manage')->name('wastes.validate-quality');
 
-    // Coût de revient + contrôle qualité
+    // Coût de revient
     Route::post('orders/{order}/cost', [\App\Modules\Production\Controllers\ProductionCostController::class, 'compute'])->name('orders.cost');
-    Route::post('orders/{order}/quality', [\App\Modules\Production\Controllers\ProductionQualityController::class, 'store'])->name('orders.quality');
     Route::delete('quality/{qualityControl}', [\App\Modules\Production\Controllers\ProductionQualityController::class, 'destroy'])->name('quality.destroy');
 
     Route::resource('orders', \App\Modules\Production\Controllers\ProductionOrderController::class);
@@ -1640,6 +1635,24 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     Route::post('operations/{operation}/finish', [\App\Modules\Production\Controllers\WorkOrderController::class, 'finish'])->name('operations.finish');
     Route::resource('coils', \App\Modules\Production\Controllers\CoilController::class);
     Route::resource('bom', \App\Modules\Production\Controllers\BillOfMaterialController::class)->parameter('bom', 'bom');
+});
+
+// [FIX A2 — rapport de test MTO] Saisie atelier ouverte à l'opérateur
+// (production.declare) EN PLUS de l'encadrement (production.update) :
+// consommation matière, déclaration de production, chutes et sous-produits.
+Route::middleware(['auth', 'verified', 'permission:production.declare|production.update'])
+    ->prefix('production')->name('production.')->group(function () {
+    Route::post('orders/{order}/consume', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'consume'])->name('orders.consume');
+    Route::post('orders/{order}/output', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'output'])->name('orders.output');
+    Route::post('orders/{order}/waste', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'waste'])->name('orders.waste');
+    Route::post('orders/{order}/byproduct', [\App\Modules\Production\Controllers\ProductionExecutionController::class, 'byproduct'])->name('orders.byproduct');
+});
+
+// [FIX A3 — rapport de test MTO] Contrôle qualité de l'OF accessible au
+// responsable qualité (quality.manage) en plus de la production.
+Route::middleware(['auth', 'verified', 'permission:production.update|quality.manage'])
+    ->prefix('production')->name('production.')->group(function () {
+    Route::post('orders/{order}/quality', [\App\Modules\Production\Controllers\ProductionQualityController::class, 'store'])->name('orders.quality');
 });
 
 // ═══ Direction — tableau de bord exécutif (cross-module) ═══

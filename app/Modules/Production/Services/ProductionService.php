@@ -170,6 +170,12 @@ class ProductionService
     {
         $this->assertStatus($order, 'brouillon');
         $order->update(['status' => 'matiere_allouee']);
+
+        // [FIX A4 — rapport de test MTO] Réservation FERME de la matière (composants
+        // BOM suivis en product_stocks) : bloque le disponible pour les autres OF
+        // jusqu'au backflush de la déclaration, à la clôture ou à l'annulation.
+        // Best-effort : un composant sans stock reste signalé par materialShortages.
+        app(ReservationService::class)->reserveMaterialsForOrder($order->fresh());
     }
 
     /**
@@ -549,6 +555,10 @@ class ProductionService
         }
 
         $order->update(['status' => 'termine', 'finished_at' => now()]);
+
+        // [FIX A4] Libère le résidu de réservation matière (composants non ou
+        // partiellement backflushés) — la matière non consommée redevient disponible.
+        app(ReservationService::class)->releaseMaterialReservations($order);
 
         // Pont comptable SYSCOHADA (no-op si désactivé — OFF par défaut)
         $this->accounting->postForOrder($order);

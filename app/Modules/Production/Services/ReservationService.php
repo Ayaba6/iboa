@@ -114,6 +114,95 @@ class ReservationService
         return $totalReserved;
     }
 
+    /**
+     * [FIX A4 — rapport de test MTO] Réservation FERME de la matière première à
+     * l'allocation de l'OF : pour chaque composant de la nomenclature suivi en
+     * product_stocks, réserve min(besoin théorique, disponible) au dépôt de sortie.
+     * Le besoin = quantité demandée × qté/m × (1 + taux de perte). La réservation
+     * (production_order_id, sans order_id → aucune interaction avec les réservations
+     * de vente) bloque la même matière pour un autre OF ; elle est libérée au
+     * backflush de la déclaration, à la clôture ou à l'annulation de l'OF.
+     * Retourne la quantité totale réservée. Idempotent par produit/OF.
+     */
+    public function reserveMaterialsForOrder(ProductionOrder $order): float
+    {
+        $order->loadMissing('billOfMaterial.lines.product');
+        $bom = $order->billOfMaterial;
+        if (! $bom) {
+            return 0.0;
+        }
+
+        $qty = (float) $order->quantity_requested;
+        $totalReserved = 0.0;
+
+        DB::transaction(function () use ($order, $bom, $qty, &$totalReserved) {
+            foreach ($bom->lines as $line) {
+                $product = $line->product;
+                $per     = (float) $line->quantity_per_meter;
+                if (! $product || $per <= 0 || $qty <= 0) {
+                    continue;
+                }
+
+                // Idempotence : matière déjà réservée pour ce produit sur cet OF.
+                if (StockReservation::where('production_order_id', $order->id)
+                    ->where('product_id', $product->id)
+                    ->where('status', 'reserved')->exists()) {
+                    continue;
+                }
+
+                $need = round($per * $qty * (1 + (float) ($line->waste_rate ?? 0) / 100), 4);
+
+                $stockQuery = ProductStock::where('product_id', $product->id)
+                    ->whereRaw('(quantity - reserved_quantity) > 0');
+                if ($line->depot_sortie_id) {
+                    $stockQuery->where('warehouse_id', $line->depot_sortie_id);
+                }
+                $stock = $stockQuery->orderByRaw('(quantity - reserved_quantity) DESC')->lockForUpdate()->first();
+                if (! $stock) {
+                    continue; // pas de stock suivi (ex. bobine hors product_stocks) — signalé par materialShortages
+                }
+
+                $avail = (float) $stock->quantity - (float) $stock->reserved_quantity;
+                $take  = min($need, $avail);
+                if ($take <= 0) {
+                    continue;
+                }
+
+                StockReservation::create([
+                    'company_id'          => $order->company_id,
+                    'production_order_id' => $order->id,
+                    'product_id'          => $product->id,
+                    'warehouse_id'        => $stock->warehouse_id,
+                    'quantity'            => $take,
+                    'status'              => 'reserved',
+                    'reserved_at'         => now(),
+                    'created_by'          => Auth::id(),
+                ]);
+                $stock->update(['reserved_quantity' => (float) $stock->reserved_quantity + $take]);
+                $totalReserved += $take;
+            }
+        });
+
+        return $totalReserved;
+    }
+
+    /**
+     * [FIX A4] Libère les réservations MATIÈRE actives d'un OF — toutes, ou celles
+     * d'un produit donné (appelé avant le backflush pour que la propre réservation
+     * de l'OF ne bloque pas sa sortie de composant).
+     */
+    public function releaseMaterialReservations(ProductionOrder $order, ?int $productId = null): int
+    {
+        return $this->releaseMany(
+            StockReservation::where('production_order_id', $order->id)
+                ->where('status', 'reserved')
+                ->when($productId, fn ($q) => $q->where('product_id', $productId))
+                // Jamais la réservation du produit fini (posée à la clôture pour le client).
+                ->when($order->product_id, fn ($q) => $q->where('product_id', '!=', $order->product_id))
+                ->get()
+        );
+    }
+
     /** Libère toutes les réservations actives d'une commande (annulation commande). */
     public function releaseForOrder(\App\Models\Order $order): int
     {
