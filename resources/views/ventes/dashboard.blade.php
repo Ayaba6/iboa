@@ -151,7 +151,7 @@
                     <tr>
                         <td class="px-3 py-2 text-gray-400 tabular-nums w-6">{{ $i + 1 }}</td>
                         <td class="px-2 py-2">{{ $c->name }}</td>
-                        <td class="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">{{ $fmt($c->total_ht) }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">{{ $fmt($c->total_ht) }}</td>
                     </tr>
                     @empty
                     <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
@@ -195,7 +195,7 @@
                     <tr>
                         <td class="px-3 py-2 text-gray-400 tabular-nums w-6">{{ $i + 1 }}</td>
                         <td class="px-2 py-2">{{ $p->name }}</td>
-                        <td class="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">{{ $fmt($p->total_ht) }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">{{ $fmt($p->total_ht) }}</td>
                     </tr>
                     @empty
                     <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
