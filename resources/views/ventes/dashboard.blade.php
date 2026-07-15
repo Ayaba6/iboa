@@ -140,7 +140,7 @@
             @if($caByFamily->isEmpty())
                 <div class="h-[240px] flex items-center justify-center text-gray-400 text-sm">Aucune vente.</div>
             @else
-                <div id="chart-famille" class="h-[240px]"></div>
+                <div id="chart-famille" class="min-h-[240px]"></div>
             @endif
         </div>
         <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
@@ -151,7 +151,7 @@
                     <tr>
                         <td class="px-3 py-2 text-gray-400 tabular-nums w-6">{{ $i + 1 }}</td>
                         <td class="px-2 py-2">{{ $c->name }}</td>
-                        <td class="px-3 py-2 text-right tabular-nums font-medium">{{ $fmt($c->total_ht) }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">{{ $fmt($c->total_ht) }}</td>
                     </tr>
                     @empty
                     <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
@@ -160,7 +160,7 @@
                 @if($topClients->isNotEmpty())
                 <tfoot><tr class="border-t-2 border-gray-200 bg-gray-50/60">
                     <td class="px-3 py-2 font-bold" colspan="2">Total</td>
-                    <td class="px-3 py-2 text-right tabular-nums font-bold">{{ $fmt($topClients->sum('total_ht')) }}</td>
+                    <td class="px-3 py-2 text-right tabular-nums font-bold whitespace-nowrap">{{ $fmt($topClients->sum('total_ht')) }}</td>
                 </tr></tfoot>
                 @endif
             </table>
@@ -169,21 +169,23 @@
 
     {{-- ── Rangée 2 : Statut · Échéance · Pipeline · Top articles ────────────── --}}
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {{-- [UI pro] Donuts : légende SOUS le graphique (position right dans une
+             colonne de 3/12 écrasait le donut à ~60px et tronquait la légende). --}}
         <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
             <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes par statut</h2>
             @if($ordersStatus->isEmpty())
-                <div class="h-[220px] flex items-center justify-center text-gray-400 text-sm">Aucune commande.</div>
+                <div class="h-[290px] flex items-center justify-center text-gray-400 text-sm">Aucune commande.</div>
             @else
-                <div id="chart-statut" class="h-[220px]"></div>
+                <div id="chart-statut" class="min-h-[290px]"></div>
             @endif
         </div>
         <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
             <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes à livrer par échéance</h2>
-            <div id="chart-echeance" class="h-[220px]"></div>
+            <div id="chart-echeance" class="min-h-[290px]"></div>
         </div>
         <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
             <h2 class="text-[13px] font-bold text-gray-800 mb-2">Devis par statut (pipeline)</h2>
-            <div id="chart-pipeline" class="h-[220px]"></div>
+            <div id="chart-pipeline" class="min-h-[290px]"></div>
         </div>
         <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
             <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Top 5 articles (CA HT)</h2></div>
@@ -193,7 +195,7 @@
                     <tr>
                         <td class="px-3 py-2 text-gray-400 tabular-nums w-6">{{ $i + 1 }}</td>
                         <td class="px-2 py-2">{{ $p->name }}</td>
-                        <td class="px-3 py-2 text-right tabular-nums font-medium">{{ $fmt($p->total_ht) }}</td>
+                        <td class="px-3 py-2 text-right tabular-nums font-medium whitespace-nowrap">{{ $fmt($p->total_ht) }}</td>
                     </tr>
                     @empty
                     <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
@@ -202,7 +204,7 @@
                 @if($topProducts->isNotEmpty())
                 <tfoot><tr class="border-t-2 border-gray-200 bg-gray-50/60">
                     <td class="px-3 py-2 font-bold" colspan="2">Total</td>
-                    <td class="px-3 py-2 text-right tabular-nums font-bold">{{ $fmt($topProducts->sum('total_ht')) }}</td>
+                    <td class="px-3 py-2 text-right tabular-nums font-bold whitespace-nowrap">{{ $fmt($topProducts->sum('total_ht')) }}</td>
                 </tr></tfoot>
                 @endif
             </table>
@@ -298,56 +300,51 @@
         chart: { type: 'donut', height: 240, fontFamily: 'inherit' },
         series: @json($caByFamily->pluck('ca')->map(fn($v) => (int) $v)),
         labels: @json($caByFamily->pluck('famille')),
-        colors: multi, legend: { position: 'right', fontSize: '11px' }, dataLabels: { enabled: true, formatter: v => Math.round(v) + ' %' },
-        plotOptions: { pie: { donut: { size: '62%' } } },
+        colors: multi,
+        legend: { position: 'bottom', horizontalAlign: 'left', fontSize: '11px', itemMargin: { horizontal: 8, vertical: 2 }, markers: { radius: 2 } },
+        dataLabels: { enabled: true, formatter: v => Math.round(v) + ' %' },
+        plotOptions: { pie: { donut: { size: '68%' } } },
     });
     @endif
 
-    @if($ordersStatus->isNotEmpty())
-    // Légende maquette : « Libellé   n (xx,x %) »
-    const stCounts = @json($ordersStatus->pluck('count'));
-    const stTotal  = stCounts.reduce((a, b) => a + b, 0) || 1;
-    mount('#chart-statut', {
-        chart: { type: 'donut', height: 220, fontFamily: 'inherit' },
-        series: stCounts,
-        labels: @json($ordersStatus->pluck('label')),
-        colors: multi, dataLabels: { enabled: false },
-        legend: {
-            position: 'right', fontSize: '11px',
-            formatter: (name, opts) => {
-                const v = opts.w.globals.series[opts.seriesIndex];
-                return name + '  ' + v + ' (' + (v / stTotal * 100).toFixed(2).replace('.', ',') + ' %)';
+    // [UI pro] Donut compact : légende en bas (droite = donut écrasé dans une
+    // colonne 3/12), segments à zéro masqués (le « 0 (0,00 %) » ×5 noyait le réel).
+    const donut = (sel, labels, counts, height) => {
+        const pairs = labels.map((l, i) => [l, Number(counts[i]) || 0]).filter(p => p[1] > 0);
+        if (!pairs.length) return;
+        const total = pairs.reduce((a, p) => a + p[1], 0);
+        mount(sel, {
+            chart: { type: 'donut', height: height, fontFamily: 'inherit' },
+            series: pairs.map(p => p[1]), labels: pairs.map(p => p[0]),
+            colors: multi, dataLabels: { enabled: false },
+            legend: {
+                position: 'bottom', horizontalAlign: 'left', fontSize: '11px',
+                itemMargin: { horizontal: 8, vertical: 2 }, markers: { radius: 2 },
+                formatter: (name, opts) => {
+                    const v = opts.w.globals.series[opts.seriesIndex];
+                    return name + '  ' + v + ' (' + (v / total * 100).toFixed(1).replace('.', ',') + ' %)';
+                },
             },
-        },
-        plotOptions: { pie: { donut: { size: '62%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '12px' } } } } },
-    });
+            plotOptions: { pie: { donut: { size: '68%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '12px', fontWeight: 600 } } } } },
+        });
+    };
+
+    @if($ordersStatus->isNotEmpty())
+    donut('#chart-statut', @json($ordersStatus->pluck('label')), @json($ordersStatus->pluck('count')), 290);
     @endif
 
     mount('#chart-echeance', {
-        chart: { type: 'bar', height: 220, toolbar: { show: false }, fontFamily: 'inherit' },
+        chart: { type: 'bar', height: 290, toolbar: { show: false }, fontFamily: 'inherit' },
         series: [{ name: 'Commandes', data: [{{ $deliveries['en_retard'] }}, {{ $deliveries['aujourd_hui'] }}, {{ $deliveries['cette_semaine'] }}, {{ $deliveries['semaine_prochaine'] }}, {{ $deliveries['plus_tard'] }}] }],
         xaxis: { categories: ['En retard', 'Aujourd\'hui', 'Cette semaine', 'Semaine proch.', 'Plus tard'], labels: { style: { fontSize: '10px', colors: '#94a3b8' } } },
-        colors: ['#ef4444'], plotOptions: { bar: { horizontal: true, borderRadius: 3, distributed: true, barHeight: '60%' } },
+        plotOptions: { bar: { horizontal: true, borderRadius: 3, distributed: true, barHeight: '60%' } },
         colors: ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#9ca3af'],
         dataLabels: { enabled: true }, legend: { show: false }, grid: { borderColor: '#f1f5f9' },
     });
 
-    const pipeLabels = @json(collect($pipeline)->map(fn($s) => $s['label'])->values());
-    const pipeData   = @json(collect($pipeline)->map(fn($s) => $s['count'])->values());
-    const pipeTotal  = pipeData.reduce((a, b) => a + b, 0);
-    if (pipeTotal > 0) mount('#chart-pipeline', {
-        chart: { type: 'donut', height: 220, fontFamily: 'inherit' },
-        series: pipeData, labels: pipeLabels, colors: multi,
-        dataLabels: { enabled: false },
-        legend: {
-            position: 'right', fontSize: '11px',
-            formatter: (name, opts) => {
-                const v = opts.w.globals.series[opts.seriesIndex];
-                return name + '  ' + v + ' (' + (v / pipeTotal * 100).toFixed(2).replace('.', ',') + ' %)';
-            },
-        },
-        plotOptions: { pie: { donut: { size: '62%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '12px' } } } } },
-    });
+    donut('#chart-pipeline',
+        @json(collect($pipeline)->map(fn($s) => $s['label'])->values()),
+        @json(collect($pipeline)->map(fn($s) => $s['count'])->values()), 290);
 
     mount('#spark-marge', {
         chart: { type: 'area', height: 32, sparkline: { enabled: true } },
