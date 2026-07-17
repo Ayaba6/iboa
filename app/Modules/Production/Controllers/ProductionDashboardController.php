@@ -42,7 +42,7 @@ class ProductionDashboardController extends Controller
             'of_en_cours'   => ProductionOrder::whereIn('status', ['lance', 'en_cours'])->count(),
             'of_termine'    => ProductionOrder::where('status', 'termine')->whereBetween('finished_at', [$f, $t])->count(),
             'meters'        => (float) ProductionOutput::whereBetween('produced_at', [$f, $t])->sum('total_meters'),
-            'material_cost' => (float) ProductionConsumption::whereBetween('consumed_at', [$f, $t])->sum('cost'),
+            'material_cost' => (float) ProductionConsumption::active()->whereBetween('consumed_at', [$f, $t])->sum('cost'),
             'waste_weight'  => (float) ProductionWaste::whereHas('productionOrder', fn ($q) => $q->whereBetween('updated_at', [$f, $t]))->sum('weight'),
             'coils_stock'   => (float) Coil::where('status', '!=', 'epuisee')->sum('remaining_weight'),
         ];
@@ -89,7 +89,7 @@ class ProductionDashboardController extends Controller
             ->orderBy('warehouses.name')->get();
 
         // Rendement matière moyen sur la période (OF terminés)
-        $consumed = (float) ProductionConsumption::whereBetween('consumed_at', [$f, $t])->sum('weight_consumed');
+        $consumed = (float) ProductionConsumption::active()->whereBetween('consumed_at', [$f, $t])->sum('weight_consumed');
         $waste    = $kpis['waste_weight'];
         $kpis['yield'] = $consumed > 0 ? max(0, min(100, round((($consumed - $waste) / $consumed) * 100, 1))) : null;
 
@@ -310,7 +310,7 @@ class ProductionDashboardController extends Controller
         $metersTotal = $metersReal;
         // Estimation rebuts en mètres : 1 m de tôle bac ≈ poids_m = epaisseur × largeur × densité
         // On utilise le ratio rebuts/consommation comme proxy qualité
-        $consumed = (float) ProductionConsumption::whereBetween('consumed_at', [$f, $t])->sum('weight_consumed');
+        $consumed = (float) ProductionConsumption::active()->whereBetween('consumed_at', [$f, $t])->sum('weight_consumed');
         $qualite  = $consumed > 0
             ? max(0, min(100, round((1 - $wasteKg / max(1, $consumed)) * 100, 1)))
             : ($metersTotal > 0 ? 95.0 : 0.0);

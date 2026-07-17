@@ -239,19 +239,21 @@ class ProductionStockService
             return;
         }
 
-        $order->loadMissing('billOfMaterial.lines.product', 'consumptions.coil');
+        $order->load('billOfMaterial.lines.product', 'consumptions.coil');
         $bom = $order->billOfMaterial;
         if (! $bom) {
             return; // OF sans nomenclature : rien à consommer
         }
 
-        // [FIX rapport MTO #2 — anti double comptage STOCK] Un composant dont la
-        // matière a déjà été consommée en réel sur cet OF via une bobine (coils =
-        // source de vérité, lot + poids) ne doit PAS être backflushé en plus dans
-        // product_stocks : double sortie physique, et blocage de la déclaration si
-        // le stock théorique du dépôt BOM est insuffisant alors que la matière
-        // réelle est déjà sortie. Même règle que le dédoublonnage du coût matière.
-        $coilProductIds = $order->consumptions->pluck('coil.product_id')->filter()->unique();
+        // [Sync coils/lots — backflush au RELIQUAT] Le backflush ne consomme que
+        // la part du besoin théorique non couverte par les consommations réelles
+        // (bobines) déjà journalisées sur l'OF. Cumulatif :
+        //   reliquat = besoin(production totale déclarée)
+        //            − consommations réelles non annulées
+        //            − backflush déjà effectué sur cet OF.
+        // Jamais négatif — et le cas historique « tout couvert par les bobines »
+        // (anti double comptage MTO #2) reste un reliquat nul → aucun mouvement.
+        $totalProducedAfter = (float) $order->quantity_produced + $quantityProduced;
 
         foreach ($bom->lines as $line) {
             $product = $line->product;
@@ -259,13 +261,32 @@ class ProductionStockService
             if (! $product || $per <= 0) {
                 continue;
             }
-            if ($coilProductIds->contains($product->id)) {
-                continue; // matière déjà consommée en réel (bobine) — pas de backflush
-            }
 
-            $need = round($per * $quantityProduced, 4);
-            if ($need <= 0) {
-                continue;
+            $needCumul = round($per * $totalProducedAfter, 4);
+
+            // Consommations réelles (bobines) non annulées de ce composant.
+            $consumedReal = (float) $order->consumptions
+                ->filter(fn ($c) => $c->coil?->product_id === $product->id && ! $c->reversed_at)
+                ->sum('weight_consumed');
+
+            // Backflush déjà journalisé pour ce composant sur cet OF
+            // (sorties sans production_consumption_id = mouvements backflush).
+            $alreadyFlushed = (float) \App\Models\StockMovement::where('product_id', $product->id)
+                ->where('type', 'sortie')
+                ->whereNull('production_consumption_id')
+                ->where(function ($q) use ($order) {
+                    $q->where('production_order_id', $order->id)
+                      ->orWhere(function ($qq) use ($order) {
+                          $qq->where('reference_type', ProductionOutput::class)
+                             ->whereIn('reference_id', $order->outputs()->pluck('id'));
+                      });
+                })
+                ->get()
+                ->sum(fn ($m) => (float) ($m->quantity_in_stock_uom ?? $m->quantity));
+
+            $need = round(max(0, $needCumul - $consumedReal - $alreadyFlushed), 4);
+            if ($need <= 0.0001) {
+                continue; // besoin couvert par les consommations réelles
             }
 
             $warehouseId = $this->componentWarehouseId($line, (int) $product->id, $order);
@@ -289,16 +310,22 @@ class ProductionStockService
             // On contextualise : composant, dépôt, et quoi faire.
             try {
                 $this->stock->recordMovement([
-                    'company_id'     => $order->company_id,
-                    'product_id'     => $product->id,
-                    'warehouse_id'   => $warehouseId,
-                    'type'           => 'sortie',
-                    'quantity'       => $need,
-                    'unit_cost'      => $unitCost,
-                    'allow_negative' => (bool) $product->allow_negative_stock,
-                    'reference_type' => ProductionOutput::class,
-                    'reference_id'   => $output->id,
-                    'notes'          => 'Consommation composant OF ' . $order->number,
+                    'company_id'          => $order->company_id,
+                    'product_id'          => $product->id,
+                    'warehouse_id'        => $warehouseId,
+                    'type'                => 'sortie',
+                    'quantity'            => $need,
+                    'uom'                 => 'KG',
+                    'conversion_factor'   => 1,
+                    'quantity_in_stock_uom' => $need,
+                    'stock_uom'           => 'KG',
+                    'unit_cost'           => $unitCost,
+                    'allow_negative'      => (bool) $product->allow_negative_stock,
+                    'production_order_id' => $order->id,
+                    'reference_type'      => ProductionOutput::class,
+                    'reference_id'        => $output->id,
+                    'notes'               => 'Consommation composant OF ' . $order->number . ' (backflush reliquat)',
+                    'idempotency_key'     => 'backflush:' . $order->id . ':' . $product->id . ':' . $output->id,
                 ]);
             } catch (ValidationException $e) {
                 $warehouseName = Warehouse::where('id', $warehouseId)->value('name') ?? ('dépôt #' . $warehouseId);

@@ -62,6 +62,15 @@ class StockService
     public function recordMovement(array $data): StockMovement
     {
         return DB::transaction(function () use ($data) {
+            // [Sync coils/lots] Idempotence : la même clé métier ne peut produire
+            // qu'un seul mouvement — un double clic / retry renvoie l'existant.
+            if (! empty($data['idempotency_key'])) {
+                $existing = StockMovement::where('idempotency_key', $data['idempotency_key'])->first();
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
             $data['created_by'] = Auth::id();
 
             // Normalise field names (form sends movement_type / movement_date)
@@ -71,7 +80,16 @@ class StockService
             $data['occurred_at'] = $data['movement_date']  ?? $data['occurred_at'] ?? now();
             $data['unit_cost']   = (float) ($data['unit_cost'] ?? 0);
             $data['quantity']    = (float) ($data['quantity']  ?? 0);
-            $data['total_cost']  = $data['quantity'] * $data['unit_cost'];
+
+            // [Sync coils/lots — unité de tenue de stock] La saisie opérationnelle
+            // (quantity/uom, ex. mètres linéaires) est conservée telle quelle ;
+            // la quantité qui meut product_stocks et le lot est
+            // quantity_in_stock_uom (KG pour les matières en bobines).
+            // Sans conversion fournie, comportement historique : quantity.
+            $stockQty = isset($data['quantity_in_stock_uom'])
+                ? (float) $data['quantity_in_stock_uom']
+                : $data['quantity'];
+            $data['total_cost']  = $stockQty * $data['unit_cost'];
             unset($data['movement_type'], $data['movement_date']);
 
             // Guard: product_id and warehouse_id are mandatory
@@ -96,7 +114,9 @@ class StockService
             }
 
             $type     = $data['type'];
-            $qty      = $data['quantity'];
+            // Delta appliqué au stock agrégé et aux lots : l'unité de tenue
+            // de stock (quantity_in_stock_uom si fournie, sinon quantity).
+            $qty      = $stockQty;
             $unitCost = $data['unit_cost'];
 
             // ---------------------------------------------------------------
@@ -226,14 +246,48 @@ class StockService
             unset($data['dest_warehouse_id'], $data['allow_negative']);
 
             // ---------------------------------------------------------------
+            // 4b. [Sync coils/lots] Delta sur le lot explicitement ciblé.
+            // quantity (stock_lots) = quantité RESTANTE, tenue en stock_uom.
+            // ---------------------------------------------------------------
+            if (!empty($data['stock_lot_id'])) {
+                $lot = StockLot::lockForUpdate()->find($data['stock_lot_id']);
+                if ($lot) {
+                    $delta = match (true) {
+                        in_array($type, $inboundTypes)  => $qty,
+                        in_array($type, $outboundTypes) => -$qty,
+                        $type === 'ajustement'          => $qty, // signé
+                        default                         => 0,
+                    };
+                    $newQty = round((float) $lot->quantity + $delta, 4);
+                    if ($newQty < -0.001) {
+                        throw new \RuntimeException(
+                            "Lot {$lot->lot_number} : quantité restante insuffisante ("
+                            . $lot->quantity . ' disponible, ' . abs($delta) . ' demandée).'
+                        );
+                    }
+                    $newQty = max(0, $newQty);
+                    $lot->update([
+                        'quantity' => $newQty,
+                        'status'   => $newQty <= 0.001
+                            ? 'epuise'
+                            : ((float) ($lot->initial_quantity ?? 0) > 0 && $newQty < (float) $lot->initial_quantity
+                                ? 'partiellement_consomme'
+                                : 'disponible'),
+                    ]);
+                }
+            }
+
+            // ---------------------------------------------------------------
             // 5. Create the movement record
             // ---------------------------------------------------------------
             $movement = StockMovement::create($data);
 
             // ---------------------------------------------------------------
             // 6. Lot / serial tracking (manual lot number provided by user)
+            // [Sync coils/lots] Ignoré si un stock_lot_id explicite a déjà été
+            // mouvementé ci-dessus (sinon double delta sur le même lot).
             // ---------------------------------------------------------------
-            if (!empty($data['lot_number'])) {
+            if (!empty($data['lot_number']) && empty($data['stock_lot_id'])) {
                 $this->upsertLot($data, $type, $qty, $unitCost);
             }
 

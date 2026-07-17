@@ -27,6 +27,10 @@ class StockMovement extends Model
         'reference_type',
         'reference_id',
         'lot_number',
+        // [Sync coils/lots] conversion d'unités + traçabilité + idempotence
+        'uom', 'conversion_factor', 'quantity_in_stock_uom', 'stock_uom',
+        'stock_lot_id', 'coil_id', 'production_order_id', 'production_consumption_id',
+        'idempotency_key', 'reversal_of_movement_id',
         'serial_number',
         'expiry_date',
         'from_warehouse_id',

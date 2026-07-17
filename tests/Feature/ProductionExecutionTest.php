@@ -123,7 +123,11 @@ it('reverses a consumption and restores coil weight', function () {
     $this->delete(route('production.consumptions.destroy', $cons))->assertRedirect();
     expect((float) $coil->fresh()->remaining_weight)->toEqual(1000.0);
     expect($coil->fresh()->status)->toBe('disponible');
-    expect($order->consumptions()->count())->toBe(0);
+    // [Sync coils/lots] Le reverse CONSERVE la consommation (traçabilité) :
+    // elle est marquée reversed_at et sort des agrégats via le scope active().
+    expect($order->consumptions()->count())->toBe(1)
+        ->and($order->consumptions()->first()->reversed_at)->not->toBeNull()
+        ->and($order->consumptions()->active()->count())->toBe(0);
 });
 
 it('records an output and enters finished goods into stock', function () {

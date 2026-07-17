@@ -20,7 +20,7 @@ class Coil extends Model
     protected $fillable = [
         'company_id','product_id','supplier_id','reception_id','reference','lot_number','color','thickness','width',
         'initial_weight','remaining_weight','estimated_length','purchase_price','cost_per_kg',
-        'received_at','status','notes','created_by',
+        'received_at','status','notes','created_by','stock_lot_id','kg_per_linear_meter',
         // [Maquette Bobine] réception + caractéristiques + gestion
         'supplier_reference','warehouse_id','site','bl_number','origine','devise',
         'nuance','gross_weight','inner_diameter','outer_diameter','coating','surface_finish',

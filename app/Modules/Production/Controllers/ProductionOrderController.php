@@ -141,7 +141,7 @@ class ProductionOrderController extends Controller
             'operations.workCenter', 'operations.operator', 'batches',
         ]);
 
-        $consumedWeight = (float) $order->consumptions->sum('weight_consumed');
+        $consumedWeight = (float) $order->consumptions->whereNull('reversed_at')->sum('weight_consumed');
         $wasteWeight    = (float) $order->wastes->sum('weight');
 
         // [Cohérence KPI] Coût matière = bobines (consumptions) + composants BOM
@@ -182,7 +182,7 @@ class ProductionOrderController extends Controller
 
         $metrics = [
             'consumed_weight' => $consumedWeight,
-            'consumed_cost'   => (float) $order->consumptions->sum('cost') + $componentCost,
+            'consumed_cost'   => (float) $order->consumptions->whereNull('reversed_at')->sum('cost') + $componentCost,
             'component_qty'   => $componentQty,
             'component_unit'  => $componentUnit,
             'output_meters'   => (float) $order->outputs->sum('total_meters'),
@@ -224,11 +224,11 @@ class ProductionOrderController extends Controller
             'outputs.product.unit', 'outputs.warehouse', 'wastes', 'cost', 'qualityControls.controller',
         ]);
 
-        $consumedWeight = (float) $order->consumptions->sum('weight_consumed');
+        $consumedWeight = (float) $order->consumptions->whereNull('reversed_at')->sum('weight_consumed');
         $wasteWeight    = (float) $order->wastes->sum('weight');
         $metrics = [
             'consumed_weight' => $consumedWeight,
-            'consumed_cost'   => (float) $order->consumptions->sum('cost'),
+            'consumed_cost'   => (float) $order->consumptions->whereNull('reversed_at')->sum('cost'),
             'output_qty'      => (float) $order->outputs->sum('quantity'),
             'output_meters'   => (float) $order->outputs->sum('total_meters'),
             'waste_weight'    => $wasteWeight,
