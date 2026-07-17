@@ -172,6 +172,7 @@ it('génère le livre de paie en PDF (documents)', function () {
     $user    = rhpAdmin();
     $company = rhpCompany();
     rhpSettings($company);
+    bfAccountClasses($company); // validation transactionnelle : la compta doit pouvoir créer ses comptes
     rhpEmployee($company, 180000);
     $this->actingAs($user);
 
