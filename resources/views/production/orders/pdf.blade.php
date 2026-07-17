@@ -22,7 +22,7 @@
                 'nbre'    => '',
                 'metrage' => '',
                 'qte'     => -1 * (float) ($c->length_consumed ?: $c->weight_consumed),
-                'unit'    => $mp?->unit?->abbreviation ?? 'MTL',
+                'unit'    => $mp?->unit?->abbreviation ?? 'ML',
             ];
         }
         // Repli : pas encore de consommation → composants de la nomenclature
@@ -32,7 +32,7 @@
                     'ref' => $l->product?->code_article ?? '—', 'lot' => '',
                     'des' => $l->product?->name ?? '—', 'nbre' => '', 'metrage' => '',
                     'qte' => -1 * (float) (($l->quantity_per_meter ?? 0) * ($order->quantity_requested ?? 0)),
-                    'unit' => $l->product?->unit?->abbreviation ?? 'MTL',
+                    'unit' => $l->product?->unit?->abbreviation ?? 'ML',
                 ];
             }
         }
@@ -46,7 +46,7 @@
                 'nbre' => (float) $o->quantity ?: '',
                 'metrage' => (float) $o->length ?: '',
                 'qte' => (float) ($o->total_meters ?: $o->quantity),
-                'unit' => $o->product?->unit?->abbreviation ?? 'MTL',
+                'unit' => $o->product?->unit?->abbreviation ?? 'ML',
             ];
         }
         // Repli : pas encore déclaré → produit fini planifié
@@ -55,7 +55,7 @@
                 'ref' => $order->product->code_article ?? '—', 'lot' => '',
                 'des' => $order->product->name ?? '—', 'nbre' => (float) $order->quantity_requested ?: '',
                 'metrage' => '', 'qte' => (float) $order->quantity_requested,
-                'unit' => $order->product->unit?->abbreviation ?? 'MTL',
+                'unit' => $order->product->unit?->abbreviation ?? 'ML',
             ];
         }
 
@@ -65,7 +65,7 @@
             $rows[] = [
                 'ref' => $bp->code_article ?? '—', 'lot' => $pfLot ?? '',
                 'des' => $bp->name ?? '—', 'nbre' => '', 'metrage' => '', 'qte' => null,
-                'unit' => $bp->unit?->abbreviation ?? 'MTL',
+                'unit' => $bp->unit?->abbreviation ?? 'ML',
             ];
         }
     @endphp
@@ -139,7 +139,8 @@
         </tr>
         <tr>
             <td class="k">Date de fabrication :</td><td class="v">{{ $dOnly($order->launched_at ?? $order->created_at) }}</td>
-            <td class="k">Site :</td><td class="v">{{ $order->depotProduitFini?->code ?? '01' }}</td>
+            {{-- Site = site de production (le dépôt PF n'est pas un site) --}}
+            <td class="k">Site :</td><td class="v">{{ $order->site_production ?? '01' }}@if($order->depotProduitFini?->code) · Dépôt {{ $order->depotProduitFini->code }}@endif</td>
         </tr>
         <tr>
             <td class="k">Date création :</td><td class="v">{{ $dOnly($order->created_at) }}</td>
@@ -175,7 +176,7 @@
                     @if($r['qte'] !== null)
                         <span class="qte {{ $r['qte'] < 0 ? 'neg' : '' }}">{{ $fmt2($r['qte']) }}</span>
                     @endif
-                    <span class="unit">{{ $r['unit'] }}</span>
+                    <span class="unit">{{ strtoupper($r["unit"]) }}</span>
                 </td>
             </tr>
             @endforeach
