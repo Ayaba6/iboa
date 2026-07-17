@@ -13,8 +13,8 @@
 @php
     $fmt = fn($n) => number_format((int)$n, 0, ',', ' ');
     $cumulPosted = $asset->depreciations->where('is_posted', true)->sum('depreciation_amount');
-    $vnc = max(0, $asset->acquisition_cost - $cumulPosted);
-    $pct = $asset->acquisition_cost > 0 ? min(100, round($cumulPosted / $asset->acquisition_cost * 100)) : 0;
+    $vnc = max(0, $asset->gross_value - $cumulPosted);
+    $pct = $asset->gross_value > 0 ? min(100, round($cumulPosted / $asset->gross_value * 100)) : 0;
     $statusColors = [
         'en_service'   => 'bg-emerald-100 text-emerald-700',
         'cede'         => 'bg-orange-100 text-orange-700',
@@ -66,7 +66,7 @@
     <div class="grid grid-cols-4 gap-4">
         <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Valeur brute</p>
-            <p class="text-[17px] font-bold text-gray-900 mt-1">{{ $fmt($asset->acquisition_cost) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
+            <p class="text-[17px] font-bold text-gray-900 mt-1">{{ $fmt($asset->gross_value) }} <span class="text-xs font-normal text-gray-500">FCFA</span></p>
         </div>
         <div class="bg-white border border-gray-300 rounded-[4px] p-4">
             <p class="text-xs text-gray-500 uppercase font-semibold">Amort. cumulé</p>
@@ -237,7 +237,7 @@
             {{-- Alerte si plan non équilibré --}}
             @php
                 $totalPlan = $asset->depreciations->sum('depreciation_amount');
-                $baseAmort = $asset->acquisition_cost - $asset->residual_value;
+                $baseAmort = $asset->gross_value - $asset->residual_value;
                 $ecart = abs($totalPlan - $baseAmort);
             @endphp
             @if($ecart > 1 && $asset->depreciations->isNotEmpty())

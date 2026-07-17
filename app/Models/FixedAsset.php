@@ -102,11 +102,17 @@ class FixedAsset extends Model
         return $this->category !== 'terrain' && $this->useful_life_years > 0;
     }
 
-    /** Valeur nette comptable actuelle (acquisition_cost − cumul amortissements postés) */
+    /** Valeur brute = coût d'acquisition + frais accessoires (transport, installation…) */
+    public function getGrossValueAttribute(): int
+    {
+        return (int) $this->acquisition_cost + (int) ($this->accessory_cost ?? 0);
+    }
+
+    /** Valeur nette comptable actuelle (valeur brute − cumul amortissements postés) */
     public function getNetBookValueAttribute(): int
     {
         $cumulated = $this->depreciations()->where('is_posted', true)->sum('depreciation_amount');
-        return max(0, $this->acquisition_cost - $cumulated);
+        return max(0, $this->gross_value - $cumulated);
     }
 
     /** Cumul des amortissements postés */

@@ -455,17 +455,19 @@ function assetForm() {
             if (!this.miseEnService || !this.duree || this.baseAmortissable <= 0) return [];
             const start = new Date(this.miseEnService);
             const y0 = start.getFullYear();
-            const moisAn1 = 12 - start.getMonth();   // prorata 1re année
+            // Prorata temporis en JOURS (même convention que le backend
+            // FixedAssetService::computeSchedule : jours restants / 365)
+            const endOfYear = new Date(y0, 11, 31);
+            const joursAn1  = Math.round((endOfYear - start) / 86400000) + 1;
             const rows = []; let cumul = 0;
-            for (let i = 0; i <= this.duree; i++) {
+            for (let i = 0; i <= this.duree && cumul < this.baseAmortissable; i++) {
                 let dot;
-                if (i === 0)               dot = Math.round(this.dotationAnnuelle * moisAn1 / 12);
+                if (i === 0)               dot = Math.round(this.dotationAnnuelle * joursAn1 / 365);
                 else if (i === this.duree) dot = this.baseAmortissable - cumul;   // solde final
-                else                       dot = this.dotationAnnuelle;
+                else                       dot = Math.min(this.dotationAnnuelle, this.baseAmortissable - cumul);
                 if (dot <= 0) break;
                 cumul += dot;
                 rows.push({ annee: y0 + i, dotation: dot, cumul, vnc: this.valeurBrute - cumul });
-                if (cumul >= this.baseAmortissable) break;
             }
             return rows;
         },

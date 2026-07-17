@@ -79,7 +79,9 @@ class FixedAssetService
 
     public function computeSchedule(FixedAsset $asset): array
     {
-        $base         = $asset->acquisition_cost - $asset->residual_value;
+        // Base amortissable = valeur brute (acquisition + frais accessoires) − valeur résiduelle
+        $grossValue   = $asset->gross_value;
+        $base         = $grossValue - $asset->residual_value;
         $years        = $asset->useful_life_years;
         $method       = $asset->depreciation_method;
         $startDate    = Carbon::instance($asset->commissioning_date);
@@ -89,7 +91,6 @@ class FixedAssetService
 
         $rows          = [];
         $cumulTotal    = 0;
-        $remainingBase = $base;
 
         // Prorata temporis 1ère année (jours de commissioning jusqu'à fin d'année / 365)
         $endOfFirstYear    = Carbon::create($firstYear, 12, 31);
@@ -99,40 +100,29 @@ class FixedAssetService
         if ($method === 'lineaire') {
             $annualAmount = (int) round($base / $years);
 
-            for ($i = 0; $i < $years; $i++) {
+            // Avec prorata la 1ère année, le plan s'étale sur years+1 exercices
+            // civils : une dotation annuelle ne dépasse JAMAIS l'annuité linéaire,
+            // le complément glisse sur l'exercice suivant.
+            for ($i = 0; $cumulTotal < $base && $i <= $years; $i++) {
                 $year = $firstYear + $i;
 
-                if ($i === 0) {
-                    // 1ère année : prorata temporis
-                    $amount = (int) round($annualAmount * $prorataFirst);
-                } elseif ($i === $years - 1) {
-                    // Dernière année : solde pour que le total = base
-                    $amount = $base - $cumulTotal;
-                    if ($amount <= 0) break;
-                } else {
-                    $amount = $annualAmount;
-                }
+                $amount = ($i === 0)
+                    ? (int) round($annualAmount * $prorataFirst)
+                    : min($annualAmount, $base - $cumulTotal);
 
-                // Si prorata 1ère année < 1, on ajoute une année supplémentaire pour le complément
+                // Dernier exercice possible : absorber le reliquat d'arrondi
+                if ($i === $years) {
+                    $amount = $base - $cumulTotal;
+                }
+                if ($amount <= 0) break;
+
                 $cumulTotal += $amount;
                 $rows[] = [
                     'fiscal_year'            => $year,
                     'depreciation_amount'    => $amount,
                     'cumulated_depreciation' => $cumulTotal,
-                    'net_book_value'         => max(0, $asset->acquisition_cost - $cumulTotal - $asset->residual_value),
-                ];
-            }
-
-            // Si prorata 1ère année a créé un reste, ajouter une dernière ligne
-            $remaining = $base - $cumulTotal;
-            if ($remaining > 0 && $remaining < $annualAmount * 2) {
-                $lastYear = $firstYear + $years;
-                $cumulTotal += $remaining;
-                $rows[] = [
-                    'fiscal_year'            => $lastYear,
-                    'depreciation_amount'    => $remaining,
-                    'cumulated_depreciation' => $cumulTotal,
-                    'net_book_value'         => max(0, $asset->acquisition_cost - $cumulTotal - $asset->residual_value),
+                    // VNC = valeur brute − cumul ; en fin de plan elle vaut la valeur résiduelle
+                    'net_book_value'         => max(0, $grossValue - $cumulTotal),
                 ];
             }
         } else {
