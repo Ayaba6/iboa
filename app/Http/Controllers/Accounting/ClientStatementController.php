@@ -164,7 +164,11 @@ class ClientStatementController extends Controller
             'non_echues'    => (int) $base->where('journal', 'VE')->filter(fn ($r) => ! ($r->est_echue ?? false) && $r->due > 0)->sum('due'),
             'echues'        => (int) $base->where('journal', 'VE')->filter(fn ($r) => ($r->est_echue ?? false))->sum('due'),
             'encours_aut'   => (int) ($client->credit_limit ?? 0),
-            'depassement'   => max(0, $soldeFinal - (int) ($client->credit_limit ?? 0)),
+            // Un dépassement ne se mesure que contre une limite DÉFINIE :
+            // « pas de limite de crédit » n'est pas « limite zéro ».
+            'depassement'   => ($client->credit_limit ?? 0) > 0
+                ? max(0, $soldeFinal - (int) $client->credit_limit)
+                : 0,
         ];
 
         // Historique : 5 derniers événements d'audit du client (si dispo)
