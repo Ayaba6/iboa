@@ -172,8 +172,13 @@
                     @forelse($orders as $o)
                     @php
                         $reste    = max(0, (float) $o->quantity_requested - (float) $o->quantity_produced);
-                        $enRetard = in_array($o->status, ['lance', 'en_cours', 'termine_partiellement'], true)
-                                    && $o->date_fin_prevue && $o->date_fin_prevue->isPast();
+                        // Même définition que ProductionOrder::scopeEnRetard (KPI du haut) :
+                        // statuts actifs (suspendu inclus) + fin prévue STRICTEMENT avant aujourd'hui.
+                        $enRetard = in_array($o->status, ['lance', 'en_cours', 'termine_partiellement', 'suspendu'], true)
+                                    && $o->date_fin_prevue && $o->date_fin_prevue->lt(today());
+                        // La colonne « Prévue » doit montrer la date qui fonde le retard :
+                        // fabrication prévue si saisie, sinon fin prévue.
+                        $datePrevue = $o->date_fabrication_prevue ?? $o->date_fin_prevue;
                     @endphp
                     <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors {{ $o->status === 'annule' ? 'opacity-50' : '' }}">
                         <td class="px-2 py-1.5 whitespace-nowrap">
@@ -200,7 +205,8 @@
                             <span class="inline-flex px-1.5 py-0.5 rounded-[2px] text-[10.5px] font-semibold {{ $pc }}">{{ $pl }}</span>
                         </td>
                         <td class="px-2 py-1.5 text-gray-500 text-[12px] hidden 2xl:table-cell max-w-[100px] truncate">{{ $o->productionLine?->name ?? '—' }}</td>
-                        <td class="px-2 py-1.5 text-gray-600 tabular-nums hidden xl:table-cell whitespace-nowrap {{ $enRetard ? 'text-red-600 font-semibold' : '' }}">{{ $o->date_fabrication_prevue?->format('d/m/y') ?? '—' }}</td>
+                        <td class="px-2 py-1.5 text-gray-600 tabular-nums hidden xl:table-cell whitespace-nowrap {{ $enRetard ? 'text-red-600 font-semibold' : '' }}"
+                            @if($datePrevue) title="{{ $o->date_fabrication_prevue ? 'Fabrication prévue' : 'Fin prévue' }}" @endif>{{ $datePrevue?->format('d/m/y') ?? '—' }}</td>
                         <td class="px-2 py-1.5 text-gray-500 text-[12px] hidden 2xl:table-cell max-w-[100px] truncate">{{ $o->responsible?->name ?? '—' }}</td>
                         <td class="px-2 py-1.5 text-center">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium
