@@ -1309,11 +1309,24 @@ class AccountingService
         ]);
     }
 
+    /** Libellés SYSCOHADA officiels des classes de comptes. */
+    public const ACCOUNT_CLASS_NAMES = [
+        1 => 'Comptes de ressources durables',
+        2 => "Comptes d'actif immobilisé",
+        3 => 'Comptes de stocks',
+        4 => 'Comptes de tiers',
+        5 => 'Comptes de trésorerie',
+        6 => 'Comptes de charges des activités ordinaires',
+        7 => 'Comptes de produits des activités ordinaires',
+        8 => 'Comptes des autres charges et produits',
+        9 => 'Comptes des engagements hors bilan et comptes analytiques',
+    ];
+
     private function accountClassId(Company $company, int $number): int
     {
         return AccountClass::firstOrCreate(
             ['company_id' => $company->id, 'number' => $number],
-            ['name' => 'Classe '.$number]
+            ['name' => self::ACCOUNT_CLASS_NAMES[$number] ?? 'Classe '.$number]
         )->id;
     }
 
