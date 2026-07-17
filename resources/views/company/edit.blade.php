@@ -388,21 +388,27 @@
         </div>
         <div class="max-h-[420px] overflow-y-auto">
             @if(($sequences ?? collect())->isNotEmpty())
-            <table class="w-full text-[11.5px]">
+            {{-- table-fixed : la somme des colonnes ne peut jamais déborder la
+                 carte (sinon la colonne Document partait hors champ en scroll
+                 horizontal invisible) ; les libellés longs sont tronqués avec
+                 title pour le texte complet. --}}
+            <table class="w-full table-fixed text-[11.5px]">
                 <thead class="sticky top-0"><tr class="bg-[#eef5f0] text-emerald-900">
-                    <th class="text-left font-bold px-1 py-1.5 border-b border-gray-300">Document</th>
-                    <th class="text-left font-bold px-1 py-1.5 border-b border-gray-300">Préfixe</th>
-                    <th class="text-right font-bold px-1 py-1.5 border-b border-gray-300">N°</th>
-                    <th class="text-left font-bold px-1 py-1.5 border-b border-gray-300">Format</th>
-                    <th class="text-center font-bold px-1 py-1.5 border-b border-gray-300">Auto</th>
+                    <th class="text-left font-bold px-1 py-1.5 border-b border-gray-300 w-[30%]">Document</th>
+                    <th class="text-left font-bold px-1 py-1.5 border-b border-gray-300 w-[16%]">Préfixe</th>
+                    <th class="text-right font-bold px-1 py-1.5 border-b border-gray-300 w-[14%]">N°</th>
+                    <th class="text-left font-bold px-1 py-1.5 border-b border-gray-300 w-[29%]">Format</th>
+                    <th class="text-center font-bold px-1 py-1.5 border-b border-gray-300 w-[11%]">Auto</th>
                 </tr></thead>
                 <tbody>
                     @foreach($sequences as $seq)
+                    @php $docLabel = ucfirst(str_replace('_', ' ', $seq->document_type)); @endphp
                     <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40">
-                        <td class="px-1 py-1.5 text-gray-700 truncate max-w-[92px]">{{ ucfirst(str_replace('_', ' ', $seq->document_type)) }}</td>
-                        <td class="px-1 py-1.5 font-mono text-emerald-800">{{ $seq->prefix }}</td>
-                        <td class="px-1 py-1.5 text-right font-mono tabular-nums text-gray-600">{{ str_pad((string) $seq->last_number, max(1, (int) $seq->padding), '0', STR_PAD_LEFT) }}</td>
-                        <td class="px-1 py-1.5 font-mono text-[10px] text-gray-500 whitespace-nowrap">{{ rtrim($seq->prefix, $seq->year_separator ?: '-') }}{{ $seq->include_year ? ($seq->year_separator ?: '-').date($seq->year_format === 'yy' ? 'y' : 'Y') : '' }}{{ $seq->year_separator ?: '-' }}{{ str_repeat('#', max(1, (int) $seq->padding)) }}</td>
+                        <td class="px-1 py-1.5 text-gray-700 truncate" title="{{ $docLabel }}">{{ $docLabel }}</td>
+                        <td class="px-1 py-1.5 font-mono text-emerald-800 truncate">{{ $seq->prefix }}</td>
+                        <td class="px-1 py-1.5 text-right font-mono tabular-nums text-gray-600 truncate">{{ str_pad((string) $seq->last_number, max(1, (int) $seq->padding), '0', STR_PAD_LEFT) }}</td>
+                        @php $fmt = rtrim($seq->prefix, $seq->year_separator ?: '-').($seq->include_year ? ($seq->year_separator ?: '-').date($seq->year_format === 'yy' ? 'y' : 'Y') : '').($seq->year_separator ?: '-').str_repeat('#', max(1, (int) $seq->padding)); @endphp
+                        <td class="px-1 py-1.5 font-mono text-[10px] text-gray-500 truncate" title="{{ $fmt }}">{{ $fmt }}</td>
                         <td class="px-1 py-1.5 text-center">
                             <span class="relative inline-block w-7 h-4 align-middle rounded-full {{ $seq->numbering_mode !== 'manuel' ? 'bg-emerald-600' : 'bg-gray-300' }}" title="{{ $seq->numbering_mode }}"><span class="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow {{ $seq->numbering_mode !== 'manuel' ? 'right-0.5' : 'left-0.5' }}"></span></span>
                         </td>
