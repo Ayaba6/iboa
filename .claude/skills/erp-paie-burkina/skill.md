@@ -20,30 +20,51 @@ IUTS, états de paiement, clôture mensuelle.
 ## Barèmes légaux Burkina Faso
 
 ### CNSS (Caisse Nationale de Sécurité Sociale)
+> Référence validée 17/07/2026 — implémentée dans `PayrollService` + `PayrollSettingSeeder`.
 
-| Branche | Salarié | Employeur | Plafond mensuel |
-|---------|---------|-----------|-----------------|
-| Prestations familiales (PF) | 0% | 5,75% | Illimité |
-| Accidents du travail (AT) | 0% | Variable (1–5%) | Illimité |
-| Retraite (RP) | 5,5% | 5,5% | 500 000 XOF |
+| Branche | Salarié | Employeur |
+|---------|---------|-----------|
+| Pension | 5,5% | 8,5% |
+| Risques professionnels (RP) | 0% | 1,5% |
+| Prestations familiales (PF) | 0% | 6% |
+| **Total** | **5,5%** | **16%** |
 
-> Le plafond CNSS retraite est de **500 000 XOF/mois** (vérifier `payroll_settings.cnss_plafond`)
+- **Plafond mensuel : 800 000 XOF** (`payroll_settings.cnss_ceiling`) ; plafond annuel 9 600 000 (`cnss_annual_ceiling`)
+- Base CNSS = MIN(salaire soumis, 800 000)
+- La ventilation patronale (pension/RP/PF) est stockée par bulletin
+  (`payroll_items.cnss_employer_pension/rp/pf`) et comptabilisée en 3 lignes distinctes.
 
 ### IUTS (Impôt Unique sur les Traitements et Salaires)
+> Référence validée 17/07/2026 — le calcul se fait sur le revenu imposable TOTAL
+> (PAS de quotient familial par parts), puis réduction pour charges de famille.
 
-Base imposable = Salaire brut − cotisations salariales − abattement 20%
+Base imposable = Salaire brut − CNSS salarié − abattement 20 %
 
-Barème progressif (tranches mensuelles) stocké dans `iuts_brackets` :
+Barème progressif mensuel (`payroll_settings.iuts_brackets`) :
 
 | Tranche (XOF) | Taux |
 |---------------|------|
-| 0 – 20 000 | 0% |
-| 20 001 – 30 000 | 12% |
-| 30 001 – 50 000 | 14% |
-| 50 001 – 80 000 | 16% |
-| 80 001 – 120 000 | 18% |
-| 120 001 – 200 000 | 24% |
-| > 200 000 | 28% |
+| 0 – 30 000 | 0% |
+| 30 001 – 50 000 | 12,1% |
+| 50 001 – 80 000 | 13,9% |
+| 80 001 – 120 000 | 15,7% |
+| 120 001 – 170 000 | 18,4% |
+| 170 001 – 250 000 | 21,7% |
+| > 250 000 | 25% |
+
+Réduction pour charges de famille, appliquée sur l'**IUTS brut**
+(`payroll_settings.iuts_family_reductions`, plafond `iuts_max_charges` = 4) :
+
+| Charges | Réduction |
+|---------|-----------|
+| 0 | 0% | 
+| 1 | 8% |
+| 2 | 10% |
+| 3 | 12% |
+| 4 et + | 14% |
+
+`IUTS net = IUTS brut − réduction` — calcul : `PayrollSetting::computeIutsDetail()`
+(détail par tranche persisté dans `payroll_items.iuts_detail`).
 
 > Abattement forfaitaire IUTS : **20%** (configurable dans `payroll_settings.iuts_abattement_rate`)
 
@@ -84,26 +105,27 @@ Effort de paix patronal                   X XXX
 
 ## Tables DB et colonnes importantes
 
-### `payroll_settings` — configuration paie par société
-- `cnss_plafond` — plafond CNSS retraite (500 000)
-- `cnss_salarie_rate` — 5.5%
-- `cnss_patronal_pf_rate` — 5.75%
-- `cnss_patronal_at_rate` — variable
-- `cnss_patronal_rp_rate` — 5.5%
-- `iuts_abattement_rate` — 20%
-- `effort_paix_rate_salarie`, `effort_paix_rate_patronal`
-- `smig` — SMIG mensuel (Burkina : 34 664 XOF)
-- `anc_rate_*` — taux ancienneté par tranche
+### `payroll_settings` — configuration paie par société (noms réels)
+- `cnss_ceiling` — plafond CNSS mensuel (800 000) ; `cnss_annual_ceiling` (9 600 000)
+- `cnss_employee_rate` — 5,5 %
+- `cnss_employer_pension_rate` (8,5) / `cnss_employer_rp_rate` (1,5) / `cnss_employer_pf_rate` (6)
+- `cnss_employer_rate` — total patronal (16, somme de la ventilation)
+- `iuts_brackets` (JSON [[plafond, taux], …]) ; `iuts_abattement_rate` — 20 %
+- `iuts_family_reductions` (JSON [[charges, pct], …]) ; `iuts_max_charges` — 4
+- `effort_paix_enabled`, `effort_paix_rate`
+- `smig` — SMIG mensuel (Burkina : 45 000 XOF)
+- `anc_rate_per_year`, `anc_rate_max_pct` — ancienneté
 
-### `payroll_items` — lignes de bulletin
-- `rubric_code` — code de la rubrique
-- `rubric_label` — libellé affiché
-- `is_gain` / `is_deduction` / `is_employer_charge`
-- `amount` — montant calculé
-- `base_amount` — assiette de calcul
-- `cnss_av` / `cnss_pf` / `cnss_rp` — parts CNSS
-- `iuts_amount` — montant IUTS
-- `net_amount` — net à payer
+### `payroll_items` — lignes de bulletin (une par employé et par run, noms réels)
+- `salaire_brut`, `cnss_base`, `cnss_employee`, `cnss_employer`
+- `cnss_employer_pension` / `cnss_employer_rp` / `cnss_employer_pf` — ventilation
+- `salaire_imposable`, `family_charges`, `iuts_amount`, `iuts_detail` (JSON par tranche)
+- `effort_paix_amount`, `salaire_net`, `cout_employeur`
+- `nb_parts` — legacy quotient familial (bulletins antérieurs au 17/07/2026)
+
+### `payroll_runs`
+- `calculation_parameters_snapshot` (JSON) — paramètres figés au calcul ;
+  un changement de barème ne modifie JAMAIS un run déjà calculé/validé
 
 ### `employee_contracts`
 - `gross_salary` — salaire brut de base
@@ -111,22 +133,22 @@ Effort de paix patronal                   X XXX
 - `status` — actif / termine / resilie
 - `payroll_profile_id` — profil de paie associé
 
-## Algorithme de calcul d'un bulletin
+## Algorithme de calcul d'un bulletin (PayrollService::calculateItem)
 
 ```
-1. Récupérer contrat actif + profil de paie + rubrics actives
-2. Calculer salaire brut = base + primes fixes + ancienneté
-3. Assiette CNSS = min(brut, plafond_cnss)  [pour retraite]
-4. CNSS salarié = assiette × 5,5%
-5. Effort de paix salarié = brut × taux
-6. Base IUTS = brut - CNSS_salarié - EP_salarié
-7. Abattement = base_IUTS × 20%
-8. IUTS_imposable = base_IUTS - abattement
-9. IUTS = calcul progressif via iuts_brackets
-10. Avances = sum(salary_advances non remboursées du mois)
-11. Retenues prêts = mensualité du mois (employee_loans)
-12. NET = brut - CNSS_salarié - EP_salarié - IUTS - avances - remb_prêts
-13. Charges patronales = CNSS_PF + CNSS_AT + CNSS_RP + EP_patronal
+1. Contrat actif + primes fixes + variables mensuelles (HS, absences, avances)
+2. Salaire brut = base proratisé + HS + primes imposables + ancienneté
+3. Base CNSS = min(brut − exclusions, 800 000)
+4. CNSS salarié = base × 5,5 %
+5. CNSS patronal = base × 8,5 % (pension) + base × 1,5 % (RP) + base × 6 % (PF)
+   — arrondis séparés, total = somme des trois
+6. Base imposable = brut − exclusions IUTS − CNSS salarié, puis abattement 20 %
+7. Charges = min(nb_children, iuts_max_charges)
+8. IUTS brut = barème progressif sur la base imposable TOTALE (computeIutsDetail)
+9. IUTS net = IUTS brut − réduction charges (8/10/12/14 % de l'IUTS brut)
+10. Effort de paix = (brut + non-imposables − CNSS sal. − IUTS) × 1 %
+11. NET = brut + non-imposables + autres gains − CNSS sal. − IUTS − EP
+        − avances − prêts − autres retenues
 ```
 
 ## Vérifications obligatoires avant clôture
