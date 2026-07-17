@@ -61,6 +61,10 @@
                 Modifier
             </a>
             @endcan
+            <a href="{{ route('stocks.warehouses.index') }}"
+               class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-[4px] flex items-center gap-2 transition-colors">
+                ✕ Fermer
+            </a>
         </div>
     </div>
 
@@ -87,9 +91,9 @@
 
     {{-- Stock table --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 class="text-base font-semibold text-gray-900">Stock dans cet entrepôt</h2>
-            <span class="text-sm text-gray-500">{{ $stocks->total() }} article(s)</span>
+        <div class="flex items-center justify-between px-4 py-2 bg-[#eef5f0] border-b border-emerald-100">
+            <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide">1. Stock dans cet entrepôt</p>
+            <p class="text-[11px] text-emerald-600">{{ $stocks->total() }} article(s)</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-100 text-sm">
@@ -165,10 +169,10 @@
 
     {{-- Recent movements --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 class="text-base font-semibold text-gray-900">Derniers mouvements</h2>
+        <div class="flex items-center justify-between px-4 py-2 bg-[#eef5f0] border-b border-emerald-100">
+            <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide">2. Derniers mouvements</p>
             <a href="{{ route('stocks.movements', ['warehouse_id' => $warehouse->id]) }}"
-               class="text-sm text-emerald-600 hover:text-emerald-800 hover:underline">
+               class="text-[11px] text-emerald-600 hover:text-emerald-800 hover:underline font-medium">
                 Voir tout →
             </a>
         </div>
@@ -236,6 +240,19 @@
             </table>
         </div>
         @endif
+    </div>
+
+    {{-- ══ Footer contexte (pattern X3) ══════════════════════════════════════ --}}
+    <div class="flex items-center justify-between bg-gray-900 text-gray-200 rounded-[4px] px-4 py-2 text-xs">
+        <div class="flex items-center gap-4 flex-wrap">
+            <span>Société : <strong class="text-white">{{ currentCompany()?->name }}</strong></span>
+            <span>Entrepôt : <strong class="text-white">{{ $warehouse->code }} — {{ $warehouse->name }}</strong></span>
+            <span>Statut : <strong class="text-white">{{ $warehouse->is_active ? 'Actif' : 'Inactif' }}{{ $warehouse->is_default ? ' · Défaut' : '' }}</strong></span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span>Utilisateur : <strong class="text-white">{{ auth()->user()?->name }}</strong></span>
+            <span>{{ now()->format('d/m/Y H:i') }}</span>
+        </div>
     </div>
 
 </div>
