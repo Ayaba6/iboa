@@ -1269,13 +1269,24 @@ class AccountingService
 
     private function journalType(Company $company, string $type): JournalType
     {
+        // orderBy('id') : résolution déterministe si plusieurs journaux du même
+        // type existent (cas historique VT/VE — doublon auto-créé puis seedé).
         $existing = JournalType::where('company_id', $company->id)
             ->where('type', $type)
-            ->where('is_active', true)
-            ->first();
+            ->orderBy('id')
+            ->get();
 
-        if ($existing) {
-            return $existing;
+        $active = $existing->firstWhere('is_active', true);
+        if ($active) {
+            return $active;
+        }
+
+        // Un journal du bon type existe mais est inactif : le réactiver plutôt
+        // que d'en créer un doublon (origine du duo VT/VE).
+        if ($existing->isNotEmpty()) {
+            $journal = $existing->first();
+            $journal->update(['is_active' => true]);
+            return $journal;
         }
 
         // Auto-create a default journal type when none exists (e.g. in test or fresh company)
@@ -1289,14 +1300,13 @@ class AccountingService
 
         $default = $defaults[$type] ?? ['code' => strtoupper(substr($type, 0, 2)), 'name' => 'Journal '.$type];
 
-        return JournalType::firstOrCreate(
-            ['company_id' => $company->id, 'type' => $type],
-            [
-                'code'      => $default['code'],
-                'name'      => $default['name'],
-                'is_active' => true,
-            ]
-        );
+        return JournalType::create([
+            'company_id' => $company->id,
+            'type'       => $type,
+            'code'       => $default['code'],
+            'name'       => $default['name'],
+            'is_active'  => true,
+        ]);
     }
 
     private function accountClassId(Company $company, int $number): int
