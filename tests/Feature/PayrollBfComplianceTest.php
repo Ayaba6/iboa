@@ -208,6 +208,35 @@ describe('Validation transactionnelle et idempotence', function () {
             ->and(\App\Models\JournalEntry::where('reference', 'PAIE-2025-5')->count())->toBe(0);
     });
 
+    it('ne réutilise jamais le numéro d\'une écriture soft-supprimée', function () {
+        $company = bfCompany();
+        bfSettings($company);
+        bfAccountClasses($company);
+        $this->actingAs(bfAdmin());
+        bfEmployee($company, 200_000);
+
+        $svc = app(PayrollService::class);
+        $run1 = $svc->createRun(['period_month' => 7, 'period_year' => 2025, 'notes' => '']);
+        $svc->calculate($run1);
+        $svc->validate($run1);
+        $entry1 = \App\Models\JournalEntry::find($run1->fresh()->journal_entry_id);
+        $number1 = $entry1->number;
+
+        // Purge du run (l'écriture brouillon est soft-supprimée mais garde son numéro)
+        $entry1->lines()->delete();
+        $entry1->delete();
+        $run1->fresh()->update(['journal_entry_id' => null]);
+
+        // Une nouvelle validation ne doit pas entrer en collision avec le numéro occupé
+        $run2 = $svc->createRun(['period_month' => 8, 'period_year' => 2025, 'notes' => '']);
+        $svc->calculate($run2);
+        $svc->validate($run2);
+        $entry2 = \App\Models\JournalEntry::find($run2->fresh()->journal_entry_id);
+
+        expect($entry2)->not->toBeNull()
+            ->and($entry2->number)->not->toBe($number1);
+    });
+
     it('ventile la CNSS patronale en trois lignes comptables distinctes', function () {
         $company = bfCompany();
         bfSettings($company);

@@ -81,7 +81,9 @@ class PurgePayrollRun extends Command
             return self::SUCCESS;
         }
 
-        if (! $this->confirm("Purger DÉFINITIVEMENT le run #{$run->id} ? Action irréversible.")) {
+        // En mode non-interactif, --force vaut confirmation (déjà exigé ci-dessus).
+        if ($this->input->isInteractive()
+            && ! $this->confirm("Purger DÉFINITIVEMENT le run #{$run->id} ? Action irréversible.")) {
             $this->info('Purge annulée.');
             return self::SUCCESS;
         }

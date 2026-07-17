@@ -336,12 +336,17 @@ class PayrollAccountingService
 
     /**
      * Numéro d'écriture séquentiel : OD-YYYY-NNN.
+     *
+     * withTrashed : une écriture soft-supprimée occupe toujours son numéro
+     * dans l'index unique — un numéro n'est JAMAIS réutilisé (sinon
+     * « Duplicate entry » à l'insert, et une piste d'audit ambiguë).
      */
     private function nextNumber(int $companyId, int $journalTypeId): string
     {
         $year  = now()->year;
         $prefix = "OD-{$year}-";
-        $last  = JournalEntry::where('company_id', $companyId)
+        $last  = JournalEntry::withTrashed()
+            ->where('company_id', $companyId)
             ->where('journal_type_id', $journalTypeId)
             ->where('number', 'like', $prefix . '%')
             ->orderByDesc('id')
