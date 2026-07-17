@@ -28,7 +28,7 @@
 <form action="{{ $isEdit ? route('clients.update', $c) : route('clients.store') }}"
       method="POST" enctype="multipart/form-data"
       x-data="clientForm({ tab: 'general', contacts: {{ Js::from($contactsInit) }}, addresses: {{ Js::from($addressesInit) }},
-          city: '{{ old('city', $c->city ?? '') }}', country: '{{ old('country', $c->country ?? 'CI') }}',
+          city: '{{ old('city', $c->city ?? '') }}', country: '{{ old('country', $c->country ?? 'BF') }}',
           creditLimit: '{{ old('credit_limit', $c->credit_limit ?? 0) }}', encours: '{{ old('encours_autorise', $c->encours_autorise ?? '') }}',
           compteCollectif: '{{ old('compte_collectif', $c->compte_collectif ?? '') }}' })"
       class="space-y-3">
@@ -269,7 +269,7 @@
                     {{-- [FIX doublons] miroirs de l'onglet Commercial — pas de name, sinon le doublon écrase --}}
                     <div><label class="{{ $lbl }}">Plafond crédit</label><input type="number" min="0" step="1" x-model="creditLimit" class="{{ $inpR }}"></div>
                     <div><label class="{{ $lbl }}">Encours autorisé</label><input type="number" min="0" step="1" x-model="encours" class="{{ $inpR }}"></div>
-                    <div><label class="{{ $lbl }}">Banque</label><input type="text" name="banque" maxlength="100" value="{{ old('banque', $c->banque ?? '') }}" class="{{ $inp }}" placeholder="BICICI"></div>
+                    <div><label class="{{ $lbl }}">Banque</label><input type="text" name="banque" maxlength="100" value="{{ old('banque', $c->banque ?? '') }}" class="{{ $inp }}" placeholder="Coris Bank"></div>
                     <div><label class="{{ $lbl }}">SWIFT</label><input type="text" name="swift" maxlength="20" value="{{ old('swift', $c->swift ?? '') }}" class="{{ $inp }} font-mono"></div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">RIB / IBAN</label><input type="text" name="rib_iban" maxlength="40" value="{{ old('rib_iban', $c->rib_iban ?? '') }}" class="{{ $inp }} font-mono"></div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">Numéro de compte</label><input type="text" name="numero_compte" maxlength="30" value="{{ old('numero_compte', $c->numero_compte ?? '') }}" class="{{ $inp }} font-mono"></div>
@@ -459,7 +459,7 @@ function clientForm(init) {
         compteCollectif: init.compteCollectif || '',
         addContact()     { this.contacts.push({ last_name: '', first_name: '', job_title: '', phone: '', email: '', is_primary: false }); },
         removeContact(i) { this.contacts.splice(i, 1); },
-        addAddress()     { this.addresses.push({ type: 'livraison', label: '', address: '', city: '', country: 'CI', is_default: false }); },
+        addAddress()     { this.addresses.push({ type: 'livraison', label: '', address: '', city: '', country: 'BF', is_default: false }); },
         removeAddress(i) { this.addresses.splice(i, 1); },
     };
 }

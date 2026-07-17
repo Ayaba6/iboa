@@ -103,7 +103,7 @@
                         <label class="{{ $lbl }}">Langue</label>
                         <div class="relative"><select name="language" class="{{ $lk }}">@php $lg = old('language', $s->language ?? 'FR'); @endphp<option value="FR" @selected($lg==='FR')>FR</option><option value="EN" @selected($lg==='EN')>EN</option></select>{!! $caret !!}</div>
                     </div>
-                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Pays</label><input type="text" name="country" maxlength="100" value="{{ old('country', $s->country ?? 'CI') }}" class="{{ $inp }}"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Pays</label><input type="text" name="country" maxlength="100" value="{{ old('country', $s->country ?? 'BF') }}" class="{{ $inp }}"></div>
                     <div class="sm:col-span-4 flex flex-wrap items-end gap-x-6 gap-y-2 pb-1">
                         @foreach(['soumis_tva'=>'Soumis TVA','blocage_achat'=>'Blocage achat'] as $bn => $blab)
                         <label class="inline-flex items-center gap-2 cursor-pointer">
@@ -140,7 +140,7 @@
                     <div><label class="{{ $lbl }}">Ville</label><input type="text" name="city" maxlength="100" value="{{ old('city', $s->city ?? '') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">Quartier</label><input type="text" name="quartier" maxlength="100" value="{{ old('quartier', $s->quartier ?? '') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">Région</label><input type="text" name="region" maxlength="100" value="{{ old('region', $s->region ?? '') }}" class="{{ $inp }}"></div>
-                    <div><label class="{{ $lbl }}">Pays</label><input type="text" name="country" maxlength="100" value="{{ old('country', $s->country ?? 'CI') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Pays</label><input type="text" name="country" maxlength="100" value="{{ old('country', $s->country ?? 'BF') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">GPS latitude</label><input type="number" step="0.000001" name="gps_lat" value="{{ old('gps_lat', $s->gps_lat ?? '') }}" class="{{ $inpR }}"></div>
                     <div><label class="{{ $lbl }}">GPS longitude</label><input type="number" step="0.000001" name="gps_lng" value="{{ old('gps_lng', $s->gps_lng ?? '') }}" class="{{ $inpR }}"></div>
                 </div>
@@ -344,7 +344,7 @@ function supplierForm(init) {
         addresses: init.addresses || [],
         addContact()     { this.contacts.push({ last_name: '', first_name: '', job_title: '', phone: '', email: '', is_primary: false }); },
         removeContact(i) { this.contacts.splice(i, 1); },
-        addAddress()     { this.addresses.push({ type: 'livraison', label: '', address: '', city: '', country: 'CI', is_default: false }); },
+        addAddress()     { this.addresses.push({ type: 'livraison', label: '', address: '', city: '', country: 'BF', is_default: false }); },
         removeAddress(i) { this.addresses.splice(i, 1); },
     };
 }
