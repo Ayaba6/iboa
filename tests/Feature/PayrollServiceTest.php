@@ -137,6 +137,26 @@ describe('PayrollService creation et calcul', function () {
             ->and($run->company_id)->toBe($company->id);
     });
 
+    it('refuse le calcul quand aucun employe actif avec contrat', function () {
+        $user    = payrollAdmin();
+        $company = payrollCompany();
+        setupPayrollSettings($company);
+        setupIutsBrackets();
+        // Aucun employé créé volontairement
+
+        $this->actingAs($user);
+        $svc = app(PayrollService::class);
+
+        $run = $svc->createRun(['period_month' => 5, 'period_year' => 2025, 'notes' => '']);
+
+        expect(fn() => $svc->calculate($run))
+            ->toThrow(\RuntimeException::class, 'Aucun employé actif');
+
+        $run->refresh();
+        expect($run->status)->toBe('brouillon')
+            ->and($run->items()->count())->toBe(0);
+    });
+
     it('calcule la paie et passe en statut calculee', function () {
         $user    = payrollAdmin();
         $company = payrollCompany();

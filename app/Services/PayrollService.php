@@ -126,6 +126,12 @@ class PayrollService
                 ->orderBy('last_name')
                 ->get();
 
+            if ($employees->isEmpty()) {
+                throw new \RuntimeException(
+                    'Aucun employé actif avec un contrat en cours : impossible de calculer la paie.'
+                );
+            }
+
             // Variables mensuelles déjà saisies pour ce run (groupées par employee_id)
             $variables = PayrollVariable::where('payroll_run_id', $run->id)
                 ->get()
@@ -177,6 +183,10 @@ class PayrollService
 
             if ($run->status !== 'calcule') {
                 throw new \RuntimeException('Seuls les bulletins calculés peuvent être validés.');
+            }
+
+            if ((int) $run->employee_count === 0) {
+                throw new \RuntimeException('Ce bulletin ne contient aucun employé : recalculez la paie avant de valider.');
             }
 
             $run->update([
