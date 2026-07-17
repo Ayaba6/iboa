@@ -464,6 +464,15 @@ class FinancialReportController extends Controller
             ->selectRaw('SUM(credit_balance) - SUM(debit_balance) as net')
             ->value('net');
 
+        // Dettes fiscales & sociales (classe 4 hors clients 41x / fournisseurs 40x :
+        // TVA 443x, État 44x, organismes sociaux 43x, personnel 42x…)
+        $totalDettesFiscales = (int) Account::where('is_detail', true)
+            ->where('code', 'like', '4%')
+            ->where('code', 'not like', '40%')
+            ->where('code', 'not like', '41%')
+            ->selectRaw('SUM(credit_balance) - SUM(debit_balance) as net')
+            ->value('net');
+
         // YTD charges (class 6)
         $totalCharges = (int) Account::where('is_detail', true)
             ->where('code', 'like', '6%')
@@ -493,6 +502,7 @@ class FinancialReportController extends Controller
             'company', 'cashAccounts', 'totalTresorerie',
             'totalClients', 'totalFournisseurs',
             'totalImmobilisations', 'totalStocks', 'totalCapitaux',
+            'totalDettesFiscales',
             'totalCharges', 'totalProduits', 'resultat',
             'recentEntries', 'brouillonCount'
         ));

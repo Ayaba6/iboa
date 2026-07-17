@@ -86,38 +86,74 @@
             <div class="px-5 py-3 border-b border-gray-100">
                 <h2 class="font-semibold text-gray-800">Synthèse bilancielle</h2>
             </div>
+            @php
+                // Soldes RÉELS — un solde de sens anormal (ex. stock créditeur)
+                // s'affiche en rouge avec alerte au lieu d'être écrasé à zéro.
+                $fmtSigned = fn($v) => number_format($v, 0, ',', ' ');
+                $totalActif  = $totalImmobilisations + $totalStocks + $totalClients + $totalTresorerie;
+                $totalPassif = $totalCapitaux + $totalFournisseurs + $totalDettesFiscales + $resultat;
+                $bilanEquilibre = abs($totalActif - $totalPassif) < 2;
+            @endphp
             <div class="p-4 space-y-3">
+                @foreach ([
+                    ['Immobilisations (classe 2)', $totalImmobilisations, 'text-gray-600', false],
+                    ['Stocks (classe 3)',          $totalStocks,          'text-gray-600', true],
+                    ['Créances clients',           $totalClients,         'text-blue-600 font-medium', true],
+                ] as [$label, $value, $labelCls, $flagNegative])
                 <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span class="text-sm text-gray-600">Immobilisations (classe 2)</span>
-                    <span class="tabular-nums font-semibold text-gray-900">{{ number_format(max(0,$totalImmobilisations), 0, ',', ' ') }} FCFA</span>
+                    <span class="text-sm {{ $labelCls }}">
+                        {{ $label }}
+                        @if($flagNegative && $value < 0)
+                        <span class="ml-1 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 align-middle">solde anormal</span>
+                        @endif
+                    </span>
+                    <span class="tabular-nums font-semibold {{ $value < 0 ? 'text-red-700' : 'text-gray-900' }}">{{ $fmtSigned($value) }} FCFA</span>
                 </div>
-                <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span class="text-sm text-gray-600">Stocks (classe 3)</span>
-                    <span class="tabular-nums font-semibold text-gray-900">{{ number_format(max(0,$totalStocks), 0, ',', ' ') }} FCFA</span>
-                </div>
-                <div class="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span class="text-sm text-blue-600 font-medium">Créances clients</span>
-                    <span class="tabular-nums font-semibold text-blue-700">{{ number_format(max(0,$totalClients), 0, ',', ' ') }} FCFA</span>
-                </div>
+                @endforeach
                 <div class="flex justify-between items-center py-2 border-b border-gray-50">
                     <span class="text-sm text-emerald-600 font-medium">Trésorerie (classe 5)</span>
                     <span class="tabular-nums font-semibold {{ $totalTresorerie >= 0 ? 'text-emerald-700' : 'text-red-700' }}">
-                        {{ number_format($totalTresorerie, 0, ',', ' ') }} FCFA
+                        {{ $fmtSigned($totalTresorerie) }} FCFA
                     </span>
                 </div>
                 <div class="flex justify-between items-center py-2 border-t-2 border-gray-200 mt-2">
                     <span class="text-sm font-bold text-gray-800">TOTAL ACTIF</span>
-                    <span class="tabular-nums font-bold text-gray-900 text-lg">
-                        {{ number_format(max(0,$totalImmobilisations) + max(0,$totalStocks) + max(0,$totalClients) + max(0,$totalTresorerie), 0, ',', ' ') }} FCFA
+                    <span class="tabular-nums font-bold {{ $totalActif < 0 ? 'text-red-700' : 'text-gray-900' }} text-lg">
+                        {{ $fmtSigned($totalActif) }} FCFA
                     </span>
                 </div>
                 <div class="flex justify-between items-center py-2 border-b border-gray-50 mt-2">
                     <span class="text-sm text-gray-600">Capitaux propres (classe 1)</span>
-                    <span class="tabular-nums font-semibold text-gray-900">{{ number_format(max(0,$totalCapitaux), 0, ',', ' ') }} FCFA</span>
+                    <span class="tabular-nums font-semibold {{ $totalCapitaux < 0 ? 'text-red-700' : 'text-gray-900' }}">{{ $fmtSigned($totalCapitaux) }} FCFA</span>
                 </div>
                 <div class="flex justify-between items-center py-2 border-b border-gray-50">
                     <span class="text-sm text-orange-600 font-medium">Dettes fournisseurs</span>
-                    <span class="tabular-nums font-semibold text-orange-700">{{ number_format(max(0,$totalFournisseurs), 0, ',', ' ') }} FCFA</span>
+                    <span class="tabular-nums font-semibold text-orange-700">{{ $fmtSigned($totalFournisseurs) }} FCFA</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-50">
+                    <span class="text-sm text-orange-600 font-medium">Dettes fiscales &amp; sociales</span>
+                    <span class="tabular-nums font-semibold text-orange-700">{{ $fmtSigned($totalDettesFiscales) }} FCFA</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-50">
+                    <span class="text-sm {{ $resultat >= 0 ? 'text-emerald-600' : 'text-red-600' }} font-medium">Résultat de l'exercice</span>
+                    <span class="tabular-nums font-semibold {{ $resultat >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ $fmtSigned($resultat) }} FCFA</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-t-2 border-gray-200">
+                    <span class="text-sm font-bold text-gray-800">TOTAL PASSIF</span>
+                    <span class="tabular-nums font-bold {{ $totalPassif < 0 ? 'text-red-700' : 'text-gray-900' }} text-lg">
+                        {{ $fmtSigned($totalPassif) }} FCFA
+                    </span>
+                </div>
+                <div class="flex items-center justify-center pt-1">
+                    @if($bilanEquilibre)
+                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                        ✓ Bilan équilibré (actif = passif)
+                    </span>
+                    @else
+                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                        ⚠ Écart actif/passif : {{ $fmtSigned(abs($totalActif - $totalPassif)) }} FCFA
+                    </span>
+                    @endif
                 </div>
             </div>
         </div>
