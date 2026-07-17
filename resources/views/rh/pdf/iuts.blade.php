@@ -28,8 +28,9 @@
             <th class="text-right">Salaire brut</th>
             <th class="text-right">CNSS (emp.)</th>
             <th class="text-right">Base imposable</th>
-            <th class="text-right">Nb parts</th>
-            <th class="text-right">Quotient/part</th>
+            <th class="text-right">Charges</th>
+            <th class="text-right">IUTS brut</th>
+            <th class="text-right">Réduction</th>
             <th class="text-right">IUTS dû</th>
         </tr>
     </thead>
@@ -41,15 +42,17 @@
         <td class="text-right">{{ number_format($item->salaire_brut, 0, ',', ' ') }}</td>
         <td class="text-right" style="color:#dc2626;">{{ number_format($item->cnss_employee, 0, ',', ' ') }}</td>
         <td class="text-right" style="font-weight:600;">{{ number_format($item->salaire_imposable, 0, ',', ' ') }}</td>
-        <td class="text-right">{{ number_format($item->nb_parts, 1) }}</td>
-        <td class="text-right">{{ $item->nb_parts > 0 ? number_format($item->salaire_imposable / $item->nb_parts, 0, ',', ' ') : '—' }}</td>
+        @php $d = $item->iuts_detail; @endphp
+        <td class="text-right">{{ $item->family_charges !== null ? $item->family_charges : number_format($item->nb_parts, 1) . ' pts' }}</td>
+        <td class="text-right">{{ $d ? number_format($d['brut'], 0, ',', ' ') : '—' }}</td>
+        <td class="text-right">{{ $d ? '− ' . number_format($d['reduction'], 0, ',', ' ') . ' (' . $d['reduction_rate'] . ' %)' : '—' }}</td>
         <td class="text-right" style="font-weight:700; color:#7c3aed;">{{ number_format($item->iuts_amount, 0, ',', ' ') }}</td>
     </tr>
     @endforeach
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="7">TOTAL IUTS À REVERSER</td>
+            <td colspan="8">TOTAL IUTS À REVERSER</td>
             <td class="text-right" style="color:#7c3aed; font-size:11px;">{{ number_format($run->total_iuts, 0, ',', ' ') }}</td>
         </tr>
     </tfoot>

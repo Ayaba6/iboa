@@ -136,7 +136,7 @@
     @endforeach
     <div class="param-row">
         <div class="param-lbl">Parts fiscales</div>
-        <div class="param-val">{{ $result['nb_parts'] }} part(s)</div>
+        <div class="param-val">{{ $result['family_charges'] ?? 0 }} charge(s)</div>
     </div>
 </div>
 

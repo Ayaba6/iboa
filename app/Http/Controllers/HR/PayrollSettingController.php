@@ -43,11 +43,13 @@ class PayrollSettingController extends Controller
             'cnssEmployee'     => (float) (old('cnss_employee_rate') ?? $setting->cnss_employee_rate),
             'cnssEmployer'     => (float) (old('cnss_employer_rate') ?? $setting->cnss_employer_rate),
             'cnssCeiling'      => (int)   (old('cnss_ceiling')       ?? $setting->cnss_ceiling),
-            'partsSingle'      => (float) (old('parts_base_single')  ?? $setting->parts_base_single),
-            'partsMarried'     => (float) (old('parts_base_married') ?? $setting->parts_base_married),
-            'partsWidowed'     => (float) (old('parts_base_widowed') ?? $setting->parts_base_widowed),
-            'partsPerChild'    => (float) (old('parts_per_child')    ?? $setting->parts_per_child),
-            'nbPartsMax'       => (int)   (old('nb_parts_max')       ?? $setting->nb_parts_max),
+            // Charges de famille (réduction IUTS) — remplace le quotient familial
+            'familyReductions' => collect($setting->iuts_family_reductions ?: PayrollSetting::defaultFamilyReductions())
+                                    ->mapWithKeys(fn($r) => [(int) $r[0] => (float) $r[1]])->toArray(),
+            'maxCharges'       => (int)   (old('iuts_max_charges')   ?? $setting->iuts_max_charges ?? 4),
+            'cnssPension'      => (float) (old('cnss_employer_pension_rate') ?? $setting->cnss_employer_pension_rate ?? 8.5),
+            'cnssRp'           => (float) (old('cnss_employer_rp_rate')      ?? $setting->cnss_employer_rp_rate ?? 1.5),
+            'cnssPf'           => (float) (old('cnss_employer_pf_rate')      ?? $setting->cnss_employer_pf_rate ?? 6.0),
             'bulletinPrefix'   => (string)(old('bulletin_prefix')    ?? $setting->bulletin_prefix ?? ''),
             // [P3.B] Effort de paix
             'effortPaixEnabled'=> (bool)  (old('effort_paix_enabled') ?? $setting->effort_paix_enabled ?? true),
@@ -77,11 +79,14 @@ class PayrollSettingController extends Controller
             'hs_rate_25'         => ['required', 'numeric', 'min:0', 'max:500'],
             'hs_rate_50'         => ['required', 'numeric', 'min:0', 'max:500'],
             'hs_rate_nuit'       => ['required', 'numeric', 'min:0', 'max:500'],
-            'nb_parts_max'        => ['required', 'integer', 'min:1', 'max:20'],
-            'parts_per_child'     => ['required', 'numeric', 'min:0', 'max:5'],
-            'parts_base_single'   => ['required', 'numeric', 'min:0.5', 'max:5'],
-            'parts_base_married'  => ['required', 'numeric', 'min:0.5', 'max:5'],
-            'parts_base_widowed'  => ['required', 'numeric', 'min:0.5', 'max:5'],
+            // Charges de famille — réduction sur l'IUTS brut
+            'family_reductions'   => ['required', 'array'],
+            'family_reductions.*' => ['required', 'numeric', 'min:0', 'max:100'],
+            'iuts_max_charges'    => ['required', 'integer', 'min:0', 'max:10'],
+            // Ventilation CNSS patronale (pension / risques pro / prestations familiales)
+            'cnss_employer_pension_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'cnss_employer_rp_rate'      => ['required', 'numeric', 'min:0', 'max:100'],
+            'cnss_employer_pf_rate'      => ['required', 'numeric', 'min:0', 'max:100'],
             'bulletin_prefix'     => ['required', 'string', 'max:10'],
             'currency_code'       => ['required', 'string', 'max:10'],
             'country_code'        => ['required', 'string', 'max:5'],
@@ -122,9 +127,27 @@ class PayrollSettingController extends Controller
         // Les checkbox non cochées n'envoient rien — forcer false si absent
         $validated['effort_paix_enabled'] = $request->boolean('effort_paix_enabled');
 
+        // Réductions charges de famille : {n => pct} → [[n, pct], ...] trié
+        $reductions = collect($validated['family_reductions'])
+            ->map(fn($pct, $n) => [(int) $n, (float) $pct])
+            ->sortBy(0)->values()->toArray();
+
+        // Le taux patronal total est TOUJOURS la somme de la ventilation —
+        // la valeur saisie séparément ne peut pas diverger des composantes.
+        $validated['cnss_employer_rate'] = round(
+            (float) $validated['cnss_employer_pension_rate']
+            + (float) $validated['cnss_employer_rp_rate']
+            + (float) $validated['cnss_employer_pf_rate'],
+            2
+        );
+
         $setting->fill(array_merge(
-            \Arr::except($validated, ['brackets']),
-            ['iuts_brackets' => $brackets, 'updated_by' => Auth::id()]
+            \Arr::except($validated, ['brackets', 'family_reductions']),
+            [
+                'iuts_brackets'          => $brackets,
+                'iuts_family_reductions' => $reductions,
+                'updated_by'             => Auth::id(),
+            ]
         ));
         $setting->company_id = $company->id;
         $setting->save();

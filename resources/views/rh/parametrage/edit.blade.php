@@ -57,7 +57,7 @@ window.__parametrageCfg = @json($cfg);
             $navTabs = [
                 [1, 'Cotisations',     'CNSS · AT/MP · SMIG'],
                 [2, 'Temps de travail','Jours · HS · Congés'],
-                [3, 'Quotient IUTS',   'Parts · Barème · Simulation'],
+                [3, 'IUTS & Charges',   'Barème · Charges famille · Simulation'],
                 [4, 'Bulletins',       'Numérotation · Devise'],
             ];
             @endphp
@@ -89,19 +89,22 @@ window.__parametrageCfg = @json($cfg);
             <div class="p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
                 @php
                 $cnssFields = [
-                    ['cnss_employee_rate', 'Cotisation salarié',  '%',     '0.01', 'Retenue sur salaire brut', $setting->cnss_employee_rate],
-                    ['cnss_employer_rate', 'Cotisation patronale','%',     '0.01', 'Charge sur salaire brut',  $setting->cnss_employer_rate],
-                    ['cnss_ceiling',       'Plafond mensuel',     $setting->currency_code, '1000', 'Assiette maximale CNSS', $setting->cnss_ceiling],
-                    ['cnss_at_rate',       'Taux AT/MP',          '%',     '0.01', 'Accidents du travail',     $setting->cnss_at_rate],
+                    ['cnss_employee_rate',          'Cotisation salarié (pension)', '%', '0.01', 'Retenue sur salaire brut', $setting->cnss_employee_rate, 'cnssEmployee'],
+                    ['cnss_ceiling',                'Plafond mensuel', $setting->currency_code, '1000', 'Assiette maximale CNSS — BF : 800 000', $setting->cnss_ceiling, null],
+                    ['cnss_annual_ceiling',         'Plafond annuel', $setting->currency_code, '10000', 'BF : 9 600 000', $setting->cnss_annual_ceiling ?? 9_600_000, null],
+                    ['cnss_at_rate',                'Taux AT/MP (legacy)', '%', '0.01', 'Non utilisé — remplacé par risques professionnels', $setting->cnss_at_rate, null],
+                    ['cnss_employer_pension_rate',  'Patronal — pension', '%', '0.01', 'BF : 8,5 %', $setting->cnss_employer_pension_rate ?? 8.5, 'cnssPension'],
+                    ['cnss_employer_rp_rate',       'Patronal — risques pro.', '%', '0.01', 'BF : 1,5 %', $setting->cnss_employer_rp_rate ?? 1.5, 'cnssRp'],
+                    ['cnss_employer_pf_rate',       'Patronal — prestations fam.', '%', '0.01', 'BF : 6 %', $setting->cnss_employer_pf_rate ?? 6.0, 'cnssPf'],
                 ];
                 @endphp
-                @foreach($cnssFields as [$name, $label, $unit, $step, $help, $value])
+                @foreach($cnssFields as [$name, $label, $unit, $step, $help, $value, $model])
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1.5">{{ $label }}</label>
                     <div class="relative">
                         <input type="number" name="{{ $name }}" step="{{ $step }}" min="0"
                                value="{{ old($name, $value) }}"
-                               x-on:input="{{ $name === 'cnss_employee_rate' ? 'cnssEmployee = $event.target.value' : ($name === 'cnss_employer_rate' ? 'cnssEmployer = $event.target.value' : '') }}"
+                               @if($model) x-on:input="{{ $model }} = parseFloat($event.target.value) || 0" @endif
                                class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-14 focus:ring-1 focus:ring-emerald-500 @error($name) border-red-400 @enderror">
                         <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">{{ $unit }}</span>
                     </div>
@@ -109,6 +112,18 @@ window.__parametrageCfg = @json($cfg);
                     @error($name)<p class="text-red-500 text-xs mt-0.5">{{ $message }}</p>@enderror
                 </div>
                 @endforeach
+                {{-- Total patronal calculé (somme de la ventilation, non modifiable) --}}
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1.5">Patronal — total</label>
+                    <div class="relative">
+                        <input type="text" readonly
+                               :value="(cnssPension + cnssRp + cnssPf).toFixed(2)"
+                               class="w-full border border-gray-200 bg-gray-50 rounded-[4px] px-3 py-2 text-sm text-right pr-14 font-semibold text-gray-700">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">%</span>
+                        <input type="hidden" name="cnss_employer_rate" :value="(cnssPension + cnssRp + cnssPf).toFixed(2)">
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-1">Somme pension + RP + PF — BF : 16 %</p>
+                </div>
             </div>
             {{-- Récap charges sur un salaire exemple --}}
             <div class="mx-5 mb-5 bg-blue-50 rounded-[4px] border border-blue-100 p-4">
@@ -379,88 +394,51 @@ window.__parametrageCfg = @json($cfg);
     {{-- ════ ONGLET 3 — Quotient IUTS ══════════════════════════════════════════ --}}
     <div x-show="tab === 3" x-cloak class="space-y-4">
 
-        {{-- Parts de base --}}
+        {{-- Charges de famille — réduction IUTS --}}
         <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="flex items-start gap-3 px-5 py-3.5 bg-purple-50 border-b border-purple-100">
                 <svg class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <div>
-                    <p class="text-sm font-semibold text-purple-900">Quotient familial — Parts de base</p>
-                    <p class="text-xs text-purple-500 mt-0.5">CGI Burkina Faso · Art. 73 et suivants · Valeurs modifiables selon évolution législative</p>
+                    <p class="text-sm font-semibold text-purple-900">Charges de famille — Réduction d'IUTS</p>
+                    <p class="text-xs text-purple-500 mt-0.5">CGI Burkina Faso · Réduction appliquée sur l'IUTS brut selon le nombre de charges</p>
                 </div>
             </div>
-            <div class="p-5 grid grid-cols-2 sm:grid-cols-4 gap-5">
+            <div class="p-5 grid grid-cols-2 sm:grid-cols-5 gap-5">
+                @php
+                    $reductions = collect($setting->iuts_family_reductions ?: \App\Models\PayrollSetting::defaultFamilyReductions())
+                        ->mapWithKeys(fn($r) => [(int) $r[0] => (float) $r[1]]);
+                @endphp
+                @foreach ([0, 1, 2, 3, 4] as $n)
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1.5">Célibataire / Divorcé(e)</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-1.5">{{ $n }} charge{{ $n > 1 ? 's' : '' }}{{ $n === 4 ? ' et +' : '' }}</label>
                     <div class="relative">
-                        <input type="number" name="parts_base_single" step="0.25" min="0.5" max="5"
-                               value="{{ old('parts_base_single', $setting->parts_base_single) }}"
-                               x-model="partsSingle"
-                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-14 focus:ring-1 focus:ring-purple-500 @error('parts_base_single') border-red-400 @enderror">
-                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">parts</span>
+                        <input type="number" name="family_reductions[{{ $n }}]" step="0.5" min="0" max="100"
+                               value="{{ old('family_reductions.' . $n, $reductions[$n] ?? 0) }}"
+                               x-model.number="familyReductions[{{ $n }}]"
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-8 focus:ring-1 focus:ring-purple-500">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                     </div>
-                    @error('parts_base_single')<p class="text-red-500 text-xs mt-0.5">{{ $message }}</p>@enderror
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1.5">Marié(e)</label>
-                    <div class="relative">
-                        <input type="number" name="parts_base_married" step="0.25" min="0.5" max="5"
-                               value="{{ old('parts_base_married', $setting->parts_base_married) }}"
-                               x-model="partsMarried"
-                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-14 focus:ring-1 focus:ring-purple-500 @error('parts_base_married') border-red-400 @enderror">
-                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">parts</span>
-                    </div>
-                    @error('parts_base_married')<p class="text-red-500 text-xs mt-0.5">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1.5">Veuf / Veuve</label>
-                    <div class="relative">
-                        <input type="number" name="parts_base_widowed" step="0.25" min="0.5" max="5"
-                               value="{{ old('parts_base_widowed', $setting->parts_base_widowed) }}"
-                               x-model="partsWidowed"
-                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-14 focus:ring-1 focus:ring-purple-500 @error('parts_base_widowed') border-red-400 @enderror">
-                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">parts</span>
-                    </div>
-                    @error('parts_base_widowed')<p class="text-red-500 text-xs mt-0.5">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1.5">Parts par enfant</label>
-                    <div class="relative">
-                        <input type="number" name="parts_per_child" step="0.25" min="0" max="5"
-                               value="{{ old('parts_per_child', $setting->parts_per_child) }}"
-                               x-model="partsPerChild"
-                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-14 focus:ring-1 focus:ring-purple-500">
-                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">part</span>
-                    </div>
-                    <p class="text-[10px] text-gray-400 mt-1">Par enfant à charge (max 6)</p>
-                </div>
+                @endforeach
                 <div class="sm:col-span-2">
-                    <label class="block text-xs font-medium text-gray-700 mb-1.5">NB_PARTS maximum autorisé</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-1.5">Nombre maximal de charges retenues</label>
                     <div class="relative">
-                        <input type="number" name="nb_parts_max" min="1" max="20"
-                               value="{{ old('nb_parts_max', $setting->nb_parts_max) }}"
-                               x-model="nbPartsMax"
-                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-14 focus:ring-1 focus:ring-purple-500">
-                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">parts</span>
+                        <input type="number" name="iuts_max_charges" min="0" max="10"
+                               value="{{ old('iuts_max_charges', $setting->iuts_max_charges ?? 4) }}"
+                               x-model.number="maxCharges"
+                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right pr-16 focus:ring-1 focus:ring-purple-500">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">charges</span>
                     </div>
-                    <p class="text-[10px] text-gray-400 mt-1">Plafond légal du quotient familial</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Plafond fiscal — BF : 4 charges maximum</p>
                 </div>
-                {{-- Exemples réactifs --}}
-                <div class="sm:col-span-2 bg-purple-50 rounded-[4px] border border-purple-100 p-3">
-                    <p class="text-[10px] text-purple-600 font-semibold uppercase tracking-wide mb-2">Exemples de quotients</p>
-                    <div class="space-y-1 text-xs">
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Célibataire, 0 enfant</span>
-                            <span class="font-bold text-purple-700 font-mono" x-text="Math.min(parseFloat(partsSingle),parseFloat(nbPartsMax)).toFixed(2) + ' parts'"></span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Marié(e), 2 enfants</span>
-                            <span class="font-bold text-purple-700 font-mono" x-text="Math.min(parseFloat(partsMarried) + 2*parseFloat(partsPerChild), parseFloat(nbPartsMax)).toFixed(2) + ' parts'"></span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Marié(e), 6 enfants</span>
-                            <span class="font-bold text-purple-700 font-mono" x-text="Math.min(parseFloat(partsMarried) + 6*parseFloat(partsPerChild), parseFloat(nbPartsMax)).toFixed(2) + ' parts'"></span>
-                        </div>
-                    </div>
+                <div class="sm:col-span-3 bg-purple-50 rounded-[4px] border border-purple-100 p-3">
+                    <p class="text-[10px] text-purple-600 font-semibold uppercase tracking-wide mb-1">Rappel du régime</p>
+                    <p class="text-xs text-gray-600">
+                        L'IUTS brut est calculé par tranches progressives sur le revenu imposable total,
+                        puis la réduction pour charges de famille s'applique sur l'IUTS brut :
+                        <span class="font-mono text-purple-700">IUTS net = IUTS brut − réduction</span>.
+                        L'ancien quotient familial par parts n'est plus utilisé.
+                    </p>
                 </div>
             </div>
         </div>
@@ -471,8 +449,8 @@ window.__parametrageCfg = @json($cfg);
                 <div class="flex items-start gap-3">
                     <svg class="w-5 h-5 text-emerald-700 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     <div>
-                        <p class="text-sm font-semibold text-emerald-900">Barème IUTS — par part, mensuel</p>
-                        <p class="text-xs text-emerald-600 mt-0.5">Tranches sur revenu ÷ NB_PARTS · Annexe fiscale CGI BF</p>
+                        <p class="text-sm font-semibold text-emerald-900">Barème IUTS — mensuel, revenu imposable total</p>
+                        <p class="text-xs text-emerald-600 mt-0.5">Tranches progressives · réduction charges de famille sur l'IUTS brut · Annexe fiscale CGI BF</p>
                     </div>
                 </div>
                 <button type="button" @click="addBracket()"
@@ -486,8 +464,8 @@ window.__parametrageCfg = @json($cfg);
                     <thead class="bg-[#eef5f0] text-[11px] text-emerald-900 font-bold uppercase tracking-wide border-b border-gray-300">
                         <tr>
                             <th class="px-3 py-2.5 text-center w-10">#</th>
-                            <th class="px-3 py-2.5 text-right">De ({{ $setting->currency_code }}/part)</th>
-                            <th class="px-3 py-2.5 text-right">Jusqu'à ({{ $setting->currency_code }}/part)</th>
+                            <th class="px-3 py-2.5 text-right">De ({{ $setting->currency_code }})</th>
+                            <th class="px-3 py-2.5 text-right">Jusqu'à ({{ $setting->currency_code }})</th>
                             <th class="px-3 py-2.5 text-center w-48">Taux</th>
                             <th class="px-3 py-2.5 w-10"></th>
                         </tr>
@@ -549,7 +527,7 @@ window.__parametrageCfg = @json($cfg);
             <div class="flex items-center gap-2 px-5 py-3.5 bg-[#eef5f0] border-b border-emerald-100">
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 <p class="text-sm font-semibold text-emerald-900">Simulateur IUTS</p>
-                <span class="text-xs text-emerald-500">— basé sur le barème et les parts ci-dessus</span>
+                <span class="text-xs text-emerald-500">— barème progressif + réduction charges, détail par tranche</span>
             </div>
             <div class="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                 <div>
@@ -558,20 +536,60 @@ window.__parametrageCfg = @json($cfg);
                            class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono text-right focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1.5">NB_PARTS du salarié</label>
-                    <input type="number" x-model="simParts" step="0.5" min="1"
+                    <label class="block text-xs font-medium text-gray-700 mb-1.5">Charges de famille</label>
+                    <input type="number" x-model.number="simCharges" step="1" min="0" max="10"
                            class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono text-right focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div class="bg-[#eef5f0] rounded-[4px] border border-emerald-200 p-4 text-center">
-                    <p class="text-xs text-emerald-700 font-medium uppercase tracking-wide">IUTS calculé</p>
+                    <p class="text-xs text-emerald-700 font-medium uppercase tracking-wide">IUTS net</p>
                     <p class="text-[16px] font-bold text-emerald-900 font-mono mt-1"
                        x-text="computeIuts().toLocaleString('fr-FR') + ' F'"></p>
                     <p class="text-[10px] text-emerald-500 mt-1"
                        x-show="simBrut > 0"
-                       x-text="'soit ' + (computeIuts() / simBrut * 100).toFixed(2) + '% du brut'"></p>
+                       x-text="'IUTS brut ' + computeIutsDetail().brut.toLocaleString('fr-FR') + ' F − réduction ' + computeIutsDetail().reduction.toLocaleString('fr-FR') + ' F (' + computeIutsDetail().reductionRate + ' %)'"></p>
                     <p class="text-[10px] text-emerald-500"
                        x-show="simBrut > 0"
-                       x-text="'Net avant CNSS ≈ ' + Math.round(simBrut - computeIuts()).toLocaleString('fr-FR') + ' F'"></p>
+                       x-text="'soit ' + (computeIuts() / simBrut * 100).toFixed(2) + '% du brut imposable'"></p>
+                </div>
+            </div>
+            {{-- Détail du calcul par tranche : contrôle manuel possible --}}
+            <div class="px-5 pb-5" x-show="simBrut > 0">
+                <p class="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide mb-2">Détail par tranche</p>
+                <div class="overflow-x-auto border border-gray-200 rounded-[4px]">
+                    <table class="w-full text-xs">
+                        <thead class="bg-[#eef5f0] text-[10px] text-emerald-900 font-bold uppercase">
+                            <tr>
+                                <th class="px-3 py-1.5 text-right">De</th>
+                                <th class="px-3 py-1.5 text-right">À</th>
+                                <th class="px-3 py-1.5 text-right">Taux</th>
+                                <th class="px-3 py-1.5 text-right">Assiette</th>
+                                <th class="px-3 py-1.5 text-right">Impôt</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="(t, i) in computeIutsDetail().tranches" :key="i">
+                                <tr>
+                                    <td class="px-3 py-1 text-right font-mono" x-text="t.de.toLocaleString('fr-FR')"></td>
+                                    <td class="px-3 py-1 text-right font-mono" x-text="t.a === null ? '∞' : t.a.toLocaleString('fr-FR')"></td>
+                                    <td class="px-3 py-1 text-right font-mono" x-text="t.taux + ' %'"></td>
+                                    <td class="px-3 py-1 text-right font-mono" x-text="t.assiette.toLocaleString('fr-FR')"></td>
+                                    <td class="px-3 py-1 text-right font-mono font-semibold" x-text="t.impot.toLocaleString('fr-FR')"></td>
+                                </tr>
+                            </template>
+                            <tr class="bg-emerald-50/50 font-semibold">
+                                <td colspan="4" class="px-3 py-1 text-right">IUTS brut</td>
+                                <td class="px-3 py-1 text-right font-mono" x-text="computeIutsDetail().brut.toLocaleString('fr-FR')"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="px-3 py-1 text-right text-purple-700">Réduction charges de famille (<span x-text="computeIutsDetail().reductionRate"></span> %)</td>
+                                <td class="px-3 py-1 text-right font-mono text-purple-700" x-text="'− ' + computeIutsDetail().reduction.toLocaleString('fr-FR')"></td>
+                            </tr>
+                            <tr class="bg-emerald-100/60 font-bold">
+                                <td colspan="4" class="px-3 py-1 text-right">IUTS net</td>
+                                <td class="px-3 py-1 text-right font-mono" x-text="computeIutsDetail().net.toLocaleString('fr-FR')"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -684,8 +702,12 @@ window.__parametrageCfg = @json($cfg);
                 <span class="font-bold text-orange-600">{{ $setting->cnss_employer_rate }} %</span>
             </div>
             <div class="flex justify-between py-1.5">
-                <span class="text-gray-500">AT/MP</span>
-                <span class="font-bold text-amber-600">{{ $setting->cnss_at_rate }} %</span>
+                <span class="text-gray-500">— pension / RP / PF</span>
+                <span class="font-bold text-amber-600">{{ $setting->cnss_employer_pension_rate ?? 8.5 }} / {{ $setting->cnss_employer_rp_rate ?? 1.5 }} / {{ $setting->cnss_employer_pf_rate ?? 6 }} %</span>
+            </div>
+            <div class="flex justify-between py-1.5">
+                <span class="text-gray-500">Plafond CNSS</span>
+                <span class="font-bold text-gray-700 font-mono">{{ number_format($setting->cnss_ceiling, 0, ',', ' ') }} F</span>
             </div>
             <div class="flex justify-between py-1.5">
                 <span class="text-gray-500">SMIG mensuel</span>
@@ -696,16 +718,12 @@ window.__parametrageCfg = @json($cfg);
                 <span class="font-bold text-gray-700">{{ $setting->work_days_month }} j/mois</span>
             </div>
             <div class="flex justify-between py-1.5">
-                <span class="text-gray-500">Parts célibataire</span>
-                <span class="font-bold text-purple-600">{{ $setting->parts_base_single }}</span>
+                <span class="text-gray-500">Réduc. charges (1→4+)</span>
+                <span class="font-bold text-purple-600">{{ collect($setting->iuts_family_reductions ?: \App\Models\PayrollSetting::defaultFamilyReductions())->filter(fn($r) => $r[0] > 0)->map(fn($r) => $r[1] . ' %')->join(' / ') }}</span>
             </div>
             <div class="flex justify-between py-1.5">
-                <span class="text-gray-500">Parts marié(e)</span>
-                <span class="font-bold text-purple-600">{{ $setting->parts_base_married }}</span>
-            </div>
-            <div class="flex justify-between py-1.5">
-                <span class="text-gray-500">NB_PARTS max</span>
-                <span class="font-bold text-emerald-700">{{ $setting->nb_parts_max }}</span>
+                <span class="text-gray-500">Charges max IUTS</span>
+                <span class="font-bold text-emerald-700">{{ $setting->iuts_max_charges ?? 4 }}</span>
             </div>
             <div class="flex justify-between py-1.5">
                 <span class="text-gray-500">Tranches IUTS</span>
@@ -722,7 +740,7 @@ window.__parametrageCfg = @json($cfg);
 
     {{-- Navigation onglets --}}
     <div class="bg-white rounded-[4px] border border-gray-300 p-3 space-y-1">
-        @foreach([1 => 'Cotisations sociales', 2 => 'Temps de travail', 3 => 'Quotient IUTS', 4 => 'Bulletins de paie'] as $n => $lbl)
+        @foreach([1 => 'Cotisations sociales', 2 => 'Temps de travail', 3 => 'IUTS & Charges', 4 => 'Bulletins de paie'] as $n => $lbl)
         <button type="button" @click="tab = {{ $n }}"
                 :class="tab === {{ $n }} ? 'bg-[#eef5f0] text-emerald-800 font-semibold' : 'text-gray-600 hover:bg-gray-50'"
                 class="w-full text-left text-xs px-2.5 py-1.5 rounded-[4px] transition-colors flex items-center gap-2">
@@ -761,21 +779,23 @@ function parametrageSage(cfg) {
         workDaysMonth: cfg.workDaysMonth,
         workHoursDay:  cfg.workHoursDay,
         cnssEmployee:  cfg.cnssEmployee,
-        cnssEmployer:  cfg.cnssEmployer,
         cnssCeiling:   cfg.cnssCeiling,
-        partsSingle:   cfg.partsSingle,
-        partsMarried:  cfg.partsMarried,
-        partsWidowed:  cfg.partsWidowed,
-        partsPerChild: cfg.partsPerChild,
-        nbPartsMax:    cfg.nbPartsMax,
+        cnssPension:   cfg.cnssPension ?? 8.5,
+        cnssRp:        cfg.cnssRp ?? 1.5,
+        cnssPf:        cfg.cnssPf ?? 6.0,
+        get cnssEmployer() { return this.cnssPension + this.cnssRp + this.cnssPf; },
         brackets:           cfg.brackets,
         bulletinPrefix:     cfg.bulletinPrefix,
         effortPaixEnabled:  cfg.effortPaixEnabled,  // [P3.B]
         effortPaixRate:     cfg.effortPaixRate,      // [P3.B]
 
+        /* ── Charges de famille (réduction IUTS) ── */
+        familyReductions: cfg.familyReductions || {0: 0, 1: 8, 2: 10, 3: 12, 4: 14},
+        maxCharges:       cfg.maxCharges ?? 4,
+
         /* ── Simulateur ── */
-        simBrut:  0,
-        simParts: cfg.partsSingle,
+        simBrut:    0,
+        simCharges: 0,
 
         /* ── Barème : ajouter / supprimer une tranche ── */
         addBracket() {
@@ -788,24 +808,45 @@ function parametrageSage(cfg) {
             this.brackets.splice(i, 1);
         },
 
-        /* ── Calcul IUTS par quotient familial ── */
-        computeIuts() {
-            const brut  = parseFloat(this.simBrut)  || 0;
-            const parts = parseFloat(this.simParts) || 1;
-            if (brut <= 0 || parts <= 0) return 0;
+        /* ── IUTS légal BF : tranches progressives sur le revenu imposable
+              total + réduction pour charges de famille sur l'IUTS brut ── */
+        computeIutsDetail() {
+            const brut = parseFloat(this.simBrut) || 0;
+            const detail = { tranches: [], brut: 0, reductionRate: 0, reduction: 0, net: 0 };
+            if (brut <= 0) return detail;
 
-            const quotient = brut / parts;
             let tax = 0, prev = 0;
-
             for (const b of this.brackets) {
                 const lim  = parseFloat(b.limit) || 9999999999;
                 const rate = parseFloat(b.rate)  || 0;
-                if (quotient <= prev) break;
-                tax += (Math.min(quotient, lim) - prev) * rate / 100;
+                if (brut <= prev) break;
+                const assiette = Math.min(brut, lim) - prev;
+                const impot    = assiette * rate / 100;
+                tax += impot;
+                detail.tranches.push({
+                    de: prev === 0 ? 0 : prev + 1,
+                    a: lim >= 9999999999 ? null : lim,
+                    taux: rate,
+                    assiette: assiette,
+                    impot: Math.round(impot),
+                });
                 prev = lim;
-                if (quotient <= lim) break;
+                if (brut <= lim) break;
             }
-            return Math.round(tax * parts);
+
+            detail.brut = Math.round(tax);
+            const charges = Math.min(Math.max(0, parseInt(this.simCharges) || 0), parseInt(this.maxCharges) || 4);
+            let rate = 0;
+            for (const [n, pct] of Object.entries(this.familyReductions)) {
+                if (charges >= parseInt(n)) rate = parseFloat(pct) || 0;
+            }
+            detail.reductionRate = rate;
+            detail.reduction     = Math.round(detail.brut * rate / 100);
+            detail.net           = Math.max(0, detail.brut - detail.reduction);
+            return detail;
+        },
+        computeIuts() {
+            return this.computeIutsDetail().net;
         },
     };
 }

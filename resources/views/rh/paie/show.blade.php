@@ -548,7 +548,7 @@
             <td class="px-3 py-2">
                 <div class="font-medium text-gray-900">{{ $item->employee_name }}</div>
                 <div class="text-gray-400">{{ $item->department_name }} · {{ $item->job_title }}</div>
-                <div class="text-gray-300">{{ $item->worked_days }}/{{ $item->total_days }} j · {{ $item->nb_parts }} part(s)</div>
+                <div class="text-gray-300">{{ $item->worked_days }}/{{ $item->total_days }} j · {{ $item->family_charges !== null ? $item->family_charges . ' charge(s)' : $item->nb_parts . ' part(s)' }}</div>
             </td>
             <td class="px-3 py-2 text-right font-mono">{{ number_format($item->base_salary, 0, ',', ' ') }}</td>
             <td class="px-3 py-2 text-right font-mono text-blue-600">

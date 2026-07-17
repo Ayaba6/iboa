@@ -53,7 +53,7 @@ class IutsExport implements FromArray, WithTitle, WithColumnWidths, WithEvents
         $this->rows[] = ["ÉTAT IUTS — {$period}"];
         $this->rows[] = [];
         $this->rows[] = [
-            'Matricule', 'Nom & Prénom', 'Parts',
+            'Matricule', 'Nom & Prénom', 'Charges',
             'Salaire Imposable', 'CNSS Salarié', 'IUTS Mensuel', 'Cumul IUTS YTD',
         ];
 
@@ -61,7 +61,7 @@ class IutsExport implements FromArray, WithTitle, WithColumnWidths, WithEvents
             $this->rows[] = [
                 $item->employee_matricule,
                 $item->employee_name,
-                number_format($item->nb_parts, 1),
+                $item->family_charges !== null ? $item->family_charges : number_format($item->nb_parts, 1),
                 $item->salaire_imposable,
                 $item->cnss_employee,
                 $item->iuts_amount,

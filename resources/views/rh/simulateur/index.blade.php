@@ -302,7 +302,7 @@
                         <div class="bg-purple-50 border border-purple-200 rounded-[4px] p-4">
                             <p class="text-xs text-purple-500 font-medium uppercase tracking-wide mb-1">IUTS</p>
                             <p class="text-[17px] font-bold text-purple-700 tabular-nums" x-text="fmt(result.iuts)+' F'"></p>
-                            <p class="text-xs text-purple-400 mt-1" x-text="result.nb_parts+' part(s) fiscale(s)'"></p>
+                            <p class="text-xs text-purple-400 mt-1" x-text="(result.family_charges ?? 0)+' charge(s) de famille'"></p>
                         </div>
                         <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] p-4">
                             <p class="text-xs text-emerald-700 font-medium uppercase tracking-wide mb-1">Salaire net imposable</p>

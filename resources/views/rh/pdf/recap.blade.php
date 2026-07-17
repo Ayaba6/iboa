@@ -45,7 +45,7 @@
             <th class="text-right">Brut</th>
             <th class="text-right">CNSS emp.</th>
             <th class="text-right">CNSS pat.</th>
-            <th class="text-right">Parts</th>
+            <th class="text-right">Charges</th>
             <th class="text-right">IUTS</th>
             <th class="text-right">NET</th>
             <th class="text-right">Coût total</th>
@@ -62,7 +62,7 @@
         <td class="text-right" style="font-weight:600;">{{ number_format($item->salaire_brut, 0, ',', ' ') }}</td>
         <td class="text-right" style="color:#dc2626;">{{ number_format($item->cnss_employee, 0, ',', ' ') }}</td>
         <td class="text-right" style="color:#d97706;">{{ number_format($item->cnss_employer, 0, ',', ' ') }}</td>
-        <td class="text-right">{{ number_format($item->nb_parts, 1) }}</td>
+        <td class="text-right">{{ $item->family_charges !== null ? $item->family_charges : number_format($item->nb_parts, 1) }}</td>
         <td class="text-right" style="color:#7c3aed;">{{ number_format($item->iuts_amount, 0, ',', ' ') }}</td>
         <td class="text-right" style="font-weight:700; color:#059669;">{{ number_format($item->salaire_net, 0, ',', ' ') }}</td>
         <td class="text-right" style="font-weight:600;">{{ number_format($item->cout_employeur, 0, ',', ' ') }}</td>
