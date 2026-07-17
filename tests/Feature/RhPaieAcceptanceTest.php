@@ -60,8 +60,10 @@ function rhpAdmin(): User
 function rhpSettings(Company $co): void
 {
     PayrollSetting::firstOrCreate(['company_id' => $co->id], [
-        'smig' => 34664, 'cnss_employee_rate' => 5.5, 'cnss_employer_rate' => 16.0, 'cnss_at_rate' => 3.5,
-        'cnss_ceiling' => 800000, 'effort_paix_rate' => 1.0, 'effort_paix_enabled' => true,
+        'smig' => 45000, 'cnss_employee_rate' => 5.5, 'cnss_employer_rate' => 16.0,
+        'cnss_employer_pension_rate' => 8.5, 'cnss_employer_rp_rate' => 1.5, 'cnss_employer_pf_rate' => 6.0,
+        'cnss_ceiling' => 800000, 'cnss_annual_ceiling' => 9600000,
+        'effort_paix_rate' => 1.0, 'effort_paix_enabled' => true,
         'work_days_month' => 26, 'work_hours_day' => 8, 'leave_days_year' => 30,
         'hs_rate_25' => 25.0, 'hs_rate_50' => 50.0, 'hs_rate_nuit' => 75.0,
         'anc_rate_per_year' => 2.0, 'anc_rate_max_pct' => 25.0,
@@ -70,6 +72,8 @@ function rhpSettings(Company $co): void
         'parts_base_married' => 2.0, 'parts_base_widowed' => 1.5,
         'currency_code' => 'XOF', 'country_code' => 'BF',
         'iuts_brackets' => PayrollSetting::defaultIutsBrackets(),
+        'iuts_family_reductions' => PayrollSetting::defaultFamilyReductions(),
+        'iuts_max_charges' => 4,
     ]);
 }
 

@@ -26,7 +26,9 @@ class PayrollItem extends Model
         'avances_deductions', 'loan_deductions', 'autres_retenues',
         // ─ Totaux cotisations
         'salaire_brut', 'cnss_base', 'cnss_employee', 'cnss_employer',
-        'salaire_imposable', 'nb_parts', 'iuts_amount', 'effort_paix_amount',  // [P3.B]
+        'cnss_employer_pension', 'cnss_employer_rp', 'cnss_employer_pf',
+        'salaire_imposable', 'nb_parts', 'family_charges',
+        'iuts_amount', 'iuts_detail', 'effort_paix_amount',  // [P3.B]
         'salaire_net', 'cout_employeur',
         // ─ Cumuls YTD
         'cumul_brut_ytd', 'cumul_cnss_ytd', 'cumul_iuts_ytd', 'cumul_net_ytd',
@@ -62,6 +64,11 @@ class PayrollItem extends Model
         'cnss_base'                    => 'integer',
         'cnss_employee'                => 'integer',
         'cnss_employer'                => 'integer',
+        'cnss_employer_pension'        => 'integer',
+        'cnss_employer_rp'             => 'integer',
+        'cnss_employer_pf'             => 'integer',
+        'family_charges'               => 'integer',
+        'iuts_detail'                  => 'array',
         'salaire_imposable'            => 'integer',
         'nb_parts'                     => 'float',
         'iuts_amount'                  => 'integer',

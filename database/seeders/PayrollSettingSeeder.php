@@ -22,12 +22,15 @@ class PayrollSettingSeeder extends Seeder
         PayrollSetting::updateOrCreate(
             ['company_id' => $company->id],
             [
-                // CNSS — taux légaux Burkina Faso 2024
+                // CNSS — taux légaux Burkina Faso
                 // Source : Décret n°2019-0013/PRES/PM/MFPTSS
-                'cnss_employee_rate' => 5.50,
-                'cnss_employer_rate' => 16.00,
-                'cnss_ceiling'       => 800_000,  // Plafond CNSS BF = 800 000 XOF/mois
-                'cnss_at_rate'       => 3.50,
+                'cnss_employee_rate' => 5.50,   // pension, part salariale
+                'cnss_employer_rate' => 16.00,  // total = pension 8,5 + RP 1,5 + PF 6
+                'cnss_employer_pension_rate' => 8.50,
+                'cnss_employer_rp_rate'      => 1.50,
+                'cnss_employer_pf_rate'      => 6.00,
+                'cnss_ceiling'        => 800_000,    // Plafond mensuel BF
+                'cnss_annual_ceiling' => 9_600_000,  // Plafond annuel BF
 
                 // Temps de travail & heures supplémentaires
                 'work_days_month'  => 26,
@@ -44,29 +47,26 @@ class PayrollSettingSeeder extends Seeder
                 // SMIG
                 'smig' => 45_000,
 
-                // Quotient familial IUTS
+                // Quotient familial (legacy — plus utilisé dans le calcul,
+                // conservé pour l'affichage des bulletins historiques)
                 'nb_parts_max'        => 5,
                 'parts_per_child'     => 0.5,
                 'parts_base_single'   => 1.0,
                 'parts_base_married'  => 2.0,
                 'parts_base_widowed'  => 1.5,
 
-                // IUTS
+                // IUTS — abattement frais professionnels + charges de famille
                 'iuts_abattement_rate' => 20.0,
+                'iuts_family_reductions' => PayrollSetting::defaultFamilyReductions(),
+                'iuts_max_charges'     => 4,
 
                 // Effort de paix
                 'effort_paix_enabled' => true,
                 'effort_paix_rate'    => 1.0,
 
-                // Barème IUTS mensuel (par part — Burkina Faso)
-                'iuts_brackets' => [
-                    [25_000,          0],
-                    [40_000,         12],
-                    [60_000,         17],
-                    [80_000,         22],
-                    [120_000,        27],
-                    [9_999_999_999,  33],
-                ],
+                // Barème IUTS mensuel officiel (annexe fiscale CGI BF) —
+                // tranches progressives sur le revenu imposable TOTAL
+                'iuts_brackets' => PayrollSetting::defaultIutsBrackets(),
 
                 'bulletin_prefix' => 'BUL',
                 'currency_code'   => 'FCFA',

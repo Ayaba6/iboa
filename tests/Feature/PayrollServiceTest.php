@@ -46,11 +46,14 @@ function setupPayrollSettings(Company $company): PayrollSetting
     return PayrollSetting::firstOrCreate(
         ['company_id' => $company->id],
         [
-            'smig'                 => 34664,
+            'smig'                 => 45000,
             'cnss_employee_rate'   => 5.5,
             'cnss_employer_rate'   => 16.0,
-            'cnss_at_rate'         => 3.5,
+            'cnss_employer_pension_rate' => 8.5,
+            'cnss_employer_rp_rate'      => 1.5,
+            'cnss_employer_pf_rate'      => 6.0,
             'cnss_ceiling'         => 800000,
+            'cnss_annual_ceiling'  => 9600000,
             'effort_paix_rate'     => 1.0,
             'effort_paix_enabled'  => true,
             'work_days_month'      => 26,
@@ -70,8 +73,10 @@ function setupPayrollSettings(Company $company): PayrollSetting
             'parts_base_widowed'   => 1.5,
             'currency_code'        => 'XOF',
             'country_code'         => 'BF',
-            // Barème IUTS BF 2024 : [[seuil_superieur, taux%], ...]
+            // Barème IUTS officiel BF : [[seuil_superieur, taux%], ...]
             'iuts_brackets'        => PayrollSetting::defaultIutsBrackets(),
+            'iuts_family_reductions' => PayrollSetting::defaultFamilyReductions(),
+            'iuts_max_charges'     => 4,
         ]
     );
 }
@@ -81,6 +86,24 @@ function setupIutsBrackets(): void
     // Les tranches IUTS sont stockées dans payroll_settings.iuts_brackets (JSON)
     // La table iuts_brackets est un référentiel séparé non utilisé dans le calcul
     // => rien à créer ici, le barème est défini dans setupPayrollSettings()
+}
+
+/**
+ * Plan comptable minimal (classes 4 et 6) : la validation d'un run est
+ * transactionnelle et échoue si la comptabilisation ne peut pas créer
+ * les comptes 661/664/671/422/451/447.
+ */
+function setupAccountClasses(Company $company): void
+{
+    foreach ([4 => 'Comptes de tiers', 6 => 'Comptes de charges'] as $number => $label) {
+        \Illuminate\Support\Facades\DB::table('account_classes')->insertOrIgnore([
+            'company_id' => $company->id,
+            'number'     => $number,
+            'name'       => $label,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
 }
 
 function createTestEmployee(Company $company, int $baseSalary = 200000): Employee
@@ -204,6 +227,7 @@ describe('PayrollService creation et calcul', function () {
         $company = payrollCompany();
         setupPayrollSettings($company);
         setupIutsBrackets();
+        setupAccountClasses($company);
         createTestEmployee($company, 150000);
 
         $this->actingAs($user);

@@ -65,10 +65,21 @@ class PayrollAccountingService
             $itemAgg = DB::table('payroll_items')
                 ->where('payroll_run_id', $run->id)
                 ->selectRaw('COALESCE(SUM(total_allowances_non_taxable), 0) as non_taxable,
-                             COALESCE(SUM(effort_paix_amount), 0)            as effort_paix')
+                             COALESCE(SUM(effort_paix_amount), 0)            as effort_paix,
+                             COALESCE(SUM(cnss_employer_pension), 0)         as cnss_pension,
+                             COALESCE(SUM(cnss_employer_rp), 0)              as cnss_rp,
+                             COALESCE(SUM(cnss_employer_pf), 0)              as cnss_pf')
                 ->first();
             $totalNonTaxable  = (int) ($itemAgg->non_taxable  ?? 0);
             $totalEffortPaix  = (int) ($itemAgg->effort_paix  ?? 0);
+            // Ventilation patronale BF (pension / risques pro / prestations familiales).
+            // Un run calculé avant la ventilation (colonnes à 0) retombe sur la
+            // ligne globale legacy.
+            $cnssPension = (int) ($itemAgg->cnss_pension ?? 0);
+            $cnssRp      = (int) ($itemAgg->cnss_rp      ?? 0);
+            $cnssPf      = (int) ($itemAgg->cnss_pf      ?? 0);
+            $hasVentilation = ($cnssPension + $cnssRp + $cnssPf) === $totalCnssPat
+                && $totalCnssPat > 0;
 
             // Équation SYSCOHADA :
             //   D = brut + CNSS_pat + nonTaxable
@@ -155,7 +166,29 @@ class PayrollAccountingService
                     'updated_at'        => now(),
                 ];
             }
-            if ($totalCnssPat > 0) {
+            if ($hasVentilation) {
+                // Trois lignes distinctes : la traçabilité comptable et
+                // déclarative de la ventilation patronale est obligatoire.
+                foreach ([
+                    ['montant' => $cnssPension, 'label' => 'CNSS patronal — pension'],
+                    ['montant' => $cnssRp,      'label' => 'CNSS patronal — risques professionnels'],
+                    ['montant' => $cnssPf,      'label' => 'CNSS patronal — prestations familiales'],
+                ] as $composante) {
+                    if ($composante['montant'] <= 0) {
+                        continue;
+                    }
+                    $lines[] = [
+                        'journal_entry_id'  => $entry->id,
+                        'account_id'        => $accounts['664']->id,
+                        'label'             => "{$composante['label']} — {$run->period_label}",
+                        'debit'             => $composante['montant'],
+                        'credit'            => 0,
+                        'sort_order'        => $sort++,
+                        'created_at'        => now(),
+                        'updated_at'        => now(),
+                    ];
+                }
+            } elseif ($totalCnssPat > 0) {
                 $lines[] = [
                     'journal_entry_id'  => $entry->id,
                     'account_id'        => $accounts['664']->id,

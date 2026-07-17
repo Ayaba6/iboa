@@ -170,12 +170,48 @@ class PayrollService
             // [P1] Créer les lignes de remboursement de prêts et MAJ des soldes
             $this->processLoanPayments($run);
 
-            $run->update(array_merge($totals, ['status' => 'calcule']));
+            // Snapshot des paramètres réglementaires utilisés : un changement
+            // ultérieur de barème/taux ne doit JAMAIS altérer la lecture d'un
+            // bulletin déjà calculé/validé. Source d'audit du run.
+            $snapshot = [
+                'captured_at'            => now()->toIso8601String(),
+                'regulation_version'     => 'BF-' . now()->format('Y-m-d'),
+                'iuts_brackets'          => $this->settings->iuts_brackets,
+                'iuts_family_reductions' => $this->settings->iuts_family_reductions,
+                'iuts_max_charges'       => $this->settings->iuts_max_charges,
+                'iuts_abattement_rate'   => $this->settings->iuts_abattement_rate,
+                'cnss_ceiling'           => $this->settings->cnss_ceiling,
+                'cnss_annual_ceiling'    => $this->settings->cnss_annual_ceiling,
+                'cnss_employee_rate'     => $this->settings->cnss_employee_rate,
+                'cnss_employer_pension_rate' => $this->settings->cnss_employer_pension_rate,
+                'cnss_employer_rp_rate'  => $this->settings->cnss_employer_rp_rate,
+                'cnss_employer_pf_rate'  => $this->settings->cnss_employer_pf_rate,
+                'cnss_employer_rate'     => $this->settings->cnss_employer_rate,
+                'smig'                   => $this->settings->smig,
+                'effort_paix_enabled'    => $this->settings->effort_paix_enabled,
+                'effort_paix_rate'       => $this->settings->effort_paix_rate,
+            ];
+
+            $run->update(array_merge($totals, [
+                'status' => 'calcule',
+                'calculation_parameters_snapshot' => $snapshot,
+            ]));
             return $run->fresh('items.employee');
         });
     }
 
-    /** Valide le bulletin (statut : valide) + génère l'écriture comptable. */
+    /**
+     * Valide le bulletin (statut : valide) + génère l'écriture comptable.
+     *
+     * TRANSACTIONNEL : validation, écriture comptable et mise à jour de statut
+     * réussissent ensemble ou sont annulées ensemble. L'ancien comportement
+     * (catch qui avalait l'échec comptable) produisait des runs « validés »
+     * sans écriture, ou des écritures orphelines après suppression du run.
+     *
+     * IDEMPOTENT : lockForUpdate + contrôle de statut + contrôle
+     * journal_entry_id — un double clic, une relance ou un timeout ne peut
+     * jamais générer deux écritures pour le même run.
+     */
     public function validate(PayrollRun $run): PayrollRun
     {
         return DB::transaction(function () use ($run) {
@@ -189,23 +225,31 @@ class PayrollService
                 throw new \RuntimeException('Ce bulletin ne contient aucun employé : recalculez la paie avant de valider.');
             }
 
+            // Clé d'idempotence : une écriture déjà rattachée = validation déjà
+            // passée (ou en cours dans une autre requête, bloquée par le lock).
+            if ($run->journal_entry_id !== null) {
+                throw new \RuntimeException(
+                    "Ce bulletin possède déjà une écriture comptable (#{$run->journal_entry_id}) — validation déjà effectuée."
+                );
+            }
+
             $run->update([
                 'status'       => 'valide',
                 'validated_by' => Auth::id(),
                 'validated_at' => now(),
             ]);
 
-            // Génération automatique de l'écriture comptable
-            try {
-                app(PayrollAccountingService::class)->generateForRun($run->fresh());
-            } catch (\Throwable $e) {
-                // Ne jamais bloquer la validation pour un problème comptable
-                \Illuminate\Support\Facades\Log::error(
-                    "[PayrollService] Échec comptabilisation paie run#{$run->id}: " . $e->getMessage()
+            // Écriture comptable : un échec ici annule TOUTE la validation.
+            app(PayrollAccountingService::class)->generateForRun($run->fresh());
+
+            $run = $run->fresh();
+            if ($run->journal_entry_id === null) {
+                throw new \RuntimeException(
+                    'La comptabilisation de la paie n\'a produit aucune écriture — validation annulée.'
                 );
             }
 
-            return $run->fresh();
+            return $run;
         });
     }
 
@@ -392,14 +436,21 @@ class PayrollService
 
         // ─── CNSS ────────────────────────────────────────────────────────────
         // [NO-HARDCODE] Taux et plafond lus depuis la DB — jamais depuis des constantes
+        // Base CNSS = MIN(salaire soumis à cotisation, plafond mensuel 800 000 BF)
         $cnssPlafond  = $this->settings->cnss_ceiling;
         $cnssEmpRate  = $this->settings->cnss_employee_rate;
-        $cnssPatRate  = $this->settings->cnss_employer_rate;
 
         // [P1] Exclure les éléments is_cnss_base=false de la base cotisable
         $cnssBase     = min(max(0, $salaireBrut - $cnssExclusions), $cnssPlafond);
         $cnssEmployee = (int) round($cnssBase * $cnssEmpRate / 100);
-        $cnssEmployer = (int) round($cnssBase * $cnssPatRate / 100);
+
+        // Ventilation patronale BF : pension 8,5 % + risques pro 1,5 % + PF 6 %.
+        // Chaque composante est arrondie séparément (traçabilité comptable et
+        // déclarative) ; le total patronal est la somme des trois.
+        $cnssEmployerPension = (int) round($cnssBase * $this->settings->cnss_employer_pension_rate / 100);
+        $cnssEmployerRp      = (int) round($cnssBase * $this->settings->cnss_employer_rp_rate / 100);
+        $cnssEmployerPf      = (int) round($cnssBase * $this->settings->cnss_employer_pf_rate / 100);
+        $cnssEmployer        = $cnssEmployerPension + $cnssEmployerRp + $cnssEmployerPf;
 
         // ─── IUTS ────────────────────────────────────────────────────────────
         // [P1] Exclure les éléments is_iuts_base=false de la base imposable
@@ -410,9 +461,12 @@ class PayrollService
         $abattementRate       = $this->settings->iuts_abattement_rate;
         $salaireImposable     = (int) round($salaireImposableBrut * (1 - $abattementRate / 100));
 
-        // [NO-HARDCODE] Quotient familial et barème IUTS lus depuis la DB
-        $nbParts = $this->settings->computeNbParts($employee->family_status ?? 'celibataire', $employee->nb_children ?? 0);
-        $iuts    = $this->settings->computeIuts($salaireImposable, $nbParts);
+        // [NO-HARDCODE] Barème progressif sur le revenu imposable TOTAL, puis
+        // réduction pour charges de famille sur l'IUTS brut (régime légal BF —
+        // remplace l'ancien quotient familial par parts depuis le 17/07/2026).
+        $familyCharges = $this->settings->computeCharges((int) ($employee->nb_children ?? 0));
+        $iutsDetail    = $this->settings->computeIutsDetail($salaireImposable, $familyCharges);
+        $iuts          = $iutsDetail['net'];
 
         // ─── Effort de paix ──────────────────────────────────────────────────
         // [NO-HARDCODE] Taux et activation lus depuis la DB
@@ -506,9 +560,14 @@ class PayrollService
             'cnss_base'                    => $cnssBase,
             'cnss_employee'                => $cnssEmployee,
             'cnss_employer'                => $cnssEmployer,
+            'cnss_employer_pension'        => $cnssEmployerPension,
+            'cnss_employer_rp'             => $cnssEmployerRp,
+            'cnss_employer_pf'             => $cnssEmployerPf,
             'salaire_imposable'            => $salaireImposable,
-            'nb_parts'                     => $nbParts,
+            'nb_parts'                     => 0, // legacy quotient familial — plus utilisé
+            'family_charges'               => $familyCharges,
             'iuts_amount'                  => $iuts,
+            'iuts_detail'                  => $iutsDetail,
             'effort_paix_amount'           => $effortPaix,   // [P3.B]
             'salaire_net'                  => max(0, $salaireNet),
             'cout_employeur'               => $coutEmployeur,
