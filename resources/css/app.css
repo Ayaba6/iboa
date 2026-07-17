@@ -18,6 +18,14 @@
         padding-bottom: 0;
         line-height: 1.25;
     }
+
+    /* Même famille de piège : @tailwindcss/forms réserve pr 2.5rem pour le
+       chevron du select, mais toute utilité px-2/px-3 l'écrase → flèche
+       superposée au texte (« Toutes les années⌄ »). ~40 selects concernés.
+       !important requis : la couche utilities prime sinon sur base. */
+    select:not([multiple]):not([size]) {
+        padding-right: 2rem !important;
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -270,6 +278,11 @@
         color: #064e3b;
         border-bottom: 1px solid #d1d5db;
     }
+    /* .tbl thead th (0-1-2) écrase les utilités d'alignement (0-1-0) posées
+       dans les blades → en-têtes numériques bloqués à gauche alors que les
+       cellules sont à droite. Ré-autorise text-right/text-center sur les th. */
+    .tbl thead th.text-right  { text-align: right; }
+    .tbl thead th.text-center { text-align: center; }
     .tbl tbody tr {
         transition: background-color var(--t-fast);
     }
