@@ -92,10 +92,14 @@ class LedgerController extends Controller
             }
         }
 
-        // Comptes de la plage sélectionnée (pour le chargement des lignes)
+        // Comptes de la plage sélectionnée (pour le chargement des lignes).
+        // Comparaison LEXICOGRAPHIQUE avec padding : PHP compare deux chaînes
+        // numériques ('3111' >= '661') numériquement, ce qui faisait passer
+        // tous les comptes dans n'importe quelle plage. Convention comptable :
+        // la borne basse est complétée par des 0, la haute par des 9
+        // (661 → 661999 couvre tous les codes préfixés 661…).
         $rangeAccounts = $accounts
-            ->when($filters['account_from'], fn($c, $v) => $c->where('code', '>=', $v))
-            ->when($filters['account_to'],   fn($c, $v) => $c->where('code', '<=', $v))
+            ->filter(fn($a) => $this->accountInRange((string) $a->code, $filters['account_from'], $filters['account_to']))
             ->values();
 
         // Mode plat permanent : liste unique triée par date, colonnes Compte/Intitulé.
@@ -646,5 +650,30 @@ class LedgerController extends Controller
                     ->whereColumn('journal_entries.id', 'journal_entry_lines.journal_entry_id')
                     ->limit(1)
             );
+    }
+
+    /**
+     * Un code compte est-il dans la plage [from, to] au sens comptable ?
+     *
+     * Comparaison lexicographique avec normalisation à longueur fixe :
+     * borne basse complétée par des 0, borne haute par des 9 — ainsi
+     * « 661 → 661999 » couvre 661, 6611, 661999… et exclut 3111 ou 7011.
+     * (PHP compare deux chaînes numériques numériquement, ce qui rendait
+     * l'ancienne comparaison directe inutilisable pour des codes comptables.)
+     */
+    private function accountInRange(string $code, ?string $from, ?string $to): bool
+    {
+        $len  = max(strlen($code), strlen((string) $from), strlen((string) $to), 10);
+        $norm = fn(string $value, string $pad) => str_pad($value, $len, $pad);
+
+        $padded = $norm($code, '0');
+
+        if ($from !== null && $from !== '' && strcmp($padded, $norm($from, '0')) < 0) {
+            return false;
+        }
+        if ($to !== null && $to !== '' && strcmp($padded, $norm($to, '9')) > 0) {
+            return false;
+        }
+        return true;
     }
 }
