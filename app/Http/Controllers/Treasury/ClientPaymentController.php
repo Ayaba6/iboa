@@ -121,6 +121,20 @@ class ClientPaymentController extends Controller
         $cashAccounts   = CashAccount::where('is_active', true)->orderBy('name')->get(['id', 'name', 'type', 'current_balance']);
         $selectedClient = $request->query('client_id');
 
+        // [UX ENCAISSEMENT] Facture passée en paramètre (bouton « Encaisser » d'une
+        // facture) : préremplit le montant et déclenche l'imputation automatique
+        // au store — sinon l'utilisateur devait ressaisir l'imputation à la main.
+        $selectedInvoice = null;
+        if ($request->filled('invoice_id')) {
+            $selectedInvoice = Invoice::where('id', (int) $request->query('invoice_id'))
+                ->whereNotIn('status', ['payee', 'annulee', 'brouillon'])
+                ->where('remaining_amount', '>', 0)
+                ->first(['id', 'number', 'client_id', 'total_ttc', 'remaining_amount', 'due_at']);
+            if ($selectedInvoice) {
+                $selectedClient = $selectedClient ?: $selectedInvoice->client_id;
+            }
+        }
+
         // [OVERPAYMENT-GUARD-UI] Vérification PROACTIVE à l'ouverture du formulaire :
         // si un client est pré-sélectionné via l'URL et qu'il a déjà des paiements non
         // imputés couvrant ses dettes, on bloque l'accès au formulaire et on redirige
@@ -134,7 +148,7 @@ class ClientPaymentController extends Controller
             }
         }
 
-        return view('tresorerie.encaissements.create', compact('clients', 'paymentMethods', 'cashAccounts', 'selectedClient'));
+        return view('tresorerie.encaissements.create', compact('clients', 'paymentMethods', 'cashAccounts', 'selectedClient', 'selectedInvoice'));
     }
 
     /**
@@ -189,6 +203,24 @@ class ClientPaymentController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        // [UX ENCAISSEMENT] Imputation automatique sur la facture d'origine quand
+        // l'encaissement vient du bouton « Encaisser » d'une facture. Non bloquant :
+        // si l'imputation échoue (facture soldée entre-temps…), l'encaissement reste
+        // créé et l'utilisateur impute à la main sur la fiche.
+        $autoImputeWarning = null;
+        if ($request->filled('invoice_id')) {
+            try {
+                $invoice = Invoice::findOrFail((int) $request->input('invoice_id'));
+                $this->service->addAllocation(
+                    $payment,
+                    $invoice->id,
+                    min((int) $payment->unallocated_amount, (int) $invoice->remaining_amount)
+                );
+            } catch (\Throwable $e) {
+                $autoImputeWarning = 'Encaissement créé mais imputation automatique impossible : '.$e->getMessage();
+            }
+        }
+
         // [PARITÉ SAGE X3] Pièces jointes de l'encaissement (post-création, additif).
         foreach ((array) $request->file('documents', []) as $file) {
             $path = $file->store('attachments/client_payment/'.$payment->id, 'local');
@@ -211,7 +243,8 @@ class ClientPaymentController extends Controller
 
         return redirect()
             ->route('tresorerie.encaissements.show', $payment)
-            ->with('success', 'Encaissement enregistré avec succès.');
+            ->with('success', 'Encaissement enregistré avec succès.')
+            ->with($autoImputeWarning ? ['warning' => $autoImputeWarning] : []);
     }
 
     /**

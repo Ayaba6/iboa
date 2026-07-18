@@ -49,6 +49,8 @@ class AccountingService
         'clients'             => ['411',  'Clients',                         'actif',   4],
         'fournisseurs'        => ['401',  'Fournisseurs',                    'passif',  4],
         'ventes'              => ['7011', 'Ventes de marchandises',          'produit', 7],
+        // [SYSCOHADA] Produit fabriqué (famille adossée au stock 361) vendu → 702, pas 7011
+        'ventes_produits_finis' => ['702', 'Ventes de produits finis',       'produit', 7],
         'achats'              => ['6011', 'Achats de marchandises',          'charge',  6],
         'tva_collectee'       => ['4431', 'TVA facturée sur ventes',         'passif',  4],
         'tva_deductible'      => ['4432', 'TVA récupérable sur achats',      'actif',   4],
@@ -124,7 +126,7 @@ class AccountingService
         if ($ttc <= 0) return null;
 
         // [COMPTA-FAMILLE] Charger les comptes de vente associés aux familles + taxes par taux
-        $invoice->loadMissing('items.product.family.saleAccount', 'items.taxRate.collectedAccount');
+        $invoice->loadMissing('items.product.family.saleAccount', 'items.product.family.stockAccount', 'items.taxRate.collectedAccount');
 
         $defaultSaleAccount = $this->account($company, 'ventes');
 
@@ -146,7 +148,17 @@ class AccountingService
         // Ventilation du HT par compte de vente (selon famille de l'article)
         // Le montant $ht est passé comme fallback pour éviter une écriture déséquilibrée
         // si la facture n'a pas de lignes (ex. factures créées sans articles).
-        $ventilation = $this->ventilateByFamilyAccount($invoice->items, $defaultSaleAccount->id, 'sale_account_id', $ht);
+        $ventilation = $this->ventilateByFamilyAccount(
+            $invoice->items,
+            $defaultSaleAccount->id,
+            'sale_account_id',
+            $ht,
+            // [SYSCOHADA] Famille sans compte de vente configuré mais adossée au
+            // stock 361 (produits finis fabriqués) → 702, pas 7011 marchandises.
+            fn ($item) => $item->product?->family?->stockAccount?->code === '361'
+                ? $this->account($company, 'ventes_produits_finis')->id
+                : null
+        );
         foreach ($ventilation as $accountId => $amount) {
             $lines[] = $this->lineByAccountId($accountId, 'Facture '.$invoice->number, 0, $amount);
         }
@@ -566,7 +578,6 @@ class AccountingService
         $invoice->loadMissing('items.product.family.stockAccount');
 
         $defaultStockAccount = $this->account($company, 'stocks');
-        $variationAccount    = $this->account($company, 'variation_stocks');
 
         // Calcul du coût par compte stock (ventilation)
         $buckets = [];
@@ -596,10 +607,11 @@ class AccountingService
 
         if ($totalCost <= 0) return null; // rien à comptabiliser (services seulement, ou coûts manquants)
 
-        $lines = [
-            $this->line($variationAccount, 'Sortie stock '.$invoice->number, $totalCost, 0),
-        ];
+        // [SYSCOHADA] Compte de variation adossé au compte de stock du bucket :
+        //   361 PF → 736 Production stockée, 321 MP → 6032, 3111 marchandises → 6031.
+        $lines = [];
         foreach ($buckets as $accountId => $amount) {
+            $lines[] = $this->line($this->variationForStock($company, (int) $accountId), 'Sortie stock '.$invoice->number, $amount, 0);
             $lines[] = $this->lineByAccountId($accountId, 'Sortie stock '.$invoice->number, 0, $amount);
         }
 
@@ -691,7 +703,6 @@ class AccountingService
         $creditNote->loadMissing('items.product.family.stockAccount');
 
         $defaultStockAccount = $this->account($company, 'stocks');
-        $variationAccount    = $this->account($company, 'variation_stocks');
 
         $buckets = [];
         $totalCost = 0;
@@ -713,11 +724,12 @@ class AccountingService
 
         if ($totalCost <= 0) return null;
 
+        // [SYSCOHADA] Variation adossée au compte de stock (361 PF → 736, 321 → 6032, défaut 6031)
         $lines = [];
         foreach ($buckets as $accountId => $amount) {
             $lines[] = $this->lineByAccountId($accountId, 'Retour stock avoir '.$creditNote->number, $amount, 0);
+            $lines[] = $this->line($this->variationForStock($company, (int) $accountId), 'Retour stock avoir '.$creditNote->number, 0, $amount);
         }
-        $lines[] = $this->line($variationAccount, 'Retour stock avoir '.$creditNote->number, 0, $totalCost);
 
         return $this->post($company, 'operations_diverses', [
             'entry_date'  => $creditNote->issued_at ?? today(),
@@ -1169,14 +1181,16 @@ class AccountingService
      * @param  string    $accountField       'sale_account_id' ou 'purchase_account_id'
      * @return array<int,int>                [accountId => totalHt, ...]
      */
-    private function ventilateByFamilyAccount($items, int $fallbackAccountId, string $accountField, int $fallbackAmount = 0): array
+    private function ventilateByFamilyAccount($items, int $fallbackAccountId, string $accountField, int $fallbackAmount = 0, ?\Closure $fallbackForItem = null): array
     {
         $buckets = [];
         foreach ($items as $item) {
             $ht = (int) ($item->line_total_ht ?? 0);
             if ($ht <= 0) continue;
 
-            $accountId = $item->product?->family?->{$accountField} ?? $fallbackAccountId;
+            $accountId = $item->product?->family?->{$accountField}
+                ?? ($fallbackForItem ? $fallbackForItem($item) : null)
+                ?? $fallbackAccountId;
             $buckets[$accountId] = ($buckets[$accountId] ?? 0) + $ht;
         }
 

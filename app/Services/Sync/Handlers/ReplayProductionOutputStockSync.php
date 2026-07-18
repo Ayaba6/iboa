@@ -28,6 +28,16 @@ class ReplayProductionOutputStockSync
         $order = $output->productionOrder ?? ProductionOrder::find($output->production_order_id);
         $uom   = $output->product?->unit?->abbreviation;
 
+        // [COMPTA-STOCK] Coût unitaire non saisi à la déclaration → valorisation
+        // au coût standard du produit (CMP puis prix d'achat). Sans cela l'entrée
+        // PF vaut 0, le CMP n'est pas alimenté et l'écriture 361/736 de clôture
+        // n'a pas de base cohérente avec la sortie de stock à la vente.
+        $unitCost = (float) ($payload['unit_cost'] ?? 0);
+        if ($unitCost <= 0) {
+            $unitCost = (float) ($output->product?->weighted_avg_cost ?: 0)
+                ?: (float) ($output->product?->purchase_price ?? 0);
+        }
+
         $movement = $this->stock->recordMovement([
             'product_id'           => $output->product_id,
             'warehouse_id'         => $output->warehouse_id,
@@ -36,7 +46,7 @@ class ReplayProductionOutputStockSync
             'uom'                  => $uom,
             'quantity_in_stock_uom' => (float) $output->quantity,
             'stock_uom'            => $uom,
-            'unit_cost'            => (float) ($payload['unit_cost'] ?? 0),
+            'unit_cost'            => $unitCost,
             'production_order_id'  => $output->production_order_id,
             'idempotency_key'      => 'production-output:' . $output->id,
             'reference_type'       => ProductionOrder::class,

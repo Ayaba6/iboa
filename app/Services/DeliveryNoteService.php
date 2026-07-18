@@ -202,15 +202,17 @@ class DeliveryNoteService
                 ->value('avg_cost') ?? 0;
 
             $this->stockService->recordMovement([
-                'product_id'     => $item->product_id,
-                'warehouse_id'   => $warehouseId,
-                'type'           => 'sortie',
-                'quantity'       => $deliveredQty,
-                'unit_cost'      => (float) $avgCost,
-                'occurred_at'    => now(),
-                'reference_type' => 'delivery_note',
-                'reference_id'   => $dn->id,
-                'notes'          => 'BL ' . $dn->number,
+                'product_id'      => $item->product_id,
+                'warehouse_id'    => $warehouseId,
+                'type'            => 'sortie',
+                'quantity'        => $deliveredQty,
+                'unit_cost'       => (float) $avgCost,
+                'occurred_at'     => now(),
+                'reference_type'  => 'delivery_note',
+                'reference_id'    => $dn->id,
+                // [CDC sync stock] Rejouer la validation du BL ne double pas la sortie
+                'idempotency_key' => 'delivery-note:' . $dn->id . ':' . $item->id,
+                'notes'           => 'BL ' . $dn->number,
             ]);
 
             // Update delivered_quantity on the linked order item
@@ -385,15 +387,17 @@ class DeliveryNoteService
                 $reversedQty = abs((float) $item->quantity);
 
                 $this->stockService->recordMovement([
-                    'product_id'     => $item->product_id,
-                    'warehouse_id'   => $warehouseId,
-                    'type'           => 'entree',
-                    'quantity'       => $reversedQty,
-                    'unit_cost'      => (float) $avgCost,
-                    'occurred_at'    => now(),
-                    'reference_type' => 'delivery_note',
-                    'reference_id'   => $dn->id,
-                    'notes'          => 'Annulation BL ' . $dn->number,
+                    'product_id'      => $item->product_id,
+                    'warehouse_id'    => $warehouseId,
+                    'type'            => 'entree',
+                    'quantity'        => $reversedQty,
+                    'unit_cost'       => (float) $avgCost,
+                    'occurred_at'     => now(),
+                    'reference_type'  => 'delivery_note',
+                    'reference_id'    => $dn->id,
+                    // [CDC sync stock] Une seule contre-passation par ligne annulée
+                    'idempotency_key' => 'delivery-note-reversal:' . $dn->id . ':' . $item->id,
+                    'notes'           => 'Annulation BL ' . $dn->number,
                 ]);
 
                 // [FIX-VENTES-07] Re-establish the reservation only when the parent order

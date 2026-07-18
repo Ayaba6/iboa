@@ -13,7 +13,7 @@
 @php
     $formConfig = [
         'clientId'        => $selectedClient,
-        'amount'          => old('amount'),
+        'amount'          => old('amount', $selectedInvoice?->remaining_amount ? (int) $selectedInvoice->remaining_amount : null),
         'bankFees'        => old('bank_fees', 0),
         'paymentMethodId' => old('payment_method_id', ''),
         'paymentMethods'  => $paymentMethods,
@@ -37,6 +37,15 @@
           x-ref="form" @submit.prevent="submitForm()" class="space-y-3">
         @csrf
         <input type="hidden" name="save_and_new" :value="saveAndNew ? 1 : 0">
+        @if($selectedInvoice)
+            <input type="hidden" name="invoice_id" value="{{ $selectedInvoice->id }}">
+            <div class="flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-[4px] px-4 py-2 text-[13px] text-amber-800">
+                <span class="font-semibold">Imputation automatique :</span>
+                <span>facture <span class="font-mono font-semibold">{{ $selectedInvoice->number }}</span>
+                — reste dû <span class="font-mono tabular-nums font-semibold">{{ number_format($selectedInvoice->remaining_amount, 0, ',', ' ') }} FCFA</span>
+                @if($selectedInvoice->due_at)· échéance {{ \Carbon\Carbon::parse($selectedInvoice->due_at)->format('d/m/Y') }}@endif</span>
+            </div>
+        @endif
 
         {{-- Header bar --}}
         <div class="flex items-center justify-between gap-3 flex-wrap">

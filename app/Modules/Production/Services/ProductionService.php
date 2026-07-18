@@ -560,11 +560,14 @@ class ProductionService
         // partiellement backflushés) — la matière non consommée redevient disponible.
         app(ReservationService::class)->releaseMaterialReservations($order);
 
-        // Pont comptable SYSCOHADA (no-op si désactivé — OFF par défaut)
-        $this->accounting->postForOrder($order);
-
         // ── Automatismes post-clôture (best-effort : n'annulent jamais la clôture) ──
         $this->afterFinish($order);
+
+        // Pont comptable SYSCOHADA (no-op si désactivé) — APRÈS afterFinish :
+        // le coût de revient (ProductionCost) y est calculé et valorise
+        // l'écriture « production stockée » 361/736 ; avant, la valeur PF était
+        // nulle et l'écriture PROD n'était jamais émise.
+        $this->accounting->postForOrder($order->fresh());
     }
 
     /**
