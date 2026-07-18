@@ -102,6 +102,25 @@ class TaxRateController extends Controller
             return back()->with('error', 'Ce taux est utilisé par des articles et ne peut pas être supprimé.');
         }
 
+        // [Audit TVA] Un taux référencé par des documents ou des tiers ne doit
+        // pas disparaître : lignes orphelines et rapports TVA faussés. Seul le
+        // contrôle « articles » existait.
+        $usages = [
+            'lignes de devis'                => DB::table('quote_items'),
+            'lignes de commande'             => DB::table('order_items'),
+            'lignes de facture'              => DB::table('invoice_items'),
+            'lignes d\'avoir'                => DB::table('credit_note_items'),
+            'factures fournisseur'           => DB::table('supplier_invoice_items'),
+            'fiches client'                  => DB::table('clients'),
+            'fiches fournisseur'             => DB::table('suppliers'),
+        ];
+        foreach ($usages as $label => $query) {
+            $count = $query->where('tax_rate_id', $taxRate->id)->count();
+            if ($count > 0) {
+                return back()->with('error', "Ce taux est utilisé par {$count} {$label} — désactivez-le plutôt que de le supprimer.");
+            }
+        }
+
         $taxRate->delete();
         return back()->with('success', "Taux supprimé.");
     }

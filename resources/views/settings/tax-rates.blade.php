@@ -269,5 +269,18 @@
         </div>
     </div>
 
+    {{-- ══ Footer contexte (pattern X3) ══════════════════════════════════════ --}}
+    <div class="flex items-center justify-between bg-gray-900 text-gray-200 rounded-[4px] px-4 py-2 text-xs">
+        <div class="flex items-center gap-4 flex-wrap">
+            <span>Société : <strong class="text-white">{{ currentCompany()?->name }}</strong></span>
+            <span>Module : <strong class="text-white">Paramètres — Taux de TVA</strong></span>
+            <span>Taux configurés : <strong class="text-white">{{ $taxRates->count() }}</strong> ({{ $taxRates->where('is_active', true)->count() }} actifs)</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span>Utilisateur : <strong class="text-white">{{ auth()->user()?->name }}</strong></span>
+            <span>{{ now()->format('d/m/Y H:i') }}</span>
+        </div>
+    </div>
+
 </div>
 @endsection
