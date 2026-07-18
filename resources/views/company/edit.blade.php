@@ -346,23 +346,25 @@
         <div class="p-3 overflow-x-auto">
             @php $accounts = $company->bankAccounts ?? collect(); @endphp
             @if($accounts->isNotEmpty())
-            <table class="w-full text-[12.5px]">
+            {{-- [Charte X3] table-fixed + truncate/title : les colonnes SWIFT /
+                 Principal / Statut sortaient du cadre (scroll horizontal caché). --}}
+            <table class="w-full table-fixed text-[12.5px]">
                 <thead><tr class="bg-[#eef5f0] text-emerald-900">
-                    <th class="text-center font-bold px-1.5 py-1.5 border-b border-gray-300 w-7">#</th>
-                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300">Banque</th>
-                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300">Intitulé</th>
-                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300">IBAN / Compte</th>
-                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300">SWIFT</th>
-                    <th class="text-center font-bold px-1.5 py-1.5 border-b border-gray-300">Principal</th>
-                    <th class="text-center font-bold px-1.5 py-1.5 border-b border-gray-300">Statut</th>
+                    <th class="text-center font-bold px-1.5 py-1.5 border-b border-gray-300 w-[6%]">#</th>
+                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300 w-[20%]">Banque</th>
+                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300 w-[20%]">Intitulé</th>
+                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300 w-[26%]">IBAN / Compte</th>
+                    <th class="text-left font-bold px-1.5 py-1.5 border-b border-gray-300 w-[10%]">SWIFT</th>
+                    <th class="text-center font-bold px-1.5 py-1.5 border-b border-gray-300 w-[9%]">Princ.</th>
+                    <th class="text-center font-bold px-1.5 py-1.5 border-b border-gray-300 w-[9%]">Statut</th>
                 </tr></thead>
                 <tbody>
                     @foreach($accounts as $acc)
                     <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40">
                         <td class="px-1.5 py-2 text-center text-gray-400 tabular-nums">{{ $loop->iteration }}</td>
-                        <td class="px-1.5 py-2 font-semibold text-gray-700">{{ $acc->bank_name }}</td>
-                        <td class="px-1.5 py-2 text-gray-600">{{ $acc->account_holder }}</td>
-                        <td class="px-1.5 py-2 font-mono text-[11px] text-gray-600 whitespace-nowrap">{{ $acc->iban ?: $acc->account_number }}</td>
+                        <td class="px-1.5 py-2 font-semibold text-gray-700 truncate" title="{{ $acc->bank_name }}">{{ $acc->bank_name }}</td>
+                        <td class="px-1.5 py-2 text-gray-600 truncate" title="{{ $acc->account_holder }}">{{ $acc->account_holder }}</td>
+                        <td class="px-1.5 py-2 font-mono text-[11px] text-gray-600 truncate" title="{{ $acc->iban ?: $acc->account_number }}">{{ $acc->iban ?: $acc->account_number }}</td>
                         <td class="px-1.5 py-2 font-mono text-[11.5px] text-gray-600">{{ $acc->swift_bic ?: '—' }}</td>
                         <td class="px-1.5 py-2 text-center {{ $acc->is_default ? 'text-emerald-600' : 'text-gray-300' }}">{{ $acc->is_default ? '★' : '☆' }}</td>
                         <td class="px-1.5 py-2 text-center"><span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $acc->is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">{{ $acc->is_active ? 'Actif' : 'Inactif' }}</span></td>
@@ -544,39 +546,28 @@
             @csrf @method('PUT')
             <input type="hidden" name="_tab" value="legal">
 
+            {{-- [Audit paramétrage] Forme juridique / RCCM / IFU / Taux TVA retirés :
+                 déjà saisis dans « Informations générales » et « Fiscalité » — le
+                 doublon écrasait la donnée selon le formulaire soumis en dernier.
+                 Le champ « Taux TVA par défaut » était de plus mappé sur vat_number
+                 (numéro d'identification TVA) et corrompait cette colonne. --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Forme juridique</label>
-                    <select name="legal_form" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
-                        <option value="">-- Sélectionner --</option>
-                        @foreach(['SARL', 'SA', 'SAS', 'EI', 'SUARL', 'GIE', 'Association'] as $form)
-                        <option value="{{ $form }}" {{ old('legal_form', $company->legal_form) === $form ? 'selected' : '' }}>{{ $form }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">RCCM</label>
-                    <input type="text" name="rccm" value="{{ old('rccm', $company->rccm) }}" placeholder="BF-OUA-2020-B-12345"
-                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">IFU / Numéro fiscal</label>
-                    <input type="text" name="ifu" value="{{ old('ifu', $company->ifu) }}" placeholder="00123456789"
-                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
-                </div>
-
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">NIF</label>
                     <input type="text" name="nif" value="{{ old('nif', $company->nif) }}"
-                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">N° TVA (identifiant)</label>
+                    <input type="text" name="vat_number" value="{{ old('vat_number', $company->vat_number) }}"
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-emerald-500">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Capital social (FCFA)</label>
                     <input type="number" name="share_capital" value="{{ old('share_capital', $company->share_capital) }}" min="0" step="100000"
-                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
+                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm text-right font-mono focus:ring-1 focus:ring-emerald-500">
                 </div>
 
                 <div>
@@ -593,12 +584,6 @@
                             <span class="text-sm">Non</span>
                         </label>
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Taux TVA par défaut (%)</label>
-                    <input type="number" name="vat_number" value="{{ old('vat_number', $company->vat_number ?? 18) }}" min="0" max="100" step="0.5"
-                           class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">
                 </div>
             </div>
 

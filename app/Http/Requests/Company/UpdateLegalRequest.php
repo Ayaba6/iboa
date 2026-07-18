@@ -15,7 +15,10 @@ class UpdateLegalRequest extends FormRequest
             'ifu'                  => 'nullable|string|max:30',
             'nif'                  => 'nullable|string|max:30',
             'is_vat_subject'       => 'boolean',
-            'vat_number'           => 'nullable|numeric|min:0|max:100',
+            // vat_number est un IDENTIFIANT TVA (texte), pas un taux : l'ancienne
+            // règle numeric|max:100 venait d'un champ « Taux TVA » mal mappé qui
+            // écrasait ce numéro avec « 18 ». Le taux vit dans default_vat_rate.
+            'vat_number'           => 'nullable|string|max:30',
             'share_capital'        => 'nullable|integer|min:0',
             'share_capital_currency' => 'nullable|string|max:3',
         ];
