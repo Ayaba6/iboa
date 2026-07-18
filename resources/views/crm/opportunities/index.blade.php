@@ -8,127 +8,185 @@
 @endsection
 
 @section('content')
+@php
+    $totalOpps = collect($kanban)->sum(fn ($c) => $c->count());
+@endphp
 <div class="space-y-3">
 
     {{-- ══ Barre titre + actions (pattern Sage X3) ══════════════════════════ --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
             <h1 class="text-[17px] font-bold text-gray-900">Pipeline commercial</h1>
-            <p class="text-xs text-gray-400 mt-0.5">
-                Pipeline actif : <strong class="text-gray-600">{{ number_format($totalPipeline, 0, ',', ' ') }} FCFA</strong>
-                · Gagné : <strong class="text-emerald-700">{{ number_format($totalWon, 0, ',', ' ') }} FCFA</strong>
-            </p>
+            <p class="text-xs text-gray-400 mt-0.5">Opportunités par étape — glisser-déposer pour changer d'étape</p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-            <form method="GET" class="flex items-center gap-2">
-                <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
-                       placeholder="Rechercher..."
-                       class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 w-48">
-                <button type="submit" class="px-3 py-2 bg-white border border-gray-300 rounded-[4px] text-sm text-gray-600 hover:bg-gray-50">Filtrer</button>
-                @if(array_filter($filters ?? []))
-                <a href="{{ route('crm.opportunities.index') }}" class="px-3 py-2 border border-gray-300 text-gray-500 rounded-[4px] text-sm hover:bg-gray-50">✕</a>
-                @endif
-            </form>
+        <div class="flex items-center gap-2 self-start">
             <a href="{{ route('crm.opportunities.create') }}"
-               class="inline-flex items-center gap-2 px-3 py-2.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Nouvelle
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
+                + Nouvelle opportunité
+            </a>
+            <a href="{{ route('crm.dashboard') }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-[4px] text-sm font-medium transition-colors">
+                ✕ Fermer
             </a>
         </div>
     </div>
 
-    {{-- KANBAN --}}
-    <div class="flex gap-4 overflow-x-auto pb-4" style="min-height:500px;">
-        @foreach(\App\Models\CrmOpportunity::STAGES as $stage => $cfg)
-        @php $opps = $kanban[$stage]; @endphp
-        <div id="stage-{{ $stage }}"
-             class="flex-shrink-0 w-72 flex flex-col"
-             x-data="{ dragOver: false }"
-             @dragover.prevent="dragOver = true"
-             @dragleave="dragOver = false"
-             @drop.prevent="dragOver = false; handleDrop($event, '{{ $stage }}')">
-
-            {{-- Entête colonne --}}
-            <div class="flex items-center justify-between px-3 py-2.5 rounded-[4px] mb-2
-                        bg-{{ $cfg['color'] }}-50 border border-{{ $cfg['color'] }}-100"
-                 :class="{ 'ring-2 ring-{{ $cfg['color'] }}-400 ring-offset-1': dragOver }">
-                <div class="flex items-center gap-2">
-                    <span class="text-lg">{{ $cfg['icon'] }}</span>
-                    <span class="text-sm font-semibold text-{{ $cfg['color'] }}-700">{{ $cfg['label'] }}</span>
-                    <span class="text-xs font-bold text-{{ $cfg['color'] }}-500 bg-{{ $cfg['color'] }}-100 rounded-full px-2 py-0.5" data-stage-count>{{ $opps->count() }}</span>
-                </div>
-                <span class="text-xs text-{{ $cfg['color'] }}-600 font-medium font-mono tabular-nums" data-stage-total>
-                    {{ number_format($opps->sum('amount'), 0, ',', ' ') }} F
-                </span>
+    {{-- ══ 1. Critères de sélection ══════════════════════════════════════════ --}}
+    <form method="GET" class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 bg-[#eef5f0] border-b border-emerald-100">
+            <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide">1. Critères de sélection</p>
+            @if(array_filter($filters ?? []))
+            <a href="{{ route('crm.opportunities.index') }}" class="text-[11px] text-emerald-600 hover:text-emerald-800 font-medium">Réinitialiser</a>
+            @endif
+        </div>
+        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Société</label>
+                <input type="text" value="{{ currentCompany()?->name }}" readonly
+                       class="w-full h-8 px-2 py-0 border border-gray-300 rounded-[4px] text-sm bg-gray-50 text-gray-600">
             </div>
+            <div>
+                <label for="f-search" class="block text-xs font-medium text-gray-600 mb-1">Recherche</label>
+                <input id="f-search" type="text" name="search" value="{{ $filters['search'] ?? '' }}"
+                       placeholder="Titre, produit/service…"
+                       class="w-full h-8 px-2 py-0 border border-gray-300 rounded-[4px] text-sm focus:ring-1 focus:ring-emerald-500">
+            </div>
+            <div>
+                <label for="f-user" class="block text-xs font-medium text-gray-600 mb-1">Responsable</label>
+                <select id="f-user" name="user_id"
+                        class="w-full h-8 py-0 pl-2 border border-gray-300 rounded-[4px] text-sm focus:ring-1 focus:ring-emerald-500">
+                    <option value="">— Tous —</option>
+                    @foreach($users as $u)
+                    <option value="{{ $u->id }}" {{ ($filters['user_id'] ?? '') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
+                    Rechercher
+                </button>
+            </div>
+        </div>
+    </form>
 
-            {{-- Cartes --}}
-            <div class="flex-1 space-y-2.5" data-drop-zone>
-                @foreach($opps as $opp)
-                <div class="bg-white rounded-[4px] border border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
-                     draggable="true"
-                     data-amount="{{ (float) $opp->amount }}"
-                     @dragstart="$event.dataTransfer.setData('oppId', {{ $opp->id }}); $event.dataTransfer.setData('fromStage', '{{ $stage }}')"
-                     id="opp-{{ $opp->id }}">
-                    <div class="flex items-start justify-between gap-2 mb-2">
-                        <a href="{{ route('crm.opportunities.show', $opp) }}"
-                           class="text-sm font-semibold text-gray-900 hover:text-emerald-700 leading-tight flex-1">{{ $opp->title }}</a>
-                        <a href="{{ route('crm.opportunities.edit', $opp) }}"
-                           class="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                            </svg>
-                        </a>
+    {{-- ══ 2. Pipeline par étape (kanban) ════════════════════════════════════ --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 bg-[#eef5f0] border-b border-emerald-100">
+            <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide">2. Pipeline par étape</p>
+            <p class="text-[11px] text-emerald-600">{{ $totalOpps }} opportunité(s)</p>
+        </div>
+        <div class="flex gap-3 overflow-x-auto p-3" style="min-height:440px;">
+            @foreach(\App\Models\CrmOpportunity::STAGES as $stage => $cfg)
+            @php
+                $opps = $kanban[$stage];
+                $dot  = $stage === 'gagne' ? 'bg-emerald-600' : ($stage === 'perdu' ? 'bg-red-500' : 'bg-' . $cfg['color'] . '-500');
+            @endphp
+            <div id="stage-{{ $stage }}"
+                 class="flex-shrink-0 w-64 flex flex-col"
+                 x-data="{ dragOver: false }"
+                 @dragover.prevent="dragOver = true"
+                 @dragleave="dragOver = false"
+                 @drop.prevent="dragOver = false; handleDrop($event, '{{ $stage }}')">
+
+                {{-- Entête colonne (neutre X3 + pastille couleur) --}}
+                <div class="flex items-center justify-between px-3 py-2 rounded-[4px] mb-2 bg-[#eef5f0] border border-emerald-100"
+                     :class="{ 'ring-2 ring-emerald-400 ring-offset-1': dragOver }">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="w-2 h-2 rounded-full {{ $dot }} flex-shrink-0"></span>
+                        <span class="text-[11px] font-bold uppercase tracking-wide {{ $stage === 'perdu' ? 'text-red-700' : 'text-emerald-900' }} truncate">{{ $cfg['label'] }}</span>
+                        <span class="text-[10.5px] font-bold text-emerald-700 bg-white border border-emerald-100 rounded-[3px] px-1.5" data-stage-count>{{ $opps->count() }}</span>
                     </div>
+                    <span class="text-[11px] font-mono tabular-nums {{ $stage === 'perdu' ? 'text-red-600' : 'text-blue-700' }} font-semibold" data-stage-total>
+                        {{ number_format($opps->sum('amount'), 0, ',', ' ') }} F
+                    </span>
+                </div>
 
-                    @if($opp->contact)
-                    <p class="text-xs text-gray-500 truncate mb-2">👤 {{ $opp->contact->name }}
-                        @if($opp->contact->company_name) · {{ $opp->contact->company_name }}@endif
-                    </p>
-                    @endif
+                {{-- Cartes --}}
+                <div class="flex-1 space-y-2" data-drop-zone>
+                    @foreach($opps as $opp)
+                    <div class="bg-white rounded-[4px] border border-gray-300 p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing text-[12.5px]"
+                         draggable="true"
+                         data-amount="{{ (float) $opp->amount }}"
+                         @dragstart="$event.dataTransfer.setData('oppId', {{ $opp->id }}); $event.dataTransfer.setData('fromStage', '{{ $stage }}')"
+                         id="opp-{{ $opp->id }}">
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <a href="{{ route('crm.opportunities.show', $opp) }}"
+                               class="font-semibold text-gray-900 hover:text-emerald-700 leading-tight flex-1 truncate"
+                               title="{{ $opp->title }}">{{ $opp->title }}</a>
+                            <a href="{{ route('crm.opportunities.edit', $opp) }}" aria-label="Modifier l'opportunité"
+                               class="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                </svg>
+                            </a>
+                        </div>
 
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-bold text-gray-900">{{ number_format($opp->amount, 0, ',', ' ') }} F</span>
-                        <span class="text-xs text-gray-400">{{ $opp->probability }}%</span>
-                    </div>
+                        @if($opp->contact)
+                        <p class="text-xs text-gray-500 truncate mb-1.5" title="{{ $opp->contact->name }}{{ $opp->contact->company_name ? ' · ' . $opp->contact->company_name : '' }}">
+                            {{ $opp->contact->name }}@if($opp->contact->company_name) · {{ $opp->contact->company_name }}@endif
+                        </p>
+                        @endif
 
-                    @if($opp->expected_close)
-                    @php $days = $opp->daysToClose(); @endphp
-                    <div class="mt-2 flex items-center gap-1 text-xs {{ $days < 0 ? 'text-red-500' : ($days <= 7 ? 'text-amber-500' : 'text-gray-400') }}">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                        {{ $opp->expected_close->format('d/m/Y') }}
-                        @if($days < 0) ({{ abs($days) }}j dépassé)
-                        @elseif($days === 0) (aujourd'hui)
-                        @elseif($days <= 7) (dans {{ $days }}j)
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono tabular-nums font-bold text-blue-700">{{ number_format($opp->amount, 0, ',', ' ') }} F</span>
+                            <span class="text-xs text-gray-400 font-mono tabular-nums">{{ $opp->probability }} %</span>
+                        </div>
+
+                        @if($opp->expected_close)
+                        @php $days = $opp->daysToClose(); @endphp
+                        <div class="mt-1.5 text-xs {{ $days < 0 ? 'text-red-600 font-medium' : ($days <= 7 ? 'text-amber-600' : 'text-gray-400') }}">
+                            Échéance {{ $opp->expected_close->format('d/m/Y') }}
+                            @if($days < 0) ({{ abs($days) }} j de retard)
+                            @elseif($days === 0) (aujourd'hui)
+                            @elseif($days <= 7) (dans {{ $days }} j)
+                            @endif
+                        </div>
+                        @endif
+
+                        @if($opp->user)
+                        <div class="mt-1 text-[11px] text-gray-400 truncate">{{ $opp->user->name }}</div>
                         @endif
                     </div>
-                    @endif
+                    @endforeach
 
-                    @if($opp->user)
-                    <div class="mt-2 text-xs text-gray-300">👤 {{ $opp->user->name }}</div>
-                    @endif
+                    {{-- Placeholder drop --}}
+                    <div class="h-8 rounded-[4px] border-2 border-dashed border-emerald-200 opacity-0 transition-opacity"
+                         :class="{ 'opacity-100': dragOver }"></div>
                 </div>
-                @endforeach
 
-                {{-- Placeholder drop --}}
-                <div class="h-8 rounded-[4px] border-2 border-dashed border-gray-200 opacity-0 transition-opacity"
-                     :class="{ 'opacity-100': dragOver }"></div>
+                {{-- Ajouter dans ce stage --}}
+                <a href="{{ route('crm.opportunities.create', ['stage' => $stage]) }}"
+                   class="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 hover:text-emerald-700 hover:bg-[#eef5f0]/60 rounded-[4px] transition-colors">
+                    + Ajouter
+                </a>
             </div>
-
-            {{-- Ajouter dans ce stage --}}
-            <a href="{{ route('crm.opportunities.create', ['stage' => $stage]) }}"
-               class="mt-2 flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-[4px] transition-colors">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Ajouter
-            </a>
+            @endforeach
         </div>
-        @endforeach
+    </div>
+
+    {{-- ══ Synthèse (pattern X3 : barre basse) ═══════════════════════════════ --}}
+    <div class="bg-white rounded-[4px] border border-gray-300 grid grid-cols-2 lg:grid-cols-5 divide-x divide-gray-200">
+        <div class="p-3 text-center">
+            <p class="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Opportunités</p>
+            <p class="text-[15px] font-bold font-mono tabular-nums text-gray-900 mt-0.5">{{ $totalOpps }}</p>
+        </div>
+        <div class="p-3 text-center">
+            <p class="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Pipeline actif</p>
+            <p class="text-[15px] font-bold font-mono tabular-nums text-blue-700 mt-0.5">{{ number_format($totalPipeline, 0, ',', ' ') }} <span class="text-[10px] font-normal text-gray-400">FCFA</span></p>
+        </div>
+        <div class="p-3 text-center">
+            <p class="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Pondéré</p>
+            <p class="text-[15px] font-bold font-mono tabular-nums text-blue-700 mt-0.5">{{ number_format($totalWeighted, 0, ',', ' ') }} <span class="text-[10px] font-normal text-gray-400">FCFA</span></p>
+        </div>
+        <div class="p-3 text-center">
+            <p class="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Gagné</p>
+            <p class="text-[15px] font-bold font-mono tabular-nums text-emerald-700 mt-0.5">{{ number_format($totalWon, 0, ',', ' ') }} <span class="text-[10px] font-normal text-gray-400">FCFA</span></p>
+        </div>
+        <div class="p-3 text-center">
+            <p class="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Perdu</p>
+            <p class="text-[15px] font-bold font-mono tabular-nums {{ $totalLost > 0 ? 'text-red-600' : 'text-gray-800' }} mt-0.5">{{ number_format($totalLost, 0, ',', ' ') }} <span class="text-[10px] font-normal text-gray-400">FCFA</span></p>
+        </div>
     </div>
 
     {{-- ══ Footer contexte (pattern X3) ══════════════════════════════════════ --}}
@@ -136,7 +194,7 @@
         <div class="flex items-center gap-4 flex-wrap">
             <span>Société : <strong class="text-white">{{ currentCompany()?->name }}</strong></span>
             <span>Module : <strong class="text-white">CRM — Pipeline</strong></span>
-            <span>Pipeline actif : <strong class="text-white">{{ number_format($totalPipeline, 0, ',', ' ') }} FCFA</strong></span>
+            <span>Filtre : <strong class="text-white">{{ array_filter($filters ?? []) ? 'personnalisé' : 'aucun' }}</strong></span>
         </div>
         <div class="flex items-center gap-4">
             <span>Utilisateur : <strong class="text-white">{{ auth()->user()?->name }}</strong></span>

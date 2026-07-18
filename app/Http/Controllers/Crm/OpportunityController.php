@@ -40,10 +40,13 @@ class OpportunityController extends Controller
         $filters = $request->only(['search', 'user_id']);
 
         // Stats globales
-        $totalPipeline = $all->whereNotIn('stage', ['gagne', 'perdu'])->sum('amount');
+        $actives       = $all->whereNotIn('stage', ['gagne', 'perdu']);
+        $totalPipeline = $actives->sum('amount');
+        $totalWeighted = $actives->sum(fn ($o) => $o->amount * $o->probability / 100);
         $totalWon      = $all->where('stage', 'gagne')->sum('amount');
+        $totalLost     = $all->where('stage', 'perdu')->sum('amount');
 
-        return view('crm.opportunities.index', compact('kanban', 'users', 'filters', 'totalPipeline', 'totalWon'));
+        return view('crm.opportunities.index', compact('kanban', 'users', 'filters', 'totalPipeline', 'totalWeighted', 'totalWon', 'totalLost'));
     }
 
     public function create(Request $request)
