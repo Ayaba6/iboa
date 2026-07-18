@@ -127,10 +127,7 @@ class IntegrationController extends Controller
         $data['slug'] = Str::slug($data['name'] . '-' . $data['provider'] . '-' . Str::random(4));
 
         if ($request->filled('extra_config_raw')) {
-            $json = json_decode($request->extra_config_raw, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $data['extra_config'] = $json;
-            }
+            $data['extra_config'] = $this->decodeExtraConfig($request);
         }
 
         $integration = ApiIntegration::create($data);
@@ -196,10 +193,7 @@ class IntegrationController extends Controller
         }
 
         if ($request->filled('extra_config_raw')) {
-            $json = json_decode($request->extra_config_raw, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $data['extra_config'] = $json;
-            }
+            $data['extra_config'] = $this->decodeExtraConfig($request);
         }
 
         $integration->update($data);
@@ -431,6 +425,23 @@ class IntegrationController extends Controller
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Décode la configuration avancée JSON. Un JSON invalide était auparavant
+     * ignoré en silence : l'utilisateur croyait sa config enregistrée. On
+     * renvoie désormais une erreur de validation explicite.
+     */
+    private function decodeExtraConfig(Request $request): array
+    {
+        $json = json_decode($request->extra_config_raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($json)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'extra_config_raw' => 'Configuration avancée : JSON invalide (' . json_last_error_msg() . ') — corrigez la syntaxe ou videz le champ.',
+            ]);
+        }
+
+        return $json;
+    }
 
     private function validateIntegration(Request $request, ?ApiIntegration $integration = null): array
     {
