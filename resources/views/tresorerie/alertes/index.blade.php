@@ -35,7 +35,7 @@
         </div>
         @forelse($lowBalance as $a)
         <div class="px-4 py-2.5 border-b border-gray-50 flex items-center justify-between text-sm">
-            <div><span class="font-medium text-gray-900">{{ $a->name }}</span> <span class="text-xs text-gray-400">{{ ucfirst($a->type) }}</span></div>
+            <div><span class="font-medium text-gray-900">{{ $a->name }}</span> <span class="text-xs text-gray-400">{{ ucfirst(str_replace('_', ' ', $a->type)) }}</span></div>
             <div class="text-right">
                 <span class="font-mono tabular-nums font-semibold text-red-600">{{ number_format($a->current_balance, 0, ',', ' ') }}</span>
                 <span class="text-xs text-gray-400"> / seuil {{ number_format($a->min_balance, 0, ',', ' ') }} FCFA</span>
