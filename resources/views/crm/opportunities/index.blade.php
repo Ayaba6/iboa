@@ -10,13 +10,13 @@
 @section('content')
 <div class="space-y-3">
 
-    {{-- Header --}}
+    {{-- ══ Barre titre + actions (pattern Sage X3) ══════════════════════════ --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Pipeline commercial</h1>
-            <p class="text-sm text-gray-500 mt-0.5">
-                Pipeline actif : <strong>{{ number_format($totalPipeline, 0, ',', ' ') }} FCFA</strong>
-                · Gagné : <strong class="text-emerald-600">{{ number_format($totalWon, 0, ',', ' ') }} FCFA</strong>
+            <h1 class="text-[17px] font-bold text-gray-900">Pipeline commercial</h1>
+            <p class="text-xs text-gray-400 mt-0.5">
+                Pipeline actif : <strong class="text-gray-600">{{ number_format($totalPipeline, 0, ',', ' ') }} FCFA</strong>
+                · Gagné : <strong class="text-emerald-700">{{ number_format($totalWon, 0, ',', ' ') }} FCFA</strong>
             </p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
@@ -57,9 +57,9 @@
                 <div class="flex items-center gap-2">
                     <span class="text-lg">{{ $cfg['icon'] }}</span>
                     <span class="text-sm font-semibold text-{{ $cfg['color'] }}-700">{{ $cfg['label'] }}</span>
-                    <span class="text-xs font-bold text-{{ $cfg['color'] }}-500 bg-{{ $cfg['color'] }}-100 rounded-full px-2 py-0.5">{{ $opps->count() }}</span>
+                    <span class="text-xs font-bold text-{{ $cfg['color'] }}-500 bg-{{ $cfg['color'] }}-100 rounded-full px-2 py-0.5" data-stage-count>{{ $opps->count() }}</span>
                 </div>
-                <span class="text-xs text-{{ $cfg['color'] }}-600 font-medium">
+                <span class="text-xs text-{{ $cfg['color'] }}-600 font-medium font-mono tabular-nums" data-stage-total>
                     {{ number_format($opps->sum('amount'), 0, ',', ' ') }} F
                 </span>
             </div>
@@ -69,6 +69,7 @@
                 @foreach($opps as $opp)
                 <div class="bg-white rounded-[4px] border border-gray-300 p-4 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
                      draggable="true"
+                     data-amount="{{ (float) $opp->amount }}"
                      @dragstart="$event.dataTransfer.setData('oppId', {{ $opp->id }}); $event.dataTransfer.setData('fromStage', '{{ $stage }}')"
                      id="opp-{{ $opp->id }}">
                     <div class="flex items-start justify-between gap-2 mb-2">
@@ -130,6 +131,19 @@
         @endforeach
     </div>
 
+    {{-- ══ Footer contexte (pattern X3) ══════════════════════════════════════ --}}
+    <div class="flex items-center justify-between bg-gray-900 text-gray-200 rounded-[4px] px-4 py-2 text-xs">
+        <div class="flex items-center gap-4 flex-wrap">
+            <span>Société : <strong class="text-white">{{ currentCompany()?->name }}</strong></span>
+            <span>Module : <strong class="text-white">CRM — Pipeline</strong></span>
+            <span>Pipeline actif : <strong class="text-white">{{ number_format($totalPipeline, 0, ',', ' ') }} FCFA</strong></span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span>Utilisateur : <strong class="text-white">{{ auth()->user()?->name }}</strong></span>
+            <span>{{ now()->format('d/m/Y H:i') }}</span>
+        </div>
+    </div>
+
 </div>
 @endsection
 
@@ -162,6 +176,7 @@ async function handleDrop(event, toStage) {
             if (card && dropZone) {
                 dropZone.insertBefore(card, dropZone.lastElementChild);
             }
+            refreshColumnTotals();
             window.toast?.('Opportunité déplacée', 'success');
         } else {
             const err = await resp.json().catch(() => ({}));
@@ -172,6 +187,20 @@ async function handleDrop(event, toStage) {
         window.toast?.('Erreur réseau', 'error');
         window.location.reload();
     }
+}
+
+// Recalcule compteur + montant de chaque colonne depuis les cartes présentes
+// (sinon les en-têtes restent figés sur les valeurs du chargement après un drop).
+function refreshColumnTotals() {
+    document.querySelectorAll('[id^="stage-"]').forEach((col) => {
+        const cards = col.querySelectorAll('[data-drop-zone] [data-amount]');
+        let total = 0;
+        cards.forEach((c) => { total += parseFloat(c.dataset.amount) || 0; });
+        const countEl = col.querySelector('[data-stage-count]');
+        const totalEl = col.querySelector('[data-stage-total]');
+        if (countEl) countEl.textContent = cards.length;
+        if (totalEl) totalEl.textContent = new Intl.NumberFormat('fr-FR').format(Math.round(total)) + ' F';
+    });
 }
 </script>
 @endpush
