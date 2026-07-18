@@ -26,16 +26,22 @@ class ReplayProductionOutputStockSync
         }
 
         $order = $output->productionOrder ?? ProductionOrder::find($output->production_order_id);
+        $uom   = $output->product?->unit?->abbreviation;
 
         $movement = $this->stock->recordMovement([
-            'product_id'     => $output->product_id,
-            'warehouse_id'   => $output->warehouse_id,
-            'type'           => 'entree',
-            'quantity'       => (float) $output->quantity,
-            'unit_cost'      => (float) ($payload['unit_cost'] ?? 0),
-            'reference_type' => ProductionOrder::class,
-            'reference_id'   => $output->production_order_id,
-            'notes'          => 'Production OF ' . ($order?->number ?? $output->production_order_id),
+            'product_id'           => $output->product_id,
+            'warehouse_id'         => $output->warehouse_id,
+            'type'                 => 'entree',
+            'quantity'             => (float) $output->quantity,
+            'uom'                  => $uom,
+            'quantity_in_stock_uom' => (float) $output->quantity,
+            'stock_uom'            => $uom,
+            'unit_cost'            => (float) ($payload['unit_cost'] ?? 0),
+            'production_order_id'  => $output->production_order_id,
+            'idempotency_key'      => 'production-output:' . $output->id,
+            'reference_type'       => ProductionOrder::class,
+            'reference_id'         => $output->production_order_id,
+            'notes'                => 'Production OF ' . ($order?->number ?? $output->production_order_id),
         ]);
 
         $output->update(['stock_movement_id' => $movement->id]);
