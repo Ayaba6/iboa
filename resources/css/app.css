@@ -238,10 +238,10 @@
     .badge-green  { @apply bg-green-100  text-green-700; }
     .badge-red    { @apply bg-red-100    text-red-700; }
     .badge-orange { @apply bg-orange-100 text-orange-700; }
-    .badge-purple { @apply bg-purple-100 text-purple-700; }
+    .badge-purple { @apply bg-teal-100 text-teal-700; } /* [Charte X3] violet proscrit */
     .badge-teal   { @apply bg-teal-100   text-teal-700; }
     .badge-yellow { @apply bg-yellow-100 text-yellow-700; }
-    .badge-indigo { @apply bg-indigo-100 text-indigo-700; }
+    .badge-indigo { @apply bg-blue-100 text-blue-700; } /* [Charte X3] violet proscrit */
     .badge-amber  { @apply bg-amber-100  text-amber-700; }
     .badge-sky    { @apply bg-sky-100    text-sky-700; }
 
@@ -494,11 +494,11 @@ html.dark .badge-blue   { background: #1E3A5F; color: #60A5FA; }
 html.dark .badge-green,
 html.dark .badge-emerald { background: #064E3B; color: #34D399; }
 html.dark .badge-red    { background: #450A0A; color: #F87171; }
-html.dark .badge-indigo { background: #1E1B4B; color: #A5B4FC; }
+html.dark .badge-indigo { background: #172554; color: #93C5FD; }
 html.dark .badge-amber  { background: #451A03; color: #FCD34D; }
 html.dark .badge-yellow { background: #422006; color: #FDE68A; }
 html.dark .badge-orange { background: #431407; color: #FB923C; }
-html.dark .badge-purple { background: #3B0764; color: #C4B5FD; }
+html.dark .badge-purple { background: #042F2E; color: #5EEAD4; }
 html.dark .badge-teal   { background: #134E4A; color: #2DD4BF; }
 html.dark .badge-sky    { background: #0C1E3C; color: #38BDF8; }
 

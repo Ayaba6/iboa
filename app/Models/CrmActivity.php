@@ -8,7 +8,7 @@ use App\Models\Traits\HasCompanyScope;
 
 class CrmActivity extends Model
 {
-    use HasCompanyScope;
+    use HasCompanyScope, \App\Models\Concerns\BustsCrmKpiCache;
 
     protected $fillable = [
         'company_id', 'user_id', 'crm_contact_id', 'crm_opportunity_id',
@@ -27,10 +27,10 @@ class CrmActivity extends Model
 
     const TYPES = [
         'appel' => ['label' => 'Appel',      'icon' => '📞', 'color' => 'blue'],
-        'email' => ['label' => 'Email',       'icon' => '✉️', 'color' => 'indigo'],
+        'email' => ['label' => 'Email',       'icon' => '✉️', 'color' => 'blue'],
         'rdv'   => ['label' => 'RDV',         'icon' => '📅', 'color' => 'emerald'],
         'note'  => ['label' => 'Note',        'icon' => '📝', 'color' => 'amber'],
-        'tache' => ['label' => 'Tâche',       'icon' => '✅', 'color' => 'purple'],
+        'tache' => ['label' => 'Tâche',       'icon' => '✅', 'color' => 'teal'],
     ];
 
     const PRIORITIES = [

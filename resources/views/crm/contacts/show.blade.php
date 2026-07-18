@@ -44,7 +44,7 @@
             </a>
             <a href="{{ route('crm.opportunities.create', ['contact_id' => $contact->id]) }}"
                class="inline-flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
-                <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
                 Nouvelle opportunité

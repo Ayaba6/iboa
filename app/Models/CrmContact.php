@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CrmContact extends Model
 {
-    use SoftDeletes, HasCompanyScope;
+    use SoftDeletes, HasCompanyScope, \App\Models\Concerns\BustsCrmKpiCache;
 
     protected $fillable = [
         'company_id', 'user_id', 'client_id',
@@ -74,7 +74,7 @@ class CrmContact extends Model
     {
         return match($this->status) {
             'new'         => 'blue',
-            'contacted'   => 'indigo',
+            'contacted'   => 'blue',
             'qualified'   => 'emerald',
             'unqualified' => 'gray',
             'converted'   => 'green',
@@ -88,7 +88,7 @@ class CrmContact extends Model
         return match($this->type) {
             'prospect'   => 'amber',
             'contact'    => 'blue',
-            'partenaire' => 'purple',
+            'partenaire' => 'teal',
             default      => 'gray',
         };
     }

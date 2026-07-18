@@ -102,7 +102,7 @@
                             @endif
                             @if($act->opportunity)
                             <a href="{{ route('crm.opportunities.show', $act->opportunity) }}"
-                               class="text-violet-600 hover:text-violet-700 block truncate max-w-[160px]">⚡ {{ Str::limit($act->opportunity->title, 25) }}</a>
+                               class="text-emerald-700 hover:text-emerald-900 block truncate max-w-[160px]">⚡ {{ Str::limit($act->opportunity->title, 25) }}</a>
                             @endif
                             @if(!$act->contact && !$act->opportunity)<span class="text-gray-300">—</span>@endif
                         </td>

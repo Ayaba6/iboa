@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CrmOpportunity extends Model
 {
-    use SoftDeletes, HasCompanyScope;
+    use SoftDeletes, HasCompanyScope, \App\Models\Concerns\BustsCrmKpiCache;
 
     protected $fillable = [
         'company_id', 'crm_contact_id', 'user_id',
@@ -30,7 +30,7 @@ class CrmOpportunity extends Model
     const STAGES = [
         'prospection'   => ['label' => 'Prospection',   'color' => 'sky',     'icon' => '🔍', 'prob' => 10],
         'qualification' => ['label' => 'Qualification', 'color' => 'blue',    'icon' => '✅', 'prob' => 25],
-        'proposition'   => ['label' => 'Proposition',   'color' => 'violet',  'icon' => '📋', 'prob' => 50],
+        'proposition'   => ['label' => 'Proposition',   'color' => 'teal',    'icon' => '📋', 'prob' => 50],
         'negociation'   => ['label' => 'Négociation',   'color' => 'amber',   'icon' => '🤝', 'prob' => 75],
         'gagne'         => ['label' => 'Gagné',         'color' => 'emerald', 'icon' => '🏆', 'prob' => 100],
         'perdu'         => ['label' => 'Perdu',         'color' => 'red',     'icon' => '❌', 'prob' => 0],

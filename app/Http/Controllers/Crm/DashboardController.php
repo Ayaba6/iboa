@@ -43,6 +43,10 @@ class DashboardController extends Controller
                     ->whereYear('created_at', now()->year)->count(),
                 'openOpps'          => CrmOpportunity::forCompany($companyId)->active()->count(),
                 'pipeline'          => CrmOpportunity::forCompany($companyId)->active()->sum('amount'),
+                // Valeur pondérée = Σ(montant × probabilité) — le libellé « valeur
+                // pondérée » affichait auparavant le pipeline brut.
+                'weightedPipeline'  => (float) CrmOpportunity::forCompany($companyId)->active()
+                    ->selectRaw('COALESCE(SUM(amount * probability / 100), 0) as w')->value('w'),
                 'wonThisMonth'      => CrmOpportunity::forCompany($companyId)
                     ->where('stage', 'gagne')
                     ->whereMonth('updated_at', now()->month)
