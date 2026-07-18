@@ -18,11 +18,12 @@
     // request base path so the URL stays valid regardless of where the app is mounted.
     $logoUrl = $co?->logo ? url(Storage::url($co->logo)) : null;
 
+    // [Charte X3] Violet proscrit : FACTURE = bleu (débit client), AVOIR = rouge (crédit)
     $docTypeColors = [
-        'FACTURE'           => ['bg' => '#4f46e5', 'light' => '#eef2ff'],
+        'FACTURE'           => ['bg' => '#1d4ed8', 'light' => '#eff6ff'],
         'DEVIS'             => ['bg' => '#047857', 'light' => '#ecfdf5'],
         'BON DE LIVRAISON'  => ['bg' => '#0f766e', 'light' => '#f0fdfa'],
-        'AVOIR'             => ['bg' => '#7c3aed', 'light' => '#f5f3ff'],
+        'AVOIR'             => ['bg' => '#dc2626', 'light' => '#fef2f2'],
         'COMMANDE'          => ['bg' => '#b45309', 'light' => '#fffbeb'],
     ];
     $colors = $docTypeColors[$docType] ?? ['bg' => '#374151', 'light' => '#f9fafb'];

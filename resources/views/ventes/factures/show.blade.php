@@ -225,7 +225,7 @@
 
                 {{-- Créer un avoir --}}
                 @if(!in_array($invoice->status, ['brouillon', 'annulee']))
-                <a href="{{ route('ventes.avoirs.create', ['invoice_id' => $invoice->id]) }}" class="btn btn-purple">
+                <a href="{{ route('ventes.avoirs.create', ['invoice_id' => $invoice->id]) }}" class="btn btn-secondary">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
                     </svg>
@@ -572,7 +572,7 @@
         <div class="px-4 py-2 border-b border-gray-200 bg-[#eef5f0] flex items-center justify-between">
             <h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">5. Avoirs liés</h2>
             <a href="{{ route('ventes.avoirs.create', ['invoice_id' => $invoice->id]) }}"
-               class="text-xs text-purple-600 hover:text-purple-800 font-medium border border-purple-200 hover:bg-purple-50 px-2.5 py-1 rounded-[4px] transition-colors">
+               class="text-xs text-emerald-700 hover:text-emerald-900 font-medium border border-emerald-200 hover:bg-emerald-50 px-2.5 py-1 rounded-[4px] transition-colors">
                 + Nouvel avoir
             </a>
         </div>
@@ -590,23 +590,23 @@
             <tbody class="divide-y divide-gray-100">
                 @foreach($invoice->creditNotes as $cn)
                 @php
-                    $cnBadges = ['brouillon' => 'bg-gray-100 text-gray-600', 'valide' => 'bg-purple-100 text-purple-700', 'applique' => 'bg-green-100 text-green-700', 'annule' => 'bg-red-100 text-red-600'];
+                    $cnBadges = ['brouillon' => 'bg-gray-100 text-gray-600', 'valide' => 'bg-blue-100 text-blue-700', 'applique' => 'bg-green-100 text-green-700', 'annule' => 'bg-red-100 text-red-600'];
                     $cnLabels = ['brouillon' => 'Brouillon', 'valide' => 'Validé', 'applique' => 'Appliqué', 'annule' => 'Annulé'];
                 @endphp
                 <tr class="odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
-                    <td class="px-3 py-1 font-mono font-semibold text-purple-700 text-[13px]">
-                        <a href="{{ route('ventes.avoirs.show', $cn) }}" class="hover:text-purple-900">{{ $cn->number }}</a>
+                    <td class="px-3 py-1 font-mono font-semibold text-emerald-700 text-[13px]">
+                        <a href="{{ route('ventes.avoirs.show', $cn) }}" class="hover:text-emerald-900">{{ $cn->number }}</a>
                     </td>
                     <td class="px-3 py-1 text-gray-600 tabular-nums">{{ $cn->issued_at?->format('d/m/Y') ?? '—' }}</td>
                     <td class="px-3 py-1 text-gray-500 text-xs hidden md:table-cell">{{ $cn->reason ?? '—' }}</td>
-                    <td class="px-3 py-1 text-right tabular-nums text-purple-700 font-bold">{{ number_format($cn->total_ttc, 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1 text-right tabular-nums text-emerald-700 font-bold">{{ number_format($cn->total_ttc, 0, ',', ' ') }}</td>
                     <td class="px-3 py-1 text-center">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $cnBadges[$cn->status] ?? 'bg-gray-100 text-gray-600' }}">
                             {{ $cnLabels[$cn->status] ?? $cn->status }}
                         </span>
                     </td>
                     <td class="px-3 py-1.5 text-center">
-                        <a href="{{ route('ventes.avoirs.show', $cn) }}" class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded" title="Voir">
+                        <a href="{{ route('ventes.avoirs.show', $cn) }}" class="p-1.5 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded" title="Voir">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         </a>
                     </td>
@@ -637,7 +637,7 @@
                     'partially_paid' => 'bg-amber-100 text-amber-700',
                     'overdue'        => 'bg-orange-100 text-orange-700',
                     'deleted'        => 'bg-red-100 text-red-700',
-                    'restored'       => 'bg-purple-100 text-purple-700',
+                    'restored'       => 'bg-blue-100 text-blue-700',
                 ];
                 $actionLabels = [
                     'created'        => 'Création',

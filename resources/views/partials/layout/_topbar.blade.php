@@ -212,8 +212,8 @@
                 {{-- Quick add --}}
                 @can('invoices.create')
                 <a href="{{ route('ventes.factures.create') }}"
-                   class="flex items-center gap-1.5 px-2.5 py-1.5 text-white text-[12px] font-semibold rounded-lg transition-all shadow-md hover:shadow-lg hover:-translate-y-px"
-                   style="background:linear-gradient(135deg,#6366F1,#8B5CF6);box-shadow:0 2px 8px rgba(99,102,241,.4);">
+                   {{-- [Charte X3] Gradient violet proscrit → émeraude plein --}}
+                   class="flex items-center gap-1.5 px-2.5 py-1.5 text-white text-[12px] font-semibold rounded-[4px] bg-emerald-700 hover:bg-emerald-800 transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
