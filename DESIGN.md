@@ -56,6 +56,26 @@ Squelette de page (ordre fixe) :
 6. **Footer noir de contexte** : `bg-gray-900 text-xs` — Société · module ou
    période · filtre · Utilisateur · horodatage `d/m/Y H:i`.
 
+## Design system — composants Blade `<x-x3.*>`
+
+Le squelette X3 est componentisé (`resources/views/components/x3/`) — toute
+nouvelle page DOIT les utiliser au lieu de copier le markup :
+
+| Composant | Rôle | Props clés |
+|---|---|---|
+| `<x-x3.title-bar>` | Barre titre + slot actions | `title`, `subtitle` |
+| `<x-x3.btn>` | Bouton/lien d'action | `variant` primary·secondary·danger, `href` |
+| `<x-x3.section>` | Carte à bandeau numéroté | `number`, `title`, `flush` (tables), slot `meta` |
+| `<x-x3.synthesis>` | Barre de synthèse basse | `cols` 2-6, enfants `<x-x3.stat>` |
+| `<x-x3.stat>` | Case de synthèse | `label`, `value`, `color`, `unit`, `sub`, `href` |
+| `<x-x3.footer>` | Footer noir de contexte | `module`, slot infos ; Société/Utilisateur/heure auto |
+
+Tokens : couleur `band` (#eef5f0) dans tailwind.config → `bg-band`,
+`bg-band/70`, `hover:bg-band/40`. Tables denses : classe **`.tbl`**
+(app.css — thead #eef5f0, th uppercase émeraude, zébrage, hover, dark mode,
+ré-autorisation `th.text-right/center`). Page de référence migrée :
+`resources/views/crm/dashboard.blade.php`.
+
 ## Components
 
 - **Formulaires** : inputs `border-gray-300 rounded-[4px] px-3 py-2 text-sm

@@ -20,6 +20,8 @@ export default {
                 'sm': ['16px', { lineHeight: '1.5' }],   // titres sidebar     (défaut Tailwind : 14px)
             },
             colors: {
+                // [Design system X3] bandeau de section (bg-band, hover:bg-band/40…)
+                band: '#eef5f0',
                 brand: {
                     dark:   '#0c0c1d',   // auth panel, login bg
                     darker: '#0f0f23',   // dashboard hero
