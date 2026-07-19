@@ -58,6 +58,8 @@ class ClientController extends Controller
             'taxRates'   => TaxRate::where('is_active', true)->orderByDesc('is_default')->orderBy('rate')->get(),
             'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'salesReps'  => \App\Models\SalesRep::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
+            // [Parité Sage X3] Tiers comptables (client facturé/payeur/groupe/risque, factor)
+            'tiersClients' => Client::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
         ];
     }
 

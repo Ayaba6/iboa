@@ -114,7 +114,21 @@
                     </div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">NIF / IFU</label><input type="text" name="ifu" maxlength="50" value="{{ old('ifu', $c->ifu ?? '') }}" class="{{ $inp }} font-mono"></div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">RCCM</label><input type="text" name="rccm" maxlength="50" value="{{ old('rccm', $c->rccm ?? '') }}" class="{{ $inp }} font-mono"></div>
-                    <div class="sm:col-span-3"><label class="{{ $lbl }}">Numéro contribuable</label><input type="text" name="numero_contribuable" maxlength="30" value="{{ old('numero_contribuable', $c->numero_contribuable ?? '') }}" class="{{ $inp }} font-mono"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Numéro contribuable</label><input type="text" name="numero_contribuable" maxlength="30" value="{{ old('numero_contribuable', $c->numero_contribuable ?? '') }}" class="{{ $inp }} font-mono"></div>
+
+                    {{-- [Parité Sage X3] Bloc juridique / fiscal --}}
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Forme juridique</label>
+                        <div class="relative"><select name="forme_juridique" class="{{ $lk }}">
+                            @php $fj = old('forme_juridique', $c->forme_juridique ?? ''); @endphp
+                            <option value="">—</option>
+                            @foreach(['SARL'=>'SARL','SA'=>'Société Anonyme (SA)','SAS'=>'SAS','SUARL'=>'SUARL','EI'=>'Entreprise Individuelle','GIE'=>'GIE','Association'=>'Association','ONG'=>'ONG','Administration'=>'Administration'] as $fv=>$fl)
+                            <option value="{{ $fv }}" @selected($fj===$fv)>{{ $fl }}</option>
+                            @endforeach
+                        </select>{!! $caret !!}</div>
+                    </div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Régime d'imposition</label><input type="text" name="regime_imposition" maxlength="80" value="{{ old('regime_imposition', $c->regime_imposition ?? '') }}" class="{{ $inp }}" placeholder="Régime normal"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">N° agrément</label><input type="text" name="no_agrement" maxlength="60" value="{{ old('no_agrement', $c->no_agrement ?? '') }}" class="{{ $inp }} font-mono"></div>
 
                     <div class="sm:col-span-3"><label class="{{ $lbl }}">Groupe client</label><input type="text" name="groupe_client" maxlength="60" value="{{ old('groupe_client', $c->groupe_client ?? '') }}" class="{{ $inp }}" placeholder="GRAND-CPT"></div>
                     <div class="sm:col-span-3"><label class="{{ $lbl }}">Secteur d'activité</label><input type="text" name="secteur_activite" maxlength="100" value="{{ old('secteur_activite', $c->secteur_activite ?? '') }}" class="{{ $inp }}" placeholder="INDUSTRIE"></div>
@@ -257,6 +271,18 @@
                             <span class="{{ $chkLb }}">Client exonéré</span>
                         </label>
                     </div>
+
+                    {{-- [Parité Sage X3] Bloc risque crédit --}}
+                    <div class="col-span-full mt-1 pt-2 border-t border-gray-100">
+                        <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-2">Risque crédit &amp; garanties</p>
+                    </div>
+                    <div><label class="{{ $lbl }}">Code risque</label><input type="text" name="code_risque" maxlength="30" value="{{ old('code_risque', $c->code_risque ?? '') }}" class="{{ $inp }}" placeholder="Bon, Surveillé…"></div>
+                    <div><label class="{{ $lbl }}">Garantie (montant)</label><input type="number" min="0" step="1" name="garantie_montant" value="{{ old('garantie_montant', $c->garantie_montant ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">Nature garantie</label><input type="text" name="nature_garantie" maxlength="80" value="{{ old('nature_garantie', $c->nature_garantie ?? '') }}" class="{{ $inp }}" placeholder="Caution, hypothèque…"></div>
+                    <div><label class="{{ $lbl }}">Assurance crédit</label><input type="text" name="assurance_credit" maxlength="120" value="{{ old('assurance_credit', $c->assurance_credit ?? '') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">RRR (montant)</label><input type="number" min="0" step="1" name="rrr_montant" value="{{ old('rrr_montant', $c->rrr_montant ?? '') }}" class="{{ $inpR }}"></div>
+                    <div><label class="{{ $lbl }}">RRR (%)</label><input type="number" min="0" max="100" step="0.01" name="rrr_taux" value="{{ old('rrr_taux', $c->rrr_taux ?? '') }}" class="{{ $inpR }}"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Référence cadastrale</label><input type="text" name="reference_cadastrale" maxlength="80" value="{{ old('reference_cadastrale', $c->reference_cadastrale ?? '') }}" class="{{ $inp }} font-mono"></div>
                 </div>
             </section>
         </div>
@@ -342,6 +368,29 @@
                     <div><label class="{{ $lbl }}">Compte collectif</label><input type="text" x-model="compteCollectif" maxlength="30" class="{{ $inp }} font-mono" placeholder="41100000"></div>
                     <div><label class="{{ $lbl }}">Condition de paiement</label><input type="text" name="condition_paiement" maxlength="60" value="{{ old('condition_paiement', $c->condition_paiement ?? '') }}" class="{{ $inp }}" placeholder="30J FDM"></div>
                     <div><label class="{{ $lbl }}">Échéance</label><input type="text" name="echeance" maxlength="60" value="{{ old('echeance', $c->echeance ?? '') }}" class="{{ $inp }}" placeholder="Fin de mois"></div>
+
+                    {{-- [Parité Sage X3] Tiers comptables : client facturé / payeur / groupe / risque / factor --}}
+                    <div class="col-span-full mt-1 pt-2 border-t border-gray-100">
+                        <p class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide mb-2">Tiers comptables</p>
+                    </div>
+                    @php
+                        $tiers = $tiersClients ?? collect();
+                        $tiersSel = fn ($field) => (int) old($field, $c->$field ?? 0);
+                    @endphp
+                    @foreach(['client_facture_id'=>'Client facturé','client_payeur_id'=>'Client payeur','client_groupe_id'=>'Client groupe','client_risque_id'=>'Client risque','factor_id'=>'Factor'] as $tf => $tlab)
+                    <div>
+                        <label class="{{ $lbl }}">{{ $tlab }}</label>
+                        <div class="relative"><select name="{{ $tf }}" class="{{ $lk }}">
+                            <option value="">—</option>
+                            @foreach($tiers as $tc)
+                            @if(!isset($c) || $tc->id !== $c->id)
+                            <option value="{{ $tc->id }}" @selected($tiersSel($tf)===$tc->id)>{{ $tc->code }} — {{ \Illuminate\Support\Str::limit($tc->name, 28) }}</option>
+                            @endif
+                            @endforeach
+                        </select>{!! $caret !!}</div>
+                    </div>
+                    @endforeach
+
                     <div class="sm:col-span-4">
                         <label class="{{ $lbl }}">Notes</label>
                         <textarea name="notes" rows="2" class="w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400 resize-none">{{ old('notes', $c->notes ?? '') }}</textarea>

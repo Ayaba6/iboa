@@ -84,6 +84,24 @@ class StoreClientRequest extends FormRequest
             'rib_iban'             => 'nullable|string|max:40',
             'numero_compte'        => 'nullable|string|max:30',
             'swift'                => 'nullable|string|max:20',
+            // [Parité Sage X3] Juridique / fiscal
+            'forme_juridique'      => 'nullable|string|max:60',
+            'regime_imposition'    => 'nullable|string|max:80',
+            'no_agrement'          => 'nullable|string|max:60',
+            // [Parité Sage X3] Risque crédit
+            'code_risque'          => 'nullable|string|max:30',
+            'garantie_montant'     => 'nullable|numeric|min:0',
+            'nature_garantie'      => 'nullable|string|max:80',
+            'assurance_credit'     => 'nullable|string|max:120',
+            'rrr_montant'          => 'nullable|numeric|min:0',
+            'rrr_taux'             => 'nullable|numeric|min:0|max:100',
+            'reference_cadastrale' => 'nullable|string|max:80',
+            // [Parité Sage X3] Tiers comptables
+            'client_facture_id'    => 'nullable|integer|exists:clients,id',
+            'client_payeur_id'     => 'nullable|integer|exists:clients,id',
+            'client_groupe_id'     => 'nullable|integer|exists:clients,id',
+            'client_risque_id'     => 'nullable|integer|exists:clients,id',
+            'factor_id'            => 'nullable|integer|exists:clients,id',
             'documents'            => 'nullable|array',
             'documents.*'          => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:5120',
             // contacts
