@@ -3,7 +3,12 @@
     Source unique : paramétrage société (table companies). Évite la duplication.
     Attend : $company. Utilise les classes .company-name / .company-sub définies par la vue hôte.
 --}}
-<div class="company-name">{{ $company?->trade_name ?? $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
+<div class="company-name">{{ $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
+@if($company?->trade_name && $company->trade_name !== $company->name)
+<div class="company-sub">{{ $company->trade_name }}@if($company?->sigle) ({{ $company->sigle }})@endif</div>
+@elseif($company?->sigle)
+<div class="company-sub">{{ $company->sigle }}</div>
+@endif
 @if($company?->legal_form)
 <div class="company-sub">{{ $company->legal_form }}@if($company->share_capital) — Capital : {{ number_format($company->share_capital, 0, ',', ' ') }} {{ $company->share_capital_currency ?? 'FCFA' }}@endif</div>
 @endif

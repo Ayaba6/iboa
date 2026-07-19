@@ -271,7 +271,10 @@
             <img src="{{ $logoBase64 }}" class="logo" alt="Logo">
             @endif
 
-            <div class="co-name">{{ $company?->trade_name ?? $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
+            <div class="co-name">{{ $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
+            @if($company?->trade_name && $company->trade_name !== $company->name)
+            <div class="co-legal">{{ $company->trade_name }}@if($company?->sigle) ({{ $company->sigle }})@endif</div>
+            @endif
 
             @if($company?->legal_form)
             <div class="co-legal">
@@ -761,7 +764,7 @@
         @if($settings?->footer_text)
             {{ $settings->footer_text }}
         @else
-            <strong>{{ $company?->trade_name ?? $company?->name ?? 'OA METAL INDUSTRIE' }}</strong>
+            <strong>{{ $company?->name ?? 'OA METAL INDUSTRIE' }}</strong>
             @if($company?->legal_form) — {{ $company->legal_form }} @endif
             @if($company?->address) | {{ $company->address }}@if($company->city), {{ $company->city }}@endif @endif
             <br>
