@@ -380,6 +380,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->only(['index', 'show']);
         });
         Route::middleware('permission:bon_preparations.update')->group(function () {
+            Route::get('bons-preparation/{bonPreparation}/pdf',            [\App\Http\Controllers\Sales\BonPreparationController::class, 'pdf'])->name('bons-preparation.pdf');
             Route::post('bons-preparation/{bonPreparation}/start-loading',  [\App\Http\Controllers\Sales\BonPreparationController::class, 'startLoading'])->name('bons-preparation.start-loading');
             Route::post('bons-preparation/{bonPreparation}/finish-loading', [\App\Http\Controllers\Sales\BonPreparationController::class, 'finishLoading'])->name('bons-preparation.finish-loading');
         });

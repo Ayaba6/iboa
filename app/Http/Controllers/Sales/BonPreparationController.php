@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Sales;
 
 use App\Http\Controllers\Controller;
 use App\Models\BonPreparation;
+use App\Models\DocumentSetting;
 use App\Models\Order;
 use App\Services\BonPreparationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,7 +16,7 @@ class BonPreparationController extends Controller
 {
     public function __construct(private BonPreparationService $service)
     {
-        $this->middleware('permission:bon_preparations.view')->only('index', 'show');
+        $this->middleware('permission:bon_preparations.view')->only('index', 'show', 'pdf');
         $this->middleware('permission:bon_preparations.update')->only('startLoading', 'finishLoading');
     }
 
@@ -47,6 +49,21 @@ class BonPreparationController extends Controller
     {
         $bonPreparation->load(['order.client', 'order.items.product', 'validatedBy', 'loadedBy', 'paymentRecordedBy']);
         return view('ventes.bons-preparation.show', compact('bonPreparation'));
+    }
+
+    /** [Ventes] Impression PDF du bon de préparation (liste des articles à charger). */
+    public function pdf(BonPreparation $bonPreparation, Request $request)
+    {
+        $bonPreparation->load(['order.client', 'order.items.product', 'validatedBy', 'loadedBy']);
+        $settings = DocumentSetting::query()->first();
+
+        $filename = 'BP-' . $bonPreparation->number . '.pdf';
+        $pdf = Pdf::loadView('ventes.pdf.bon-preparation', compact('bonPreparation', 'settings'))
+            ->setPaper(strtolower($settings?->page_size ?? 'a4'), $settings?->orientation ?? 'portrait');
+
+        return $request->boolean('stream')
+            ? $pdf->stream($filename)
+            : $pdf->download($filename);
     }
 
     public function startLoading(BonPreparation $bonPreparation): RedirectResponse
