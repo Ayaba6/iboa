@@ -70,6 +70,9 @@ class Client extends Model
         'tax_exemption_reason',
         'tax_exemption_number',
         'soumis_tva',
+        // [Précompte BIC] inclusion/exclusion au précompte BIC + motif d'exemption
+        'soumis_bic',
+        'bic_exemption_reason',
         // Statuts
         'is_livrable',
         'is_facturable',
@@ -133,6 +136,7 @@ class Client extends Model
         'is_active'        => 'boolean',
         'is_tax_exempt'    => 'boolean',
         'soumis_tva'       => 'boolean',
+        'soumis_bic'       => 'boolean',
         'is_livrable'      => 'boolean',
         'is_facturable'    => 'boolean',
         'blocage_commande' => 'boolean',

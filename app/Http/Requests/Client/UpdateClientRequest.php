@@ -54,6 +54,8 @@ class UpdateClientRequest extends FormRequest
             'is_livrable'          => 'nullable|boolean',
             'is_facturable'        => 'nullable|boolean',
             'soumis_tva'           => 'nullable|boolean',
+            'soumis_bic'           => 'nullable|boolean',
+            'bic_exemption_reason' => 'nullable|string|max:150',
             'blocage_commande'     => 'nullable|boolean',
             'phone2'               => 'nullable|string|max:20',
             'boite_postale'        => 'nullable|string|max:60',

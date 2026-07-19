@@ -149,14 +149,27 @@
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">Pays</label><input type="text" name="country" x-model="country" maxlength="100" class="{{ $inp }}"></div>
                     <div class="sm:col-span-3"><label class="{{ $lbl }}">Ville</label><input type="text" name="city" x-model="city" maxlength="100" class="{{ $inp }}"></div>
                     <div class="sm:col-span-3"><label class="{{ $lbl }}">Quartier</label><input type="text" name="quartier" maxlength="100" value="{{ old('quartier', $c->quartier ?? '') }}" class="{{ $inp }}"></div>
-                    <div class="sm:col-span-6 flex flex-wrap items-end gap-x-6 gap-y-2 pb-1">
-                        @foreach(['is_livrable'=>'Client livrable','is_facturable'=>'Client facturable','soumis_tva'=>'Soumis TVA','blocage_commande'=>'Blocage commande'] as $bn => $blab)
-                        <label class="inline-flex items-center gap-2 cursor-pointer">
-                            <input type="hidden" name="{{ $bn }}" value="0">
-                            <input type="checkbox" name="{{ $bn }}" value="1" class="{{ $chk }}" {{ $bool($bn, $bn !== 'blocage_commande') ? 'checked' : '' }}>
-                            <span class="{{ $chkLb }}">{{ $blab }}</span>
-                        </label>
-                        @endforeach
+                    {{-- [Précompte BIC] wrapper Alpine commun : le motif d'exemption
+                         n'apparaît que si le client N'EST PAS soumis au BIC. --}}
+                    <div class="sm:col-span-6" x-data="{ bic: {{ $bool('soumis_bic', true) ? 'true' : 'false' }} }">
+                        <div class="flex flex-wrap items-end gap-x-6 gap-y-2 pb-1">
+                            @foreach(['is_livrable'=>'Client livrable','is_facturable'=>'Client facturable','soumis_tva'=>'Soumis TVA','blocage_commande'=>'Blocage commande'] as $bn => $blab)
+                            <label class="inline-flex items-center gap-2 cursor-pointer">
+                                <input type="hidden" name="{{ $bn }}" value="0">
+                                <input type="checkbox" name="{{ $bn }}" value="1" class="{{ $chk }}" {{ $bool($bn, $bn !== 'blocage_commande') ? 'checked' : '' }}>
+                                <span class="{{ $chkLb }}">{{ $blab }}</span>
+                            </label>
+                            @endforeach
+                            <label class="inline-flex items-center gap-2 cursor-pointer">
+                                <input type="hidden" name="soumis_bic" value="0">
+                                <input type="checkbox" name="soumis_bic" value="1" x-model="bic" class="{{ $chk }}">
+                                <span class="{{ $chkLb }}">Soumis BIC (précompte)</span>
+                            </label>
+                        </div>
+                        <div x-show="!bic" x-cloak class="mt-2 sm:max-w-md">
+                            <label class="{{ $lbl }}">Motif d'exemption BIC</label>
+                            <input type="text" name="bic_exemption_reason" maxlength="150" value="{{ old('bic_exemption_reason', $c->bic_exemption_reason ?? '') }}" class="{{ $inp }}" placeholder="Ex : Grande entreprise (DGE), administration…">
+                        </div>
                     </div>
                 </div>
             </section>
