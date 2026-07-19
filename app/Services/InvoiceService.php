@@ -141,6 +141,8 @@ class InvoiceService
                     'description'      => $item->description,
                     'unit_id'          => $item->unit_id,
                     'quantity'         => $item->quantity,
+                    'nb_toles'         => $item->nb_toles,
+                    'metrage_par_tole' => $item->metrage_par_tole,
                     'unit_price'       => $item->unit_price,
                     'discount_percent' => $item->discount_percent,
                     'tax_rate_id'      => $item->tax_rate_id,
@@ -245,6 +247,9 @@ class InvoiceService
                     'description'      => $item->description,
                     'unit_id'          => $item->unit_id,
                     'quantity'         => $qty,
+                    // [§5 TÔLE BAC] hérite nb tôles / longueur de la ligne commande source
+                    'nb_toles'         => $orderItem?->nb_toles ?? $item->nb_toles,
+                    'metrage_par_tole' => $orderItem?->metrage_par_tole ?? $item->metrage_par_tole,
                     'unit_price'       => (int) $price,
                     'discount_percent' => $disc,
                     'tax_rate_id'      => $orderItem?->tax_rate_id ?? null,

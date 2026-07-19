@@ -305,14 +305,11 @@ class OrderService
                 continue;
             }
 
-            // [§5 TÔLE BAC] Quantité en mètres linéaires = nombre de tôles × métrage.
+            // [§5 TÔLE BAC] Quantité en mètres linéaires = nombre de tôles × métrage
+            // (règle et arrondi centralisés dans SheetConversion).
             $nbToles = isset($item['nb_toles']) ? (float) $item['nb_toles'] : null;
             $metrage = isset($item['metrage_par_tole']) ? (float) $item['metrage_par_tole'] : null;
-            if ($nbToles && $metrage) {
-                $qty = round($nbToles * $metrage, 2);
-            } else {
-                $qty = (float) ($item['quantity'] ?? 1);
-            }
+            $qty     = \App\Support\SheetConversion::resolveQuantity($nbToles, $metrage, $item['quantity'] ?? 1);
 
             $price = (float) ($item['unit_price'] ?? 0);
             $disc  = (float) ($item['discount_percent'] ?? 0);

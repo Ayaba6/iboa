@@ -88,6 +88,9 @@ class DeliveryNoteService
                     'description'   => $item->description,
                     'unit_id'       => $item->unit_id,
                     'quantity'      => $qty,
+                    // [§5 TÔLE BAC] nb tôles / longueur unitaire hérités de la commande
+                    'nb_toles'         => $item->nb_toles,
+                    'metrage_par_tole' => $item->metrage_par_tole,
                     'unit_price'    => $item->unit_price,
                     'sort_order'    => $i,
                 ]);

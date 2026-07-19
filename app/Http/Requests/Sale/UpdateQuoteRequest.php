@@ -58,6 +58,8 @@ class UpdateQuoteRequest extends FormRequest
             'items.*.description'          => 'required_with:items|string|max:255',
             'items.*.unit_id'              => 'nullable|exists:units,id',
             'items.*.quantity'             => 'required_with:items|numeric|min:0.0001',
+            'items.*.nb_toles'             => 'nullable|numeric|min:0',
+            'items.*.metrage_par_tole'     => 'nullable|numeric|min:0',
             'items.*.unit_price'           => 'required_with:items|numeric|min:0',
             'items.*.discount_percent'     => 'nullable|numeric|min:0|max:100',
             'items.*.tax_rate_id'          => 'nullable|exists:tax_rates,id',

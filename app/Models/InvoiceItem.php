@@ -15,6 +15,8 @@ class InvoiceItem extends Model
         'description',
         'unit_id',
         'quantity',
+        'nb_toles',
+        'metrage_par_tole',
         'unit_price',
         'unit_cost',
         'discount_percent',

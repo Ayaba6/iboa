@@ -16,6 +16,8 @@ class DeliveryNoteItem extends Model
         'description',
         'unit_id',
         'quantity',
+        'nb_toles',
+        'metrage_par_tole',
         'unit_price',
         'lot_number',
         'serial_number',

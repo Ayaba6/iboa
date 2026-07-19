@@ -299,6 +299,8 @@ class QuoteService
                     'description'      => $item->description,
                     'unit_id'          => $item->unit_id,
                     'quantity'         => $item->quantity,
+                    'nb_toles'         => $item->nb_toles,
+                    'metrage_par_tole' => $item->metrage_par_tole,
                     'unit_price'       => $item->unit_price,
                     'discount_percent' => $item->discount_percent,
                     'tax_rate_id'      => $item->tax_rate_id,
@@ -336,7 +338,10 @@ class QuoteService
                 continue;
             }
 
-            $qty   = (float) ($item['quantity'] ?? 1);
+            // [§5 TÔLE BAC] Métrage linéaire = nb tôles × longueur unitaire (centralisé).
+            $nbToles = isset($item['nb_toles']) ? (float) $item['nb_toles'] : null;
+            $metrage = isset($item['metrage_par_tole']) ? (float) $item['metrage_par_tole'] : null;
+            $qty   = \App\Support\SheetConversion::resolveQuantity($nbToles, $metrage, $item['quantity'] ?? 1);
             $price = (float) ($item['unit_price'] ?? 0);
             $disc  = (float) ($item['discount_percent'] ?? 0);
             $tax   = (float) ($item['tax_rate_value'] ?? 0);
@@ -349,6 +354,8 @@ class QuoteService
                 'description'      => $item['description'] ?? '',
                 'unit_id'          => $item['unit_id'] ?? null,
                 'quantity'         => $qty,
+                'nb_toles'         => $nbToles,
+                'metrage_par_tole' => $metrage,
                 'unit_price'       => (int) $price,
                 'discount_percent' => $disc,
                 'tax_rate_id'      => $item['tax_rate_id'] ?? null,
