@@ -12,7 +12,10 @@ Artisan::command('inspire', function () {
 Schedule::command('invoices:mark-overdue')->dailyAt('06:00');
 
 // [MED-2] Générer les factures récurrentes échues (factures abonnements, prestations mensuelles…)
-Schedule::command('invoices:generate-recurring')->dailyAt('06:30');
+// [Anti-doublons] withoutOverlapping : deux exécutions simultanées (relance
+// manuelle pendant le cron, redémarrage scheduler) généreraient les factures
+// en double. onOneServer pour le futur multi-serveur.
+Schedule::command('invoices:generate-recurring')->dailyAt('06:30')->withoutOverlapping()->onOneServer();
 
 // Audit métier quotidien — non-zero exit code en cas d'anomalie HIGH
 // (à coupler à un système d'alerte mail si besoin via ->emailOutputOnFailure())
@@ -49,4 +52,6 @@ Schedule::command('backup:run --only-db')->dailyAt('02:00')->onOneServer();
 Schedule::command('backup:monitor')->dailyAt('07:00')->onOneServer();
 
 // [PIL-04] Évaluation horaire des alertes par seuil → notification des rôles cibles.
-Schedule::command('alerts:run')->hourly();
+// [Anti-doublons] withoutOverlapping : un run qui déborde sur l'heure suivante
+// enverrait les mêmes notifications deux fois.
+Schedule::command('alerts:run')->hourly()->withoutOverlapping();
