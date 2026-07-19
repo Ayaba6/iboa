@@ -193,7 +193,7 @@
                             <div class="relative"><select name="order_id" class="{{ $lk }} font-mono"><option value="">—</option>@foreach($salesOrders as $so)<option value="{{ $so->id }}" @selected(old('order_id',$o->order_id)==$so->id)>{{ $so->number }}</option>@endforeach</select>{!! $caret !!}</div>
                         </div>
                         <div class="sm:col-span-3">
-                            <label class="{{ $lbl }}">Article à lancer (produit fini)</label>
+                            <label class="{{ $lbl }}">Article à lancer (produit fini) <span class="text-red-500">*</span></label>
                             <div class="relative"><select name="product_id" x-model="pid" @change="bomId = ''" class="{{ $lk }}"><option value="">—</option>@foreach($products as $p)<option value="{{ $p->id }}" @selected(old('product_id',$o->product_id)==$p->id)>{{ $p->name }}</option>@endforeach</select>{!! $caret !!}</div>
                         </div>
                         <div class="sm:col-span-3">
@@ -355,7 +355,7 @@
                         <div><label class="{{ $lbl }}">Tolérance longueur (mm)</label><input type="number" step="0.01" min="0" name="tolerance_longueur" value="{{ old('tolerance_longueur', $o->tolerance_longueur) }}" class="{{ $inpR }}"></div>
                         <div><label class="{{ $lbl }}">Tolérance épaisseur (mm)</label><input type="number" step="0.001" min="0" name="tolerance_epaisseur" value="{{ old('tolerance_epaisseur', $o->tolerance_epaisseur) }}" class="{{ $inpR }}"></div>
 
-                        <div><label class="{{ $lbl }}">Qté demandée</label><input type="number" step="0.01" min="0" name="quantity_requested" x-model="qty" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Qté demandée <span class="text-red-500">*</span></label><input type="number" step="0.01" min="0" name="quantity_requested" x-model="qty" class="{{ $inpR }}"></div>
                         <div><label class="{{ $lbl }}">Poids par mètre (kg/m)</label><input type="number" step="0.001" min="0" name="poids_par_metre" x-model="ppm" class="{{ $inpR }}"></div>
                         <div>
                             <label class="{{ $lbl }}">Poids théorique (kg)</label>
