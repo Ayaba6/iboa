@@ -16,20 +16,13 @@
     @csrf
     @method('PUT')
 
-    <div class="flex items-center justify-between">
-        <h1 class="text-[16px] font-bold text-gray-900">Modifier — {{ $contact->name }}</h1>
-        <div class="flex items-center gap-2">
-            <a href="{{ route('crm.contacts.show', $contact) }}"
-               class="px-3 py-2.5 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
-                Annuler
-            </a>
-            <button type="submit"
-                    class="px-3 py-2.5 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
-                Mettre à jour
-            </button>
-        </div>
-    </div>
+    <x-x3.title-bar title="Modifier — {{ $contact->name }}" subtitle="CRM — {{ $contact->typeLabel() }}">
+        <x-x3.btn variant="primary" type="submit">Mettre à jour</x-x3.btn>
+        <x-x3.btn :href="route('crm.contacts.show', $contact)">✕ Annuler</x-x3.btn>
+    </x-x3.title-bar>
 
     @include('crm.contacts._form')
+
+    <x-x3.footer module="CRM — Modification contact" />
 </form>
 @endsection
