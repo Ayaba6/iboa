@@ -455,7 +455,13 @@
         // Catalogue : key => [label, align(l|r), width, render(item)]
         $catalog = [
             'reference'   => ['Réf.',        'l', '60px', fn($it) => e($it->product?->reference ?? '—')],
-            'description' => ['Désignation', 'l', '',     fn($it) => '<strong>'.e($it->description).'</strong>'],
+            'description' => ['Désignation', 'l', '',     fn($it) => '<strong>'.e($it->description).'</strong>'
+                . (($it->nb_toles > 0 && $it->metrage_par_tole > 0)
+                    ? '<br><span style="font-size:8px;color:#6b7280">'
+                        . number_format($it->nb_toles, 0, ',', ' ') . ' tôle(s) × '
+                        . rtrim(rtrim(number_format($it->metrage_par_tole, 2, ',', ' '), '0'), ',') . ' m = '
+                        . number_format($it->quantity, 2, ',', ' ') . ' ml</span>'
+                    : '')],
             'longueur'    => ['Long.',       'r', '42px', fn($it) => $fmtDim($dims[$it->product_id]['length'] ?? null, 'm')],
             'epaisseur'   => ['Épais.',      'r', '42px', fn($it) => $fmtDim($dims[$it->product_id]['thickness'] ?? null, 'mm')],
             'quantity'    => ['Qté',         'r', '42px', fn($it) => number_format($it->quantity, 2, ',', ' ')],
