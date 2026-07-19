@@ -84,7 +84,7 @@
                 ['label' => 'Factures', 'value' => number_format($totals->nb_factures ?? 0, 0, ',', ' '), 'unit' => 'docs', 'color' => 'indigo'],
                 ['label' => 'CA HT',    'value' => number_format($totals->total_ht ?? 0, 0, ',', ' '),     'unit' => 'FCFA', 'color' => 'blue'],
                 ['label' => 'TVA',      'value' => number_format($totals->total_tva ?? 0, 0, ',', ' '),    'unit' => 'FCFA', 'color' => 'sky'],
-                ['label' => 'CA TTC',   'value' => number_format($totals->total_ttc ?? 0, 0, ',', ' '),    'unit' => 'FCFA', 'color' => 'violet'],
+                ['label' => 'CA TTC',   'value' => number_format($totals->total_ttc ?? 0, 0, ',', ' '),    'unit' => 'FCFA', 'color' => 'slate'],
                 ['label' => 'Encaissé', 'value' => number_format($totals->total_encaisse ?? 0, 0, ',', ' '),'unit' => 'FCFA', 'color' => 'emerald'],
                 ['label' => 'Reste dû', 'value' => number_format($totals->total_reste ?? 0, 0, ',', ' '),  'unit' => 'FCFA', 'color' => 'rose'],
             ];
@@ -92,7 +92,7 @@
                 'indigo'  => 'bg-[#eef5f0] text-emerald-800 border-emerald-100',
                 'blue'    => 'bg-blue-50 text-blue-700 border-blue-100',
                 'sky'     => 'bg-sky-50 text-sky-700 border-sky-100',
-                'violet'  => 'bg-violet-50 text-violet-700 border-violet-100',
+                'slate'   => 'bg-slate-100 text-slate-800 border-slate-200',
                 'emerald' => 'bg-emerald-50 text-emerald-700 border-emerald-100',
                 'rose'    => 'bg-rose-50 text-rose-700 border-rose-100',
             ];
@@ -225,7 +225,7 @@
         ],
         xaxis:  { categories: @json($serie->pluck('label')), labels: { style: { fontSize: '11px', colors: '#94a3b8' } }, axisBorder: { show: false } },
         yaxis:  { labels: { style: { fontSize: '11px', colors: '#94a3b8' }, formatter: fmt } },
-        colors: ['#4f46e5', '#10b981'],
+        colors: ['#1d4ed8', '#10b981'],
         fill:   { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02, stops: [0, 100] } },
         stroke: { curve: 'smooth', width: 2.5 },
         grid:   { borderColor: '#f1f5f9', strokeDashArray: 3 },
