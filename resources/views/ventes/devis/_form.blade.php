@@ -234,7 +234,9 @@ window._quoteFormData = {
                             <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-8">N°</th>
                             <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-32">Article</th>
                             <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Désignation</th>
-                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16">Qté</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Nombre de tôles (tôle bac) — laisser vide pour un article standard">Nb tôles</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Longueur unitaire en mètres">Long. m</th>
+                            <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Métrage total = nb tôles × longueur (auto)">Qté / ml</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">P.U. HT</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-14">Rem. %</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Net HT</th>
@@ -254,7 +256,10 @@ window._quoteFormData = {
                                            :class="item.description.trim() === '' && submitted ? 'border-red-400 bg-red-50' : 'border-gray-300'"
                                            class="no-spin w-full h-8 border rounded-[3px] px-2 py-0 text-[13px] bg-white focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 min-w-[88px]">
                                 </td>
-                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[40px] text-right"></td>
+                                {{-- [§5 TÔLE BAC] nb tôles × longueur → métrage (Qté figée si tôle mesurée) --}}
+                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][nb_toles]'" x-model.number="item.nb_toles" @input="syncSheet(item)" min="0" step="1" inputmode="numeric" placeholder="—" class="{{ $tdIn }} min-w-[40px] text-right"></td>
+                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][metrage_par_tole]'" x-model.number="item.metrage_par_tole" @input="syncSheet(item)" min="0" step="0.01" placeholder="—" class="{{ $tdIn }} min-w-[40px] text-right"></td>
+                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" :readonly="isSheet(item)" :class="isSheet(item) ? 'bg-gray-100 text-gray-500' : ''" min="0.01" step="0.01" inputmode="decimal" class="{{ $tdIn }} min-w-[40px] text-right"></td>
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right"></td>
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
                                 <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
@@ -464,7 +469,10 @@ function quoteForm() {
             _key:             nextKey++,
             product_id:       i.product_id        ?? '',
             description:      i.description       ?? '',
-            quantity:         parseInt(i.quantity, 10) || 1,
+            quantity:         parseFloat(i.quantity) || 1,
+            // [§5 TÔLE BAC] saisie nombre de tôles × longueur unitaire → métrage
+            nb_toles:         parseFloat(i.nb_toles) || 0,
+            metrage_par_tole: parseFloat(i.metrage_par_tole) || 0,
             unit_price:       parseFloat(i.unit_price)       || 0,
             discount_percent: parseFloat(i.discount_percent) || 0,
             // [TVA-FIX] ?? 0 au lieu de || 18 : 0% ne doit pas devenir 18%
@@ -563,8 +571,21 @@ function quoteForm() {
         lineTtc(item) {
             return this.lineHt(item) + this.lineTax(item);
         },
+        // [§5 TÔLE BAC] métrage total = nb tôles × longueur unitaire (arrondi 2 déc.).
+        // Recalcule item.quantity quand les deux sont saisis ; sinon on laisse la
+        // quantité saisie manuellement (article standard).
+        syncSheet(item) {
+            const n = parseFloat(item.nb_toles) || 0;
+            const l = parseFloat(item.metrage_par_tole) || 0;
+            if (n > 0 && l > 0) {
+                item.quantity = Math.round(n * l * 100) / 100;
+            }
+        },
+        isSheet(item) {
+            return (parseFloat(item.nb_toles) || 0) > 0 && (parseFloat(item.metrage_par_tole) || 0) > 0;
+        },
         addItem() {
-            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, unit_price: 0, discount_percent: 0, tax_rate_value: this.isClientTaxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
+            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, nb_toles: 0, metrage_par_tole: 0, unit_price: 0, discount_percent: 0, tax_rate_value: this.isClientTaxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
         },
         removeItem(index) { if (this.items.length > 1) this.items.splice(index, 1); },
         duplicateItem(index) {
