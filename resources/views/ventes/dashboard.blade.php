@@ -10,15 +10,19 @@
 @section('content')
 @php
     $fmt = fn ($n) => number_format((int) $n, 0, ',', ' ');
-    // Objectif CA estimé : max(CA N-1 +10%, CA courant) arrondi — barre de progression.
-    $objCa   = max((float) ($kpis['ca_prev_year'] ?? 0) * 1.1, (float) $kpis['ca_year'], 1);
-    $pctCa   = min(100, round($kpis['ca_year'] / $objCa * 100, 1));
+    // [Audit] Objectif dérivé du CA N-1 +10%. Sans historique (N-1 = 0) et sans
+    // cible commerciale saisie, il n'existe PAS d'objectif : afficher un faux
+    // « 100 % » avec barre pleine induisait en erreur. On ne montre l'objectif
+    // et la progression que lorsqu'une base réelle existe.
+    $hasTarget = (float) ($kpis['ca_prev_year'] ?? 0) > 0;
+    $objCa     = $hasTarget ? (float) $kpis['ca_prev_year'] * 1.1 : 0;
+    $pctCa     = $hasTarget ? min(100, round($kpis['ca_year'] / max($objCa, 1) * 100, 1)) : null;
     // Devis en cours (brouillon + envoyé) depuis le pipeline.
     $devisEnCours = ($pipeline['brouillon']['count'] ?? 0) + ($pipeline['envoye']['count'] ?? 0);
     $devisMontant = ($pipeline['brouillon']['total'] ?? 0) + ($pipeline['envoye']['total'] ?? 0);
     $cmdALivrer   = array_sum($deliveries);
-    $objCmd       = max((float) $ordersValue * 1.15, $objCa, 1);
-    $pctCmd       = min(100, round($ordersValue / $objCmd * 100, 1));
+    $objCmd       = $hasTarget ? max((float) $ordersValue, $objCa) * 1.0 : 0;
+    $pctCmd       = $hasTarget ? min(100, round($ordersValue / max($objCmd, 1) * 100, 1)) : null;
 @endphp
 
 <div class="space-y-3">
@@ -65,17 +69,25 @@
         <div class="bg-white rounded-[4px] border border-gray-200 p-4">
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Chiffre d'affaires HT</p>
             <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-700">{{ $fmt($kpis['ca_year']) }} <span class="text-xs text-gray-400">FCFA</span></p>
-            <p class="text-[11px] text-gray-400 mt-1">Objectif : {{ $fmt($objCa) }} FCFA</p>
+            @if($hasTarget)
+            <p class="text-[11px] text-gray-400 mt-1">Objectif (N-1 +10%) : {{ $fmt($objCa) }} FCFA</p>
             <div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded bg-emerald-500" style="width: {{ $pctCa }}%"></div></div>
             <p class="text-[11px] font-semibold text-emerald-600 mt-0.5 tabular-nums">{{ $pctCa }} %</p>
+            @else
+            <p class="text-[11px] text-gray-400 mt-1">Objectif non défini <span class="text-gray-300">(pas d'historique N-1)</span></p>
+            @endif
         </div>
         {{-- Commandes HT + objectif --}}
         <div class="bg-white rounded-[4px] border border-gray-200 p-4">
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Commandes HT</p>
             <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $fmt($ordersValue) }} <span class="text-xs text-gray-400">FCFA</span></p>
-            <p class="text-[11px] text-gray-400 mt-1">Objectif : {{ $fmt($objCmd) }} FCFA</p>
+            @if($hasTarget)
+            <p class="text-[11px] text-gray-400 mt-1">Objectif (N-1 +10%) : {{ $fmt($objCmd) }} FCFA</p>
             <div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded bg-sky-500" style="width: {{ $pctCmd }}%"></div></div>
             <p class="text-[11px] font-semibold text-sky-600 mt-0.5 tabular-nums">{{ $pctCmd }} %</p>
+            @else
+            <p class="text-[11px] text-gray-400 mt-1">Objectif non défini <span class="text-gray-300">(pas d'historique N-1)</span></p>
+            @endif
         </div>
         {{-- Marge brute + sparkline --}}
         <div class="bg-white rounded-[4px] border border-gray-200 p-4">
