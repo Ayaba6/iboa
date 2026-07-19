@@ -1,3 +1,13 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHIE GLOBALE — Inter servie en LOCAL (@fontsource, bundlée par Vite).
+   Aucune dépendance CDN : l'ERP reste utilisable sans Internet.
+   Poids chargés : 400 (texte), 500 (labels/boutons), 600 (titres), 700 (KPIs).
+═══════════════════════════════════════════════════════════════════════════ */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -102,6 +112,13 @@
         color: var(--text-primary);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* [Typo globale] Les contrôles de formulaire et tableaux héritent toujours
+       de la police de l'app (certains navigateurs imposent leur police système
+       aux <button>/<input>/<select> malgré le preflight). */
+    button, input, select, textarea, table, label {
+        font-family: inherit;
     }
 
     /* Focus visible accessible (WCAG AA) */

@@ -17,7 +17,7 @@ const fmt  = v => fmtNum(v) + ' F';
 const fmt0 = v => fmtNum(v);
 
 const baseChart = {
-    chart:      { toolbar:{show:false}, fontFamily:'Figtree, ui-sans-serif, sans-serif', animations:{enabled:true,easing:'easeinout',speed:700} },
+    chart:      { toolbar:{show:false}, fontFamily:'Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif', animations:{enabled:true,easing:'easeinout',speed:700} },
     grid:       { borderColor:'#f1f5f9', strokeDashArray:4, padding:{left:2,right:4,top:-8,bottom:0} },
     dataLabels: { enabled:false },
     tooltip:    { theme:'light', y:{formatter:fmt} },

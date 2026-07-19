@@ -11,8 +11,9 @@ export default {
 
     theme: {
         extend: {
+            // [Typo globale] Inter servie en local (@fontsource) — plus de Figtree CDN.
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Inter', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', ...defaultTheme.fontFamily.sans],
             },
             fontSize: {
                 'xs': ['14px', { lineHeight: '1.4' }],   // sous-titres sidebar (défaut Tailwind : 12px)

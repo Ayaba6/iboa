@@ -2,6 +2,12 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 
 export default defineConfig(({ command }) => ({
+    // [Typo globale] base relative : les url() du CSS bundlé (fontes Inter
+    // @fontsource) étaient émises en /build/assets/… — cassées quand l'app vit
+    // dans un sous-dossier (Laragon /iboa/public). En relatif, elles se
+    // résolvent depuis le fichier CSS lui-même, quel que soit le point de
+    // montage. Le helper @vite PHP continue de préfixer via asset().
+    base: '',
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/css/erp-theme.css', 'resources/js/app.js'],

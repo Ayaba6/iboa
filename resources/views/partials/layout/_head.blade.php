@@ -5,7 +5,7 @@
     Charge :
       - Meta (viewport, CSRF, turbo-prefetch off)
       - Favicon SVG inline (data URI — pas de 404 selon sous-chemin)
-      - Polices Bunny (figtree)
+      - Police Inter locale (@fontsource, bundlée via app.css — pas de CDN)
       - Vite (app.css + app.js)
       - DataTables CDN (CSS + JS)
       - @stack('styles') et @stack('head_scripts') pour extensions par vue
@@ -43,8 +43,7 @@
 <title>@yield('title', 'Dashboard') — {{ config('app.name') }}</title>
 {{-- Favicon en SVG inline (data URI) — évite tout 404 quel que soit le sous-chemin --}}
 <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234f46e5%22/&gt;&lt;text x=%2250%22 y=%2270%22 font-size=%2270%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22 text-anchor=%22middle%22&gt;A&lt;/text&gt;&lt;/svg&gt;">
-<link rel="preconnect" href="https://fonts.bunny.net">
-<link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet"/>
+{{-- [Typo globale] Inter servie en local via @fontsource (bundlée app.css) — CDN bunny.net supprimé --}}
 @vite(['resources/css/app.css', 'resources/css/erp-theme.css', 'resources/js/app.js'])
 
 {{-- DataTables --}}

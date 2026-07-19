@@ -6,9 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'A3-ERP') }} — {{ isset($heading) ? strip_tags((string) $heading) : 'Connexion' }}</title>
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700,800,900&display=swap" rel="stylesheet"/>
-
+    {{-- [Typo globale] Inter en local via @fontsource (bundlée app.css) — CDN supprimé --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -28,7 +26,7 @@
             padding: 0;
             min-height: 100vh;
             background: #000;
-            font-family: 'Inter', ui-sans-serif, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             color: #fff;
             overflow: hidden;
         }

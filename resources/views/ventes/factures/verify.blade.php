@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vérification facture {{ $invoice->number }} — {{ config('app.name') }}</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&display=swap" rel="stylesheet"/>
+    {{-- [Typo globale] Page publique autonome (pas de bundle Vite) : pile système
+         sans CDN — l'ERP ne doit pas dépendre d'Internet pour ses polices. --}}
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
+        body { font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
 
         .page { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
 

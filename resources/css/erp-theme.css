@@ -55,7 +55,7 @@
     --erp-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.12);
 
     /* Typographie — pixels ENTIERS uniquement (netteté écran) */
-    --erp-font-family: 'Figtree', 'Inter', 'Segoe UI', Arial, sans-serif;
+    --erp-font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --erp-font-size-xs:   11px;
     --erp-font-size-sm:   12px;
     --erp-font-size-base: 13px;
