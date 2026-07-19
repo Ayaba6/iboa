@@ -72,9 +72,12 @@
         .footer { margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 8px; font-size: 9px; color: #9ca3af; text-align: center; }
         .validity-banner { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 5px 10px; margin-bottom: 10px; font-size: 10px; color: {{ $color }}; }
         .clearfix::after { content: ''; display: table; clear: both; }
-    </style>
+        .pagenum { position: fixed; bottom: 4px; right: 28px; font-size: 7.5px; color: #9ca3af; }
+    .pagenum:after { content: "Page " counter(page) " / " counter(pages); }
+</style>
 </head>
 <body>
+<div class="pagenum"></div>
 <div class="page">
 
     {{-- Entête --}}

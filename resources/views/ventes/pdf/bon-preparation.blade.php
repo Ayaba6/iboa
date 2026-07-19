@@ -47,9 +47,12 @@
         .sign-line { border-top: 1px solid #9ca3af; margin: 34px 12px 4px; }
         .foot { margin-top: 22px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; color: #9ca3af; text-align: center; }
         .badge { display: inline-block; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 3px; background: #fef3c7; color: #92400e; }
-    </style>
+        .pagenum { position: fixed; bottom: 4px; right: 28px; font-size: 7.5px; color: #9ca3af; }
+    .pagenum:after { content: "Page " counter(page) " / " counter(pages); }
+</style>
 </head>
 <body>
+<div class="pagenum"></div>
 <div class="page">
     <div class="header">
         <div class="header-left">

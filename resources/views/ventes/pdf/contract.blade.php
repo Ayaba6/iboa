@@ -54,9 +54,12 @@
         .sign-cell { display: table-cell; width: 48%; text-align: center; font-size: 9.5px; color: #6b7280; }
         .sign-line { border-top: 1px solid #9ca3af; margin: 30px 20px 4px; }
         .footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5px; color: #9ca3af; text-align: center; }
-    </style>
+        .pagenum { position: fixed; bottom: 4px; right: 28px; font-size: 7.5px; color: #9ca3af; }
+    .pagenum:after { content: "Page " counter(page) " / " counter(pages); }
+</style>
 </head>
 <body>
+<div class="pagenum"></div>
 <div class="page">
     <div class="header">
         <div class="h-left">
