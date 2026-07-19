@@ -67,7 +67,11 @@
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: {{ $font }}, 'DejaVu Sans', sans-serif; font-size:11px; color:#1f2937; background:#fff; }
-        .page { padding:22px 28px 20px; }
+        .page { padding:4px 28px 4px; }
+        /* [Mise en page] Numérotation « Page X / Y » répétée sur chaque page
+           (n'apparaît que sur les documents multipages). */
+        .pagenum { position: fixed; bottom: 4px; right: 28px; font-size: 7.5px; color: #9ca3af; }
+        .pagenum:after { content: "Page " counter(page) " / " counter(pages); }
 
         /* ── Filigrane ── */
         .watermark { position:fixed; top:42%; left:50%; transform:translateX(-50%) translateY(-50%) rotate(-35deg);
@@ -88,7 +92,7 @@
         .status-stamp.annulee            { border-color:#6b7280; color:#6b7280; }
 
         /* ── En-tête ── */
-        .header { display:table; width:100%; margin-bottom:14px; }
+        .header { display:table; width:100%; margin-bottom:5px; }
         .header-left  { display:table-cell; width:58%; vertical-align:top; }
         .header-right { display:table-cell; width:42%; vertical-align:top; text-align:right; }
         .logo { max-height:52px; max-width:170px; margin-bottom:5px; }
@@ -108,11 +112,11 @@
         .doc-meta td:last-child { font-weight:600; color:#111827; }
 
         /* ── Séparateur ── */
-        .sep { border:none; border-top:2.5px solid {{ $color }}; margin:12px 0; }
+        .sep { border:none; border-top:2.5px solid {{ $color }}; margin:8px 0; }
         .sep-thin { border:none; border-top:1px solid #e5e7eb; margin:8px 0; }
 
         /* ── Parties vendeur/acheteur ── */
-        .parties { display:table; width:100%; margin-bottom:12px; }
+        .parties { display:table; width:100%; margin-bottom:8px; }
         .party-col { display:table-cell; width:50%; vertical-align:top; padding:8px 10px;
                      border:1px solid #e5e7eb; border-radius:3px; }
         .party-col.right { padding-left:14px; border-left:none; }
@@ -148,7 +152,7 @@
         .items-table.cols-extra tfoot td { padding:4px 4px; font-size:8px; }
 
         /* ── Bloc totaux + TVA (table deux colonnes) ── */
-        .bottom-wrap { display:table; width:100%; margin-top:10px; }
+        .bottom-wrap { display:table; width:100%; margin-top:3px; }
         .tva-col   { display:table-cell; width:46%; vertical-align:top; padding-right:12px; }
         .total-col { display:table-cell; width:54%; vertical-align:top; }
 
@@ -176,7 +180,7 @@
 
         /* ── Total en lettres ── */
         .lettres { background:#eff6ff; border:1px solid #bfdbfe; border-radius:3px;
-                   padding:7px 10px; margin-top:12px; font-size:10px; }
+                   padding:4px 9px; margin-top:4px; font-size:9.5px; }
         .lettres-lbl { font-size:8.5px; font-weight:bold; text-transform:uppercase;
                        color:#1d4ed8; margin-bottom:2px; letter-spacing:.04em; }
         .lettres-txt { font-weight:bold; color:#1e3a8a; font-size:10px; line-height:1.4; }
@@ -201,27 +205,27 @@
         .notes-txt { font-size:10px; color:#78350f; }
 
         /* ── Signatures ── */
-        .sig-row { display:table; width:100%; margin-top:24px; }
+        .sig-row { display:table; width:100%; margin-top:4px; page-break-inside:avoid; }
         .sig-cell { display:table-cell; width:50%; text-align:center; padding:0 8px; vertical-align:bottom; }
-        .sig-img  { max-height:38px; max-width:110px; margin-bottom:4px; }
+        .sig-img  { max-height:28px; max-width:96px; margin-bottom:2px; }
         .sig-box  { border-top:1px solid #374151; padding-top:5px; font-size:9px; color:#6b7280; }
         .sig-box strong { color:#111827; font-size:9.5px; display:block; margin-bottom:1px; }
 
         /* Espace signature client */
-        .client-sig { border:1px dashed #d1d5db; border-radius:3px; padding:10px; text-align:center; }
-        .client-sig-lbl { font-size:9px; color:#9ca3af; margin-bottom:18px; }
+        .client-sig { border:1px dashed #d1d5db; border-radius:3px; padding:7px; text-align:center; }
+        .client-sig-lbl { font-size:9px; color:#9ca3af; margin-bottom:10px; }
 
         /* ── CGV ── */
         .cgv { background:#f9fafb; border:1px solid #e5e7eb; border-radius:3px;
-               padding:7px 10px; margin-top:12px; }
+               padding:5px 9px; margin-top:4px; page-break-inside:avoid; }
         .cgv-lbl { font-size:8.5px; font-weight:bold; color:#374151; text-transform:uppercase; margin-bottom:3px; }
-        .cgv-txt { font-size:9px; color:#6b7280; line-height:1.55; }
+        .cgv-txt { font-size:8px; color:#6b7280; line-height:1.35; }
 
         /* Pénalités (mention légale obligatoire Burkina) */
-        .penalites { font-size:9px; color:#6b7280; margin-top:6px; line-height:1.55; }
+        .penalites { font-size:7.5px; color:#6b7280; margin-top:3px; line-height:1.3; }
 
         /* ── Pied de page ── */
-        .footer { margin-top:16px; border-top:1px solid #e5e7eb; padding-top:7px;
+        .footer { margin-top:4px; border-top:1px solid #e5e7eb; padding-top:4px;
                   font-size:8.5px; color:#9ca3af; text-align:center; line-height:1.6; }
         .footer strong { color:#6b7280; }
 
@@ -230,16 +234,17 @@
         .nobr { white-space:nowrap; }
 
         /* ── QR code de vérification ── */
-        .qr-section { display:table; width:100%; margin-top:10px; padding-top:10px; border-top:1px solid #e5e7eb; }
-        .qr-img-cell { display:table-cell; width:126px; vertical-align:middle; }
-        .qr-img-cell img { width:110px; height:110px; }
+        .qr-section { display:table; width:100%; margin-top:3px; padding-top:4px; border-top:1px solid #e5e7eb; page-break-inside:avoid; }
+        .qr-img-cell { display:table-cell; width:78px; vertical-align:middle; }
+        .qr-img-cell img { width:66px; height:66px; }
         .qr-text-cell { display:table-cell; vertical-align:middle; padding-left:12px; }
         .qr-title { font-size:9.5px; font-weight:bold; color:#374151; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
-        .qr-desc { font-size:9px; color:#6b7280; line-height:1.6; }
+        .qr-desc { font-size:8px; color:#6b7280; line-height:1.4; }
         .qr-ref { font-size:8px; color:#9ca3af; margin-top:5px; font-family:monospace; }
     </style>
 </head>
 <body>
+<div class="pagenum"></div>
 <div class="page">
 
     {{-- Filigrane --}}
