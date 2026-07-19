@@ -56,10 +56,7 @@
 <div class="page">
     <div class="header">
         <div class="header-left">
-            <div class="company-name">{{ $co?->name ?? 'OA METAL INDUSTRIE' }}</div>
-            @if($co?->address)<div class="company-sub">{{ $co->address }}{{ $co->city ? ', ' . $co->city : '' }}</div>@endif
-            @if($co?->phone)<div class="company-sub">Tél : {{ $co->phone }}</div>@endif
-            @if($co?->rccm)<div class="company-sub">RCCM : {{ $co->rccm }}@if($co?->ifu) · IFU : {{ $co->ifu }}@endif</div>@endif
+            @include('ventes.pdf.partials.company-identity', ['company' => $co])
         </div>
         <div class="header-right">
             <div class="doc-title">BON DE PRÉPARATION</div>
