@@ -156,35 +156,49 @@
                     <thead>
                         <tr class="text-[11px] font-bold text-emerald-900 uppercase tracking-wide border-b border-gray-200">
                             <th class="pb-2 text-left">Facture</th>
-                            <th class="pb-2 text-left hidden md:table-cell">Date émission</th>
+                            <th class="pb-2 text-left hidden lg:table-cell">Documents sources</th>
                             <th class="pb-2 text-right">Montant facture</th>
+                            <th class="pb-2 text-right hidden md:table-cell">Reste dû</th>
                             <th class="pb-2 text-right">Montant imputé</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($validAllocations as $alloc)
+                        @php $inv = $alloc->invoice; @endphp
                         <tr class="hover:bg-gray-50">
                             <td class="py-3 pr-4">
-                                <a href="{{ route('ventes.factures.show', $alloc->invoice) }}"
-                                   class="font-mono font-semibold text-emerald-700 hover:text-emerald-900">
-                                    {{ $alloc->invoice->number }}
+                                <a href="{{ route('ventes.factures.show', $inv) }}"
+                                   class="font-mono font-semibold text-emerald-700 hover:text-emerald-900" title="Ouvrir la facture">
+                                    {{ $inv->number }}
                                 </a>
+                                <div class="text-[11px] text-gray-400">{{ $inv->issued_at?->format('d/m/Y') ?? '—' }}</div>
                             </td>
-                            <td class="py-3 pr-4 text-gray-600 hidden md:table-cell">
-                                {{ $alloc->invoice->issued_at?->format('d/m/Y') ?? '—' }}
+                            {{-- [§2] Commande source + BL liés, cliquables --}}
+                            <td class="py-3 pr-4 hidden lg:table-cell text-[12px]">
+                                @if($inv->order)
+                                <a href="{{ route('ventes.commandes.show', $inv->order) }}" class="font-mono text-emerald-700 hover:underline" title="Ouvrir la commande">{{ $inv->order->number }}</a>
+                                @endif
+                                @if($inv->deliveryNote)
+                                <span class="text-gray-300">·</span>
+                                <a href="{{ route('ventes.bons-livraison.show', $inv->deliveryNote) }}" class="font-mono text-emerald-700 hover:underline" title="Ouvrir le BL">{{ $inv->deliveryNote->number }}</a>
+                                @endif
+                                @unless($inv->order || $inv->deliveryNote)<span class="text-gray-300">—</span>@endunless
                             </td>
                             <td class="py-3 pr-4 text-right tabular-nums text-gray-700">
-                                {{ number_format($alloc->invoice->total_ttc ?? 0, 0, ',', ' ') }} FCFA
+                                {{ number_format($inv->total_ttc ?? 0, 0, ',', ' ') }}
+                            </td>
+                            <td class="py-3 pr-4 text-right tabular-nums hidden md:table-cell {{ (float) $inv->remaining_amount > 0 ? 'text-red-600 font-semibold' : 'text-gray-400' }}">
+                                {{ number_format($inv->remaining_amount ?? 0, 0, ',', ' ') }}
                             </td>
                             <td class="py-3 text-right tabular-nums font-semibold text-green-700">
-                                {{ number_format($alloc->amount, 0, ',', ' ') }} FCFA
+                                {{ number_format($alloc->amount, 0, ',', ' ') }}
                             </td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-gray-200">
-                            <td colspan="3" class="pt-3 text-sm font-semibold text-gray-700 text-right pr-4">Total imputé :</td>
+                            <td colspan="4" class="pt-3 text-sm font-semibold text-gray-700 text-right pr-4">Total imputé :</td>
                             <td class="pt-3 text-right tabular-nums font-bold text-green-700">
                                 {{ number_format($validAllocations->sum('amount'), 0, ',', ' ') }} FCFA
                             </td>

@@ -69,7 +69,9 @@ class ClientPaymentRepository extends BaseRepository
             'client',
             'paymentMethod',
             'cashAccount',
-            'allocations.invoice',
+            // [§2 Règlement] documents sources liés à chaque facture imputée
+            'allocations.invoice.order',
+            'allocations.invoice.deliveryNote',
             'createdBy',
         ])->findOrFail($id);
     }
