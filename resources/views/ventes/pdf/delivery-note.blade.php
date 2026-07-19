@@ -195,7 +195,12 @@
             @forelse($deliveryNote->items as $item)
             <tr>
                 <td>{{ $loop->iteration }}</td>
-                <td>{{ $item->description }}</td>
+                <td>
+                    {{ $item->description }}
+                    @if($item->nb_toles > 0 && $item->metrage_par_tole > 0)
+                    <br><span style="font-size:8px;color:#6b7280">{{ number_format($item->nb_toles, 0, ',', ' ') }} tôle(s) × {{ rtrim(rtrim(number_format($item->metrage_par_tole, 2, ',', ' '), '0'), ',') }} m = {{ number_format($item->quantity, 2, ',', ' ') }} ml</span>
+                    @endif
+                </td>
                 <td style="font-family: monospace; font-size: 8px; color: #6b7280;">
                     {{ $item->product?->reference ?? '—' }}
                 </td>
