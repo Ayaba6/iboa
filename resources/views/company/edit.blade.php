@@ -707,6 +707,13 @@
                     <textarea name="terms_conditions" rows="4"
                               class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">{{ old('terms_conditions', $ds?->terms_conditions) }}</textarea>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mentions de pénalités de retard</label>
+                    <textarea name="penalty_mentions" rows="3"
+                              placeholder="Laisser vide pour utiliser la mention légale OHADA par défaut"
+                              class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500">{{ old('penalty_mentions', $ds?->penalty_mentions) }}</textarea>
+                    <p class="text-xs text-gray-400 mt-1">Affiché en bas des factures (bloc pénalités). Vide = texte OHADA standard.</p>
+                </div>
             </div>
 
             {{-- Signature & cachet --}}

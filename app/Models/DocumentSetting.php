@@ -24,6 +24,7 @@ class DocumentSetting extends Model
         'watermark_text',
         'footer_text',
         'terms_conditions',
+        'penalty_mentions',
         'signature_name',
         'signature_title',
         'signature_image',

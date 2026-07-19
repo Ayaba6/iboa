@@ -724,12 +724,8 @@
         @if($settings?->terms_conditions)
         <div class="cgv-txt">{{ $settings->terms_conditions }}</div>
         @endif
-        <div class="penalites">
-            En cas de retard de paiement, des pénalités de retard au taux de 1,5% par mois seront appliquées
-            de plein droit, sans mise en demeure préalable, conformément à la réglementation OHADA en vigueur.
-            Une indemnité forfaitaire pour frais de recouvrement de 40 000 FCFA sera due dès le premier jour de retard.
-            Tout paiement doit être accompagné de la présente facture.
-        </div>
+        <div class="penalites">{{ $settings?->penalty_mentions
+            ?: 'En cas de retard de paiement, des pénalités de retard au taux de 1,5% par mois seront appliquées de plein droit, sans mise en demeure préalable, conformément à la réglementation OHADA en vigueur. Une indemnité forfaitaire pour frais de recouvrement de 40 000 FCFA sera due dès le premier jour de retard. Tout paiement doit être accompagné de la présente facture.' }}</div>
     </div>
 
     {{-- ════════════════════════════════════════════════

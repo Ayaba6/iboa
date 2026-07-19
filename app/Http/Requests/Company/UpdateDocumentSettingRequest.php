@@ -21,6 +21,7 @@ class UpdateDocumentSettingRequest extends FormRequest
             'product_columns.*' => 'string|in:reference,description,longueur,epaisseur,quantity,unit_price,discount,tax,total_ht,total_ttc',
             'footer_text'       => 'nullable|string|max:500',
             'terms_conditions'  => 'nullable|string',
+            'penalty_mentions'  => 'nullable|string|max:1000',
             'signature_name'    => 'nullable|string|max:100',
             'signature_title'   => 'nullable|string|max:100',
             // [SEC] mimes: explicite — exclut SVG (peut embarquer <script>, servi en disque public).
