@@ -71,23 +71,31 @@
                     @forelse($orders as $o)
                     @php $inv = $o->invoices->first(); @endphp
                     <tr class="hover:bg-gray-50 align-top">
-                        <td class="px-3 py-2 font-mono text-emerald-800 whitespace-nowrap">{{ $o->number }}</td>
-                        <td class="px-3 py-2">{!! $o->quote ? $show($quoteS, $o->quote->status) : '<span class="text-gray-300">—</span>' !!}</td>
-                        <td class="px-3 py-2">{!! $show($orderS, $o->status) !!}</td>
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            <a href="{{ route('ventes.commandes.show', $o->id) }}" class="font-mono text-emerald-800 hover:underline" title="Ouvrir la commande">{{ $o->number }}</a>
+                        </td>
                         <td class="px-3 py-2">
-                            @forelse($o->productionOrders as $of){!! $show($ofS, $of->status) !!}@if(!$loop->last)<br>@endif
+                            @if($o->quote)
+                            <a href="{{ route('ventes.devis.show', $o->quote->id) }}" title="Ouvrir le devis {{ $o->quote->number }}">{!! $show($quoteS, $o->quote->status) !!}</a>
+                            @else<span class="text-gray-300">—</span>@endif
+                        </td>
+                        <td class="px-3 py-2">
+                            <a href="{{ route('ventes.commandes.show', $o->id) }}" title="Ouvrir la commande">{!! $show($orderS, $o->status) !!}</a>
+                        </td>
+                        <td class="px-3 py-2">
+                            @forelse($o->productionOrders as $of)<a href="{{ route('production.orders.show', $of->id) }}" title="Ouvrir l'OF {{ $of->number }}">{!! $show($ofS, $of->status) !!}</a>@if(!$loop->last)<br>@endif
                             @empty
                                 <span class="text-gray-300">—</span>
                             @endforelse
                         </td>
                         <td class="px-3 py-2">
-                            @forelse($o->deliveryNotes as $bl){!! $show($blS, $bl->status) !!}@if(!$loop->last)<br>@endif
+                            @forelse($o->deliveryNotes as $bl)<a href="{{ route('ventes.bons-livraison.show', $bl->id) }}" title="Ouvrir le BL {{ $bl->number }}">{!! $show($blS, $bl->status) !!}</a>@if(!$loop->last)<br>@endif
                             @empty
                                 <span class="text-gray-300">—</span>
                             @endforelse
                         </td>
                         <td class="px-3 py-2">
-                            @forelse($o->invoices as $f){!! $show($invS, $f->status) !!}@if(!$loop->last)<br>@endif
+                            @forelse($o->invoices as $f)<a href="{{ route('ventes.factures.show', $f->id) }}" title="Ouvrir la facture {{ $f->number }}">{!! $show($invS, $f->status) !!}</a>@if(!$loop->last)<br>@endif
                             @empty
                                 <span class="text-gray-300">—</span>
                             @endforelse
@@ -114,8 +122,8 @@
                     </tr></thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse($invoices->where('type', '!=', 'avoir') as $f)
-                        <tr>
-                            <td class="px-3 py-1.5 font-mono text-emerald-800">{{ $f->number }}</td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 py-1.5"><a href="{{ route('ventes.factures.show', $f->id) }}" class="font-mono text-emerald-800 hover:underline" title="Ouvrir la facture">{{ $f->number }}</a></td>
                             <td class="px-3 py-1.5">{!! $show($invS, $f->status) !!}</td>
                             <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($f->total_ttc) }}</td>
                             <td class="px-3 py-1.5 text-right tabular-nums {{ (float) $f->remaining_amount > 0 ? 'text-red-600' : 'text-gray-400' }}">{{ $fmt($f->remaining_amount) }}</td>
@@ -139,8 +147,8 @@
                     </tr></thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse($creditNotes as $cn)
-                        <tr>
-                            <td class="px-3 py-1.5 font-mono text-emerald-800">{{ $cn->number }}</td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 py-1.5"><a href="{{ route('ventes.avoirs.show', $cn->id) }}" class="font-mono text-emerald-800 hover:underline" title="Ouvrir l'avoir">{{ $cn->number }}</a></td>
                             <td class="px-3 py-1.5">{!! $show($cnS, $cn->status) !!}</td>
                             <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($cn->total_ttc) }}</td>
                             <td class="px-3 py-1.5 text-right tabular-nums">{{ $fmt($cn->remaining_credit) }}</td>
