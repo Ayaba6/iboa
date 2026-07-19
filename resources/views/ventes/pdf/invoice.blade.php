@@ -92,7 +92,7 @@
         .status-stamp.annulee            { border-color:#6b7280; color:#6b7280; }
 
         /* ── En-tête ── */
-        .header { display:table; width:100%; margin-bottom:5px; }
+        .header { display:table; width:100%; margin-bottom:3px; }
         .header-left  { display:table-cell; width:58%; vertical-align:top; }
         .header-right { display:table-cell; width:42%; vertical-align:top; text-align:right; }
         .logo { max-height:52px; max-width:170px; margin-bottom:5px; }
@@ -112,11 +112,11 @@
         .doc-meta td:last-child { font-weight:600; color:#111827; }
 
         /* ── Séparateur ── */
-        .sep { border:none; border-top:2.5px solid {{ $color }}; margin:8px 0; }
-        .sep-thin { border:none; border-top:1px solid #e5e7eb; margin:8px 0; }
+        .sep { border:none; border-top:2.5px solid {{ $color }}; margin:5px 0; }
+        .sep-thin { border:none; border-top:1px solid #e5e7eb; margin:5px 0; }
 
         /* ── Parties vendeur/acheteur ── */
-        .parties { display:table; width:100%; margin-bottom:8px; }
+        .parties { display:table; width:100%; margin-bottom:5px; }
         .party-col { display:table-cell; width:50%; vertical-align:top; padding:8px 10px;
                      border:1px solid #e5e7eb; border-radius:3px; }
         .party-col.right { padding-left:14px; border-left:none; }
@@ -272,17 +272,22 @@
             @endif
 
             <div class="co-name">{{ $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
-            @if($company?->trade_name && $company->trade_name !== $company->name)
-            <div class="co-legal">{{ $company->trade_name }}@if($company?->sigle) ({{ $company->sigle }})@endif</div>
-            @endif
-
-            @if($company?->legal_form)
-            <div class="co-legal">
-                {{ $company->legal_form }}
-                @if($company->share_capital)
-                 — Capital : {{ number_format($company->share_capital, 0, ',', ' ') }} {{ $company->share_capital_currency ?? 'FCFA' }}
-                @endif
-            </div>
+            @php
+                $enseigne = ($company?->trade_name && $company->trade_name !== $company->name)
+                    ? $company->trade_name.($company?->sigle ? ' ('.$company->sigle.')' : '')
+                    : ($company?->sigle ?: null);
+                $legalParts = [];
+                if ($company?->legal_form) {
+                    $lf = $company->legal_form;
+                    if ($company->share_capital) {
+                        $lf .= ' — Capital : '.number_format($company->share_capital, 0, ',', ' ').' '.($company->share_capital_currency ?? 'FCFA');
+                    }
+                    $legalParts[] = $lf;
+                }
+                if ($enseigne) { $legalParts[] = $enseigne; }
+            @endphp
+            @if($legalParts)
+            <div class="co-legal">{{ implode(' · ', $legalParts) }}</div>
             @endif
 
             <div class="co-addr">
