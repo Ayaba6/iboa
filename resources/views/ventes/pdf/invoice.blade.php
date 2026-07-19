@@ -271,7 +271,7 @@
             <img src="{{ $logoBase64 }}" class="logo" alt="Logo">
             @endif
 
-            <div class="co-name">{{ $company?->trade_name ?? $company?->name ?? 'A3 ERP' }}</div>
+            <div class="co-name">{{ $company?->trade_name ?? $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
 
             @if($company?->legal_form)
             <div class="co-legal">
@@ -289,13 +289,15 @@
                 @if($company?->phone)
                 <br>Tél. : {{ $company->phone }}@if($company?->phone2) / {{ $company->phone2 }}@endif
                 @endif
-                @if($company?->email)<br>{{ $company->email }}@endif
+                @if($company?->email)<br>{{ $company->email }}@if($company?->website) · {{ $company->website }}@endif
+                @elseif($company?->website)<br>{{ $company->website }}@endif
             </div>
 
             <div class="co-ids">
                 @if($company?->ifu)<strong>IFU :</strong> {{ $company->ifu }}&nbsp;&nbsp;@endif
                 @if($company?->rccm)<strong>RCCM :</strong> {{ $company->rccm }}&nbsp;&nbsp;@endif
-                @if($company?->nif)<strong>NIF :</strong> {{ $company->nif }}@endif
+                @if($company?->nif)<strong>NIF :</strong> {{ $company->nif }}&nbsp;&nbsp;@endif
+                @if($company?->cnss_number)<strong>CNSS :</strong> {{ $company->cnss_number }}@endif
             </div>
         </div>
 
@@ -348,7 +350,7 @@
         {{-- Vendeur --}}
         <div class="party-col">
             <div class="party-lbl">Vendeur / Prestataire</div>
-            <div class="party-name">{{ $company?->name ?? 'A3 ERP' }}</div>
+            <div class="party-name">{{ $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
             @if($company?->legal_form)
             <div class="party-line">{{ $company->legal_form }}
                 @if($company->share_capital) — Cap. {{ number_format($company->share_capital, 0, ',', ' ') }} FCFA @endif
@@ -759,7 +761,7 @@
         @if($settings?->footer_text)
             {{ $settings->footer_text }}
         @else
-            <strong>{{ $company?->trade_name ?? $company?->name ?? 'A3 ERP' }}</strong>
+            <strong>{{ $company?->trade_name ?? $company?->name ?? 'OA METAL INDUSTRIE' }}</strong>
             @if($company?->legal_form) — {{ $company->legal_form }} @endif
             @if($company?->address) | {{ $company->address }}@if($company->city), {{ $company->city }}@endif @endif
             <br>

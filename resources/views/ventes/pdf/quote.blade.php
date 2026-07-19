@@ -95,15 +95,21 @@
     <div class="header">
         <div class="header-left">
             @if($logoBase64)<img src="{{ $logoBase64 }}" class="logo" alt="Logo">@endif
-            <div class="company-name">{{ $company?->trade_name ?? $company?->name ?? 'A3 ERP' }}</div>
+            <div class="company-name">{{ $company?->trade_name ?? $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
+            @if($company?->legal_form)
+            <div class="company-sub">{{ $company->legal_form }}@if($company->share_capital) — Capital : {{ number_format($company->share_capital, 0, ',', ' ') }} {{ $company->share_capital_currency ?? 'FCFA' }}@endif</div>
+            @endif
             @if($company?->address)
             <div class="company-sub">{{ $company->address }}{{ $company->city ? ', '.$company->city : '' }}</div>
             @endif
             @if($company?->phone)
-            <div class="company-sub">Tél. : {{ $company->phone }}</div>
+            <div class="company-sub">Tél. : {{ $company->phone }}@if($company?->phone2) / {{ $company->phone2 }}@endif</div>
+            @endif
+            @if($company?->email || $company?->website)
+            <div class="company-sub">{{ $company->email }}@if($company?->email && $company?->website) · @endif{{ $company->website }}</div>
             @endif
             @if($company?->ifu)
-            <div class="company-sub">IFU : {{ $company->ifu }} | RCCM : {{ $company->rccm ?? '—' }}</div>
+            <div class="company-sub">IFU : {{ $company->ifu }} | RCCM : {{ $company->rccm ?? '—' }}@if($company?->cnss_number) | CNSS : {{ $company->cnss_number }}@endif</div>
             @endif
         </div>
         <div class="header-right">
@@ -122,7 +128,7 @@
     <div class="parties">
         <div class="party-left">
             <div class="party-label">Émetteur</div>
-            <div class="party-name">{{ $company?->name ?? 'A3 ERP' }}</div>
+            <div class="party-name">{{ $company?->name ?? 'OA METAL INDUSTRIE' }}</div>
             @if($company?->legal_form) <div class="party-detail">{{ $company->legal_form }}</div> @endif
             @if($company?->email) <div class="party-detail">{{ $company->email }}</div> @endif
         </div>
@@ -258,7 +264,7 @@
         @if($settings?->footer_text)
             {{ $settings->footer_text }}
         @else
-            {{ $company?->trade_name ?? $company?->name ?? 'A3 ERP' }}
+            {{ $company?->trade_name ?? $company?->name ?? 'OA METAL INDUSTRIE' }}
             @if($company?->address) — {{ $company->address }} @endif
             @if($company?->rccm) | RCCM : {{ $company->rccm }} @endif
             @if($company?->ifu) | IFU : {{ $company->ifu }} @endif
