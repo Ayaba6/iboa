@@ -165,7 +165,9 @@
                         <th class="{{ $th }} text-left hidden 2xl:table-cell">Ligne</th>
                         <th class="{{ $th }} text-left hidden xl:table-cell">Prévue</th>
                         <th class="{{ $th }} text-left hidden 2xl:table-cell">Responsable</th>
-                        <th class="{{ $th }} text-center">Statut</th>
+                        {{-- [Charte X3] Statut figé à droite : reste visible même quand la
+                             table déborde (colonnes Ligne/Responsable au breakpoint 2xl). --}}
+                        <th class="{{ $th }} text-center sticky right-0 bg-[#3b4248] z-20">Statut</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -208,7 +210,7 @@
                         <td class="px-2 py-1.5 text-gray-600 tabular-nums hidden xl:table-cell whitespace-nowrap {{ $enRetard ? 'text-red-600 font-semibold' : '' }}"
                             @if($datePrevue) title="{{ $o->date_fabrication_prevue ? 'Fabrication prévue' : 'Fin prévue' }}" @endif>{{ $datePrevue?->format('d/m/y') ?? '—' }}</td>
                         <td class="px-2 py-1.5 text-gray-500 text-[12px] hidden 2xl:table-cell max-w-[100px] truncate">{{ $o->responsible?->name ?? '—' }}</td>
-                        <td class="px-2 py-1.5 text-center">
+                        <td class="px-2 py-1.5 text-center sticky right-0 bg-white z-10 shadow-[-6px_0_6px_-4px_rgba(0,0,0,0.08)]">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium
                                 @switch($o->status)
                                     @case('brouillon') bg-gray-100 text-gray-600 @break
