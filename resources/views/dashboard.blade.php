@@ -55,16 +55,16 @@
 
     {{-- ═══ Bandeau documents en attente [maquette : jaune pâle] ═══ --}}
     @if(($pendingCount ?? 0) > 0)
-    <div class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-[4px] px-4 py-2.5">
+    <div class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-[4px] px-4 py-2.5 dark:bg-amber-400/10 dark:border-amber-400/30">
         <div class="flex items-center gap-3">
-            <svg class="w-6 h-6 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <svg class="w-6 h-6 text-amber-600 shrink-0 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <div>
-                <p class="text-[13px] font-bold text-gray-900">Documents en attente de validation</p>
-                <p class="text-[12px] text-gray-600">Vous avez {{ $pendingCount }} document{{ $pendingCount > 1 ? 's' : '' }} en attente de validation.</p>
+                <p class="text-[13px] font-bold text-gray-900 dark:text-amber-100">Documents en attente de validation</p>
+                <p class="text-[12px] text-gray-600 dark:text-amber-200/80">Vous avez {{ $pendingCount }} document{{ $pendingCount > 1 ? 's' : '' }} en attente de validation.</p>
             </div>
         </div>
         <a href="{{ route('validations.index') }}"
-           class="h-8 inline-flex items-center border border-amber-300 bg-white hover:bg-amber-100 text-[12px] font-medium text-gray-800 px-3 rounded-[4px] transition-colors whitespace-nowrap">Voir les documents</a>
+           class="h-8 inline-flex items-center border border-amber-300 bg-white hover:bg-amber-100 text-[12px] font-medium text-gray-800 px-3 rounded-[4px] transition-colors whitespace-nowrap dark:bg-transparent dark:border-amber-400/40 dark:text-amber-100 dark:hover:bg-amber-400/10">Voir les documents</a>
     </div>
     @endif
 
