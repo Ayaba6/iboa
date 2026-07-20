@@ -36,7 +36,7 @@
 
     {{-- Table --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <table data-dt="simple" class="w-full divide-y divide-gray-200 text-sm">
+        <table data-dt="simple" data-col-filter class="w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
                     <th data-sortable class="px-5 py-3 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Code</th>

@@ -77,7 +77,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="overflow-x-auto">
-            <table data-dt="simple" class="w-full text-[12.5px] border-collapse">
+            <table data-dt="simple" data-col-filter class="w-full text-[12.5px] border-collapse">
                 <thead>
                     <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
                         <th data-sortable class="text-left font-bold px-3 py-1 uppercase tracking-wide w-28">Code client</th>
