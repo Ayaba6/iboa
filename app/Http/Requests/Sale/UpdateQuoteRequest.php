@@ -34,7 +34,7 @@ class UpdateQuoteRequest extends FormRequest
             'validity_duration'            => 'nullable|string|max:15',
             'project_reference'            => 'nullable|string|max:60',
             'price_list'                   => 'nullable|string|max:60',
-            'price_mode'                   => 'nullable|in:ttc,ht',
+            'price_mode'                   => 'nullable|in:ttc,ht,exonere',
             'net_prices'                   => 'nullable|boolean',
             'payment_terms'                => 'nullable|string|max:100',
             'payment_method'               => 'nullable|string|max:30',

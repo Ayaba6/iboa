@@ -38,7 +38,7 @@ class UpdateInvoiceRequest extends FormRequest
             // [Maquette Facture de vente]
             'contact_id'                   => 'nullable|exists:client_contacts,id',
             'warehouse_id'                 => 'nullable|exists:warehouses,id',
-            'price_mode'                   => 'nullable|in:ttc,ht',
+            'price_mode'                   => 'nullable|in:ttc,ht,exonere',
             'net_prices'                   => 'nullable|boolean',
             'project_reference'            => 'nullable|string|max:60',
             'price_list'                   => 'nullable|string|max:60',

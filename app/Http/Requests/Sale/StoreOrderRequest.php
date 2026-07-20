@@ -37,7 +37,7 @@ class StoreOrderRequest extends FormRequest
             // [Maquette Commande client]
             'contact_id'                   => 'nullable|exists:client_contacts,id',
             'sales_rep_id'                 => 'nullable|exists:users,id',
-            'price_mode'                   => 'nullable|in:ttc,ht',
+            'price_mode'                   => 'nullable|in:ttc,ht,exonere',
             'net_prices'                   => 'nullable|boolean',
             'price_list'                   => 'nullable|string|max:60',
             'payment_terms'                => 'nullable|string|max:100',

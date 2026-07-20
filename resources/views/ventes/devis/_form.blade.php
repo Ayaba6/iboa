@@ -74,7 +74,7 @@ window._quoteFormData = {
                     </div>
                     @error('client_id')<p class="text-red-500 text-[11px] mt-0.5">{{ $message }}</p>@enderror
                     <p x-show="selectedClient" class="text-[11.5px] text-gray-500 mt-1" x-text="[selectedClient?.address, selectedClient?.city].filter(Boolean).join(' – ')"></p>
-                    <div x-show="isClientTaxExempt" x-cloak class="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">Client exonéré de TVA — TVA forcée à 0%</div>
+                    <div x-show="taxExempt" x-cloak class="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">Client exonéré de TVA — TVA forcée à 0%</div>
                 </div>
                 <div>
                     <label class="{{ $lbl }}">Contact</label>
@@ -131,12 +131,12 @@ window._quoteFormData = {
                 <div>
                     <label class="{{ $lbl }}">TVA par défaut</label>
                     <div class="flex items-center gap-1.5">
-                        <div class="relative flex-1"><select x-model.number="defaultTaxRate" :disabled="isClientTaxExempt" class="{{ $lk }}">
+                        <div class="relative flex-1"><select x-model.number="defaultTaxRate" :disabled="taxExempt" class="{{ $lk }}">
                             <option value="0">0 %</option>
                             @foreach($taxRatesVente ?? [] as $tr)<option value="{{ (float) $tr->rate }}">{{ (float) $tr->rate }} %</option>@endforeach
                             @if(empty($taxRatesVente ?? []))<option value="18">18 %</option>@endif
                         </select>{!! $caret !!}</div>
-                        <button type="button" @click="applyTaxToAll()" x-show="!isClientTaxExempt" class="text-[11px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-2 h-8 rounded-[3px] whitespace-nowrap">Appliquer</button>
+                        <button type="button" @click="applyTaxToAll()" x-show="!taxExempt" class="text-[11px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-2 h-8 rounded-[3px] whitespace-nowrap">Appliquer</button>
                     </div>
                 </div>
                 <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $q?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="PROJ-2026-0008 – Construction Hangar"></div>
@@ -188,9 +188,10 @@ window._quoteFormData = {
                     <div>
                         <label class="{{ $lbl }}">Prix / Devise</label>
                         @php $pm = old('price_mode', $q?->price_mode ?? 'ttc'); @endphp
-                        <div class="relative"><select name="price_mode" class="{{ $lk }}">
-                            <option value="ttc" @selected($pm==='ttc')>TTC</option>
-                            <option value="ht" @selected($pm==='ht')>HT</option>
+                        <div class="relative"><select name="price_mode" x-model="priceMode" @change="onPriceModeChange()" class="{{ $lk }}">
+                            <option value="ttc">TTC</option>
+                            <option value="ht">HT</option>
+                            <option value="exonere">Exonéré</option>
                         </select>{!! $caret !!}</div>
                     </div>
                     <label class="inline-flex items-center gap-1.5 cursor-pointer pb-1.5">
@@ -264,13 +265,10 @@ window._quoteFormData = {
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
                                 <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
                                 <td class="px-2 py-1">
-                                    <div class="relative">
-                                        <select :name="'items[' + index + '][tax_rate_value]'" x-model.number="item.tax_rate_value" class="{{ $tdIn }} appearance-none bg-none min-w-[56px] pl-1.5 pr-5 text-right">
-                                            <option value="0">0 %</option>
-                                            @foreach($taxRatesVente ?? [] as $tr)<option value="{{ (float) $tr->rate }}">{{ rtrim(rtrim(number_format($tr->rate, 2, ',', ''), '0'), ',') }} %</option>@endforeach
-                                            @if(empty($taxRatesVente ?? []))<option value="18">18 %</option>@endif
-                                        </select>
-                                        <span class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>
+                                    {{-- [CDC] TVA non modifiable (grisée) : dérivée du produit / TVA par défaut / mode de vente. Valeur soumise via input caché. --}}
+                                    <div class="relative" title="TVA dérivée automatiquement (non modifiable)">
+                                        <span x-text="(taxExempt ? 0 : (item.tax_rate_value ?? 0)) + ' %'" class="{{ $tdIn }} inline-block bg-gray-100 text-gray-500 cursor-not-allowed min-w-[56px] pl-1.5 pr-1.5 text-right select-none"></span>
+                                        <input type="hidden" :name="'items[' + index + '][tax_rate_value]'" :value="taxExempt ? 0 : (item.tax_rate_value ?? 0)">
                                     </div>
                                 </td>
                                 <td class="px-2 py-1 text-right tabular-nums text-gray-600 text-[12.5px] whitespace-nowrap" x-text="formatNum(lineTax(item))"></td>
@@ -503,7 +501,17 @@ function quoteForm() {
         products,
         clientsMap,
         defaultTaxRate:          dtr,
-        applyTaxToAll() { if (this.isClientTaxExempt) return; this.items = this.items.map(item => ({ ...item, tax_rate_value: this.defaultTaxRate })); },
+        priceMode:               @js($pm),
+        // [CDC] Exonération TVA : client exonéré OU mode de vente « exonéré ».
+        get taxExempt() { return this.isClientTaxExempt || this.priceMode === 'exonere'; },
+        onPriceModeChange() {
+            if (this.priceMode === 'exonere') {
+                this.items = this.items.map(item => ({ ...item, tax_rate_value: 0 }));
+            } else if (!this.isClientTaxExempt) {
+                this.items = this.items.map(item => ({ ...item, tax_rate_value: this.defaultTaxRate }));
+            }
+        },
+        applyTaxToAll() { if (this.taxExempt) return; this.items = this.items.map(item => ({ ...item, tax_rate_value: this.defaultTaxRate })); },
         submitting:  false,
         submitted:   false,
         importing:   false,
@@ -551,7 +559,7 @@ function quoteForm() {
         get totalTax() {
             return this.items.reduce((sum, i) => {
                 const ht = i.quantity * i.unit_price * (1 - i.discount_percent / 100);
-                const rate = this.isClientTaxExempt ? 0 : (parseFloat(i.tax_rate_value) || 0);
+                const rate = this.taxExempt ? 0 : (parseFloat(i.tax_rate_value) || 0);
                 return sum + Math.round(ht * rate / 100);
             }, 0);
         },
@@ -565,7 +573,7 @@ function quoteForm() {
             return Math.round(item.quantity * item.unit_price * (1 - item.discount_percent / 100));
         },
         lineTax(item) {
-            const rate = this.isClientTaxExempt ? 0 : (parseFloat(item.tax_rate_value) || 0);
+            const rate = this.taxExempt ? 0 : (parseFloat(item.tax_rate_value) || 0);
             return Math.round(this.lineHt(item) * rate / 100);
         },
         lineTtc(item) {
@@ -585,7 +593,7 @@ function quoteForm() {
             return (parseFloat(item.nb_toles) || 0) > 0 && (parseFloat(item.metrage_par_tole) || 0) > 0;
         },
         addItem() {
-            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, nb_toles: 0, metrage_par_tole: 0, unit_price: 0, discount_percent: 0, tax_rate_value: this.isClientTaxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
+            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, nb_toles: 0, metrage_par_tole: 0, unit_price: 0, discount_percent: 0, tax_rate_value: this.taxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
         },
         removeItem(index) { if (this.items.length > 1) this.items.splice(index, 1); },
         duplicateItem(index) {
@@ -608,7 +616,7 @@ function quoteForm() {
                     product_id: l.product_id ?? '', description: l.description ?? '',
                     quantity: parseFloat(l.quantity) || 1, unit_price: parseFloat(l.unit_price) || 0,
                     discount_percent: parseFloat(l.discount_percent) || 0,
-                    tax_rate_value: this.isClientTaxExempt ? 0 : (parseFloat(l.tax_rate_value) || 0),
+                    tax_rate_value: this.taxExempt ? 0 : (parseFloat(l.tax_rate_value) || 0),
                     _ps_open: false, _ps_search: '', _ps_rect: null,
                 }));
             } finally { this.importing = false; }
@@ -622,7 +630,7 @@ function quoteForm() {
             if (p) {
                 if (!this.items[index].description.trim()) this.items[index].description = p.name;
                 this.items[index].unit_price = parseFloat(p.sale_price) || 0;
-                this.items[index].tax_rate_value = this.isClientTaxExempt ? 0 : (p.tax_rate?.rate != null ? parseFloat(p.tax_rate.rate) : (this.defaultTaxRate ?? dtr));
+                this.items[index].tax_rate_value = this.taxExempt ? 0 : (p.tax_rate?.rate != null ? parseFloat(p.tax_rate.rate) : (this.defaultTaxRate ?? dtr));
                 this.fetchAdvisedPrice(index);
             }
         },
