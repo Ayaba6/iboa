@@ -79,6 +79,11 @@
                            value="{{ old('default_margin_min', $s->default_margin_min) }}" class="{{ $inp }} text-right font-mono">
                 </div>
                 <div>
+                    <label class="{{ $lbl }}">Acompte requis avant production (%)</label>
+                    <input type="number" name="deposit_required_rate" step="0.01" min="0" max="100"
+                           value="{{ old('deposit_required_rate', $s->deposit_required_rate) }}" class="{{ $inp }} text-right font-mono">
+                </div>
+                <div>
                     <label class="{{ $lbl }}">Validité des devis (jours)</label>
                     <input type="number" name="quote_validity_days" min="1" max="365" required
                            value="{{ old('quote_validity_days', $s->quote_validity_days) }}" class="{{ $inp }} text-right font-mono">

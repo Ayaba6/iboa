@@ -52,6 +52,7 @@ class SalesConfigController extends Controller
             'require_order_for_delivery'    => ['boolean'],
             'discount_validation_threshold' => ['required', 'numeric', 'min:0', 'max:100'],
             'default_margin_min'            => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'deposit_required_rate'         => ['nullable', 'numeric', 'min:0', 'max:100'],
             'quote_validity_days'           => ['required', 'integer', 'min:1', 'max:365'],
             'default_sales_warehouse_id'    => ['nullable', 'exists:warehouses,id'],
             'quote_footer_note'             => ['nullable', 'string', 'max:1000'],

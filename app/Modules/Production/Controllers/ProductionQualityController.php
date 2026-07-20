@@ -45,6 +45,19 @@ class ProductionQualityController extends Controller
             return back()->with('error', 'Contrôle identique déjà enregistré aujourd\'hui — doublon ignoré.');
         }
 
+        // [CDC §31.33 — séparation des tâches] Un déclarant de production ne peut pas
+        // valider CONFORME sa propre production (auto-libération interdite). L'auto-signalement
+        // d'un défaut (non_conforme / a_reprendre) reste permis. Dérogation : super_admin.
+        if ($request->input('status') === 'conforme') {
+            $declarerIds = \App\Modules\Production\Models\ProductionOutput::where('production_order_id', $order->id)
+                ->pluck('created_by')->filter()->unique();
+            $isDeclarer  = $declarerIds->contains(Auth::id());
+            $canOverride = Auth::user()?->hasRole('super_admin') ?? false;
+            if ($isDeclarer && ! $canOverride) {
+                return back()->with('error', "Séparation des tâches : vous avez déclaré cette production, un autre contrôleur doit valider la conformité.");
+            }
+        }
+
         $order->qualityControls()->create([
             'company_id'        => $order->company_id,
             'thickness_ok'      => $request->boolean('thickness_ok'),

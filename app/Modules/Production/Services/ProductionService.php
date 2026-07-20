@@ -239,10 +239,13 @@ class ProductionService
             ]);
         }
 
-        if ($paymentMode === 'acompte' && $rate < 70) {
-            $this->notifyFinancialGateBlocked($order, "Client acompte : {$rate}% encaissé — seuil 70% non atteint.");
+        // [CDC §9] Seuil d'acompte paramétrable (SalesSetting.deposit_required_rate, défaut 70 %).
+        $depositRate = (float) (\App\Models\SalesSetting::current()->deposit_required_rate ?? 70);
+        if ($paymentMode === 'acompte' && $rate < $depositRate) {
+            $seuil = rtrim(rtrim(number_format($depositRate, 2, '.', ''), '0'), '.');
+            $this->notifyFinancialGateBlocked($order, "Client acompte : {$rate}% encaissé — seuil {$seuil}% non atteint.");
             throw ValidationException::withMessages([
-                'financial' => "Client acompte : acompte ≥ 70% requis ({$rate}% encaissé). Demandez l'autorisation DAF.",
+                'financial' => "Client acompte : acompte ≥ {$seuil}% requis ({$rate}% encaissé). Demandez l'autorisation DAF.",
             ]);
         }
 

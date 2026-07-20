@@ -12,7 +12,7 @@ class SalesSetting extends Model
 
     protected $fillable = [
         'company_id', 'reserve_stock_on_quote', 'allow_direct_invoicing',
-        'enforce_price_floor', 'discount_validation_threshold', 'default_margin_min',
+        'enforce_price_floor', 'discount_validation_threshold', 'default_margin_min', 'deposit_required_rate',
         'quote_validity_days', 'block_sales_on_overdue', 'require_order_for_delivery',
         'default_sales_warehouse_id', 'quote_footer_note', 'invoice_footer_note',
     ];
@@ -25,6 +25,7 @@ class SalesSetting extends Model
         'require_order_for_delivery'    => 'boolean',
         'discount_validation_threshold' => 'decimal:2',
         'default_margin_min'            => 'decimal:2',
+        'deposit_required_rate'         => 'decimal:2',
         'quote_validity_days'           => 'integer',
     ];
 
