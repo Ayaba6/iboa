@@ -12,7 +12,7 @@ use Illuminate\Validation\Validator;
  */
 trait ChecksFloorPrice
 {
-    public function withValidator(Validator $validator): void
+    public function checkFloorPrice(Validator $validator): void
     {
         $validator->after(function (Validator $v) {
             $items = (array) $this->input('items', []);

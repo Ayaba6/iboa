@@ -67,6 +67,8 @@ class StoreProductRequest extends FormRequest
             'couleur'               => 'nullable|string|max:60',
             'largeur_utile'         => 'nullable|numeric|min:0',
             'longueur_standard'     => 'nullable|numeric|min:0',
+            'longueur_min'          => 'nullable|numeric|min:0',
+            'longueur_max'          => 'nullable|numeric|min:0|gte:longueur_min',
             'machine_defaut_id'     => 'nullable|exists:production_machines,id',
             'rendement_standard'    => 'nullable|numeric|min:0|max:9.9999',
             'taux_perte'            => 'nullable|numeric|min:0|max:9.9999',

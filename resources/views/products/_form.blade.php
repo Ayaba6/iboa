@@ -515,6 +515,8 @@
                         <div><label class="{{ $lbl }}">Épaisseur (mm)</label><input type="number" step="0.01" min="0" x-model="thickness" class="{{ $inpR }}"></div>
                         <div><label class="{{ $lbl }}">Largeur utile (mm)</label><input type="number" step="0.01" min="0" name="largeur_utile" value="{{ old('largeur_utile', $p->largeur_utile ?? '') }}" class="{{ $inpR }}"></div>
                         <div><label class="{{ $lbl }}">Longueur standard (mm)</label><input type="number" step="0.01" min="0" name="longueur_standard" value="{{ old('longueur_standard', $p->longueur_standard ?? '') }}" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Longueur mini fabricable (m)</label><input type="number" step="0.001" min="0" name="longueur_min" value="{{ old('longueur_min', $p->longueur_min ?? '') }}" placeholder="—" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Longueur maxi fabricable (m)</label><input type="number" step="0.001" min="0" name="longueur_max" value="{{ old('longueur_max', $p->longueur_max ?? '') }}" placeholder="—" class="{{ $inpR }}"></div>
                         <div>
                             <label class="{{ $lbl }}">Machine par défaut</label>
                             <div class="relative">

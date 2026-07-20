@@ -317,6 +317,9 @@ class OrderService
             // [§5 PRIX PLANCHER] Vente sous le prix plancher interdite, sauf rôle autorisé.
             $this->assertFloorPrice($item['product_id'] ?? null, $price, $disc);
 
+            // [§6 DIMENSIONS] Longueur unitaire hors bornes fabricables interdite.
+            $this->assertSheetLength($item['product_id'] ?? null, $metrage);
+
             $tax   = (float) ($item['tax_rate_value'] ?? 0);
             $ht    = (int) round($qty * $price * (1 - $disc / 100));
             $lineTax = (int) round($ht * ($tax / 100));
@@ -367,6 +370,39 @@ class OrderService
             'Prix de vente (%s) inférieur au prix plancher (%s) pour « %s ». Autorisation spéciale requise.',
             number_format($net, 0, ',', ' '), number_format($floor, 0, ',', ' '), $product->name
         ));
+    }
+
+    /**
+     * [§6] Refuse une longueur unitaire (métrage par tôle) hors des bornes
+     * fabricables de l'article (longueur_min / longueur_max, en mètres).
+     * Article sans bornes = aucun contrôle.
+     */
+    private function assertSheetLength(?int $productId, ?float $length): void
+    {
+        if (! $productId || $length === null || $length <= 0) {
+            return;
+        }
+        $product = \App\Models\Product::find($productId);
+        if (! $product) {
+            return;
+        }
+        $min = $product->longueur_min !== null ? (float) $product->longueur_min : null;
+        $max = $product->longueur_max !== null ? (float) $product->longueur_max : null;
+
+        if ($max !== null && $length > $max) {
+            throw new \RuntimeException(sprintf(
+                'Longueur unitaire (%s m) supérieure à la longueur maximale fabricable (%s m) pour « %s ».',
+                rtrim(rtrim(number_format($length, 3, ',', ' '), '0'), ','),
+                rtrim(rtrim(number_format($max, 3, ',', ' '), '0'), ','), $product->name
+            ));
+        }
+        if ($min !== null && $length < $min) {
+            throw new \RuntimeException(sprintf(
+                'Longueur unitaire (%s m) inférieure à la longueur minimale fabricable (%s m) pour « %s ».',
+                rtrim(rtrim(number_format($length, 3, ',', ' '), '0'), ','),
+                rtrim(rtrim(number_format($min, 3, ',', ' '), '0'), ','), $product->name
+            ));
+        }
     }
 
     /** [TVA-EXEMPT] Met tous les taux TVA à 0 sur un tableau d'items. */

@@ -7,6 +7,14 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdateQuoteRequest extends FormRequest
 {
     use \App\Http\Requests\Sale\Concerns\ChecksFloorPrice;
+    use \App\Http\Requests\Sale\Concerns\ChecksSheetLength;
+
+    // [CDC §4/§6] Contrôles serveur des lignes : prix plancher + longueur fabricable.
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $this->checkFloorPrice($validator);
+        $this->checkSheetLength($validator);
+    }
 
     public function authorize(): bool
     {
