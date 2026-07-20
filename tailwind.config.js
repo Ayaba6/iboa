@@ -3,6 +3,11 @@ import forms from '@tailwindcss/forms';
 
 /** @type {import('tailwindcss').Config} */
 export default {
+    // [Fix mode sombre] Le toggle pose la classe `.dark` sur <html> (Alpine store +
+    // script inline anti-FOUC). Sans ceci, Tailwind resterait en mode `media` (OS) et
+    // les utilitaires dark: ignoreraient la classe → toggle sans effet visuel.
+    darkMode: 'class',
+
     content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
