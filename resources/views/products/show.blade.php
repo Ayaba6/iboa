@@ -229,6 +229,7 @@
             <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
                 {!! $row('Prix de vente HT', $f($product->sale_price).' FCFA') !!}
                 {!! $row('Prix de vente mini', $product->min_sale_price ? $f($product->min_sale_price).' FCFA' : null) !!}
+                {!! $row('Prix de vente maxi (indicatif)', $product->max_sale_price ? $f($product->max_sale_price).' FCFA' : null) !!}
                 {!! $row('Taux de marge cible', $product->margin_rate_target ? $product->margin_rate_target.' %' : null) !!}
                 {!! $row('TVA', $product->taxRate ? $product->taxRate->rate.' %' : null) !!}
                 {!! $row('Vendable', $oui($product->is_sellable)) !!}
@@ -242,6 +243,7 @@
                     <thead><tr class="text-[10px] font-bold text-gray-500 uppercase">
                         <th class="px-4 py-1.5 text-left">Libellé</th>
                         <th class="px-4 py-1.5 text-left">Catégorie</th>
+                        <th class="px-4 py-1.5 text-left">Agence</th>
                         <th class="px-4 py-1.5 text-right">Qté min.</th>
                         <th class="px-4 py-1.5 text-right">Prix</th>
                         <th class="px-4 py-1.5 text-right">Remise</th>
@@ -251,6 +253,7 @@
                         <tr>
                             <td class="px-4 py-1.5 text-gray-900">{{ $tier->label ?: 'Tarif #'.$tier->id }}</td>
                             <td class="px-4 py-1.5 text-gray-500 capitalize">{{ $tier->client_category ?: '—' }}</td>
+                            <td class="px-4 py-1.5 text-gray-500">{{ $tier->site?->code ?? 'Tous' }}</td>
                             <td class="px-4 py-1.5 text-right tabular-nums">{{ $tier->min_quantity ?? 1 }}</td>
                             <td class="px-4 py-1.5 text-right font-semibold text-blue-700 tabular-nums">{{ number_format($tier->price, 0, ',', ' ') }} FCFA</td>
                             <td class="px-4 py-1.5 text-right text-green-600 tabular-nums">{{ $tier->discount_percent ? '-'.$tier->discount_percent.'%' : '—' }}</td>

@@ -24,6 +24,7 @@ class ProductPriceTierController extends Controller
             'price'            => 'required|integer|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'client_id'        => 'nullable|exists:clients,id',
+            'site_id'          => 'nullable|exists:warehouses,id',
             'client_category'  => 'nullable|in:gros,semi-gros,detail',
             'min_quantity'     => 'nullable|numeric|min:0',
             'starts_at'        => 'nullable|date',

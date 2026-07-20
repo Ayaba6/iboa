@@ -46,6 +46,10 @@ class SalesPricingService
         $floor = (float) ($product->min_sale_price ?? 0);
         $belowFloor = $floor > 0 && $price < $floor;
 
+        // [CDC Tarifaire] Prix plafond indicatif : dépassement signalé (alerte), non bloquant.
+        $ceiling = (float) ($product->max_sale_price ?? 0);
+        $aboveCeiling = $ceiling > 0 && $price > $ceiling;
+
         // Prix plancher strict : la remise est écrêtée au plancher, la vente
         // sous plancher exige une validation DG/DAF (flag remonté au caller).
         $requiresValidation = $discountValidation
@@ -60,6 +64,8 @@ class SalesPricingService
             'discount_name'       => $discountName,
             'floor'               => $floor,
             'below_floor'         => $belowFloor,
+            'ceiling'             => $ceiling,
+            'above_ceiling'       => $aboveCeiling,
             'requires_validation' => $requiresValidation,
             'unit_id'             => $tierUnit ?? $unitId,
         ];
@@ -73,7 +79,10 @@ class SalesPricingService
             ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', $date))
             ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', $date))
             ->where(fn ($q) => $q->whereNull('min_quantity')->orWhere('min_quantity', '<=', $quantity))
-            ->get();
+            ->get()
+            // [CDC Tarifaire] Zone = agence : ne garder que les paliers du site du client ou « tous sites » (site_id NULL).
+            ->filter(fn ($t) => ! $t->site_id || ($client && (int) $t->site_id === (int) $client->site_id))
+            ->values();
 
         $candidates = [
             // [filtre, source]
@@ -88,8 +97,11 @@ class SalesPricingService
         ];
 
         foreach ($candidates as [$filter, $source]) {
-            // Qté min la plus élevée satisfaite = tarif volume le plus avantageux
-            $tier = $tiers->filter($filter)->sortByDesc('min_quantity')->first();
+            // Palier spécifique à l'agence prioritaire, puis qté min la plus élevée satisfaite
+            // (tarif volume le plus avantageux).
+            $tier = $tiers->filter($filter)
+                ->sortByDesc(fn ($t) => [$t->site_id ? 1 : 0, (float) ($t->min_quantity ?? 0)])
+                ->first();
             if ($tier) {
                 return [(float) $tier->price, $source, $tier->unit_id];
             }

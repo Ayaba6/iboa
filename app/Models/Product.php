@@ -84,6 +84,7 @@ class Product extends Model
         'bande',
         'metrage',
         'min_sale_price',
+        'max_sale_price',
         'margin_rate_target',
         'stock_min',
         'stock_max',

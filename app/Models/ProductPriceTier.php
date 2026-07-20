@@ -15,6 +15,7 @@ class ProductPriceTier extends Model
     protected $fillable = [
         'product_id',
         'client_id',
+        'site_id',
         'client_category',
         'unit_id',
         'famille_tarifaire',
@@ -48,5 +49,11 @@ class ProductPriceTier extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /** [CDC Tarifaire] Agence (zone tarifaire). NULL = tous sites. */
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'site_id');
     }
 }

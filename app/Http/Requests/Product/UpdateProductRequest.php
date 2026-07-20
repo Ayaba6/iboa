@@ -102,6 +102,7 @@ class UpdateProductRequest extends FormRequest
             'purchase_price'        => 'nullable|integer|min:0',
             'sale_price'            => 'nullable|integer|min:0',
             'min_sale_price'        => 'nullable|integer|min:0',
+            'max_sale_price'        => 'nullable|integer|min:0|gte:min_sale_price',
             'cout_standard'         => 'nullable|numeric|min:0',
             'margin_rate_target'    => 'nullable|numeric|min:0|max:999.99',
             'valuation_method'      => 'nullable|in:cmp,fifo,lifo',

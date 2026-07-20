@@ -261,7 +261,11 @@ window._quoteFormData = {
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][nb_toles]'" x-model.number="item.nb_toles" @input="syncSheet(item)" min="0" step="1" inputmode="numeric" placeholder="—" class="{{ $tdIn }} min-w-[40px] text-right"></td>
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][metrage_par_tole]'" x-model.number="item.metrage_par_tole" @input="syncSheet(item)" min="0" step="0.01" placeholder="—" class="{{ $tdIn }} min-w-[40px] text-right"></td>
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" :readonly="isSheet(item)" :class="isSheet(item) ? 'bg-gray-100 text-gray-500' : ''" min="0.01" step="0.01" inputmode="decimal" class="{{ $tdIn }} min-w-[40px] text-right"></td>
-                                <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right"></td>
+                                <td class="px-2 py-1">
+                                    <input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right">
+                                    {{-- [CDC Tarifaire] Alerte plafond indicative (non bloquante). --}}
+                                    <span x-show="item._above_ceiling" x-cloak class="block text-[10px] text-amber-600 font-semibold mt-0.5 whitespace-nowrap" :title="'Prix plafond conseillé : ' + formatNum(item._ceiling) + ' F'">⚠ &gt; plafond</span>
+                                </td>
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
                                 <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
                                 <td class="px-2 py-1">
@@ -666,6 +670,8 @@ function quoteForm() {
                     this.items[index]._advised = d.source !== 'prix de base' ? d.source : null;
                 }
                 this.items[index]._below_floor = !!d.below_floor;
+                this.items[index]._above_ceiling = !!d.above_ceiling;
+                this.items[index]._ceiling = d.ceiling || 0;
             } catch (e) { /* reseau indisponible : prix de base conserve */ }
         },
         onClientChange() {
