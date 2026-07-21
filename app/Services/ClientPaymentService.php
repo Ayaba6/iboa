@@ -30,6 +30,28 @@ class ClientPaymentService
             $allocations = $data['allocations'] ?? [];
             unset($data['allocations']);
 
+            // [Imputation automatique FIFO] Aucune imputation saisie et paiement non-acompte :
+            // imputer d'office sur les factures OUVERTES du client, la plus ancienne d'abord
+            // (logique balance âgée), jusqu'à épuisement du montant. Les gardes de la boucle
+            // d'allocation (verrou, statuts, plafond au reste dû) s'appliquent inchangées.
+            // Un acompte (is_acompte) reste volontairement non imputé.
+            if (empty($allocations) && empty($data['is_acompte']) && ! empty($data['client_id'])) {
+                $restant = (int) $data['amount'];
+                $ouvertes = Invoice::where('client_id', $data['client_id'])
+                    ->whereNotIn('status', ['brouillon', 'en_attente_validation', 'annulee', 'payee'])
+                    ->where('remaining_amount', '>', 0)
+                    ->orderBy('issued_at')->orderBy('id')
+                    ->get(['id', 'remaining_amount']);
+                foreach ($ouvertes as $inv) {
+                    if ($restant <= 0) {
+                        break;
+                    }
+                    $part = min($restant, (int) $inv->remaining_amount);
+                    $allocations[] = ['invoice_id' => $inv->id, 'allocated_amount' => $part];
+                    $restant -= $part;
+                }
+            }
+
             $data['created_by'] = Auth::id();
 
             // [DOUBLE-PAYMENT-GUARD] Protection anti-doublon AVANT toute écriture :
