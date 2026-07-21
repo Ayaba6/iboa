@@ -108,3 +108,20 @@ it('bloque le changement d\'unité de stock quand des mouvements existent — §
     expect(fn () => app(ProductService::class)->update($p, ['unit_id' => $autre->id]))
         ->toThrow(\RuntimeException::class);
 });
+
+it('fiche famille : onglets Général/Sous-familles/Articles/Statistiques rendent', function () {
+    sfSetup();
+    $fam = ProductFamily::where('code', 'TOLES_BAC')->first();
+    app(ProductService::class)->create([
+        'name' => 'Tôle fiche famille', 'family_id' => $fam->id,
+        'sub_family_id' => ProductFamily::where('code', 'TB_PRELAQ')->first()->id,
+        'item_category_id' => ItemCategory::where('code', 'PF_TOLE_MTO')->first()->id,
+    ]);
+
+    $this->get(route('product-families.show', $fam))
+        ->assertOk()
+        ->assertSee('Tôles bac')
+        ->assertSee('Prélaquées')
+        ->assertSee('Tôle fiche famille')
+        ->assertSee('CA facturé HT');
+});

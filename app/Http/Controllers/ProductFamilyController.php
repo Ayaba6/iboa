@@ -61,6 +61,24 @@ class ProductFamilyController extends Controller
         return redirect()->route('product-families.index')->with('success', 'Catégorie créée avec succès.');
     }
 
+    /** [X3 §16] Fiche famille à onglets : Général / Sous-familles / Articles / Statistiques. */
+    public function show(ProductFamily $family)
+    {
+        $family->load(['parent', 'children' => fn ($q) => $q->withCount('products')])
+            ->loadCount('products');
+
+        $articles = $family->products()->with('itemCategory:id,code')->orderBy('name')->limit(200)
+            ->get(['id', 'reference', 'name', 'item_category_id', 'is_active']);
+
+        // Statistiques simples : CA facturé YTD des articles de la famille.
+        $caYtd = (int) \App\Models\InvoiceItem::whereHas('invoice', fn ($q) => $q
+                ->whereYear('issued_at', now()->year)->whereNotIn('status', ['annulee', 'brouillon']))
+            ->whereIn('product_id', $family->products()->pluck('id'))
+            ->sum('line_total_ht');
+
+        return view('product-families.show', compact('family', 'articles', 'caYtd'));
+    }
+
     public function edit(ProductFamily $family)
     {
         $family->load(['warehouses', 'attachments']);

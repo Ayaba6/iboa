@@ -147,8 +147,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('brands', \App\Http\Controllers\BrandController::class)->except(['show']);
         // 'show' exclu — la méthode n'est pas implémentée (gestion via index + edit suffit pour les familles).
         Route::resource('product-families', \App\Http\Controllers\ProductFamilyController::class)
-            ->except(['show'])
-            ->parameters(['product-families' => 'family']);
+                        ->parameters(['product-families' => 'family']);
         // [X3] Catégories d'article (modèle de gestion ≠ familles)
         Route::prefix('articles/categories')->name('articles.categories.')->group(function () {
             Route::get('/', [\App\Http\Controllers\ItemCategoryController::class, 'index'])->name('index');
