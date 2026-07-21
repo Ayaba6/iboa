@@ -177,8 +177,19 @@ class Order extends Model
      * Utilisée PAR LE TABLEAU d'éligibilité ET par la gate financière de lancement OF
      * (même règle, même source — exigence de recette).
      */
+    /** Mémo par requête : la vue du tableau appelle la méthode plusieurs fois par ligne. */
+    private ?int $confirmedReceiptsMemo = null;
+
     public function confirmedReceipts(): int
     {
+        if ($this->confirmedReceiptsMemo !== null) {
+            return $this->confirmedReceiptsMemo;
+        }
+
+        // Seuls les paiements CONFIRMÉS comptent (brouillons/annulés/rejetés exclus) ;
+        // un BP annulé est exclu (statuts actifs seulement). L'acompte libre affecté
+        // ensuite à une facture est un TRANSFERT (unallocated ↓, allocation ↑) — pas
+        // de double comptage par construction.
         $invoiceIds = \App\Models\Invoice::where('order_id', $this->id)->pluck('id');
         $viaInvoices = $invoiceIds->isNotEmpty()
             ? (int) \App\Models\ClientPaymentAllocation::whereIn('invoice_id', $invoiceIds)
@@ -193,7 +204,14 @@ class Order extends Model
             ->where('status', 'confirme')->where('is_acompte', true)
             ->sum('unallocated_amount');
 
-        return $viaInvoices + $viaCaisse + $acomptesLibres;
+        // Plafond au TTC : si le même argent caisse (BP) est ensuite ressaisi en
+        // trésorerie et alloué à la facture (aucun lien BP↔ClientPayment n'existe),
+        // la somme sur-compterait — le plafond rend ce cumul inoffensif pour
+        // l'éligibilité et la gate (comparaisons bornées à 100 % du TTC).
+        return $this->confirmedReceiptsMemo = min(
+            $viaInvoices + $viaCaisse + $acomptesLibres,
+            (int) $this->total_ttc
+        );
     }
 
     /**
