@@ -489,7 +489,7 @@
                              et affiche une erreur visible via <x-validation-errors>. --}}
                         <div><label class="{{ $lbl }}">Marge cible (%)</label><input type="number" step="0.01" name="margin_rate_target" x-model.number="marginRate" @input="recomputeFromMargin()" value="{{ old('margin_rate_target', $p->margin_rate_target ?? '') }}" class="{{ $inpR }}"></div>
                         <div><label class="{{ $lbl }}">Prix plancher</label><input type="number" min="0" step="1" name="min_sale_price" value="{{ old('min_sale_price', $p->min_sale_price ?? 0) }}" class="{{ $inpR }}"></div>
-                        <div><label class="{{ $lbl }}">Prix plafond <span class="text-gray-400 font-normal">(indicatif)</span></label><input type="number" min="0" step="1" name="max_sale_price" value="{{ old('max_sale_price', $p->max_sale_price) }}" placeholder="—" class="{{ $inpR }}"></div>
+                        <div><label class="{{ $lbl }}">Prix plafond <span class="text-gray-400 font-normal">(indicatif)</span></label><input type="number" min="0" step="1" name="max_sale_price" value="{{ old('max_sale_price', $p->max_sale_price ?? '') }}" placeholder="—" class="{{ $inpR }}"></div>
                         <div>
                             <label class="{{ $lbl }}">TVA vente</label>
                             <div class="relative">
