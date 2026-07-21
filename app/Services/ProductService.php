@@ -183,9 +183,12 @@ class ProductService
 
     public function getFamiliesTree(): \Illuminate\Database\Eloquent\Collection
     {
+        // [X3] Actives seulement : les anciennes familles plates désactivées
+        // ne doivent plus recevoir d'articles.
         return ProductFamily::whereNull('parent_id')
-            ->with('children')
-            ->orderBy('name')
+            ->where('is_active', true)
+            ->with(['children' => fn ($q) => $q->where('is_active', true)])
+            ->orderBy('sort_order')->orderBy('name')
             ->get();
     }
 }

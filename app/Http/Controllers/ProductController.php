@@ -40,7 +40,9 @@ class ProductController extends Controller
         }
 
         $products  = $this->repository->search($request->all(), 20);
-        $families  = ProductFamily::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $families  = ProductFamily::whereNull('parent_id')->where('is_active', true)
+            ->with(['children' => fn ($q) => $q->where('is_active', true)])
+            ->orderBy('sort_order')->orderBy('name')->get();
         $familiesFlat = ProductFamily::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']);
         $brands    = Brand::where('is_active', true)->orderBy('name')->get();
 
