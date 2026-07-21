@@ -200,6 +200,51 @@ class Product extends Model
     /** [X3] Catégorie de gestion (modèle de fonctionnement — distincte de la famille). */
     public function itemCategory(): BelongsTo { return $this->belongsTo(ItemCategory::class, 'item_category_id'); }
 
+    /** [X3 §10] Déclinaisons article-site. */
+    public function productSites(): HasMany { return $this->hasMany(ProductSite::class); }
+
+    /**
+     * [X3 §10] Paramètres résolus pour un site :
+     * article-site > catégorie-site > catégorie globale > valeurs de l'article.
+     */
+    public function paramsForSite(?int $siteId): array
+    {
+        $base = [
+            'mp_warehouse_id'      => $this->production_warehouse_id,
+            'pf_warehouse_id'      => $this->sale_warehouse_id,
+            'receipt_warehouse_id' => null,
+            'production_line_id'   => null,
+            'lead_time_days'       => $this->delivery_delay_days,
+            'stock_min'            => $this->stock_min,
+            'stock_max'            => $this->stock_max,
+            'stock_securite'       => $this->stock_securite,
+        ];
+
+        // Catégorie (globale puis surcharge site)
+        if ($this->itemCategory) {
+            $catSite = $this->itemCategory->forSite($siteId);
+            foreach (['mp_warehouse_id', 'pf_warehouse_id', 'receipt_warehouse_id', 'production_line_id', 'lead_time_days', 'stock_min', 'stock_max', 'stock_securite'] as $k) {
+                if (($catSite[$k] ?? null) !== null) {
+                    $base[$k] = $catSite[$k];
+                }
+            }
+        }
+
+        // Article-site : priorité maximale
+        if ($siteId) {
+            $ps = $this->productSites->firstWhere('site_id', $siteId);
+            if ($ps) {
+                foreach (array_keys($base) as $k) {
+                    if ($ps->$k !== null) {
+                        $base[$k] = $ps->$k;
+                    }
+                }
+            }
+        }
+
+        return $base;
+    }
+
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);

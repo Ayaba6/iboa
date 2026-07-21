@@ -125,3 +125,45 @@ it('fiche famille : onglets Général/Sous-familles/Articles/Statistiques renden
         ->assertSee('Tôle fiche famille')
         ->assertSee('CA facturé HT');
 });
+
+it('article-site : priorité article-site > catégorie-site > catégorie globale (§10)', function () {
+    $co = sfSetup();
+    $site = Warehouse::firstOrCreate(['code' => 'SITE-PS'], ['name' => 'Site PS', 'company_id' => $co->id, 'is_active' => true]);
+    $cat = ItemCategory::where('code', 'PF_FER_MTS')->first();
+    $cat->update(['site_declinable' => true, 'default_stock_min' => 100, 'lead_time_days' => 5]);
+    $cat->sites()->create(['site_id' => $site->id, 'stock_min' => 300]);
+
+    $p = app(ProductService::class)->create(['name' => 'Fer article-site', 'item_category_id' => $cat->id]);
+
+    // Sans déclinaison article : catégorie-site gagne sur global.
+    $params = $p->fresh()->paramsForSite($site->id);
+    expect((float) $params['stock_min'])->toBe(300.0)
+        ->and((int) $params['lead_time_days'])->toBe(5);
+
+    // Déclinaison article-site : priorité maximale.
+    $p->productSites()->create(['site_id' => $site->id, 'stock_min' => 900, 'lead_time_days' => 2]);
+    $params = $p->fresh()->load('productSites')->paramsForSite($site->id);
+    expect((float) $params['stock_min'])->toBe(900.0)
+        ->and((int) $params['lead_time_days'])->toBe(2);
+});
+
+it('article-site : endpoints HTTP upsert et suppression', function () {
+    $co = sfSetup();
+    $site = Warehouse::firstOrCreate(['code' => 'SITE-PS2'], ['name' => 'Site PS2', 'company_id' => $co->id, 'is_active' => true]);
+    $p = app(ProductService::class)->create(['name' => 'Article sites HTTP',
+        'item_category_id' => ItemCategory::where('code', 'MARCHANDISE')->first()->id]);
+
+    $this->post(route('products.sites.store', $p), ['site_id' => $site->id, 'stock_min' => 50])
+        ->assertRedirect();
+    expect($p->productSites()->count())->toBe(1);
+
+    // Upsert : même site → mise à jour, pas de doublon.
+    $this->post(route('products.sites.store', $p), ['site_id' => $site->id, 'stock_min' => 80])
+        ->assertRedirect();
+    expect($p->productSites()->count())->toBe(1)
+        ->and((float) $p->productSites()->first()->stock_min)->toBe(80.0);
+
+    $this->delete(route('products.sites.destroy', [$p, $p->productSites()->first()]))
+        ->assertRedirect();
+    expect($p->productSites()->count())->toBe(0);
+});

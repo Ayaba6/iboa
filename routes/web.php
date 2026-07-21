@@ -144,6 +144,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ── Products (products.view minimum) ────────────────────────────────────────
     Route::middleware('permission:products.view')->group(function () {
         Route::resource('products', ProductController::class);
+        // [X3 §10] Article-sites
+        Route::post('products/{product}/sites', [ProductController::class, 'storeSite'])->name('products.sites.store');
+        Route::delete('products/{product}/sites/{site}', [ProductController::class, 'destroySite'])->name('products.sites.destroy');
         Route::resource('brands', \App\Http\Controllers\BrandController::class)->except(['show']);
         // 'show' exclu — la méthode n'est pas implémentée (gestion via index + edit suffit pour les familles).
         Route::resource('product-families', \App\Http\Controllers\ProductFamilyController::class)

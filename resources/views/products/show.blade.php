@@ -41,6 +41,7 @@
         'production' => 'Production',
         'qualite'    => 'Qualité',
         'compta'     => 'Compta',
+        'sites'      => 'Sites',
         'documents'  => 'Documents',
     ];
 @endphp
@@ -287,6 +288,63 @@
             @else
                 <div class="px-4 py-4 text-center text-gray-400 text-[12.5px]">Aucune promotion</div>
             @endif
+        </div>
+
+        {{-- ── [X3 §10] Article-sites : paramètres par site (priorité maximale) ── --}}
+        <div x-show="tab === 'sites'" x-cloak>
+            <div class="p-4">
+                <p class="text-[11.5px] text-gray-400 mb-3">Résolution : article-site &gt; catégorie-site &gt; catégorie globale &gt; article.</p>
+                <table class="min-w-full text-[12.5px] mb-4">
+                    <thead><tr class="text-left text-[10.5px] font-bold text-gray-500 uppercase">
+                        <th class="py-1 pr-3">Site</th><th class="py-1 pr-3">Dépôt MP</th><th class="py-1 pr-3">Dépôt PF</th>
+                        <th class="py-1 pr-3">Ligne</th><th class="py-1 pr-3">Délai (j)</th>
+                        <th class="py-1 pr-3">Min</th><th class="py-1 pr-3">Max</th><th class="py-1 pr-3">Sécurité</th><th class="py-1"></th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @forelse($product->productSites()->with(['site'])->get() as $ps)
+                        <tr>
+                            <td class="py-1 pr-3 font-semibold">{{ $ps->site?->code }}</td>
+                            <td class="py-1 pr-3">{{ \App\Models\Warehouse::find($ps->mp_warehouse_id)?->code ?? '—' }}</td>
+                            <td class="py-1 pr-3">{{ \App\Models\Warehouse::find($ps->pf_warehouse_id)?->code ?? '—' }}</td>
+                            <td class="py-1 pr-3">{{ \App\Modules\Production\Models\ProductionLine::find($ps->production_line_id)?->name ?? '—' }}</td>
+                            <td class="py-1 pr-3 tabular-nums">{{ $ps->lead_time_days ?? '—' }}</td>
+                            <td class="py-1 pr-3 tabular-nums">{{ $ps->stock_min ?? '—' }}</td>
+                            <td class="py-1 pr-3 tabular-nums">{{ $ps->stock_max ?? '—' }}</td>
+                            <td class="py-1 pr-3 tabular-nums">{{ $ps->stock_securite ?? '—' }}</td>
+                            <td class="py-1 text-right">
+                                @can('products.edit')
+                                <form method="POST" action="{{ route('products.sites.destroy', [$product, $ps]) }}" onsubmit="return confirm('Supprimer cette déclinaison site ?')">
+                                    @csrf @method('DELETE')
+                                    <button class="text-red-600 hover:underline text-[12px]">Retirer</button>
+                                </form>
+                                @endcan
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="9" class="py-3 text-gray-400">Aucune déclinaison — les valeurs catégorie/article s'appliquent.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+
+                @can('products.edit')
+                <form method="POST" action="{{ route('products.sites.store', $product) }}" class="grid grid-cols-2 md:grid-cols-5 gap-2 items-end border-t border-gray-100 pt-3">
+                    @csrf
+                    <div><label class="block text-[10.5px] font-bold text-gray-500 mb-0.5">Site *</label>
+                        <select name="site_id" required class="w-full h-8 py-0 border border-gray-300 rounded-[3px] px-2 text-[12.5px]">
+                            @foreach(\App\Models\Warehouse::where('is_active', true)->orderBy('code')->get() as $w)
+                            <option value="{{ $w->id }}">{{ $w->code }}</option>
+                            @endforeach
+                        </select></div>
+                    <div><label class="block text-[10.5px] font-bold text-gray-500 mb-0.5">Délai (j)</label>
+                        <input type="number" name="lead_time_days" min="0" class="w-full h-8 border border-gray-300 rounded-[3px] px-2 text-[12.5px]"></div>
+                    <div><label class="block text-[10.5px] font-bold text-gray-500 mb-0.5">Stock min</label>
+                        <input type="number" step="0.01" name="stock_min" class="w-full h-8 border border-gray-300 rounded-[3px] px-2 text-[12.5px]"></div>
+                    <div><label class="block text-[10.5px] font-bold text-gray-500 mb-0.5">Stock max</label>
+                        <input type="number" step="0.01" name="stock_max" class="w-full h-8 border border-gray-300 rounded-[3px] px-2 text-[12.5px]"></div>
+                    <button class="h-8 text-[12.5px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-3 rounded-[3px]">Ajouter / Mettre à jour</button>
+                </form>
+                @endcan
+            </div>
         </div>
 
         {{-- ── Production ── --}}
