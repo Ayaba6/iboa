@@ -64,6 +64,7 @@ class ProductFamily extends Model
         'image',
         'depth',
         'is_active',
+        'sort_order',
     ];
 
     protected $casts = [
@@ -152,7 +153,8 @@ class ProductFamily extends Model
      */
     public function children(): HasMany
     {
-        return $this->hasMany(ProductFamily::class, 'parent_id');
+        return $this->hasMany(ProductFamily::class, 'parent_id')
+            ->orderBy('sort_order')->orderBy('name');
     }
 
     /**

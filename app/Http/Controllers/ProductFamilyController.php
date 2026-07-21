@@ -25,14 +25,14 @@ class ProductFamilyController extends Controller
             $families = ProductFamily::with('parent:id,code,name')
                 ->withCount('products')
                 ->whereNotNull('parent_id')
-                ->orderBy('name')
+                ->orderBy('sort_order')->orderBy('name')
                 ->paginate(20)
                 ->withQueryString();
         } else {
             $families = ProductFamily::with(['children' => fn($q) => $q->withCount('products')])
                 ->withCount('products')
                 ->whereNull('parent_id')
-                ->orderBy('name')
+                ->orderBy('sort_order')->orderBy('name')
                 ->paginate(20)
                 ->withQueryString();
         }
