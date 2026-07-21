@@ -50,6 +50,9 @@ class Product extends Model
         'famille1_id',
         'famille2_id',
         'famille3_id',
+        'famille4_id',
+        'famille5_id',
+        'item_category_id',
         'brand_id',
         'unit_id',
         'purchase_unit_id',
@@ -184,6 +187,11 @@ class Product extends Model
     public function famille1(): BelongsTo { return $this->belongsTo(ProductFamily::class, 'famille1_id'); }
     public function famille2(): BelongsTo { return $this->belongsTo(ProductFamily::class, 'famille2_id'); }
     public function famille3(): BelongsTo { return $this->belongsTo(ProductFamily::class, 'famille3_id'); }
+    public function famille4(): BelongsTo { return $this->belongsTo(ProductFamily::class, 'famille4_id'); }
+    public function famille5(): BelongsTo { return $this->belongsTo(ProductFamily::class, 'famille5_id'); }
+
+    /** [X3] Catégorie de gestion (modèle de fonctionnement — distincte de la famille). */
+    public function itemCategory(): BelongsTo { return $this->belongsTo(ItemCategory::class, 'item_category_id'); }
 
     public function brand(): BelongsTo
     {
