@@ -568,6 +568,48 @@ html.dark .erp-content .shadow-sm,
 html.dark .erp-content .shadow,
 html.dark .erp-content .shadow-md { box-shadow: 0 1px 3px rgba(0,0,0,.35) !important; }
 
+/* ═══════════ [Fix dark mode systémique] Bande de section X3 + bandeaux sémantiques ═══════════
+   La bande d'en-tête de section (bg-[#eef5f0] / bg-band, ~235 vues) et les bandeaux
+   d'alerte à fond clair (bg-*-50) n'étaient pas remappés → clairs sur fond sombre.
+   On les teinte en sombre + on éclaircit texte et bordures pour garder le contraste. */
+
+/* Bande d'en-tête de section (design system X3) */
+html.dark .erp-content .bg-\[\#eef5f0\],
+html.dark .erp-content .bg-band { background-color: var(--surface-muted) !important; }
+
+/* Fonds de bandeaux/tuiles sémantiques clairs → teinte sombre */
+html.dark .erp-content .bg-amber-50   { background-color: var(--warning-soft) !important; }
+html.dark .erp-content .bg-red-50,
+html.dark .erp-content .bg-rose-50    { background-color: var(--danger-soft) !important; }
+html.dark .erp-content .bg-green-50,
+html.dark .erp-content .bg-emerald-50 { background-color: var(--success-soft) !important; }
+html.dark .erp-content .bg-blue-50,
+html.dark .erp-content .bg-sky-50,
+html.dark .erp-content .bg-indigo-50  { background-color: var(--info-soft) !important; }
+html.dark .erp-content .bg-yellow-50  { background-color: #422006 !important; }
+html.dark .erp-content .bg-orange-50  { background-color: #431407 !important; }
+html.dark .erp-content .bg-purple-50,
+html.dark .erp-content .bg-violet-50  { background-color: #2E1065 !important; }
+
+/* Texte des bandeaux → nuances claires lisibles sur teinte sombre */
+html.dark .erp-content .text-emerald-900, html.dark .erp-content .text-emerald-800,
+html.dark .erp-content .text-emerald-700, html.dark .erp-content .text-green-800,
+html.dark .erp-content .text-green-700    { color: #6EE7B7 !important; }
+html.dark .erp-content .text-amber-800,   html.dark .erp-content .text-amber-700   { color: #FCD34D !important; }
+html.dark .erp-content .text-red-800,     html.dark .erp-content .text-red-700,
+html.dark .erp-content .text-rose-700     { color: #FCA5A5 !important; }
+html.dark .erp-content .text-blue-800,    html.dark .erp-content .text-blue-700,
+html.dark .erp-content .text-sky-700,     html.dark .erp-content .text-indigo-700  { color: #93C5FD !important; }
+html.dark .erp-content .text-yellow-800,  html.dark .erp-content .text-yellow-700  { color: #FDE68A !important; }
+html.dark .erp-content .text-orange-800,  html.dark .erp-content .text-orange-700  { color: #FDBA74 !important; }
+html.dark .erp-content .text-purple-800,  html.dark .erp-content .text-purple-700  { color: #D8B4FE !important; }
+
+/* Bordures claires des bandeaux → teinte sombre correspondante */
+html.dark .erp-content .border-amber-200,  html.dark .erp-content .border-amber-100   { border-color: #78350F !important; }
+html.dark .erp-content .border-red-200,    html.dark .erp-content .border-red-100     { border-color: #7F1D1D !important; }
+html.dark .erp-content .border-green-200,  html.dark .erp-content .border-emerald-200 { border-color: #065F46 !important; }
+html.dark .erp-content .border-blue-200,   html.dark .erp-content .border-sky-200     { border-color: #1E3A8A !important; }
+
 /* ═══════════ [SAGE X3] Topbar sombre #11181F — lisibilité du breadcrumb ═══════════
    Les pages injectent des classes claires (text-gray-900, hover:text-gray-700)
    dans @yield('breadcrumb') ; on les inverse quand le header est sombre. */
