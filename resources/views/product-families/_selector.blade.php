@@ -1,9 +1,9 @@
-{{-- [SAGE parité] Panneau gauche « Catégories » : sélection rapide des fiches --}}
+{{-- [SAGE parité] Panneau gauche « Familles » : sélection rapide des fiches --}}
 <aside class="hidden xl:block w-72 shrink-0"
        x-data="{ q: '' }">
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden sticky top-4">
         <div class="px-3 py-2 border-b border-gray-200 bg-[#eef5f0] text-[12px] font-bold text-emerald-900 uppercase tracking-wide">
-            Catégories
+            Familles
         </div>
         <div class="p-2 border-b border-gray-100">
             <input type="text" x-model="q" placeholder="Filtrer code / intitulé…"
@@ -12,9 +12,9 @@
         <div class="max-h-[540px] overflow-y-auto">
             <table class="w-full text-[11.5px]">
                 <thead><tr class="bg-gray-50 text-gray-500 border-b border-gray-200">
-                    <th class="text-left font-bold px-2 py-1.5 uppercase">Code catégorie</th>
+                    <th class="text-left font-bold px-2 py-1.5 uppercase">Code famille</th>
                     <th class="text-left font-bold px-2 py-1.5 uppercase">Intitulé</th>
-                    <th class="text-left font-bold px-2 py-1.5 uppercase">Type</th>
+                    <th class="text-left font-bold px-2 py-1.5 uppercase">Niveau</th>
                 </tr></thead>
                 <tbody>
                     @foreach(($selectorFamilies ?? collect()) as $sf)
@@ -23,7 +23,7 @@
                         onclick="window.location='{{ route('product-families.edit', $sf) }}'">
                         <td class="px-2 py-1 font-mono text-emerald-800 whitespace-nowrap">{{ $sf->code ?: '—' }}</td>
                         <td class="px-2 py-1 text-gray-700 truncate max-w-[110px]">{{ $sf->name }}</td>
-                        <td class="px-2 py-1 text-gray-500 truncate max-w-[80px]">{{ $sf->type_categorie ? ucfirst(str_replace('_', ' ', $sf->type_categorie)) : '—' }}</td>
+                        <td class="px-2 py-1 text-gray-500 truncate max-w-[80px]">{{ $sf->parent_id ? 'Sous-famille' : 'Famille' }}</td>
                     </tr>
                     @endforeach
                 </tbody>
