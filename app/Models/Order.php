@@ -177,15 +177,20 @@ class Order extends Model
      * Utilisée PAR LE TABLEAU d'éligibilité ET par la gate financière de lancement OF
      * (même règle, même source — exigence de recette).
      */
-    /** Mémo par requête : la vue du tableau appelle la méthode plusieurs fois par ligne. */
-    private ?int $confirmedReceiptsMemo = null;
-
+    /**
+     * Montant retenu UNIQUEMENT pour l'éligibilité de la commande à la production
+     * (tableau coordinateur + gate financière de lancement OF).
+     *
+     * Le résultat est PLAFONNÉ au TTC de la commande et ne représente pas
+     * nécessairement le total comptable ou bancaire réellement encaissé.
+     * Ne jamais l'utiliser pour : états d'encaissement, trésorerie, solde client,
+     * comptabilité, remboursements, balance âgée, détection de trop-perçus.
+     *
+     * Pas de mémoïsation : une décision financière doit toujours refléter l'état
+     * courant (un paiement ajouté/annulé dans la même exécution est vu au prochain appel).
+     */
     public function confirmedReceipts(): int
     {
-        if ($this->confirmedReceiptsMemo !== null) {
-            return $this->confirmedReceiptsMemo;
-        }
-
         // Seuls les paiements CONFIRMÉS comptent (brouillons/annulés/rejetés exclus) ;
         // un BP annulé est exclu (statuts actifs seulement). L'acompte libre affecté
         // ensuite à une facture est un TRANSFERT (unallocated ↓, allocation ↑) — pas
@@ -208,10 +213,7 @@ class Order extends Model
         // trésorerie et alloué à la facture (aucun lien BP↔ClientPayment n'existe),
         // la somme sur-compterait — le plafond rend ce cumul inoffensif pour
         // l'éligibilité et la gate (comparaisons bornées à 100 % du TTC).
-        return $this->confirmedReceiptsMemo = min(
-            $viaInvoices + $viaCaisse + $acomptesLibres,
-            (int) $this->total_ttc
-        );
+        return min($viaInvoices + $viaCaisse + $acomptesLibres, (int) $this->total_ttc);
     }
 
     /**

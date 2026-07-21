@@ -128,6 +128,41 @@ it('exclut les paiements non confirmés (brouillon/annulé) et les BP annulés',
     expect($order->fresh()->confirmedReceipts())->toBe(0);
 });
 
+it('reflète immédiatement un paiement ajouté ou annulé sur la MÊME instance (pas de valeur périmée)', function () {
+    $co = rcCompany();
+    $order = rcOrder($co, 1000000);
+
+    // 1-2. Même instance, avant paiement.
+    expect($order->confirmedReceipts())->toBe(0);
+
+    // 3-5. BP confirmé créé → le second appel sur la MÊME instance voit le paiement.
+    $bp = BonPreparation::create([
+        'company_id' => $co->id, 'order_id' => $order->id,
+        'number' => 'BP-RC-' . uniqid(), 'status' => 'en_attente', 'payment_amount' => 1000000,
+    ]);
+    expect($order->confirmedReceipts())->toBe(1000000);
+
+    // Contrôle inverse : annulation du BP → retombe à 0 sur la même instance.
+    $bp->update(['status' => 'annule']);
+    expect($order->confirmedReceipts())->toBe(0);
+
+    // Nouvelle allocation facture → visible immédiatement.
+    $invoice = rcInvoice($order);
+    $pay = ClientPayment::create([
+        'company_id' => $co->id, 'client_id' => $order->client_id, 'status' => 'confirme',
+        'is_acompte' => false, 'amount' => 400000, 'unallocated_amount' => 0,
+        'payment_date' => now(), 'number' => 'ENC-RC-' . uniqid(),
+    ]);
+    ClientPaymentAllocation::create([
+        'client_payment_id' => $pay->id, 'invoice_id' => $invoice->id, 'amount' => 400000, 'allocated_at' => now(),
+    ]);
+    expect($order->confirmedReceipts())->toBe(400000);
+
+    // Révocation du paiement (annulé) → retombe à 0 sur la même instance.
+    $pay->update(['status' => 'annule']);
+    expect($order->confirmedReceipts())->toBe(0);
+});
+
 it('mesure les requêtes du tableau des commandes à produire (documentation N+1)', function () {
     $co = rcCompany();
     $u = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]);
