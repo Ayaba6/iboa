@@ -16,7 +16,7 @@
         $sigBase64   = pdf_image_data($settings?->signature_image);
         $stampBase64 = pdf_image_data($settings?->stamp_image);
 
-        /* ── Récapitulatif TVA par taux ─────────────── */
+        /* ── TVA par taux (lignes « TVA x% » du bloc Totaux) ── */
         $tvaRecap = [];
         foreach ($invoice->items as $item) {
             $rate = (float) $item->tax_rate_value;
@@ -514,16 +514,7 @@
             <tr><td colspan="{{ $colCount }}" style="text-align:center; color:#9ca3af; padding:14px;">Aucune ligne de facturation</td></tr>
             @endforelse
         </tbody>
-        @if($invoice->items->count() > 0)
-        <tfoot>
-            <tr style="border-top:2px solid #e5e7eb;">
-                <td colspan="{{ $colCount - 1 }}" style="text-align:right; color:#374151; font-weight:600;">
-                    {{ $invoice->items->count() }} article(s) · Total HT {{ number_format($invoice->subtotal_ht, 0, ',', ' ') }} · TVA {{ number_format($invoice->total_tax, 0, ',', ' ') }}
-                </td>
-                <td class="r" style="font-weight:bold; color:#111827;">{{ number_format($invoice->total_ttc, 0, ',', ' ') }}</td>
-            </tr>
-        </tfoot>
-        @endif
+        {{-- [UI] Ligne de sous-total du tableau supprimée (redondante avec le bloc Totaux). --}}
     </table>
 
     {{-- ════════════════════════════════════════════════
@@ -531,34 +522,8 @@
     ════════════════════════════════════════════════ --}}
     <div class="bottom-wrap">
 
-        {{-- Gauche : Récap TVA par taux --}}
+        {{-- Gauche : Observations (le Récapitulatif de TVA a été retiré — redondant avec le bloc Totaux). --}}
         <div class="tva-col">
-            <div class="tva-box">
-                <div class="hd">Récapitulatif de TVA</div>
-                <table class="tva-table">
-                    <thead>
-                        <tr>
-                            <th>Taux</th>
-                            <th>Base HT</th>
-                            <th>Montant TVA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($tvaRecap as $rate => $data)
-                        <tr>
-                            <td>{{ number_format($rate, 0, ',', '') }}%</td>
-                            <td>{{ number_format($data['base'], 0, ',', ' ') }} F</td>
-                            <td>{{ number_format($data['tva'], 0, ',', ' ') }} F</td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="3" style="text-align:center; color:#9ca3af;">—</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
             {{-- Notes --}}
             @if($invoice->notes)
             <div class="notes-box mt8">
