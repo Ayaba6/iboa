@@ -11,15 +11,6 @@
 @php
     $niveau = $niveau ?? 'categorie';
     $isFam  = $niveau === 'famille';
-    if ($isFam) {
-        $totalFamilies    = $families->total();
-        $totalSubFamilies = $families->total();
-        $totalProducts    = $families->sum('products_count');
-    } else {
-        $totalFamilies    = $families->count();
-        $totalSubFamilies = $families->sum(fn($f) => $f->children->count());
-        $totalProducts    = $families->sum(fn($f) => $f->products_count + $f->children->sum('products_count'));
-    }
 @endphp
 
 <div class="space-y-3">
@@ -31,12 +22,12 @@
             <p class="text-sm text-gray-500 mt-0.5">{{ $isFam ? 'Sous-familles rattachées à leur famille parente' : 'Familles racines et leur arborescence de sous-familles (classement commercial — la gestion relève des catégories)' }}</p>
         </div>
         <div class="flex items-center gap-2 self-start">
-            {{-- Bascule Catégories / Familles --}}
+            {{-- Bascule Familles (arborescence) / Sous-familles (à plat) --}}
             <div class="inline-flex rounded-[4px] border border-gray-300 overflow-hidden text-[13px] font-semibold">
                 <a href="{{ route('product-families.index') }}"
-                   class="px-3 py-2 {{ ! $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Familles racines</a>
+                   class="px-3 py-2 {{ ! $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Familles</a>
                 <a href="{{ route('product-families.index', ['niveau' => 'famille']) }}"
-                   class="px-3 py-2 border-l border-gray-300 {{ $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Familles</a>
+                   class="px-3 py-2 border-l border-gray-300 {{ $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Sous-familles</a>
             </div>
             <a href="{{ route('product-families.create') }}"
                class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-2.5 rounded-[4px] transition-colors">
@@ -57,8 +48,8 @@
                 </svg>
             </div>
             <div>
-                <p class="text-[16px] font-bold text-gray-900">{{ $totalFamilies }}</p>
-                <p class="text-xs text-gray-500">{{ $isFam ? 'Sous-famille(s)' : 'Famille(s) racine' }}</p>
+                <p class="text-[16px] font-bold text-gray-900">{{ $stats['racines'] }}</p>
+                <p class="text-xs text-gray-500">Famille(s)</p>
             </div>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 p-4 flex items-center gap-3">
@@ -68,7 +59,7 @@
                 </svg>
             </div>
             <div>
-                <p class="text-[16px] font-bold text-gray-900">{{ $totalSubFamilies }}</p>
+                <p class="text-[16px] font-bold text-gray-900">{{ $stats['sous'] }}</p>
                 <p class="text-xs text-gray-500">Sous-famille(s)</p>
             </div>
         </div>
@@ -79,7 +70,7 @@
                 </svg>
             </div>
             <div>
-                <p class="text-[16px] font-bold text-gray-900">{{ $totalProducts }}</p>
+                <p class="text-[16px] font-bold text-gray-900">{{ $stats['articles'] }}</p>
                 <p class="text-xs text-gray-500">Articles classifiés</p>
             </div>
         </div>
@@ -91,7 +82,7 @@
         {{-- Vue Familles : sous-familles à plat avec catégorie parente --}}
         @if($families->isEmpty())
         <div class="text-center py-16">
-            <p class="text-sm font-medium text-gray-600">Aucune famille (sous-famille) créée</p>
+            <p class="text-sm font-medium text-gray-600">Aucune sous-famille créée</p>
             <p class="text-xs mt-1 text-gray-400">Créez une sous-famille en la rattachant à sa famille parente.</p>
         </div>
         @else
@@ -110,7 +101,7 @@
                 @foreach($families as $fam)
                 <tr class="border-b border-gray-100 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50 transition-colors">
                     <td class="px-3 py-1.5">
-                        <span class="font-medium text-gray-900">{{ $fam->name }}</span>
+                        <a href="{{ route('product-families.show', $fam) }}" class="font-medium text-gray-900 hover:text-emerald-700 hover:underline">{{ $fam->name }}</a>
                         @unless($fam->is_active)<span class="text-xs text-gray-400 italic ml-1">(inactif)</span>@endunless
                     </td>
                     <td class="px-3 py-1.5">
@@ -118,7 +109,7 @@
                     </td>
                     <td class="px-3 py-1.5 text-gray-600">
                         @if($fam->parent)
-                            <a href="{{ route('product-families.edit', $fam->parent) }}" class="hover:underline">{{ $fam->parent->name }}</a>
+                            <a href="{{ route('product-families.show', $fam->parent) }}" class="hover:underline">{{ $fam->parent->name }}</a>
                             @if($fam->parent->code)<code class="font-mono text-[11px] text-gray-400 ml-1">{{ $fam->parent->code }}</code>@endif
                         @else — @endif
                     </td>
@@ -216,7 +207,7 @@
                             <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                             </svg>
-                            <span class="font-semibold text-gray-900">{{ $family->name }}</span>
+                            <a href="{{ route('product-families.show', $family) }}" class="font-semibold text-gray-900 hover:text-emerald-700 hover:underline">{{ $family->name }}</a>
                             @unless($family->is_active)
                                 <span class="text-xs text-gray-400 italic">(inactif)</span>
                             @endunless
@@ -302,7 +293,7 @@
                             <svg class="w-3 h-3 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <span class="text-gray-700">{{ $child->name }}</span>
+                            <a href="{{ route('product-families.show', $child) }}" class="text-gray-700 hover:text-emerald-700 hover:underline">{{ $child->name }}</a>
                             @unless($child->is_active)
                                 <span class="text-xs text-gray-400 italic">(inactif)</span>
                             @endunless

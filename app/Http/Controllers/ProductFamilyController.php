@@ -44,7 +44,14 @@ class ProductFamilyController extends Controller
                 ->withQueryString();
         }
 
-        return view('product-families.index', compact('families', 'niveau'));
+        // Compteurs GLOBAUX (les sommes sur $families ne couvriraient que la page courante)
+        $stats = [
+            'racines'  => ProductFamily::whereNull('parent_id')->count(),
+            'sous'     => ProductFamily::whereNotNull('parent_id')->count(),
+            'articles' => \App\Models\Product::whereNotNull('family_id')->count(),
+        ];
+
+        return view('product-families.index', compact('families', 'niveau', 'stats'));
     }
 
     public function create()
