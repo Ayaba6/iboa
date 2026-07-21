@@ -29,6 +29,7 @@
 
 <form action="{{ $isEdit ? route('products.update', $p) : route('products.store') }}"
       method="POST" enctype="multipart/form-data" data-turbo="false"
+      x-init="if(!Alpine.store('cat')) Alpine.store('cat', { f: {{ ($p->itemCategory ?? null) ? json_encode(['man'=>(bool)$p->itemCategory->is_manufactured,'buy'=>(bool)$p->itemCategory->is_purchasable,'sell'=>(bool)$p->itemCategory->is_sellable,'stk'=>(bool)$p->itemCategory->is_stockable,'nat'=>$p->itemCategory->nature]) : 'null' }} })"
       x-data="productForm({
           tab: 'general',
           manuf: {{ old('is_manufacturable', $p->is_manufacturable ?? false) ? 'true' : 'false' }},
@@ -117,10 +118,15 @@
                         <div class="mb-3">
                             <label class="{{ $lbl }}">Catégorie de gestion</label>
                             <div class="relative">
-                                <select name="item_category_id" class="{{ $lk }}">
+                                {{-- [X3 §7/§10] Les data-props pilotent l'affichage des sections du form
+                                     (Achat/Vente/Production/Stock) selon la catégorie. Serveur reste maître. --}}
+                                <select name="item_category_id" class="{{ $lk }}"
+                                        @change="const o=$event.target.selectedOptions[0]; $store.cat.f = o && o.dataset.props ? JSON.parse(o.dataset.props) : null">
                                     <option value="">—</option>
                                     @foreach(\App\Models\ItemCategory::where('is_active', true)->orderBy('sort_order')->get() as $ic)
-                                        <option value="{{ $ic->id }}" @selected(old('item_category_id', $p->item_category_id ?? '') == $ic->id)>{{ $ic->code }} — {{ $ic->name }}</option>
+                                        <option value="{{ $ic->id }}"
+                                                data-props='{!! json_encode(['man' => (bool) $ic->is_manufactured, 'buy' => (bool) $ic->is_purchasable, 'sell' => (bool) $ic->is_sellable, 'stk' => (bool) $ic->is_stockable, 'nat' => $ic->nature]) !!}'
+                                                @selected(old('item_category_id', $p->item_category_id ?? '') == $ic->id)>{{ $ic->code }} — {{ $ic->name }}</option>
                                     @endforeach
                                 </select>{!! $caret !!}
                             </div>
@@ -277,7 +283,8 @@
 
         {{-- ══════════════════ STOCK ═══════════════════════════════════════════ --}}
         <div id="sec-stock" class="p-4 pt-0 space-y-4 scroll-mt-28">
-            <section class="border border-gray-200 rounded-[4px]">
+            {{-- [X3 §7] Section masquée pour un service (catégorie non stockable). --}}
+            <section class="border border-gray-200 rounded-[4px]" x-show="!$store.cat?.f || $store.cat.f.stk" x-cloak>
                 <div class="{{ $secH }}">Gestion stock</div>
                 <div class="p-4 space-y-4">
                     <div class="flex flex-wrap gap-x-8 gap-y-2">
@@ -421,7 +428,8 @@
 
         {{-- ══════════════════ ACHAT ═══════════════════════════════════════════ --}}
         <div id="sec-achat" class="p-4 pt-0 scroll-mt-28">
-            <section class="border border-gray-200 rounded-[4px]">
+            {{-- [X3 §7] Section masquée si la catégorie n'est pas achetable (serveur = maître). --}}
+            <section class="border border-gray-200 rounded-[4px]" x-show="!$store.cat?.f || $store.cat.f.buy" x-cloak>
                 <div class="{{ $secH }}">Achat</div>
                 <div class="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div><label class="{{ $lbl }}">Prix d'achat HT</label><input type="number" min="0" step="1" name="purchase_price" x-model.number="purchasePrice" value="{{ old('purchase_price', $p->purchase_price ?? 0) }}" class="{{ $inpR }}"></div>
@@ -460,7 +468,8 @@
 
         {{-- ══════════════════ VENTE ═══════════════════════════════════════════ --}}
         <div id="sec-vente" class="p-4 pt-0 scroll-mt-28">
-            <section class="border border-gray-200 rounded-[4px]">
+            {{-- [X3 §7] Section masquée si la catégorie n'est pas vendable. --}}
+            <section class="border border-gray-200 rounded-[4px]" x-show="!$store.cat?.f || $store.cat.f.sell" x-cloak>
                 <div class="{{ $secH }}">Vente</div>
                 <div class="p-4 space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -513,7 +522,8 @@
 
         {{-- ══════════════════ PRODUCTION ══════════════════════════════════════ --}}
         <div id="sec-prod" class="p-4 pt-0 scroll-mt-28">
-            <section class="border border-gray-200 rounded-[4px]">
+            {{-- [X3 §7] Section masquée si la catégorie n'est pas fabriquée. --}}
+            <section class="border border-gray-200 rounded-[4px]" x-show="!$store.cat?.f || $store.cat.f.man" x-cloak>
                 <div class="{{ $secH }}">Production tôle bac</div>
                 <div class="p-4 space-y-4">
                     <div class="flex flex-wrap gap-x-8 gap-y-2">
