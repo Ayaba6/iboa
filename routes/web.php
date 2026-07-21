@@ -1629,6 +1629,9 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     // [Flux tôle bac §3] Tableau des commandes éligibles à la production (réglées ou approuvées, sans OF)
     Route::get('orders/eligible', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'eligible'])->name('orders.eligible');
 
+    // [MTS §2.2] Planification production pour stock (fer à béton…) — besoin net + création OF MTS
+    Route::get('orders/mts', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'mts'])->name('orders.mts');
+
     Route::resource('orders', \App\Modules\Production\Controllers\ProductionOrderController::class);
 
     // Référentiel
