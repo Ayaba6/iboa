@@ -175,10 +175,20 @@
 
                     {{-- [Flux tôle bac §3] Gérant : approuver une commande NON réglée pour production --}}
                     @if($order->production_approved)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] text-sm font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] text-sm font-semibold bg-blue-50 text-blue-800 border border-blue-200"
+                              title="{{ $order->production_approval_reason }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             Approuvée pour production
                         </span>
+                        @can('production.approve_financial')
+                        @if(!$order->hasActiveProductionOrder())
+                        <form action="{{ route('ventes.commandes.revoke-production', $order) }}" method="POST"
+                              onsubmit="return confirm('Révoquer l\'approbation de production de cette commande ?')">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center px-2.5 py-2 border border-gray-300 text-gray-600 bg-white rounded-[4px] text-sm font-medium hover:bg-gray-50">Révoquer</button>
+                        </form>
+                        @endif
+                        @endcan
                     @elseif(!$order->hasBonPreparation())
                     @can('production.approve_financial')
                     <div x-data="{ open: false }">

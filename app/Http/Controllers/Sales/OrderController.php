@@ -368,4 +368,29 @@ class OrderController extends Controller
 
         return back()->with('success', 'Commande approuvée pour la production — éligible à la création d\'OF.');
     }
+
+    /**
+     * [Audit MTO] Révocation d'une approbation de production (avant création d'OF).
+     * Même permission que l'octroi. Refusée si un OF actif existe déjà.
+     */
+    public function revokeProduction(Request $request, Order $commande): RedirectResponse
+    {
+        if (! $commande->production_approved) {
+            return back()->with('error', 'Cette commande n\'est pas approuvée pour la production.');
+        }
+        if ($commande->hasActiveProductionOrder()) {
+            return back()->with('error', 'Un OF actif existe déjà — annulez d\'abord l\'OF avant de révoquer l\'approbation.');
+        }
+
+        $commande->update([
+            'production_approved'            => false,
+            'production_approved_at'         => null,
+            'production_approved_by'         => null,
+            'production_approval_reason'     => null,
+            'production_approval_unpaid'     => null,
+            'production_approval_expires_at' => null,
+        ]);
+
+        return back()->with('success', 'Approbation de production révoquée.');
+    }
 }

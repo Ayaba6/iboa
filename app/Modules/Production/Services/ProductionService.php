@@ -32,6 +32,41 @@ class ProductionService
         return DB::transaction(function () use ($data, $lines) {
             $company = currentCompany();
 
+            // [Audit MTO — double OF / reliquat] OF lié à une commande : la somme des OF
+            // actifs (non annulés) du même article ne peut pas dépasser la quantité
+            // commandée. Bloque le double OF (double clic / 2 coordinateurs) et limite
+            // tout OF complémentaire au reliquat restant. Ne s'applique que si la
+            // commande porte bien l'article (comportement conservé sinon).
+            if (! empty($data['order_id']) && ! empty($data['product_id'])) {
+                $commanded = (float) \App\Models\OrderItem::where('order_id', $data['order_id'])
+                    ->where('product_id', $data['product_id'])->sum('quantity');
+                if ($commanded > 0) {
+                    $alreadyRequested = (float) ProductionOrder::where('order_id', $data['order_id'])
+                        ->where('product_id', $data['product_id'])
+                        ->where('status', '!=', 'annule')
+                        ->lockForUpdate()
+                        ->sum('quantity_requested');
+                    $reliquat = $commanded - $alreadyRequested;
+                    $requested = (float) ($data['quantity_requested'] ?? 0);
+
+                    if ($reliquat <= 0) {
+                        throw ValidationException::withMessages([
+                            'order_id' => 'Un OF couvre déjà la totalité de la quantité commandée pour cet article — double OF refusé.',
+                        ]);
+                    }
+                    if ($requested > $reliquat + 0.001) {
+                        throw ValidationException::withMessages([
+                            'quantity_requested' => sprintf(
+                                'OF complémentaire limité au reliquat restant : %s (commandé %s, déjà couvert par OF %s).',
+                                rtrim(rtrim(number_format($reliquat, 2, ',', ' '), '0'), ','),
+                                rtrim(rtrim(number_format($commanded, 2, ',', ' '), '0'), ','),
+                                rtrim(rtrim(number_format($alreadyRequested, 2, ',', ' '), '0'), ',')
+                            ),
+                        ]);
+                    }
+                }
+            }
+
             $data['company_id']     = $company->id;
             $data['fiscal_year_id'] = $company->current_fiscal_year_id;
             $data['number']         = $this->sequences->nextNumber($company, 'ordre_fabrication');

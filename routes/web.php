@@ -376,6 +376,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // [Flux tôle bac §3] Approbation gérant d'une commande non réglée pour production
         Route::middleware('permission:production.approve_financial')->group(function () {
             Route::post('commandes/{commande}/approve-production', [\App\Http\Controllers\Sales\OrderController::class, 'approveProduction'])->name('commandes.approve-production');
+            Route::post('commandes/{commande}/revoke-production', [\App\Http\Controllers\Sales\OrderController::class, 'revokeProduction'])->name('commandes.revoke-production');
         });
         // [CDC §bon-préparation] Module bon de préparation
         Route::middleware('permission:bon_preparations.view')->group(function () {
