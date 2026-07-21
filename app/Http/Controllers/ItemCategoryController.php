@@ -119,7 +119,7 @@ class ItemCategoryController extends Controller
 
     private function validateData(Request $request, ?ItemCategory $category = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'code'        => 'required|string|max:30|unique:item_categories,code' . ($category ? ',' . $category->id : ''),
             'name'        => 'required|string|max:120',
             'description' => 'nullable|string|max:500',
@@ -164,6 +164,15 @@ class ItemCategoryController extends Controller
             'overridable_fields' => 'nullable|array',
             'overridable_fields.*' => 'string|max:60',
         ]);
+
+        if (isset($data['default_stock_min'], $data['default_stock_max'])
+            && (float) $data['default_stock_max'] < (float) $data['default_stock_min']) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'default_stock_max' => 'Le stock maxi par défaut doit être supérieur ou égal au stock mini.',
+            ]);
+        }
+
+        return $data;
     }
 
     private function formData(): array
