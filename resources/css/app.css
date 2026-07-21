@@ -530,6 +530,8 @@ html.dark .badge-sky    { background: #0C1E3C; color: #38BDF8; }
 html.dark .erp-content .bg-white { background-color: var(--surface-card) !important; }
 html.dark .erp-content .bg-gray-50,
 html.dark .erp-content .bg-gray-100 { background-color: var(--surface-muted) !important; }
+/* gray-200 : pistes de toggle off, séparateurs pleins, fonds désactivés */
+html.dark .erp-content .bg-gray-200 { background-color: var(--border) !important; }
 html.dark .erp-content .bg-gray-50\/30 { background-color: transparent !important; }
 
 /* Texte */
