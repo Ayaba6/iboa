@@ -149,6 +149,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('product-families', \App\Http\Controllers\ProductFamilyController::class)
             ->except(['show'])
             ->parameters(['product-families' => 'family']);
+        // [X3] Catégories d'article (modèle de gestion ≠ familles)
+        Route::prefix('articles/categories')->name('articles.categories.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ItemCategoryController::class, 'index'])->name('index');
+            Route::get('/nouvelle', [\App\Http\Controllers\ItemCategoryController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\ItemCategoryController::class, 'store'])->name('store');
+            Route::get('/{category}', [\App\Http\Controllers\ItemCategoryController::class, 'show'])->whereNumber('category')->name('show');
+            Route::get('/{category}/modifier', [\App\Http\Controllers\ItemCategoryController::class, 'edit'])->whereNumber('category')->name('edit');
+            Route::put('/{category}', [\App\Http\Controllers\ItemCategoryController::class, 'update'])->whereNumber('category')->name('update');
+            Route::post('/{category}/disable', [\App\Http\Controllers\ItemCategoryController::class, 'disable'])->whereNumber('category')->name('disable');
+            Route::post('/{category}/duplicate', [\App\Http\Controllers\ItemCategoryController::class, 'duplicate'])->whereNumber('category')->name('duplicate');
+            Route::get('/{category}/propager', [\App\Http\Controllers\ItemCategoryController::class, 'propagatePreview'])->whereNumber('category')->name('propagate.preview');
+            Route::post('/{category}/propager', [\App\Http\Controllers\ItemCategoryController::class, 'propagate'])->whereNumber('category')->name('propagate');
+        });
         Route::resource('units', \App\Http\Controllers\UnitController::class)->except(['show']);
         Route::resource('promotions', \App\Http\Controllers\ProductPromotionController::class)->except(['show']);
         Route::post('product-price-tiers', [\App\Http\Controllers\ProductPriceTierController::class, 'store'])->name('product-price-tiers.store');

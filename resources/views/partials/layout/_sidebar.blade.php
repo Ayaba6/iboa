@@ -322,7 +322,8 @@ request()->routeIs('achats.*')                                                  
                             auth()->user()->can('clients.view')   ? [route('clients.grand-livre'),  'Grand livre clients', 'clients.grand-livre']  : null,
                             auth()->user()->can('suppliers.view') ? [route('suppliers.index'),      'Fournisseurs',        'suppliers*']           : null,
                             auth()->user()->can('products.view')  ? [route('products.index'),         'Articles',             'products*']             : null,
-                            auth()->user()->can('products.view')  ? [route('product-families.index'), 'Catégories articles','product-families*']     : null,
+                            auth()->user()->can('categories.view') ? [route('articles.categories.index'), 'Catégories de gestion','articles.categories*'] : null,
+                            auth()->user()->can('products.view')  ? [route('product-families.index'), 'Familles articles','product-families*']     : null,
                             auth()->user()->can('products.view')  ? [route('brands.index'),           'Marques',              'brands*']               : null,
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp

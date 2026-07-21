@@ -18,6 +18,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'direction.view',
             // Articles
             'products.view', 'products.create', 'products.edit', 'products.delete',
+            // [X3] Catégories & familles d'articles
+            'categories.view', 'categories.create', 'categories.update', 'categories.disable', 'categories.propagate',
+            'families.view', 'families.create', 'families.update', 'families.disable',
+            'articles.change_category', 'articles.override_category_defaults',
             // Clients
             'clients.view', 'clients.create', 'clients.edit', 'clients.delete',
             // CRM (prospection : contacts/leads, opportunités, activités)
