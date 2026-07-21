@@ -47,6 +47,27 @@ class ProductService
     public function update(Product $product, array $data, ?UploadedFile $image = null): Product
     {
         return DB::transaction(function () use ($product, $data, $image) {
+            // [X3 §15.1] Changement de catégorie INTERDIT dès que l'article a des
+            // mouvements de stock : le modèle de gestion ne peut plus changer
+            // librement (stock, valorisation et compta en dépendent).
+            if (array_key_exists('item_category_id', $data)
+                && (int) $data['item_category_id'] !== (int) $product->item_category_id
+                && $product->stockMovements()->exists()) {
+                throw new \RuntimeException(
+                    'Changement de catégorie refusé : l\'article a des mouvements de stock. '
+                    . 'Créez un nouvel article ou passez par une demande contrôlée.'
+                );
+            }
+
+            // [X3 §15.2] Passage stocké → non stocké interdit si un stock existe.
+            if (array_key_exists('is_stockable', $data)
+                && ! $data['is_stockable'] && $product->is_stockable
+                && \App\Models\ProductStock::where('product_id', $product->id)->where('quantity', '>', 0)->exists()) {
+                throw new \RuntimeException(
+                    'Impossible de rendre l\'article non stocké : un stock physique existe encore.'
+                );
+            }
+
             if ($image) {
                 if ($product->image) {
                     Storage::disk('public')->delete($product->image);

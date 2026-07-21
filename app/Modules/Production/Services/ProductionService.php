@@ -32,6 +32,25 @@ class ProductionService
         return DB::transaction(function () use ($data, $lines) {
             $company = currentCompany();
 
+            // [X3 §14] OF interdit pour un article dont la CATÉGORIE n'est pas
+            // fabriquée (marchandise, service, matière première…). Repli sur le
+            // flag article si l'article n'a pas encore de catégorie (legacy).
+            if (! empty($data['product_id'])) {
+                $p = \App\Models\Product::with('itemCategory')->find($data['product_id']);
+                // Garde STRICTEMENT catégorielle : un article legacy sans catégorie
+                // conserve le comportement historique (pas de blocage rétroactif).
+                if ($p && $p->itemCategory && ! $p->itemCategory->is_manufactured) {
+                    throw ValidationException::withMessages([
+                        'product_id' => sprintf(
+                            'OF refusé : « %s » appartient à la catégorie %s, non fabriquée (%s).',
+                            $p->name,
+                            $p->itemCategory?->code ?? '—',
+                            $p->itemCategory?->name ?? 'article non fabricable'
+                        ),
+                    ]);
+                }
+            }
+
             // [Audit MTO — double OF / reliquat] OF lié à une commande : la somme des OF
             // actifs (non annulés) du même article ne peut pas dépasser la quantité
             // commandée. Bloque le double OF (double clic / 2 coordinateurs) et limite
