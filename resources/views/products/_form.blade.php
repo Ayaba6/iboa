@@ -111,6 +111,21 @@
                                 'us'=>$f->unite_stock_id,'ua'=>$f->unite_achat_id,'uv'=>$f->unite_vente_id,'depot'=>$f->site_stockage_id,
                             ], JSON_HEX_APOS) . '\'';
                         @endphp
+                        {{-- [X3] Catégorie de gestion : détermine le fonctionnement de l'article
+                             (flux, stratégie MTO/MTS, stock, comptes). Les défauts sont appliqués
+                             CÔTÉ SERVEUR à la création (CategoryDefaultsService). --}}
+                        <div class="mb-3">
+                            <label class="{{ $lbl }}">Catégorie de gestion</label>
+                            <div class="relative">
+                                <select name="item_category_id" class="{{ $lk }}">
+                                    <option value="">—</option>
+                                    @foreach(\App\Models\ItemCategory::where('is_active', true)->orderBy('sort_order')->get() as $ic)
+                                        <option value="{{ $ic->id }}" @selected(old('item_category_id', $p->item_category_id ?? '') == $ic->id)>{{ $ic->code }} — {{ $ic->name }}</option>
+                                    @endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                            <p class="text-[10.5px] text-gray-400 mt-0.5">Modèle de gestion (≠ famille). Pose les défauts : flux, MTO/MTS, stock, comptes.</p>
+                        </div>
                         <div class="relative">
                             <select name="family_id" id="family_id_select" class="{{ $lk }}">
                                 <option value="">—</option>

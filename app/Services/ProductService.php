@@ -16,6 +16,17 @@ class ProductService
     public function create(array $data, ?UploadedFile $image = null): Product
     {
         return DB::transaction(function () use ($data, $image) {
+            // [X3 §7] Héritage catégorie → article à la CRÉATION : la catégorie pose
+            // les défauts (flux, stratégie, stock, unités, comptes) ; la saisie ne
+            // surcharge que les champs autorisés par la catégorie. Jamais rétroactif.
+            if (! empty($data['item_category_id'])) {
+                $cat = \App\Models\ItemCategory::find($data['item_category_id']);
+                if ($cat) {
+                    $data = app(\App\Services\CategoryDefaultsService::class)
+                        ->apply($data, $cat, isset($data['site_id']) ? (int) $data['site_id'] : null);
+                }
+            }
+
             if ($image) {
                 $data['image'] = $image->store('products', 'public');
             }

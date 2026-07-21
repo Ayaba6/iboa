@@ -20,6 +20,7 @@ class StoreProductRequest extends FormRequest
 
             // Classification
             'family_id'             => 'nullable|exists:product_families,id',
+            'item_category_id'      => 'nullable|exists:item_categories,id',
             'brand_id'              => 'nullable|exists:brands,id',
             'unit_id'               => 'nullable|exists:units,id',
             'tax_rate_id'           => 'nullable|exists:tax_rates,id',
