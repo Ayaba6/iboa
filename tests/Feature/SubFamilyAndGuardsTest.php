@@ -167,3 +167,34 @@ it('article-site : endpoints HTTP upsert et suppression', function () {
         ->assertRedirect();
     expect($p->productSites()->count())->toBe(0);
 });
+
+it('attributs dynamiques : obligatoire exigé, select contrôlé, valeurs sauvegardées (§10)', function () {
+    sfSetup();
+    $cat = ItemCategory::where('code', 'PF_TOLE_MTO')->first();
+    $cat->attributes()->create(['code' => 'nuance', 'label' => 'Nuance acier', 'type' => 'select',
+        'options' => ['DX51D', 'S250GD'], 'required' => true]);
+    $cat->attributes()->create(['code' => 'garantie', 'label' => 'Garantie (ans)', 'type' => 'number', 'required' => false]);
+
+    // Obligatoire manquant → refus.
+    expect(fn () => app(ProductService::class)->create([
+        'name' => 'Tôle sans nuance', 'item_category_id' => $cat->id,
+    ]))->toThrow(\RuntimeException::class);
+
+    // Valeur hors options → refus.
+    expect(fn () => app(ProductService::class)->create([
+        'name' => 'Tôle nuance inconnue', 'item_category_id' => $cat->id,
+        'attributes' => ['nuance' => 'XXX'],
+    ]))->toThrow(\RuntimeException::class);
+
+    // Valide → sauvegardé et mis à jour.
+    $p = app(ProductService::class)->create([
+        'name' => 'Tôle nuancée', 'item_category_id' => $cat->id,
+        'attributes' => ['nuance' => 'DX51D', 'garantie' => '10'],
+    ]);
+    expect($p->attributeValues()->count())->toBe(2)
+        ->and($p->attributeValues()->whereHas('attribute', fn ($q) => $q->where('code', 'nuance'))->first()->value)->toBe('DX51D');
+
+    app(ProductService::class)->update($p, ['attributes' => ['nuance' => 'S250GD', 'garantie' => '10']]);
+    expect($p->attributeValues()->whereHas('attribute', fn ($q) => $q->where('code', 'nuance'))->first()->value)->toBe('S250GD')
+        ->and($p->attributeValues()->count())->toBe(2); // upsert, pas de doublon
+});

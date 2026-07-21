@@ -36,6 +36,40 @@ class ProductService
         }
     }
 
+    /**
+     * [X3 §10] Enregistre les attributs dynamiques (attributes[code] => valeur)
+     * définis par la catégorie ; exige les attributs marqués obligatoires.
+     */
+    private function syncCategoryAttributes(Product $product, array $input): void
+    {
+        $cat = $product->itemCategory()->with('attributes')->first();
+        if (! $cat || $cat->attributes->isEmpty()) {
+            return;
+        }
+        $values = (array) ($input['attributes'] ?? []);
+        foreach ($cat->attributes as $attr) {
+            $value = $values[$attr->code] ?? null;
+            if ($attr->required && ($value === null || $value === '')) {
+                throw new \RuntimeException(sprintf(
+                    'Attribut « %s » obligatoire pour la catégorie %s.', $attr->label, $cat->code
+                ));
+            }
+            if ($attr->type === 'select' && $value !== null && $value !== ''
+                && ! in_array($value, (array) $attr->options, true)) {
+                throw new \RuntimeException(sprintf(
+                    'Valeur « %s » invalide pour l\'attribut %s (%s).',
+                    $value, $attr->label, implode(', ', (array) $attr->options)
+                ));
+            }
+            if ($value !== null && $value !== '') {
+                $product->attributeValues()->updateOrCreate(
+                    ['category_attribute_id' => $attr->id],
+                    ['value' => (string) $value]
+                );
+            }
+        }
+    }
+
     public function create(array $data, ?UploadedFile $image = null): Product
     {
         return DB::transaction(function () use ($data, $image) {
@@ -59,6 +93,9 @@ class ProductService
                 $data['reference'] = $this->generateReference();
             }
             $product = Product::create($data);
+
+            // [X3 §10] Attributs dynamiques de la catégorie (obligatoires contrôlés).
+            $this->syncCategoryAttributes($product, $data);
 
             if (!empty($data['components'])) {
                 foreach ($data['components'] as $component) {
@@ -113,6 +150,11 @@ class ProductService
                 $data['image'] = $image->store('products', 'public');
             }
             $product->update($data);
+
+            // [X3 §10] Attributs dynamiques (mêmes règles qu'à la création).
+            if (array_key_exists('attributes', $data)) {
+                $this->syncCategoryAttributes($product->fresh('itemCategory'), $data);
+            }
 
             if (isset($data['components'])) {
                 $product->components()->delete();

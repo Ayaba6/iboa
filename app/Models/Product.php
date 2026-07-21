@@ -203,6 +203,9 @@ class Product extends Model
     /** [X3 §10] Déclinaisons article-site. */
     public function productSites(): HasMany { return $this->hasMany(ProductSite::class); }
 
+    /** [X3 §10] Valeurs des attributs dynamiques (définis par la catégorie). */
+    public function attributeValues(): HasMany { return $this->hasMany(ProductAttributeValue::class); }
+
     /**
      * [X3 §10] Paramètres résolus pour un site :
      * article-site > catégorie-site > catégorie globale > valeurs de l'article.

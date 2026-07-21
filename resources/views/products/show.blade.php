@@ -290,6 +290,17 @@
             @endif
         </div>
 
+        {{-- [X3 §10] Attributs dynamiques de la catégorie (affichés dans Général si présents) --}}
+        @php $attrVals = $product->attributeValues()->with('attribute')->get(); @endphp
+        @if($attrVals->isNotEmpty())
+        <div x-show="tab === 'general'" class="px-4 pb-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 border-t border-gray-100 pt-3">
+            @foreach($attrVals as $av)
+            <div><dt class="text-[10.5px] font-bold text-gray-500 uppercase">{{ $av->attribute?->label }}</dt>
+                 <dd class="text-[13px] text-gray-900">{{ $av->value }}</dd></div>
+            @endforeach
+        </div>
+        @endif
+
         {{-- ── [X3 §10] Article-sites : paramètres par site (priorité maximale) ── --}}
         <div x-show="tab === 'sites'" x-cloak>
             <div class="p-4">

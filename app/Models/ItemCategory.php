@@ -65,6 +65,12 @@ class ItemCategory extends Model
         return $this->hasMany(ItemCategorySite::class);
     }
 
+    /** [X3 §10] Attributs dynamiques exigibles sur les articles de la catégorie. */
+    public function attributes(): HasMany
+    {
+        return $this->hasMany(CategoryAttribute::class)->orderBy('sort_order');
+    }
+
     public function defaultSaleUnit(): BelongsTo { return $this->belongsTo(Unit::class, 'default_sale_unit_id'); }
     public function defaultPurchaseUnit(): BelongsTo { return $this->belongsTo(Unit::class, 'default_purchase_unit_id'); }
     public function defaultPricingUnit(): BelongsTo { return $this->belongsTo(Unit::class, 'default_pricing_unit_id'); }
