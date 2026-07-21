@@ -182,7 +182,7 @@
         .lettres { background:#eff6ff; border:1px solid #bfdbfe; border-radius:3px;
                    padding:4px 9px; margin-top:4px; font-size:9.5px; }
         .lettres-lbl { font-size:8.5px; font-weight:bold; text-transform:uppercase;
-                       color:#1d4ed8; margin-bottom:2px; letter-spacing:.04em; }
+                       color:#1d4ed8; letter-spacing:.04em; }
         .lettres-txt { font-weight:bold; color:#1e3a8a; font-size:10px; line-height:1.4; }
 
         /* ── Règlement ── */
@@ -650,8 +650,8 @@
     ════════════════════════════════════════════════ --}}
     @if($totalWords)
     <div class="lettres">
-        <div class="lettres-lbl">Arrêtée la présente facture à la somme de :</div>
-        <div class="lettres-txt">{{ $totalWords }} FRANCS CFA ({{ number_format($invoice->total_ttc, 0, ',', ' ') }} FCFA)</div>
+        {{-- [UI] Libellé + montant en lettres sur UNE seule ligne --}}
+        <div class="lettres-txt"><span class="lettres-lbl">Arrêtée la présente facture à la somme de :</span> {{ $totalWords }} FRANCS CFA ({{ number_format($invoice->total_ttc, 0, ',', ' ') }} FCFA)</div>
     </div>
     @endif
 
