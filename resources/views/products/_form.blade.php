@@ -104,7 +104,6 @@
                         </div>
                     </div>
                     <div class="sm:col-span-3">
-                        <label class="{{ $lbl }}">Catégorie article <span class="text-red-600">*</span></label>
                         @php
                             $famProps = fn($f) => 'data-props=\'' . json_encode([
                                 'flux'=>(array)($f->type_flux ?? []),'gs'=>(bool)$f->gestion_stock,'sneg'=>(bool)($f->stock_negatif ?? false),
@@ -132,6 +131,7 @@
                             </div>
                             <p class="text-[10.5px] text-gray-400 mt-0.5">Modèle de gestion (≠ famille). Pose les défauts : flux, MTO/MTS, stock, comptes.</p>
                         </div>
+                        <label class="{{ $lbl }}">Famille <span class="text-gray-400 font-normal">(classement commercial)</span></label>
                         <div class="relative">
                             <select name="family_id" id="family_id_select" class="{{ $lk }}">
                                 <option value="">—</option>
