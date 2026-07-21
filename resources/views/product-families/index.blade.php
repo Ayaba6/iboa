@@ -114,8 +114,8 @@
                         @else — @endif
                     </td>
                     <td class="px-3 py-1.5 text-center">
-                        @if($fam->products_count > 0)
-                            <a href="{{ route('products.index', ['family_id' => $fam->id]) }}" class="font-semibold text-emerald-800 tabular-nums hover:underline">{{ $fam->products_count }}</a>
+                        @if($fam->sub_products_count > 0)
+                            <a href="{{ route('products.index', ['family_id' => $fam->id]) }}" class="font-semibold text-emerald-800 tabular-nums hover:underline">{{ $fam->sub_products_count }}</a>
                         @else<span class="text-gray-400 text-xs">0</span>@endif
                     </td>
                     <td class="px-3 py-1.5 text-center">
@@ -231,7 +231,7 @@
                         @endif
                     </td>
                     <td class="px-3 py-1.5 text-center">
-                        @php $totalFamilyProducts = $family->products_count + $family->children->sum('products_count'); @endphp
+                        @php $totalFamilyProducts = $family->products_count; @endphp
                         @if($totalFamilyProducts > 0)
                             <a href="{{ route('products.index', ['family_id' => $family->id]) }}"
                                class="font-semibold text-emerald-800 tabular-nums hover:underline"
@@ -308,10 +308,10 @@
                     </td>
                     <td class="px-3 py-2.5 text-center text-gray-300">—</td>
                     <td class="px-3 py-2.5 text-center">
-                        @if($child->products_count > 0)
+                        @if($child->sub_products_count > 0)
                             <a href="{{ route('products.index', ['family_id' => $child->id]) }}"
                                class="font-semibold text-emerald-800 tabular-nums hover:underline"
-                               title="Voir les articles">{{ $child->products_count }}</a>
+                               title="Voir les articles">{{ $child->sub_products_count }}</a>
                         @else
                             <span class="text-gray-400 text-xs">0</span>
                         @endif

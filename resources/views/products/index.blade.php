@@ -202,7 +202,7 @@
                             <a href="{{ route('products.show', $product) }}" class="font-medium text-gray-900 hover:text-emerald-700 block truncate max-w-md">{{ $product->name }}</a>
                         </td>
                         <td class="px-3 py-1 hidden md:table-cell text-gray-600">
-                            <span class="block truncate max-w-[180px]" title="{{ $product->family?->name }}">{{ $product->family?->name ?? '—' }}</span>
+                            <span class="block truncate max-w-[180px]" title="{{ $product->family?->name }}{{ $product->subFamily ? ' / ' . $product->subFamily->name : '' }}">{{ $product->family?->name ?? '—' }}@if($product->subFamily)<span class="text-gray-400"> / {{ $product->subFamily->name }}</span>@endif</span>
                         </td>
                         <td class="px-3 py-1 hidden md:table-cell">
                             @if($product->itemCategory)

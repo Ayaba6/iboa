@@ -23,13 +23,13 @@ class ProductFamilyController extends Controller
 
         if ($niveau === 'famille') {
             $families = ProductFamily::with('parent:id,code,name')
-                ->withCount('products')
+                ->withCount('subProducts')
                 ->whereNotNull('parent_id')
                 ->orderBy('sort_order')->orderBy('name')
                 ->paginate(20)
                 ->withQueryString();
         } else {
-            $families = ProductFamily::with(['children' => fn($q) => $q->withCount('products')])
+            $families = ProductFamily::with(['children' => fn($q) => $q->withCount('subProducts')])
                 ->withCount('products')
                 ->whereNull('parent_id')
                 ->orderBy('sort_order')->orderBy('name')
@@ -62,19 +62,24 @@ class ProductFamilyController extends Controller
     /** [X3 §16] Fiche famille à onglets : Général / Sous-familles / Articles / Statistiques. */
     public function show(ProductFamily $family)
     {
-        $family->load(['parent', 'children' => fn ($q) => $q->withCount('products')])
+        $family->load(['parent', 'children' => fn ($q) => $q->withCount('subProducts')])
             ->loadCount('products');
 
-        $articles = $family->products()->with('itemCategory:id,code')->orderBy('name')->limit(200)
+        // [X3 §5] Sous-famille : les articles y sont rattachés par sub_family_id.
+        $articlesQuery = $family->parent_id ? $family->subProducts() : $family->products();
+
+        $articles = (clone $articlesQuery)->with('itemCategory:id,code')->orderBy('name')->limit(200)
             ->get(['id', 'reference', 'name', 'item_category_id', 'is_active']);
 
         // Statistiques simples : CA facturé YTD des articles de la famille.
         $caYtd = (int) \App\Models\InvoiceItem::whereHas('invoice', fn ($q) => $q
                 ->whereYear('issued_at', now()->year)->whereNotIn('status', ['annulee', 'brouillon']))
-            ->whereIn('product_id', $family->products()->pluck('id'))
+            ->whereIn('product_id', (clone $articlesQuery)->pluck('products.id'))
             ->sum('line_total_ht');
 
-        return view('product-families.show', compact('family', 'articles', 'caYtd'));
+        $articlesCount = (clone $articlesQuery)->count();
+
+        return view('product-families.show', compact('family', 'articles', 'caYtd', 'articlesCount'));
     }
 
     public function edit(ProductFamily $family)
@@ -121,7 +126,7 @@ class ProductFamilyController extends Controller
 
     public function destroy(ProductFamily $family)
     {
-        if ($family->products()->count() > 0) {
+        if ($family->products()->count() > 0 || $family->subProducts()->count() > 0) {
             return back()->with('error', 'Impossible de supprimer : des articles appartiennent à cette famille.');
         }
         if ($family->children()->count() > 0) {

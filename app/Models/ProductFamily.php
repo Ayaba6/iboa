@@ -165,6 +165,12 @@ class ProductFamily extends Model
         return $this->hasMany(Product::class, 'family_id');
     }
 
+    /** [X3 §5] Articles rattachés à cette SOUS-famille (axe sub_family_id). */
+    public function subProducts(): HasMany
+    {
+        return $this->hasMany(Product::class, 'sub_family_id');
+    }
+
     /**
      * Compte comptable de vente (classe 7).
      */
