@@ -13,9 +13,34 @@ class ProductService
 {
     public function __construct(private ProductRepository $repository) {}
 
+    /**
+     * [X3 §5/§14] La sous-famille choisie doit appartenir à la famille de
+     * l'article (parent_id = family_id). Sous-famille facultative.
+     */
+    private function assertSubFamilyCoherent(array $data, ?Product $product = null): void
+    {
+        $subId = $data['sub_family_id'] ?? null;
+        if (! $subId) {
+            return;
+        }
+        $familyId = $data['family_id'] ?? $product?->family_id;
+        $sub = \App\Models\ProductFamily::find($subId);
+        if (! $sub || ! $sub->parent_id) {
+            throw new \RuntimeException('La sous-famille sélectionnée n\'est pas une sous-famille (aucune famille parente).');
+        }
+        if (! $familyId || (int) $sub->parent_id !== (int) $familyId) {
+            throw new \RuntimeException(sprintf(
+                'Sous-famille incohérente : « %s » appartient à la famille « %s », pas à celle de l\'article.',
+                $sub->name, $sub->parent?->name ?? '?'
+            ));
+        }
+    }
+
     public function create(array $data, ?UploadedFile $image = null): Product
     {
         return DB::transaction(function () use ($data, $image) {
+            $this->assertSubFamilyCoherent($data);
+
             // [X3 §7] Héritage catégorie → article à la CRÉATION : la catégorie pose
             // les défauts (flux, stratégie, stock, unités, comptes) ; la saisie ne
             // surcharge que les champs autorisés par la catégorie. Jamais rétroactif.
@@ -47,6 +72,8 @@ class ProductService
     public function update(Product $product, array $data, ?UploadedFile $image = null): Product
     {
         return DB::transaction(function () use ($product, $data, $image) {
+            $this->assertSubFamilyCoherent($data, $product);
+
             // [X3 §15.1] Changement de catégorie INTERDIT dès que l'article a des
             // mouvements de stock : le modèle de gestion ne peut plus changer
             // librement (stock, valorisation et compta en dépendent).
@@ -56,6 +83,17 @@ class ProductService
                 throw new \RuntimeException(
                     'Changement de catégorie refusé : l\'article a des mouvements de stock. '
                     . 'Créez un nouvel article ou passez par une demande contrôlée.'
+                );
+            }
+
+            // [X3 §15.5] Changement d'UNITÉ DE STOCK interdit dès qu'il existe des
+            // mouvements : l'historique perdrait son sens (quantités hétérogènes).
+            if (array_key_exists('unit_id', $data)
+                && (int) $data['unit_id'] !== (int) $product->unit_id
+                && $product->stockMovements()->exists()) {
+                throw new \RuntimeException(
+                    'Changement d\'unité de stock refusé : des mouvements existent. '
+                    . 'Créez un nouvel article avec la bonne unité.'
                 );
             }
 

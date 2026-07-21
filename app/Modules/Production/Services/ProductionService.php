@@ -378,8 +378,12 @@ class ProductionService
         // (is_manufacturable) ne peut pas être lancé sans nomenclature : sans BOM,
         // aucune consommation matière n'est calculable → stock matière faux, coût
         // de revient faux, traçabilité absente. Rattachez une nomenclature à l'OF.
-        $order->loadMissing('product');
-        if ($order->product?->is_manufacturable && ! $order->bill_of_material_id) {
+        $order->loadMissing('product.itemCategory');
+        // [X3 §14] La CATÉGORIE peut rendre la nomenclature obligatoire (bom_required),
+        // en plus du flag article historique (is_manufacturable).
+        $bomMandatory = $order->product?->is_manufacturable
+            || (bool) $order->product?->itemCategory?->bom_required;
+        if ($bomMandatory && ! $order->bill_of_material_id) {
             throw ValidationException::withMessages([
                 'bill_of_material' => "Article fabriqué « {$order->product->name} » : nomenclature obligatoire avant lancement. Rattachez une BOM à l'OF (sinon aucune consommation matière ne sera tracée).",
             ]);

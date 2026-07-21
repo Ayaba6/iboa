@@ -137,6 +137,20 @@
                                 @endforeach
                             </select>{!! $caret !!}
                         </div>
+                        {{-- [X3 §5] Sous-famille : filtrée sur la famille sélectionnée (garde serveur en plus). --}}
+                        <div class="mt-2">
+                            <label class="{{ $lbl }}">Sous-famille</label>
+                            <div class="relative">
+                                <select name="sub_family_id" id="sub_family_select" class="{{ $lk }}"
+                                        onfocus="(function(s){var fam=document.getElementById('family_id_select').value;Array.from(s.options).forEach(function(o){o.hidden=o.value!=='' && o.dataset.parent!==fam;});})(this)">
+                                    <option value="">—</option>
+                                    @foreach(\App\Models\ProductFamily::whereNotNull('parent_id')->where('is_active', true)->orderBy('name')->get() as $sf)
+                                        <option value="{{ $sf->id }}" data-parent="{{ $sf->parent_id }}" @selected(old('sub_family_id', $p->sub_family_id ?? '') == $sf->id)>{{ $sf->name }}</option>
+                                    @endforeach
+                                </select>{!! $caret !!}
+                            </div>
+                            <p class="text-[10.5px] text-gray-400 mt-0.5">Doit appartenir à la famille choisie (contrôlé côté serveur).</p>
+                        </div>
                     </div>
                     <div class="sm:col-span-2">
                         <label class="{{ $lbl }}">Code article <span class="text-red-600">*</span></label>

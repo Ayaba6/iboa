@@ -47,6 +47,7 @@ class Product extends Model
         'article_chute_id',
         'image',
         'family_id',
+        'sub_family_id',
         'famille1_id',
         'famille2_id',
         'famille3_id',
@@ -182,6 +183,12 @@ class Product extends Model
     public function family(): BelongsTo
     {
         return $this->belongsTo(ProductFamily::class, 'family_id');
+    }
+
+    /** [X3 §5] Sous-famille (doit appartenir à la famille — garde serveur). */
+    public function subFamily(): BelongsTo
+    {
+        return $this->belongsTo(ProductFamily::class, 'sub_family_id');
     }
 
     public function famille1(): BelongsTo { return $this->belongsTo(ProductFamily::class, 'famille1_id'); }

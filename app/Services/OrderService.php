@@ -314,6 +314,18 @@ class OrderService
             $price = (float) ($item['unit_price'] ?? 0);
             $disc  = (float) ($item['discount_percent'] ?? 0);
 
+            // [X3 §14] Vente d'un article non vendable interdite (catégorie prioritaire, repli article).
+            if (! empty($item['product_id'])) {
+                $prod = \App\Models\Product::with('itemCategory')->find($item['product_id']);
+                $sellable = $prod?->itemCategory ? (bool) $prod->itemCategory->is_sellable : (bool) ($prod?->is_sellable ?? true);
+                if ($prod && ! $sellable) {
+                    throw new \RuntimeException(sprintf(
+                        'Article « %s » non vendable (catégorie %s) — vente refusée.',
+                        $prod->name, $prod->itemCategory?->code ?? 'article'
+                    ));
+                }
+            }
+
             // [§5 PRIX PLANCHER] Vente sous le prix plancher interdite, sauf rôle autorisé.
             $this->assertFloorPrice($item['product_id'] ?? null, $price, $disc);
 
