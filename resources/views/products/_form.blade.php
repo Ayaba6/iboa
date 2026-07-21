@@ -104,13 +104,6 @@
                         </div>
                     </div>
                     <div class="sm:col-span-3">
-                        @php
-                            $famProps = fn($f) => 'data-props=\'' . json_encode([
-                                'flux'=>(array)($f->type_flux ?? []),'gs'=>(bool)$f->gestion_stock,'sneg'=>(bool)($f->stock_negatif ?? false),
-                                'gl'=>(bool)$f->gestion_lot,'serie'=>(bool)$f->gestion_numero_serie,'qc'=>(bool)$f->controle_qualite,
-                                'us'=>$f->unite_stock_id,'ua'=>$f->unite_achat_id,'uv'=>$f->unite_vente_id,'depot'=>$f->site_stockage_id,
-                            ], JSON_HEX_APOS) . '\'';
-                        @endphp
                         {{-- [X3] Catégorie de gestion : détermine le fonctionnement de l'article
                              (flux, stratégie MTO/MTS, stock, comptes). Les défauts sont appliqués
                              CÔTÉ SERVEUR à la création (CategoryDefaultsService). --}}
@@ -136,9 +129,9 @@
                             <select name="family_id" id="family_id_select" class="{{ $lk }}">
                                 <option value="">—</option>
                                 @foreach($families as $f)
-                                    <option value="{{ $f->id }}" {!! $famProps($f) !!} @selected(old('family_id', $p->family_id ?? '') == $f->id)>{{ $f->code ?: $f->name }}</option>
+                                    <option value="{{ $f->id }}" @selected(old('family_id', $p->family_id ?? '') == $f->id)>{{ $f->code ?: $f->name }}</option>
                                     @foreach($f->children as $child)
-                                        <option value="{{ $child->id }}" {!! $famProps($child) !!} @selected(old('family_id', $p->family_id ?? '') == $child->id)>&nbsp;&nbsp;└ {{ $child->code ?: $child->name }}</option>
+                                        <option value="{{ $child->id }}" @selected(old('family_id', $p->family_id ?? '') == $child->id)>&nbsp;&nbsp;└ {{ $child->code ?: $child->name }}</option>
                                     @endforeach
                                 @endforeach
                             </select>{!! $caret !!}
@@ -759,32 +752,10 @@ function productForm(init) {
     };
 }
 
-// ── CDC articles : héritage des propriétés de la catégorie ──────────────────
+// [X3] L'ancien héritage FAMILLE→article (data-props sur family_id_select) est
+// SUPPRIMÉ : la famille est un classement pur ; le fonctionnement vient de la
+// CATÉGORIE (CategoryDefaultsService côté serveur, $store.cat côté affichage).
 document.addEventListener('DOMContentLoaded', function () {
-    const catSelect = document.getElementById('family_id_select');
-    if (catSelect) {
-        catSelect.addEventListener('change', function () {
-            const opt = this.options[this.selectedIndex];
-            if (!opt || !opt.dataset.props) return;
-            const p = JSON.parse(opt.dataset.props);
-            // [FIX Fabriqué(F)] dispatch 'change' pour que les cases pilotées par x-model
-            // (état Alpine) prennent la nouvelle valeur — sinon l'état écraserait le .checked.
-            const setCheck = (name, val) => { const b = document.querySelector('input[type="checkbox"][name="' + name + '"]'); if (b) { b.checked = !!val; b.dispatchEvent(new Event('change')); } };
-            const setSelect = (name, val) => { const s = document.querySelector('select[name="' + name + '"]'); if (s && val) s.value = val; };
-            setCheck('is_stockable', p.gs);
-            setCheck('allow_negative_stock', p.sneg);
-            setCheck('has_lot_number', p.gl);
-            setCheck('has_serial_number', p.serie);
-            setCheck('controle_qualite', p.qc);
-            setCheck('is_purchasable', (p.flux || []).includes('achete'));
-            setCheck('is_sellable', (p.flux || []).includes('vendu'));
-            setCheck('is_manufacturable', (p.flux || []).includes('fabrique'));
-            setSelect('unit_id', p.us);
-            setSelect('purchase_unit_id', p.ua);
-            setSelect('sale_unit_id', p.uv);
-            setSelect('main_warehouse_id', p.depot);
-        });
-    }
     // Coef UA-US auto = 1 / poids net
     const netWeight = document.querySelector('input[name="net_weight_per_us"]');
     const coefUaUs  = document.getElementById('ua_to_us_coef');
