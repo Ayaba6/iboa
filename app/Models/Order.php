@@ -209,6 +209,36 @@ class Order extends Model
             ->where('status', 'confirme')->where('is_acompte', true)
             ->sum('unallocated_amount');
 
+        // [FIX anomalie ÉLEVÉE — acomptes libres partagés] Un même acompte libre ne
+        // peut pas rendre plusieurs commandes éligibles : les commandes SŒURS du
+        // client ayant déjà un OF ACTIF « réservent » la part d'acompte libre qui a
+        // couvert leur exigence (requis − leurs encaissements propres). Déduction
+        // conservatrice : en cas de doute, la commande est SOUS-éligible, jamais sur-éligible.
+        if ($acomptesLibres > 0) {
+            $siblings = static::where('client_id', $this->client_id)
+                ->where('id', '!=', $this->id)
+                ->whereHas('productionOrders', fn ($q) => $q->where('status', '!=', 'annule'))
+                ->get();
+            foreach ($siblings as $sibling) {
+                $required = $sibling->requiredBeforeProduction();
+                if ($required === null) {
+                    continue; // crédit : éligible par approbation, ne consomme pas d'acompte
+                }
+                $ownReceipts = (int) \App\Models\Invoice::where('order_id', $sibling->id)->pluck('id')
+                    ->pipe(fn ($ids) => $ids->isNotEmpty()
+                        ? \App\Models\ClientPaymentAllocation::whereIn('invoice_id', $ids)
+                            ->whereHas('clientPayment', fn ($q) => $q->where('status', 'confirme'))->sum('amount')
+                        : 0)
+                    + (int) $sibling->bonPreparations()
+                        ->whereIn('status', ['en_attente', 'en_cours', 'charge'])->sum('payment_amount');
+                $claimed = max(0, $required - $ownReceipts);
+                $acomptesLibres = max(0, $acomptesLibres - $claimed);
+                if ($acomptesLibres === 0) {
+                    break;
+                }
+            }
+        }
+
         // Plafond au TTC : si le même argent caisse (BP) est ensuite ressaisi en
         // trésorerie et alloué à la facture (aucun lien BP↔ClientPayment n'existe),
         // la somme sur-compterait — le plafond rend ce cumul inoffensif pour
