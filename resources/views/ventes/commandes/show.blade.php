@@ -172,6 +172,26 @@
                     </div>
                     @endcan
                     @endif
+
+                    {{-- [Flux tôle bac §3] Gérant : approuver une commande NON réglée pour production --}}
+                    @if($order->production_approved)
+                        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-[4px] text-sm font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Approuvée pour production
+                        </span>
+                    @elseif(!$order->hasBonPreparation())
+                    @can('production.approve_financial')
+                    <form action="{{ route('ventes.commandes.approve-production', $order) }}" method="POST"
+                          onsubmit="return confirm('Approuver cette commande pour la production sans encaissement préalable ?')">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 border border-blue-300 text-blue-700 bg-white rounded-[4px] text-sm font-semibold hover:bg-blue-50 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Approuver pour production
+                        </button>
+                    </form>
+                    @endcan
+                    @endif
+
                     @php $activeBp = $order->activeBonPreparation(); @endphp
                     @if($order->isReadyForDelivery())
                     <form action="{{ route('ventes.commandes.delivery-note', $order) }}" method="POST"

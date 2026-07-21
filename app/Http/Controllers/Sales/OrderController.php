@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\TaxRate;
 use App\Services\BonPreparationService;
 use App\Services\CommercialWorkflowService;
+use Illuminate\Http\RedirectResponse;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 
@@ -323,5 +324,28 @@ class OrderController extends Controller
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * [Flux tôle bac §3] POST ventes/commandes/{commande}/approve-production
+     * Le gérant valide une commande NON réglée pour production (éligible à l'OF
+     * sans encaissement préalable). Permission DAF/DG.
+     */
+    public function approveProduction(Request $request, Order $commande): RedirectResponse
+    {
+        if (! in_array($commande->status, ['confirme', 'en_preparation'], true)) {
+            return back()->with('error', 'La commande doit être confirmée pour être approuvée en production.');
+        }
+        if ($commande->production_approved) {
+            return back()->with('error', 'Cette commande est déjà approuvée pour la production.');
+        }
+
+        $commande->update([
+            'production_approved'    => true,
+            'production_approved_at' => now(),
+            'production_approved_by' => $request->user()->id,
+        ]);
+
+        return back()->with('success', 'Commande approuvée pour la production — éligible à la création d\'OF.');
     }
 }

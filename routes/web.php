@@ -373,6 +373,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('permission:payments.create')->group(function () {
             Route::post('commandes/{commande}/register-payment', [\App\Http\Controllers\Sales\OrderController::class, 'registerPayment'])->name('commandes.register-payment');
         });
+        // [Flux tôle bac §3] Approbation gérant d'une commande non réglée pour production
+        Route::middleware('permission:production.approve_financial')->group(function () {
+            Route::post('commandes/{commande}/approve-production', [\App\Http\Controllers\Sales\OrderController::class, 'approveProduction'])->name('commandes.approve-production');
+        });
         // [CDC §bon-préparation] Module bon de préparation
         Route::middleware('permission:bon_preparations.view')->group(function () {
             Route::resource('bons-preparation', \App\Http\Controllers\Sales\BonPreparationController::class)
@@ -1621,6 +1625,9 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     // Coût de revient
     Route::post('orders/{order}/cost', [\App\Modules\Production\Controllers\ProductionCostController::class, 'compute'])->name('orders.cost');
     Route::delete('quality/{qualityControl}', [\App\Modules\Production\Controllers\ProductionQualityController::class, 'destroy'])->name('quality.destroy');
+
+    // [Flux tôle bac §3] Tableau des commandes éligibles à la production (réglées ou approuvées, sans OF)
+    Route::get('orders/eligible', [\App\Modules\Production\Controllers\ProductionOrderController::class, 'eligible'])->name('orders.eligible');
 
     Route::resource('orders', \App\Modules\Production\Controllers\ProductionOrderController::class);
 

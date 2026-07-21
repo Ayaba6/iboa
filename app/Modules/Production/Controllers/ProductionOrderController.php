@@ -91,6 +91,25 @@ class ProductionOrderController extends Controller
         return view('production.orders.index', compact('orders', 'stats', 'clients', 'produits', 'lignes', 'responsables'));
     }
 
+    /**
+     * [Flux tôle bac §3] Commandes éligibles à la production sans OF encore :
+     * réglées (bon de préparation = paiement caisse) OU approuvées par le gérant.
+     * Le coordinateur y crée l'OF.
+     */
+    public function eligible(Request $request): View
+    {
+        $orders = Order::eligibleForProduction()
+            ->with([
+                'client:id,name,trade_name,payment_mode',
+                'productionApprovedBy:id,name',
+                'items.product:id,name,reference',
+            ])
+            ->orderByDesc('id')
+            ->paginate(25);
+
+        return view('production.orders.eligible', compact('orders'));
+    }
+
     public function create(Request $request): View
     {
         $order = new ProductionOrder();

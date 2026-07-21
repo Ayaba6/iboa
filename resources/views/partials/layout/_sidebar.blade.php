@@ -419,6 +419,7 @@ request()->routeIs('achats.*')                                                  
                         @foreach(array_filter([
                             /* Suivi OF : tous les porteurs de production.view (dont commercial §13.10) */
                             [route('production.dashboard'),      'Tableau de bord',       'production.dashboard'],
+                            [route('production.orders.eligible'), 'Commandes à produire', 'production.orders.eligible'],
                             [route('production.orders.index'),   'Ordres de fabrication', 'production.orders*'],
                             [route('production.trackings.index'), 'Suivi de fabrication', 'production.trackings*'],
                             /* Bobines : plus de sous-menu dédié — rattachées à la fiche article

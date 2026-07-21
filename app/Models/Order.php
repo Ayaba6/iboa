@@ -28,6 +28,9 @@ class Order extends Model
         'number',
         'reference',
         'status',
+        'production_approved',
+        'production_approved_at',
+        'production_approved_by',
         'issued_at',
         'expires_at',
         'delivery_date',
@@ -63,6 +66,8 @@ class Order extends Model
 
     protected $casts = [
         'net_prices'              => 'boolean',
+        'production_approved'     => 'boolean',
+        'production_approved_at'  => 'datetime',
         'total_weight_kg'         => 'decimal:2',
         'issued_at'               => 'date',
         'expires_at'              => 'date',
@@ -146,6 +151,30 @@ class Order extends Model
     public function bonPreparations(): HasMany
     {
         return $this->hasMany(BonPreparation::class);
+    }
+
+    public function productionApprovedBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'production_approved_by');
+    }
+
+    /** OF actif (non annulé) lié à la commande. */
+    public function hasActiveProductionOrder(): bool
+    {
+        return $this->productionOrders()->where('status', '!=', 'annule')->exists();
+    }
+
+    /**
+     * [Flux tôle bac §3] Commande éligible à la production = confirmée, sans OF actif,
+     * ET (réglée [BP actif = paiement caisse comptant] OU approuvée production par le gérant).
+     */
+    public function scopeEligibleForProduction($query)
+    {
+        return $query->whereIn('status', ['confirme', 'en_preparation'])
+            ->whereDoesntHave('productionOrders', fn ($q) => $q->where('status', '!=', 'annule'))
+            ->where(fn ($q) => $q
+                ->where('production_approved', true)
+                ->orWhereHas('bonPreparations', fn ($b) => $b->whereIn('status', ['en_attente', 'en_cours', 'charge'])));
     }
 
     /** Retourne true si la commande a un bon de préparation actif (pas annulé). */
