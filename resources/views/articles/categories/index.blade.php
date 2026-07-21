@@ -77,7 +77,13 @@
                     @foreach(['is_purchasable','is_sellable','is_stockable','is_manufactured','qc_required'] as $flag)
                     <td class="px-3 py-1.5">{!! $c->$flag ? '<span class="text-emerald-600 font-bold">✓</span>' : '<span class="text-gray-300">—</span>' !!}</td>
                     @endforeach
-                    <td class="px-3 py-1.5 tabular-nums font-semibold">{{ $c->products_count }}</td>
+                    <td class="px-3 py-1.5 tabular-nums font-semibold">
+                        @if($c->products_count > 0)
+                            <a href="{{ route('products.index', ['item_category_id' => $c->id]) }}" class="text-emerald-800 hover:underline" title="Voir les articles de la catégorie">{{ $c->products_count }}</a>
+                        @else
+                            <span class="text-gray-400">0</span>
+                        @endif
+                    </td>
                     <td class="px-3 py-1.5">{!! $c->is_active ? '<span class="inline-flex px-2 py-0.5 rounded text-[11px] bg-green-100 text-green-800">Active</span>' : '<span class="inline-flex px-2 py-0.5 rounded text-[11px] bg-gray-100 text-gray-600">Inactive</span>' !!}</td>
                     <td class="px-3 py-1.5 text-right whitespace-nowrap">
                         @can('categories.update')<a href="{{ route('articles.categories.edit', $c) }}" class="text-[12px] text-gray-500 hover:text-emerald-700 mr-2">Modifier</a>@endcan

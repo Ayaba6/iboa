@@ -98,6 +98,16 @@
             </div>
 
             <div>
+                <label class="{{ $lblX }}">Catégorie</label>
+                <div class="relative"><select name="item_category_id" class="{{ $lkX }}">
+                    <option value="">Toutes les catégories</option>
+                    @foreach($itemCategories as $ic)
+                        <option value="{{ $ic->id }}" {{ request('item_category_id') == $ic->id ? 'selected' : '' }}>{{ $ic->code }} — {{ $ic->name }}</option>
+                    @endforeach
+                </select>{!! $carX !!}</div>
+            </div>
+
+            <div>
                 <label class="{{ $lblX }}">Type</label>
                 <div class="relative"><select name="type" class="{{ $lkX }}">
                     <option value="">Tous les types</option>

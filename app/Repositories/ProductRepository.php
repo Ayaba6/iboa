@@ -26,6 +26,7 @@ class ProductRepository extends BaseRepository
             ->when(isset($filters['family_id']), fn($q) => $q->where(fn($qq) => $qq
                 ->where('family_id', $filters['family_id'])
                 ->orWhere('sub_family_id', $filters['family_id'])))
+            ->when(isset($filters['item_category_id']), fn($q) => $q->where('item_category_id', $filters['item_category_id']))
             // [PHASE E] Recherche avancée : code article, familles 3 niveaux, statut
             ->when(!empty($filters['code_article']), fn($q) => $q->where('code_article', 'like', "%{$filters['code_article']}%"))
             ->when(!empty($filters['famille1_id']), fn($q) => $q->where('famille1_id', $filters['famille1_id']))

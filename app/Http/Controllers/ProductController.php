@@ -34,7 +34,7 @@ class ProductController extends Controller
         $this->authorize('viewAny', Product::class);
         if ($request->boolean('export')) {
             return Excel::download(
-                new ProductsExport($request->only(['search', 'family_id', 'brand_id', 'type'])),
+                new ProductsExport($request->only(['search', 'family_id', 'brand_id', 'type', 'item_category_id'])),
                 'articles-' . now()->format('Ymd') . '.xlsx'
             );
         }
@@ -45,6 +45,7 @@ class ProductController extends Controller
             ->orderBy('sort_order')->orderBy('name')->get();
         $familiesFlat = ProductFamily::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']);
         $brands    = Brand::where('is_active', true)->orderBy('name')->get();
+        $itemCategories = \App\Models\ItemCategory::where('is_active', true)->orderBy('sort_order')->get(['id', 'code', 'name']);
 
         $summary = [
             'total'     => Product::count(),
@@ -53,7 +54,7 @@ class ProductController extends Controller
             'purchasable'=> Product::where('is_active', true)->where('is_purchasable', true)->count(),
         ];
 
-        return view('products.index', compact('products', 'families', 'familiesFlat', 'brands', 'summary'));
+        return view('products.index', compact('products', 'families', 'familiesFlat', 'brands', 'itemCategories', 'summary'));
     }
 
     public function create(): View
