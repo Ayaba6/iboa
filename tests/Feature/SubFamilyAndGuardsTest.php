@@ -198,3 +198,25 @@ it('attributs dynamiques : obligatoire exigé, select contrôlé, valeurs sauveg
     expect($p->attributeValues()->whereHas('attribute', fn ($q) => $q->where('code', 'nuance'))->first()->value)->toBe('S250GD')
         ->and($p->attributeValues()->count())->toBe(2); // upsert, pas de doublon
 });
+
+it('form famille simplifié : création racine + sous-famille via HTTP (classement pur)', function () {
+    sfSetup();
+
+    $this->get(route('product-families.create'))
+        ->assertOk()
+        ->assertSee('classement commercial')
+        ->assertSee('Famille parente')
+        ->assertDontSee('type_flux')     // champs de gestion retirés
+        ->assertDontSee('Compte de stock');
+
+    $this->post(route('product-families.store'), [
+        'code' => 'ACCESS_COUV', 'name' => 'Accessoires de couverture', 'is_active' => 1,
+    ])->assertRedirect();
+    $racine = ProductFamily::where('code', 'ACCESS_COUV')->first();
+    expect($racine)->not->toBeNull();
+
+    $this->post(route('product-families.store'), [
+        'code' => 'AC_VIS', 'name' => 'Visserie', 'parent_id' => $racine->id, 'is_active' => 1,
+    ])->assertRedirect();
+    expect(ProductFamily::where('code', 'AC_VIS')->first()->parent_id)->toBe($racine->id);
+});
