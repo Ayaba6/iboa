@@ -46,8 +46,8 @@
                     </td>
                     <td class="px-3 py-1.5">
                         @if($order->production_approved)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Approuvée gérant</span>
-                            @if($order->productionApprovedBy)<div class="text-[10.5px] text-gray-400 mt-0.5">{{ $order->productionApprovedBy->name }}</div>@endif
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800" title="{{ $order->production_approval_reason }}">Approuvée gérant</span>
+                            @if($order->productionApprovedBy)<div class="text-[10.5px] text-gray-400 mt-0.5">{{ $order->productionApprovedBy->name }}@if($order->production_approval_expires_at) · valide → {{ $order->production_approval_expires_at->format('d/m/Y') }}@endif</div>@endif
                         @else
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Réglée (caisse)</span>
                         @endif

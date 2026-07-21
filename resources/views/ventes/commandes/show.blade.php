@@ -181,14 +181,36 @@
                         </span>
                     @elseif(!$order->hasBonPreparation())
                     @can('production.approve_financial')
-                    <form action="{{ route('ventes.commandes.approve-production', $order) }}" method="POST"
-                          onsubmit="return confirm('Approuver cette commande pour la production sans encaissement préalable ?')">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 border border-blue-300 text-blue-700 bg-white rounded-[4px] text-sm font-semibold hover:bg-blue-50 transition-colors">
+                    <div x-data="{ open: false }">
+                        <button type="button" @click="open = true" class="inline-flex items-center gap-2 px-3 py-2 border border-blue-300 text-blue-700 bg-white rounded-[4px] text-sm font-semibold hover:bg-blue-50 transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Approuver pour production
                         </button>
-                    </form>
+                        <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
+                            <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
+                                <h3 class="font-semibold text-gray-900 mb-1">Approbation exceptionnelle pour production</h3>
+                                <p class="text-xs text-gray-500 mb-4">Commande non réglée — l'approbation autorise la fabrication sans encaissement préalable. Elle est tracée (motif, montant non réglé, validité).</p>
+                                <form action="{{ route('ventes.commandes.approve-production', $order) }}" method="POST" class="space-y-3">
+                                    @csrf
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Motif <span class="text-red-500">*</span></label>
+                                        <textarea name="motif" rows="3" required minlength="5" maxlength="500"
+                                                  class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500"
+                                                  placeholder="Ex. : client historique, engagement de règlement sous 8 jours…"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Validité (jours) <span class="text-gray-400 font-normal">— vide = sans limite</span></label>
+                                        <input type="number" name="valide_jours" min="1" max="90"
+                                               class="w-32 border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500" placeholder="Ex. 15">
+                                    </div>
+                                    <div class="flex justify-end gap-2 pt-1">
+                                        <button type="button" @click="open = false" class="{{ $btnO }}">Annuler</button>
+                                        <button type="submit" class="{{ $btnP }} bg-blue-600 hover:bg-blue-700">Approuver</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                     @endcan
                     @endif
 

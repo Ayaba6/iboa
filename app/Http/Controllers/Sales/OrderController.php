@@ -333,6 +333,13 @@ class OrderController extends Controller
      */
     public function approveProduction(Request $request, Order $commande): RedirectResponse
     {
+        // [MTO §1.3 cas 2] Motif obligatoire — une approbation sans justification est refusée.
+        $request->validate([
+            'motif'       => ['required', 'string', 'min:5', 'max:500'],
+            'valide_jours' => ['nullable', 'integer', 'min:1', 'max:90'],
+        ], ['motif.required' => "Le motif de l'approbation exceptionnelle est obligatoire.",
+            'motif.min'      => 'Le motif doit contenir au moins 5 caractères.']);
+
         if (! in_array($commande->status, ['confirme', 'en_preparation'], true)) {
             return back()->with('error', 'La commande doit être confirmée pour être approuvée en production.');
         }
@@ -340,10 +347,23 @@ class OrderController extends Controller
             return back()->with('error', 'Cette commande est déjà approuvée pour la production.');
         }
 
+        // Snapshot du montant réellement non réglé au moment de l'approbation.
+        $invoiceIds = \App\Models\Invoice::where('order_id', $commande->id)->pluck('id');
+        $paid = $invoiceIds->isNotEmpty()
+            ? (int) \App\Models\ClientPaymentAllocation::whereIn('invoice_id', $invoiceIds)
+                ->whereHas('clientPayment', fn ($q) => $q->where('status', 'confirme'))->sum('amount')
+            : 0;
+        $unpaid = max(0, (int) $commande->total_ttc - $paid);
+
         $commande->update([
-            'production_approved'    => true,
-            'production_approved_at' => now(),
-            'production_approved_by' => $request->user()->id,
+            'production_approved'            => true,
+            'production_approved_at'         => now(),
+            'production_approved_by'         => $request->user()->id,
+            'production_approval_reason'     => $request->input('motif'),
+            'production_approval_unpaid'     => $unpaid,
+            'production_approval_expires_at' => $request->filled('valide_jours')
+                ? today()->addDays((int) $request->input('valide_jours'))
+                : null,
         ]);
 
         return back()->with('success', 'Commande approuvée pour la production — éligible à la création d\'OF.');

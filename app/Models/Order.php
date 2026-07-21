@@ -31,6 +31,9 @@ class Order extends Model
         'production_approved',
         'production_approved_at',
         'production_approved_by',
+        'production_approval_reason',
+        'production_approval_unpaid',
+        'production_approval_expires_at',
         'issued_at',
         'expires_at',
         'delivery_date',
@@ -68,6 +71,8 @@ class Order extends Model
         'net_prices'              => 'boolean',
         'production_approved'     => 'boolean',
         'production_approved_at'  => 'datetime',
+        'production_approval_expires_at' => 'date',
+        'production_approval_unpaid'     => 'integer',
         'total_weight_kg'         => 'decimal:2',
         'issued_at'               => 'date',
         'expires_at'              => 'date',
@@ -165,15 +170,21 @@ class Order extends Model
     }
 
     /**
-     * [Flux tôle bac §3] Commande éligible à la production = confirmée, sans OF actif,
-     * ET (réglée [BP actif = paiement caisse comptant] OU approuvée production par le gérant).
+     * [Flux tôle bac §3 / MTO §1.3] Commande éligible à la production = confirmée,
+     * portant au moins un article MTO, sans OF actif, ET (réglée [BP actif = paiement
+     * caisse comptant] OU approuvée production par le gérant, approbation non expirée).
      */
     public function scopeEligibleForProduction($query)
     {
         return $query->whereIn('status', ['confirme', 'en_preparation'])
+            ->whereHas('items.product', fn ($q) => $q->where('production_mode', 'mto'))
             ->whereDoesntHave('productionOrders', fn ($q) => $q->where('status', '!=', 'annule'))
             ->where(fn ($q) => $q
-                ->where('production_approved', true)
+                ->where(fn ($a) => $a
+                    ->where('production_approved', true)
+                    ->where(fn ($v) => $v
+                        ->whereNull('production_approval_expires_at')
+                        ->orWhereDate('production_approval_expires_at', '>=', today())))
                 ->orWhereHas('bonPreparations', fn ($b) => $b->whereIn('status', ['en_attente', 'en_cours', 'charge'])));
     }
 
