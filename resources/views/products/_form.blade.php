@@ -103,28 +103,26 @@
                             </select>{!! $caret !!}
                         </div>
                     </div>
-                    <div class="sm:col-span-3">
-                        {{-- [X3] Catégorie de gestion : détermine le fonctionnement de l'article
-                             (flux, stratégie MTO/MTS, stock, comptes). Les défauts sont appliqués
-                             CÔTÉ SERVEUR à la création (CategoryDefaultsService). --}}
-                        <div class="mb-3">
-                            <label class="{{ $lbl }}">Catégorie de gestion</label>
-                            <div class="relative">
-                                {{-- [X3 §7/§10] Les data-props pilotent l'affichage des sections du form
-                                     (Achat/Vente/Production/Stock) selon la catégorie. Serveur reste maître. --}}
-                                <select name="item_category_id" class="{{ $lk }}"
-                                        @change="const o=$event.target.selectedOptions[0]; $store.cat.f = o && o.dataset.props ? JSON.parse(o.dataset.props) : null">
-                                    <option value="">—</option>
-                                    @foreach(\App\Models\ItemCategory::where('is_active', true)->orderBy('sort_order')->get() as $ic)
-                                        <option value="{{ $ic->id }}"
-                                                data-props='{!! json_encode(['man' => (bool) $ic->is_manufactured, 'buy' => (bool) $ic->is_purchasable, 'sell' => (bool) $ic->is_sellable, 'stk' => (bool) $ic->is_stockable, 'nat' => $ic->nature]) !!}'
-                                                @selected(old('item_category_id', $p->item_category_id ?? '') == $ic->id)>{{ $ic->code }} — {{ $ic->name }}</option>
-                                    @endforeach
-                                </select>{!! $caret !!}
-                            </div>
-                            <p class="text-[10.5px] text-gray-400 mt-0.5">Modèle de gestion (≠ famille). Pose les défauts : flux, MTO/MTS, stock, comptes.</p>
+                    {{-- [X3] Catégorie de gestion : détermine le fonctionnement de l'article
+                         (flux, stratégie MTO/MTS, stock, comptes). Défauts appliqués CÔTÉ
+                         SERVEUR à la création (CategoryDefaultsService) ; les data-props
+                         pilotent l'affichage des sections Achat/Vente/Production/Stock. --}}
+                    <div class="sm:col-span-4">
+                        <label class="{{ $lbl }}" title="Modèle de gestion (≠ famille). Pose les défauts : flux, MTO/MTS, stock, comptes.">Catégorie de gestion</label>
+                        <div class="relative">
+                            <select name="item_category_id" class="{{ $lk }}"
+                                    @change="const o=$event.target.selectedOptions[0]; $store.cat.f = o && o.dataset.props ? JSON.parse(o.dataset.props) : null">
+                                <option value="">—</option>
+                                @foreach(\App\Models\ItemCategory::where('is_active', true)->orderBy('sort_order')->get() as $ic)
+                                    <option value="{{ $ic->id }}"
+                                            data-props='{!! json_encode(['man' => (bool) $ic->is_manufactured, 'buy' => (bool) $ic->is_purchasable, 'sell' => (bool) $ic->is_sellable, 'stk' => (bool) $ic->is_stockable, 'nat' => $ic->nature]) !!}'
+                                            @selected(old('item_category_id', $p->item_category_id ?? '') == $ic->id)>{{ $ic->code }} — {{ $ic->name }}</option>
+                                @endforeach
+                            </select>{!! $caret !!}
                         </div>
-                        <label class="{{ $lbl }}">Famille <span class="text-gray-400 font-normal">(classement commercial)</span></label>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="{{ $lbl }}" title="Classement commercial et statistique (n'influe pas sur la gestion).">Famille</label>
                         <div class="relative">
                             <select name="family_id" id="family_id_select" class="{{ $lk }}">
                                 <option value="">—</option>
@@ -136,21 +134,21 @@
                                 @endforeach
                             </select>{!! $caret !!}
                         </div>
-                        {{-- [X3 §5] Sous-famille : filtrée sur la famille sélectionnée (garde serveur en plus). --}}
-                        <div class="mt-2">
-                            <label class="{{ $lbl }}">Sous-famille</label>
-                            <div class="relative">
-                                <select name="sub_family_id" id="sub_family_select" class="{{ $lk }}"
-                                        onfocus="(function(s){var fam=document.getElementById('family_id_select').value;Array.from(s.options).forEach(function(o){o.hidden=o.value!=='' && o.dataset.parent!==fam;});})(this)">
-                                    <option value="">—</option>
-                                    @foreach(\App\Models\ProductFamily::whereNotNull('parent_id')->where('is_active', true)->orderBy('name')->get() as $sf)
-                                        <option value="{{ $sf->id }}" data-parent="{{ $sf->parent_id }}" @selected(old('sub_family_id', $p->sub_family_id ?? '') == $sf->id)>{{ $sf->name }}</option>
-                                    @endforeach
-                                </select>{!! $caret !!}
-                            </div>
-                            <p class="text-[10.5px] text-gray-400 mt-0.5">Doit appartenir à la famille choisie (contrôlé côté serveur).</p>
+                    </div>
+                    {{-- [X3 §5] Sous-famille : filtrée sur la famille sélectionnée (garde serveur en plus). --}}
+                    <div class="sm:col-span-3">
+                        <label class="{{ $lbl }}" title="Doit appartenir à la famille choisie (contrôlé côté serveur).">Sous-famille</label>
+                        <div class="relative">
+                            <select name="sub_family_id" id="sub_family_select" class="{{ $lk }}"
+                                    onfocus="(function(s){var fam=document.getElementById('family_id_select').value;Array.from(s.options).forEach(function(o){o.hidden=o.value!=='' && o.dataset.parent!==fam;});})(this)">
+                                <option value="">—</option>
+                                @foreach(\App\Models\ProductFamily::whereNotNull('parent_id')->where('is_active', true)->orderBy('name')->get() as $sf)
+                                    <option value="{{ $sf->id }}" data-parent="{{ $sf->parent_id }}" @selected(old('sub_family_id', $p->sub_family_id ?? '') == $sf->id)>{{ $sf->name }}</option>
+                                @endforeach
+                            </select>{!! $caret !!}
                         </div>
                     </div>
+
                     <div class="sm:col-span-2">
                         <label class="{{ $lbl }}">Code article <span class="text-red-600">*</span></label>
                         <input type="text" name="code_article" maxlength="10" value="{{ old('code_article', $p->code_article ?? '') }}"
@@ -170,6 +168,27 @@
                             </select>{!! $caret !!}
                         </div>
                     </div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $lbl }}">Statut</label>
+                        <div class="relative">
+                            <select name="statut" class="{{ $lk }}">
+                                @php $st = old('statut', $p->statut ?? 'actif'); @endphp
+                                <option value="actif" @selected($st==='actif')>Actif</option>
+                                <option value="inactif" @selected($st==='inactif')>En sommeil</option>
+                                <option value="bloque" @selected($st==='bloque')>Bloqué</option>
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="{{ $lbl }}">Structure</label>
+                        <div class="relative">
+                            <select name="type" x-model="type" required class="{{ $lk }}">
+                                <option value="simple">Simple</option>
+                                <option value="service">Service</option>
+                                <option value="compose">Composé (kit)</option>
+                            </select>{!! $caret !!}
+                        </div>
+                    </div>
 
                     <div class="sm:col-span-6">
                         <label class="{{ $lbl }}">Désignation 1 <span class="text-red-600">*</span></label>
@@ -182,29 +201,8 @@
                                class="{{ $inp }}" placeholder="TÔLE BAC ALUMINIUM PUR 70/100 AL6">
                     </div>
 
-                    <div class="sm:col-span-2">
-                        <label class="{{ $lbl }}">Statut</label>
-                        <div class="relative">
-                            <select name="statut" class="{{ $lk }}">
-                                @php $st = old('statut', $p->statut ?? 'actif'); @endphp
-                                <option value="actif" @selected($st==='actif')>Actif</option>
-                                <option value="inactif" @selected($st==='inactif')>En sommeil</option>
-                                <option value="bloque" @selected($st==='bloque')>Bloqué</option>
-                            </select>{!! $caret !!}
-                        </div>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="{{ $lbl }}">Structure</label>
-                        <div class="relative">
-                            <select name="type" x-model="type" required class="{{ $lk }}">
-                                <option value="simple">Simple</option>
-                                <option value="service">Service</option>
-                                <option value="compose">Composé (kit)</option>
-                            </select>{!! $caret !!}
-                        </div>
-                    </div>
                     @foreach(['famille1_id' => 'Famille 1', 'famille2_id' => 'Famille 2', 'famille3_id' => 'Famille 3'] as $fname => $flabel)
-                    <div class="sm:col-span-2">
+                    <div class="sm:col-span-3">
                         <label class="{{ $lbl }}">{{ $flabel }}</label>
                         <div class="relative">
                             <select name="{{ $fname }}" class="{{ $lk }} font-mono">
@@ -214,7 +212,7 @@
                         </div>
                     </div>
                     @endforeach
-                    <div class="sm:col-span-2">
+                    <div class="sm:col-span-3">
                         <label class="{{ $lbl }}">Marque</label>
                         <div class="relative">
                             <select name="brand_id" class="{{ $lk }}">
