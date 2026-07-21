@@ -1,12 +1,12 @@
 @extends('layouts.erp')
-@section('title', 'Nouvelle catégorie')
+@section('title', 'Nouvelle famille')
 
 @section('breadcrumb')
     <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Accueil</a>
     <span class="mx-1">/</span>
-    <a href="{{ route('product-families.index') }}" class="hover:text-gray-700">Catégories</a>
+    <a href="{{ route('product-families.index') }}" class="hover:text-gray-700">Familles</a>
     <span class="mx-1">/</span>
-    <span class="text-gray-900 font-medium">Nouvelle catégorie</span>
+    <span class="text-gray-900 font-medium">Nouvelle famille</span>
 @endsection
 
 @section('content')
@@ -20,8 +20,8 @@
         {{-- Barre d'en-tête façon SAGE X3 : titre fiche + actions à droite --}}
         <div class="flex items-center justify-between bg-white border border-gray-300 rounded-[4px] px-3 py-2.5">
             <div>
-                <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Catégories : Création complète</h1>
-                <p class="text-[12px] text-gray-500">L'article hérite des propriétés de sa catégorie — flux, gestion de stock, unités, comptes</p>
+                <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Familles : Création</h1>
+                <p class="text-[12px] text-gray-500">Classement commercial et statistique — la gestion des articles relève des catégories</p>
             </div>
             <div class="flex items-center gap-2">
                 <button type="submit"
@@ -54,7 +54,7 @@
     <div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
         <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
         <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
-        <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">Catégorie article</span></span>
+        <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">Famille article</span></span>
         <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
         <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
