@@ -49,7 +49,8 @@
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800" title="{{ $order->production_approval_reason }}">Approuvée gérant</span>
                             @if($order->productionApprovedBy)<div class="text-[10.5px] text-gray-400 mt-0.5">{{ $order->productionApprovedBy->name }}@if($order->production_approval_expires_at) · valide → {{ $order->production_approval_expires_at->format('d/m/Y') }}@endif</div>@endif
                         @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Réglée (caisse)</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Réglée</span>
+                            <div class="text-[10.5px] text-gray-400 mt-0.5 tabular-nums">{{ number_format($order->confirmedReceipts(), 0, ',', ' ') }} / {{ number_format((int) ($order->requiredBeforeProduction() ?? 0), 0, ',', ' ') }} F</div>
                         @endif
                     </td>
                     <td class="px-3 py-1.5 text-right tabular-nums font-medium">{{ number_format((int) $order->total_ttc, 0, ',', ' ') }} FCFA</td>
@@ -67,6 +68,5 @@
         </table>
     </div>
 
-    @if($orders->hasPages())<div>{{ $orders->withQueryString()->links() }}</div>@endif
 </div>
 @endsection

@@ -244,22 +244,10 @@ class ProductionService
             return;
         }
 
-        // Encaissements déjà reçus pour cette commande :
-        // orders → invoices(order_id) → client_payment_allocations(invoice_id)
-        $invoiceIds = \App\Models\Invoice::where('order_id', $salesOrder->id)->pluck('id');
-        $paidViaInvoice = $invoiceIds->isNotEmpty()
-            ? (float) \App\Models\ClientPaymentAllocation::whereIn('invoice_id', $invoiceIds)
-                ->whereHas('clientPayment', fn ($q) => $q->where('status', 'confirme'))
-                ->sum('amount')
-            : 0.0;
-
-        // Acomptes non alloués reçus directement du client (is_acompte=true)
-        $acompteLibre = (float) \App\Models\ClientPayment::where('client_id', $salesOrder->client_id)
-            ->where('status', 'confirme')
-            ->where('is_acompte', true)
-            ->sum('unallocated_amount');
-
-        $paid = $paidViaInvoice + $acompteLibre;
+        // [MTO §1.3 — méthode centrale] Encaissements confirmés de la commande :
+        // allocations factures + paiements caisse (BP) + acomptes libres client.
+        // Même source que l'éligibilité du tableau coordinateur (Order::confirmedReceipts).
+        $paid = (float) $salesOrder->confirmedReceipts();
         $rate = $totalTtc > 0 ? round(($paid / $totalTtc) * 100, 1) : 0;
 
         // Déterminer le mode de paiement du client

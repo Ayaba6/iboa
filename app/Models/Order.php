@@ -170,9 +170,74 @@ class Order extends Model
     }
 
     /**
-     * [Flux tôle bac §3 / MTO §1.3] Commande éligible à la production = confirmée,
-     * portant au moins un article MTO, sans OF actif, ET (réglée [BP actif = paiement
-     * caisse comptant] OU approuvée production par le gérant, approbation non expirée).
+     * [MTO §1.3 — méthode centrale] Encaissements confirmés rattachables à la commande :
+     *   1. allocations confirmées sur les factures de la commande ;
+     *   2. paiements caisse enregistrés sur les bons de préparation actifs (comptant) ;
+     *   3. acomptes libres confirmés du client (non alloués).
+     * Utilisée PAR LE TABLEAU d'éligibilité ET par la gate financière de lancement OF
+     * (même règle, même source — exigence de recette).
+     */
+    public function confirmedReceipts(): int
+    {
+        $invoiceIds = \App\Models\Invoice::where('order_id', $this->id)->pluck('id');
+        $viaInvoices = $invoiceIds->isNotEmpty()
+            ? (int) \App\Models\ClientPaymentAllocation::whereIn('invoice_id', $invoiceIds)
+                ->whereHas('clientPayment', fn ($q) => $q->where('status', 'confirme'))->sum('amount')
+            : 0;
+
+        $viaCaisse = (int) $this->bonPreparations()
+            ->whereIn('status', ['en_attente', 'en_cours', 'charge'])
+            ->sum('payment_amount');
+
+        $acomptesLibres = (int) \App\Models\ClientPayment::where('client_id', $this->client_id)
+            ->where('status', 'confirme')->where('is_acompte', true)
+            ->sum('unallocated_amount');
+
+        return $viaInvoices + $viaCaisse + $acomptesLibres;
+    }
+
+    /**
+     * [MTO §1.3] Montant minimum requis avant production selon le mode de paiement
+     * du client : comptant = 100 % TTC ; acompte = TTC × taux paramétré ;
+     * crédit/inconnu = jamais éligible financièrement (chemin approbation/DAF).
+     */
+    public function requiredBeforeProduction(): ?int
+    {
+        $mode = $this->client?->payment_mode;
+        if ($mode === 'comptant') {
+            return (int) $this->total_ttc;
+        }
+        if ($mode === 'acompte') {
+            $rate = (float) (\App\Models\SalesSetting::current()->deposit_required_rate ?? 70);
+
+            return (int) ceil((int) $this->total_ttc * $rate / 100);
+        }
+
+        return null; // crédit / non défini : pas de chemin financier direct
+    }
+
+    /** [MTO §1.3] Éligibilité financière = encaissements confirmés ≥ minimum requis. */
+    public function isFinanciallyEligibleForProduction(): bool
+    {
+        $required = $this->requiredBeforeProduction();
+
+        return $required !== null && $this->confirmedReceipts() >= $required;
+    }
+
+    /** [MTO §1.3] Approbation gérant valide (posée et non expirée). */
+    public function hasValidProductionApproval(): bool
+    {
+        return (bool) $this->production_approved
+            && ($this->production_approval_expires_at === null
+                || $this->production_approval_expires_at->gte(today()));
+    }
+
+    /**
+     * [Flux tôle bac §3 / MTO §1.3] Pré-filtre SQL de l'éligibilité : confirmée,
+     * ≥ 1 article MTO, sans OF actif, ET (approbation valide OU BP actif).
+     * Le volet financier exact (montant encaissé ≥ requis, 3 sources) n'est pas
+     * exprimable proprement en SQL : il est appliqué par le contrôleur du tableau
+     * via isFinanciallyEligibleForProduction() — même méthode que la gate OF.
      */
     public function scopeEligibleForProduction($query)
     {

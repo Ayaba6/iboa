@@ -98,14 +98,20 @@ class ProductionOrderController extends Controller
      */
     public function eligible(Request $request): View
     {
+        // Pré-filtre SQL (structure + approbation/BP), puis règle financière exacte :
+        // montant encaissé ≥ montant requis — MÊME méthode que la gate de lancement OF.
+        // Un BP partiel (ex. 50 000 sur 500 000 requis) n'apparaît donc plus ici.
         $orders = Order::eligibleForProduction()
             ->with([
                 'client:id,name,trade_name,payment_mode',
                 'productionApprovedBy:id,name',
                 'items.product:id,name,reference',
+                'bonPreparations:id,order_id,status,payment_amount',
             ])
             ->orderByDesc('id')
-            ->paginate(25);
+            ->get()
+            ->filter(fn (Order $o) => $o->hasValidProductionApproval() || $o->isFinanciallyEligibleForProduction())
+            ->values();
 
         return view('production.orders.eligible', compact('orders'));
     }
