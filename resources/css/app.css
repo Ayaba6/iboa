@@ -577,19 +577,21 @@ html.dark .erp-content .shadow-md { box-shadow: 0 1px 3px rgba(0,0,0,.35) !impor
 html.dark .erp-content .bg-\[\#eef5f0\],
 html.dark .erp-content .bg-band { background-color: var(--surface-muted) !important; }
 
-/* Fonds de bandeaux/tuiles sémantiques clairs → teinte sombre */
-html.dark .erp-content .bg-amber-50   { background-color: var(--warning-soft) !important; }
-html.dark .erp-content .bg-red-50,
-html.dark .erp-content .bg-rose-50    { background-color: var(--danger-soft) !important; }
-html.dark .erp-content .bg-green-50,
-html.dark .erp-content .bg-emerald-50 { background-color: var(--success-soft) !important; }
-html.dark .erp-content .bg-blue-50,
-html.dark .erp-content .bg-sky-50,
-html.dark .erp-content .bg-indigo-50  { background-color: var(--info-soft) !important; }
-html.dark .erp-content .bg-yellow-50  { background-color: #422006 !important; }
-html.dark .erp-content .bg-orange-50  { background-color: #431407 !important; }
-html.dark .erp-content .bg-purple-50,
-html.dark .erp-content .bg-violet-50  { background-color: #2E1065 !important; }
+/* Fonds de bandeaux/tuiles/badges sémantiques clairs (-50 et -100) → teinte sombre.
+   Le remappage -100 est indispensable pour les badges inline bg-*-100 + text-*-800 :
+   sans lui, le texte éclairci ci-dessous serait clair sur badge clair (illisible). */
+html.dark .erp-content .bg-amber-50,   html.dark .erp-content .bg-amber-100   { background-color: var(--warning-soft) !important; }
+html.dark .erp-content .bg-red-50,     html.dark .erp-content .bg-red-100,
+html.dark .erp-content .bg-rose-50,    html.dark .erp-content .bg-rose-100    { background-color: var(--danger-soft) !important; }
+html.dark .erp-content .bg-green-50,   html.dark .erp-content .bg-green-100,
+html.dark .erp-content .bg-emerald-50, html.dark .erp-content .bg-emerald-100 { background-color: var(--success-soft) !important; }
+html.dark .erp-content .bg-blue-50,    html.dark .erp-content .bg-blue-100,
+html.dark .erp-content .bg-sky-50,     html.dark .erp-content .bg-sky-100,
+html.dark .erp-content .bg-indigo-50,  html.dark .erp-content .bg-indigo-100  { background-color: var(--info-soft) !important; }
+html.dark .erp-content .bg-yellow-50,  html.dark .erp-content .bg-yellow-100  { background-color: #422006 !important; }
+html.dark .erp-content .bg-orange-50,  html.dark .erp-content .bg-orange-100  { background-color: #431407 !important; }
+html.dark .erp-content .bg-purple-50,  html.dark .erp-content .bg-purple-100,
+html.dark .erp-content .bg-violet-50,  html.dark .erp-content .bg-violet-100  { background-color: #2E1065 !important; }
 
 /* Texte des bandeaux → nuances claires lisibles sur teinte sombre */
 html.dark .erp-content .text-emerald-900, html.dark .erp-content .text-emerald-800,
