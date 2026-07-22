@@ -22,11 +22,25 @@
     @csrf
     @if($c->exists)@method('PUT')@endif
 
-    <div class="flex items-center justify-between">
-        <h1 class="text-[16px] font-bold text-gray-900">{{ $c->exists ? 'Modifier la catégorie ' . $c->code : 'Nouvelle catégorie d\'article' }}</h1>
-        <div class="flex gap-2">
-            <button class="text-[12.5px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-4 py-1.5 rounded-[4px]">Enregistrer</button>
-            <a href="{{ route('articles.categories.index') }}" class="text-[12.5px] font-semibold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-1.5 rounded-[4px]">Abandon</a>
+    {{-- ═══ Bandeau SAGE X3 (même squelette que le module familles) ═══ --}}
+    <div class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <div>
+                <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
+                    Catégories : {{ $c->exists ? 'Modification' : 'Création' }}
+                    @if($c->exists)<span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $c->code }}</span>@endif
+                </h2>
+                <p class="text-[11.5px] text-gray-400">Modèle de gestion — détermine le fonctionnement des articles (défauts hérités à la création)</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">Enregistrer</button>
+                @if($c->exists)
+                <a href="{{ route('articles.categories.show', $c) }}"
+                   class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Fiche</a>
+                @endif
+                <a href="{{ route('articles.categories.index') }}"
+                   class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">Abandon</a>
+            </div>
         </div>
     </div>
 
