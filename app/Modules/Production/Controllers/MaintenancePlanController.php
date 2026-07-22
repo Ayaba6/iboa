@@ -39,7 +39,7 @@ class MaintenancePlanController extends Controller
     {
         $this->service->create($this->validateData($request));
 
-        return redirect()->route('production.maintenance.plans.index')->with('success', 'Plan de maintenance créé.');
+        return redirect()->route('production.maintenance-plans.index')->with('success', 'Plan de maintenance créé.');
     }
 
     public function edit(MaintenancePlan $plan): View
@@ -54,7 +54,7 @@ class MaintenancePlanController extends Controller
     {
         $this->service->update($plan, $this->validateData($request));
 
-        return redirect()->route('production.maintenance.plans.index')->with('success', 'Plan mis à jour.');
+        return redirect()->route('production.maintenance-plans.index')->with('success', 'Plan mis à jour.');
     }
 
     public function destroy(MaintenancePlan $plan): RedirectResponse

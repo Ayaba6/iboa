@@ -76,8 +76,8 @@ class DashboardCacheService
                 )->n,
                 'ca_annee' => DB::selectOne(
                     "SELECT COALESCE(SUM(total_ttc),0) amt FROM invoices
-                     WHERE company_id=? AND status='payee' AND YEAR(issued_at)=? AND deleted_at IS NULL",
-                    [$companyId, $now->year]
+                     WHERE company_id=? AND status='payee' AND issued_at >= ? AND issued_at < ? AND deleted_at IS NULL",
+                    [$companyId, $now->copy()->startOfYear()->toDateTimeString(), $now->copy()->startOfYear()->addYear()->toDateTimeString()]
                 )->amt,
                 'impayees_count' => DB::selectOne(
                     "SELECT COUNT(*) n FROM invoices

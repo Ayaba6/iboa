@@ -51,22 +51,30 @@ class DashboardController extends Controller
             $invoiceStatuses, $now, $year, $month, $prevMonth
         ) {
             // [PERF-01] All invoice KPIs in ONE query via CASE expressions.
+            // [PORTABLE] Bornes de dates plutôt que YEAR()/MONTH() : fonctionne
+            // aussi sur SQLite (tests) et reste indexable.
+            $monthStart     = $now->copy()->startOfMonth()->toDateTimeString();
+            $nextMonthStart = $now->copy()->startOfMonth()->addMonth()->toDateTimeString();
+            $prevMonthStart = $prevMonth->copy()->startOfMonth()->toDateTimeString();
+            $yearStart      = $now->copy()->startOfYear()->toDateTimeString();
+            $nextYearStart  = $now->copy()->startOfYear()->addYear()->toDateTimeString();
+
             $ivKpi = DB::table('invoices')
                 ->whereIn('status', $invoiceStatuses)
                 ->selectRaw("
-                    SUM(CASE WHEN DATE(issued_at) = ? THEN total_ttc ELSE 0 END)                                        AS rev_jour,
-                    SUM(CASE WHEN DATE(issued_at) = ? THEN total_ttc ELSE 0 END)                                        AS rev_prev_jour,
-                    SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN total_ttc ELSE 0 END)                   AS rev_mois,
-                    SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN total_ttc ELSE 0 END)                   AS rev_prev_mois,
-                    SUM(CASE WHEN YEAR(issued_at)=?                        THEN total_ttc ELSE 0 END)                   AS rev_annee,
-                    COUNT(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN 1 END)                                AS nb_mois
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_jour,
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_prev_jour,
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_mois,
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_prev_mois,
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_annee,
+                    COUNT(CASE WHEN issued_at >= ? AND issued_at < ? THEN 1 END)                AS nb_mois
                 ", [
-                    $now->toDateString(),
-                    $now->copy()->subDay()->toDateString(),
-                    $year, $month,
-                    $prevMonth->year, $prevMonth->month,
-                    $year,
-                    $year, $month,
+                    $now->toDateString(), $now->copy()->addDay()->toDateString(),
+                    $now->copy()->subDay()->toDateString(), $now->toDateString(),
+                    $monthStart, $nextMonthStart,
+                    $prevMonthStart, $monthStart,
+                    $yearStart, $nextYearStart,
+                    $monthStart, $nextMonthStart,
                 ])
                 ->first();
 
@@ -81,9 +89,9 @@ class DashboardController extends Controller
             $encKpi = DB::table('client_payments')
                 ->where('status', 'confirme')
                 ->selectRaw("
-                    SUM(CASE WHEN YEAR(payment_date)=? AND MONTH(payment_date)=? THEN amount ELSE 0 END) AS enc_mois,
-                    SUM(CASE WHEN YEAR(payment_date)=? AND MONTH(payment_date)=? THEN amount ELSE 0 END) AS enc_prev_mois
-                ", [$year, $month, $prevMonth->year, $prevMonth->month])
+                    SUM(CASE WHEN payment_date >= ? AND payment_date < ? THEN amount ELSE 0 END) AS enc_mois,
+                    SUM(CASE WHEN payment_date >= ? AND payment_date < ? THEN amount ELSE 0 END) AS enc_prev_mois
+                ", [$monthStart, $nextMonthStart, $prevMonthStart, $monthStart])
                 ->first();
 
             // [PERF-04] Four count KPIs in ONE subquery block.
@@ -257,9 +265,14 @@ class DashboardController extends Controller
         $decKpi = DB::table('supplier_payments')
             ->where('status', 'confirme')
             ->selectRaw("
-                SUM(CASE WHEN YEAR(payment_date)=? AND MONTH(payment_date)=? THEN amount ELSE 0 END) AS dec_mois,
-                SUM(CASE WHEN YEAR(payment_date)=? AND MONTH(payment_date)=? THEN amount ELSE 0 END) AS dec_prev_mois
-            ", [$year, $month, $prevMonth->year, $prevMonth->month])->first();
+                SUM(CASE WHEN payment_date >= ? AND payment_date < ? THEN amount ELSE 0 END) AS dec_mois,
+                SUM(CASE WHEN payment_date >= ? AND payment_date < ? THEN amount ELSE 0 END) AS dec_prev_mois
+            ", [
+                $now->copy()->startOfMonth()->toDateTimeString(),
+                $now->copy()->startOfMonth()->addMonth()->toDateTimeString(),
+                $now->copy()->subMonth()->startOfMonth()->toDateTimeString(),
+                $now->copy()->startOfMonth()->toDateTimeString(),
+            ])->first();
         $decaissementsMois = (int) $decKpi->dec_mois;
         $trendDecaissements = $this->trend($decaissementsMois, (int) $decKpi->dec_prev_mois);
 
@@ -274,16 +287,18 @@ class DashboardController extends Controller
             ->where('status', 'non_conforme')
             ->where('created_at', '>=', $now->copy()->subDays(30))->count();
 
-        // CA (HT) 12 mois — année en cours vs année précédente
+        // CA (HT) 12 mois — année en cours vs année précédente.
+        // [PORTABLE] Bornes de dates + agrégation par mois en PHP (SQLite + index).
         $caHt2Years = DB::table('invoices')
             ->whereIn('status', $invoiceStatuses)
-            ->whereIn(DB::raw('YEAR(issued_at)'), [$year, $year - 1])
-            ->selectRaw('YEAR(issued_at) as y, MONTH(issued_at) as m, SUM(subtotal_ht) as total')
-            ->groupByRaw('YEAR(issued_at), MONTH(issued_at)')->get();
+            ->where('issued_at', '>=', $now->copy()->subYear()->startOfYear()->toDateTimeString())
+            ->where('issued_at', '<', $now->copy()->startOfYear()->addYear()->toDateTimeString())
+            ->get(['issued_at', 'subtotal_ht']);
         $caN = array_fill(1, 12, 0); $caN1 = array_fill(1, 12, 0);
         foreach ($caHt2Years as $row) {
-            if ((int) $row->y === $year) $caN[(int) $row->m] = (int) $row->total;
-            else $caN1[(int) $row->m] = (int) $row->total;
+            $d = \Carbon\Carbon::parse($row->issued_at);
+            if ($d->year === $year) $caN[$d->month] += (int) $row->subtotal_ht;
+            elseif ($d->year === $year - 1) $caN1[$d->month] += (int) $row->subtotal_ht;
         }
         $caAnnuel = [
             'labels' => ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'],
@@ -327,9 +342,14 @@ class DashboardController extends Controller
         $caHtKpi = DB::table('invoices')
             ->whereIn('status', $invoiceStatuses)
             ->selectRaw("
-                SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN subtotal_ht ELSE 0 END) AS ht_mois,
-                SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN subtotal_ht ELSE 0 END) AS ht_prev
-            ", [$year, $month, $prevMonth->year, $prevMonth->month])->first();
+                SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN subtotal_ht ELSE 0 END) AS ht_mois,
+                SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN subtotal_ht ELSE 0 END) AS ht_prev
+            ", [
+                $now->copy()->startOfMonth()->toDateTimeString(),
+                $now->copy()->startOfMonth()->addMonth()->toDateTimeString(),
+                $prevMonth->copy()->startOfMonth()->toDateTimeString(),
+                $now->copy()->startOfMonth()->toDateTimeString(),
+            ])->first();
         $caHtMois   = (int) $caHtKpi->ht_mois;
         $trendCaHt  = $this->trend($caHtMois, (int) $caHtKpi->ht_prev);
 
@@ -437,15 +457,15 @@ class DashboardController extends Controller
                 ->where('company_id', $companyId)
                 ->whereIn('status', $invoiceStatuses)
                 ->selectRaw("
-                    SUM(CASE WHEN DATE(issued_at) = ? THEN total_ttc ELSE 0 END)                                   AS rev_jour,
-                    SUM(CASE WHEN DATE(issued_at) = ? THEN total_ttc ELSE 0 END)                                   AS rev_prev_jour,
-                    SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN total_ttc ELSE 0 END)              AS rev_mois,
-                    SUM(CASE WHEN YEAR(issued_at)=? AND MONTH(issued_at)=? THEN total_ttc ELSE 0 END)              AS rev_prev_mois
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_jour,
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_prev_jour,
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_mois,
+                    SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_prev_mois
                 ", [
-                    $now->toDateString(),
-                    $now->copy()->subDay()->toDateString(),
-                    $year, $month,
-                    $prevMonth->year, $prevMonth->month,
+                    $now->toDateString(), $now->copy()->addDay()->toDateString(),
+                    $now->copy()->subDay()->toDateString(), $now->toDateString(),
+                    $now->copy()->startOfMonth()->toDateTimeString(), $now->copy()->startOfMonth()->addMonth()->toDateTimeString(),
+                    $prevMonth->copy()->startOfMonth()->toDateTimeString(), $now->copy()->startOfMonth()->toDateTimeString(),
                 ])->first();
 
             $overdueKpi = DB::table('invoices')
