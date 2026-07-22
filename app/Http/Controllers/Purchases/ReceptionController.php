@@ -158,6 +158,19 @@ class ReceptionController extends Controller
                     'validated_at' => now(),
                 ]);
 
+                // [Gap inter-modules — recette] Génération AUTOMATIQUE des bobines
+                // et lots pour les articles à suivi bobine/lot : l'action manuelle
+                // « Générer les bobines » restait facile à rater et bloquait
+                // ensuite la consommation matière en production. Le service filtre
+                // lui-même les articles éligibles et ne double PAS l'entrée de
+                // stock (traçabilité pure sur ce chemin).
+                try {
+                    app(\App\Modules\Production\Services\CoilReceptionService::class)
+                        ->createFromReception($reception->fresh('items.product.itemCategory'), onlyTracked: true);
+                } catch (\Illuminate\Validation\ValidationException) {
+                    // Déjà générées ou rien d'éligible — silencieux.
+                }
+
                 // Update PO status
                 $po = $reception->purchaseOrder;
                 if ($po) {

@@ -248,3 +248,34 @@ it('recordPayment débite le compte de trésorerie et journalise la transaction'
     expect((int) $cash->fresh()->current_balance)->toBe(50000 - 11800)
         ->and(\App\Models\CashTransaction::where('reference_type', 'SupplierPayment')->where('cash_account_id', $cash->id)->where('type', 'debit')->count())->toBe(1);
 });
+
+// [Gap recette] La validation d'une réception d'article à suivi bobine génère
+// automatiquement bobine + lot, SANS doubler l'entrée de stock.
+it('génère automatiquement bobine et lot à la validation de réception (stock unique)', function () {
+    $co = achCompany();
+    achAdmin();
+    $supplier = achSupplier();
+
+    $catBobine = \App\Models\ItemCategory::firstOrCreate(
+        ['code' => 'MP_BOB_T'],
+        ['name' => 'Bobines T', 'nature' => 'matiere_premiere', 'strategy' => 'achat_revente',
+         'is_purchasable' => 1, 'is_stockable' => 1, 'coil_managed' => 1, 'lot_managed' => 1, 'is_active' => 1]
+    );
+    $bobine = Product::factory()->create(['is_stockable' => true, 'item_category_id' => $catBobine->id, 'has_lot_number' => true]);
+    $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-BOB'], ['name' => 'Dépôt BOB', 'is_default' => true, 'is_active' => true]);
+
+    $po = achConfirmedPo($co, $supplier, $bobine, 200, 1500);
+    $reception = app(PurchaseOrderService::class)->createReception($po);
+
+    $this->post(route('achats.receptions.validate', $reception), [
+        'warehouse_id' => $wh->id,
+        'items' => [$reception->items->first()->id => ['received_quantity' => 200]],
+    ])->assertRedirect();
+
+    // Bobine + lot créés automatiquement
+    expect(\App\Modules\Production\Models\Coil::where('reception_id', $reception->id)->count())->toBe(1)
+        ->and(\App\Models\StockLot::where('product_id', $bobine->id)->count())->toBe(1)
+        // Stock crédité UNE seule fois (pas de double entrée)
+        ->and((float) ProductStock::where('product_id', $bobine->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(200.0)
+        ->and(\App\Models\StockMovement::where('product_id', $bobine->id)->where('type', 'entree')->count())->toBe(1);
+});

@@ -30,7 +30,13 @@ class CoilReceptionService
     /**
      * @return array<int, Coil> bobines créées
      */
-    public function createFromReception(Reception $reception): array
+    /**
+     * @param bool $onlyTracked  true = ne générer que pour les articles à suivi
+     *                           bobine/lot (chemin AUTO à la validation achats) ;
+     *                           false = tous les items (bouton manuel du flux
+     *                           réception bobines, comportement historique).
+     */
+    public function createFromReception(Reception $reception, bool $onlyTracked = false): array
     {
         if (! $reception->validated_at) {
             throw ValidationException::withMessages(['status' => 'La réception doit être validée avant de générer les bobines.']);
@@ -42,13 +48,23 @@ class CoilReceptionService
 
         $reception->loadMissing('items.product');
 
-        return DB::transaction(function () use ($reception) {
+        return DB::transaction(function () use ($reception, $onlyTracked) {
             $created = [];
             $i = 0;
 
             foreach ($reception->items as $item) {
                 $weight = (float) $item->received_quantity;
                 if ($weight <= 0) {
+                    continue;
+                }
+
+                // [FILTRE bobine] Ne générer que pour les articles à suivi
+                // bobine/lot (catégorie coil_managed ou article géré en lot) —
+                // un consommable standard reçu sur la même réception n'a pas
+                // de bobine.
+                $p = $item->product;
+                $tracked = $p && (($p->itemCategory?->coil_managed ?? false) || $p->has_lot_number);
+                if ($onlyTracked && ! $tracked) {
                     continue;
                 }
                 $i++;
@@ -104,7 +120,22 @@ class CoilReceptionService
 
                 // ── Entrée de stock économique UNIQUE (KG) : mouvement + lot +
                 //    product_stocks, via le service central. ──
-                if ($item->product_id && $warehouseId) {
+                // [ANTI-DOUBLE] La validation d'une réception ACHATS crée déjà son
+                // entrée de stock : dans ce cas, la génération de bobines est de la
+                // traçabilité pure — on crédite le lot sans second mouvement
+                // (constaté en recette : stock 20 au lieu de 10).
+                $alreadyStocked = $item->product_id && $warehouseId
+                    && \App\Models\StockMovement::where('product_id', $item->product_id)
+                        ->where('warehouse_id', $warehouseId)
+                        ->where('type', 'entree')
+                        ->where(fn ($q) => $q
+                            ->where(fn ($w) => $w->where('reference_type', 'reception')->where('reference_id', $reception->id))
+                            ->orWhere(fn ($w) => $w->where('reference_type', Reception::class)->where('reference_id', $reception->id)))
+                        ->exists();
+
+                if ($alreadyStocked) {
+                    $lot?->increment('quantity', $weight);
+                } elseif ($item->product_id && $warehouseId) {
                     $movement = $this->stock->recordMovement([
                         'product_id'            => $item->product_id,
                         'warehouse_id'          => $warehouseId,
