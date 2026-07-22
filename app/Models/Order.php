@@ -201,8 +201,11 @@ class Order extends Model
                 ->whereHas('clientPayment', fn ($q) => $q->where('status', 'confirme'))->sum('amount')
             : 0;
 
+        // [Anti-double BP↔encaissement] Les BP liés à un encaissement central
+        // (client_payment_id) comptent via l'acompte du client, pas ici.
         $viaCaisse = (int) $this->bonPreparations()
             ->whereIn('status', ['en_attente', 'en_cours', 'charge'])
+            ->whereNull('client_payment_id')
             ->sum('payment_amount');
 
         $acomptesLibres = (int) \App\Models\ClientPayment::where('client_id', $this->client_id)

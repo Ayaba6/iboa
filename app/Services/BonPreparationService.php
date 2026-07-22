@@ -54,10 +54,34 @@ class BonPreparationService
     public function createForCashOrder(
         Order $order,
         int $amount,
-        ?string $reference = null
+        ?string $reference = null,
+        ?int $cashAccountId = null
     ): BonPreparation {
-        return DB::transaction(function () use ($order, $amount, $reference) {
+        return DB::transaction(function () use ($order, $amount, $reference, $cashAccountId) {
             $company = $order->company ?? currentCompany();
+
+            // [FIX argent caisse] L'encaissement du guichet passe par le service
+            // central : numéro, écriture comptable, transaction de caisse.
+            // Avant, payment_amount ne vivait QUE sur le BP — invisible de la
+            // trésorerie et de la comptabilité, ressaisie manuelle risquée.
+            $cashAccountId ??= \App\Models\CashAccount::where('is_active', true)
+                ->whereIn('type', ['caisse', 'especes'])->orderBy('id')->value('id')
+                ?? \App\Models\CashAccount::where('is_active', true)->orderBy('id')->value('id');
+
+            $payment = app(\App\Services\ClientPaymentService::class)->create([
+                'company_id'      => $company->id,
+                'client_id'       => $order->client_id,
+                'amount'          => $amount,
+                'status'          => 'confirme',
+                'payment_date'    => now()->toDateString(),
+                'method'          => 'especes',
+                'reference'       => $reference,
+                'cash_account_id' => $cashAccountId,
+                'is_acompte'      => true, // argent reçu AVANT facture — imputé plus tard
+                'force_duplicate' => true, // règlement comptoir AVANT facturation : la garde anti-doublon (client sans dette) ne s'applique pas
+                'notes'           => 'Règlement caisse commande ' . $order->number . ' (bon de préparation)',
+            ]);
+
             $bp = BonPreparation::create([
                 'company_id'          => $company->id,
                 'order_id'            => $order->id,
@@ -69,6 +93,7 @@ class BonPreparationService
                 'payment_reference'   => $reference,
                 'payment_recorded_by' => Auth::id(),
                 'payment_recorded_at' => now(),
+                'client_payment_id'   => $payment->id,
                 'created_by'          => Auth::id(),
             ]);
 

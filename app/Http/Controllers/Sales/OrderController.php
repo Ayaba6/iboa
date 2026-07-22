@@ -299,6 +299,7 @@ class OrderController extends Controller
         $request->validate([
             'payment_amount'    => ['required', 'integer', 'min:1'],
             'payment_reference' => ['nullable', 'string', 'max:100'],
+            'cash_account_id'   => ['nullable', 'integer', 'exists:cash_accounts,id'],
         ]);
 
         $client = $commande->client ?? \App\Models\Client::find($commande->client_id);
@@ -317,6 +318,7 @@ class OrderController extends Controller
                 $commande,
                 (int) $request->payment_amount,
                 $request->payment_reference,
+                $request->integer('cash_account_id') ?: null,
             );
             return redirect()
                 ->route('ventes.bons-preparation.show', $bp)

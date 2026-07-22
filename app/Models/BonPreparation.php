@@ -17,7 +17,7 @@ class BonPreparation extends Model
 
     protected $fillable = [
         'company_id', 'order_id', 'fiscal_year_id', 'number', 'payment_mode', 'status',
-        'payment_reference', 'payment_amount', 'payment_recorded_by', 'payment_recorded_at',
+        'payment_reference', 'payment_amount', 'payment_recorded_by', 'payment_recorded_at', 'client_payment_id',
         'validated_by', 'validated_at', 'loaded_by', 'loaded_at', 'notes', 'created_by',
     ];
 

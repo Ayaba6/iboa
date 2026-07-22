@@ -160,3 +160,35 @@ it('CDC §33 : client acompte 50 % — devis→commande→acompte→OF→product
     $dn = app(OrderService::class)->createDeliveryNote($order->fresh());
     expect($dn->items)->toHaveCount(1);
 });
+
+// [Chemins parallèles] Le paiement caissier (BP) crée désormais un encaissement
+// CENTRAL (numéro, GL, caisse) lié au BP — sans double comptage d'éligibilité.
+it('le paiement caisse du BP crée un encaissement central sans double comptage', function () {
+    $co = acCompany();
+    $user = acAdmin($co);
+    $this->actingAs($user);
+
+    $client = Client::factory()->create(['is_active' => true, 'payment_mode' => 'comptant']);
+    $p = Product::factory()->create(['production_mode' => 'mto', 'sale_price' => 5000, 'is_sellable' => true]);
+    $order = \App\Models\Order::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'client_id' => $client->id, 'number' => 'CMD-BPC-' . uniqid(),
+        'status' => 'confirme', 'issued_at' => now(), 'total_ttc' => 118000,
+    ]);
+    $cash = \App\Models\CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 0, 'is_active' => true]);
+
+    $bp = app(\App\Services\BonPreparationService::class)->createForCashOrder($order, 118000, 'RECU-001', $cash->id);
+
+    // Encaissement central complet, lié au BP
+    $payment = \App\Models\ClientPayment::find($bp->client_payment_id);
+    expect($payment)->not->toBeNull()
+        ->and($payment->status)->toBe('confirme')
+        ->and($payment->number)->not->toBeNull()
+        ->and((bool) $payment->is_acompte)->toBeTrue()
+        // Caisse créditée + transaction journalisée
+        ->and((int) $cash->fresh()->current_balance)->toBe(118000)
+        ->and(\App\Models\CashTransaction::where('cash_account_id', $cash->id)->where('type', 'credit')->count())->toBe(1);
+
+    // Éligibilité : 118 000 UNE seule fois (BP lié exclu, acompte compte)
+    expect($order->fresh()->confirmedReceipts())->toBe(118000);
+});

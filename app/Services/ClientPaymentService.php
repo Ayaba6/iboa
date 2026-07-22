@@ -78,7 +78,11 @@ class ClientPaymentService
             $this->assertNoDuplicateRecent($data);
 
             // Generate payment number
-            $company = Auth::user()->company;
+            // [Chemins système] Webhooks/jobs n'ont pas d'utilisateur connecté :
+            // retomber sur la société passée en données, puis la société unique.
+            $company = Auth::user()?->company
+                ?? \App\Models\Company::find($data['company_id'] ?? null)
+                ?? \App\Models\Company::first();
             if ($company) {
                 $data['company_id'] = $company->id;
                 $data['number'] = $this->sequenceService->nextNumber($company, 'encaissement');

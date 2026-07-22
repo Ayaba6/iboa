@@ -87,39 +87,33 @@ class PaymentConfirmationService
         $invoice = Invoice::lockForUpdate()->find($transaction->invoice_id);
         if (! $invoice) return;
 
-        $amount = (float) $transaction->amount;
+        $amount = (int) $transaction->amount;
 
-        // Create encaissement (ClientPayment) if the model exists
-        if (class_exists(\App\Models\ClientPayment::class)) {
-            $payment = \App\Models\ClientPayment::create([
-                'invoice_id'     => $invoice->id,
-                'client_id'      => $invoice->client_id,
-                'amount'         => $amount,
-                'payment_date'   => now(),
-                'payment_method' => $this->paymentMethodFromProvider($transaction->provider),
-                'reference'      => $transaction->internal_reference,
-                'notes'          => sprintf(
-                    'Paiement %s — Réf ext: %s',
-                    strtoupper($transaction->provider),
-                    $transaction->external_reference ?? 'N/A'
-                ),
-            ]);
-
-            $transaction->update(['client_payment_id' => $payment->id]);
-        }
-
-        // Update invoice amounts
-        $totalPaid       = (float) ($invoice->paid_amount ?? 0) + $amount;
-        $remainingAmount = max(0, (float) $invoice->total_ttc - $totalPaid);
-        $newStatus       = $remainingAmount <= 0 ? 'payee' : 'partiellement_payee';
-
-        $invoice->update([
-            'paid_amount'      => $totalPaid,
-            'remaining_amount' => $remainingAmount,
-            'status'           => $newStatus,
+        // [CHEMIN UNIQUE] Déléguer au service central des encaissements : l'ancien
+        // ClientPayment::create direct produisait un paiement SANS numéro de
+        // séquence, sans statut confirmé, sans allocation (paid_amount patché à
+        // la main), sans écriture comptable et sans anti-doublon — invisible de
+        // la balance âgée et de l'imputation. Le service gère tout cela ; le
+        // montant est plafonné au reste dû par la boucle d'allocations.
+        $payment = app(\App\Services\ClientPaymentService::class)->create([
+            'company_id'   => $invoice->company_id, // webhook : aucun user connecté
+            'client_id'    => $invoice->client_id,
+            'amount'       => $amount,
+            'status'       => 'confirme',
+            'payment_date' => now()->toDateString(),
+            'method'       => $this->paymentMethodFromProvider($transaction->provider),
+            'reference'    => $transaction->internal_reference,
+            'notes'        => sprintf(
+                'Paiement %s — Réf ext: %s',
+                strtoupper($transaction->provider),
+                $transaction->external_reference ?? 'N/A'
+            ),
+            'allocations'  => [['invoice_id' => $invoice->id, 'allocated_amount' => min($amount, (int) $invoice->remaining_amount)]],
         ]);
 
-        Log::info("[PaymentConfirmation] Invoice #{$invoice->number} → {$newStatus} (paid: {$totalPaid})");
+        $transaction->update(['client_payment_id' => $payment->id]);
+
+        Log::info("[PaymentConfirmation] Invoice #{$invoice->number} — encaissement {$payment->number} ({$amount} FCFA) via {$transaction->provider}.");
     }
 
     private function sendConfirmationSms(ExternalTransaction $transaction): void
