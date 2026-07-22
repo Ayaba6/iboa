@@ -115,3 +115,37 @@ it('l\'excédent au-delà des factures ouvertes reste non affecté (crédit clie
     expect((int) $payment->allocated_amount)->toBe(100000)
         ->and((int) $payment->unallocated_amount)->toBe(30000);
 });
+
+// [Lot 1 annulations] Annuler un encaissement inverse TOUT : facture restaurée,
+// allocations supprimées, écriture extournée, caisse débitée, statut annulé.
+it('annule un encaissement : facture restaurée, GL extourné, caisse restituée', function () {
+    [$co, $user, $client0] = afSetup();
+    
+    $client = Client::factory()->create();
+    $inv = afInvoice($co, $client, 59000, '2026-01-10');
+    $cash = \App\Models\CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 0, 'is_active' => true]);
+
+    $svc = app(\App\Services\ClientPaymentService::class);
+    $payment = $svc->create([
+        'client_id' => $client->id, 'amount' => 59000, 'status' => 'confirme',
+        'method' => 'especes', 'payment_date' => now()->toDateString(), 'cash_account_id' => $cash->id,
+    ]);
+    expect((int) $inv->fresh()->remaining_amount)->toBe(0)
+        ->and((int) $cash->fresh()->current_balance)->toBe(59000);
+    $glCountBefore = \App\Models\JournalEntry::count();
+
+    $svc->cancel($payment->fresh(), 'Erreur de saisie caissier');
+
+    $inv->refresh();
+    expect($payment->fresh()->status)->toBe('annule')
+        ->and((int) $inv->remaining_amount)->toBe(59000)
+        ->and($inv->status)->toBe('emise')
+        ->and(\App\Models\ClientPaymentAllocation::where('client_payment_id', $payment->id)->count())->toBe(0)
+        // Caisse restituée (débit inverse) → solde revenu à 0
+        ->and((int) $cash->fresh()->current_balance)->toBe(0)
+        // Une écriture d'extourne a été créée (équilibrée par construction)
+        ->and(\App\Models\JournalEntry::count())->toBeGreaterThan($glCountBefore);
+
+    // Double annulation refusée
+    expect(fn () => $svc->cancel($payment->fresh(), 'encore'))->toThrow(\RuntimeException::class);
+});

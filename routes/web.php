@@ -892,6 +892,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('encaissements/{encaissement}/recu', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'recu'])->name('encaissements.recu');
             // Imputation a posteriori (lettrage)
             Route::post('encaissements/{encaissement}/imputer', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'imputer'])->name('encaissements.imputer');
+            Route::post('encaissements/{encaissement}/cancel', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'cancel'])->name('encaissements.cancel');
             Route::resource('encaissements', \App\Http\Controllers\Treasury\ClientPaymentController::class)
                 ->only(['index', 'create', 'store', 'show'])
                 ->parameters(['encaissements' => 'encaissement']);

@@ -323,4 +323,28 @@ class ClientPaymentController extends Controller
             'status'           => $inv->status,
         ]));
     }
+
+    /**
+     * [Annulation encaissement] Miroir du cancel décaissement : motif obligatoire,
+     * inversion complète (factures, allocations, GL, caisse) par le service.
+     */
+    public function cancel(Request $request, \App\Models\ClientPayment $encaissement): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+        ], [
+            'reason.required' => 'Le motif d\'annulation est obligatoire (traçabilité comptable).',
+            'reason.min'      => 'Le motif doit faire au moins 5 caractères.',
+        ]);
+
+        try {
+            $this->service->cancel($encaissement, $data['reason']);
+
+            return redirect()
+                ->route('tresorerie.encaissements.show', $encaissement)
+                ->with('success', 'Encaissement ' . $encaissement->number . ' annulé — factures restaurées, contre-passation comptable et restitution caisse effectuées.');
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
 }

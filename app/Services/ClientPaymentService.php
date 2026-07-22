@@ -457,4 +457,106 @@ class ClientPaymentService
             $remaining -= $toApply;
         }
     }
+
+    /**
+     * [Annulation encaissement — miroir de SupplierPaymentService::cancel]
+     * Inverse TOUS les effets : restauration des factures allouées, suppression
+     * des allocations, contre-passation comptable, restitution de la caisse
+     * (mouvement inverse — refuse si le solde deviendrait négatif), statut
+     * « annule » avec motif tracé. Jamais de suppression physique.
+     *
+     * @throws \RuntimeException
+     */
+    public function cancel(ClientPayment $payment, ?string $reason = null): ClientPayment
+    {
+        $reason = trim((string) $reason);
+        if ($reason === '') {
+            throw new \RuntimeException('Motif d\'annulation obligatoire (traçabilité comptable).');
+        }
+
+        return DB::transaction(function () use ($payment, $reason) {
+            $payment = ClientPayment::lockForUpdate()->findOrFail($payment->id);
+
+            if ($payment->status === 'annule') {
+                throw new \RuntimeException('Cet encaissement est déjà annulé.');
+            }
+
+            $payment->load('allocations', 'cashAccount', 'client');
+
+            // 1. Restaurer chaque facture allouée
+            foreach ($payment->allocations as $alloc) {
+                $invoice = Invoice::lockForUpdate()->find($alloc->invoice_id);
+                if (! $invoice) {
+                    continue;
+                }
+
+                $newPaid      = max(0, (int) $invoice->paid_amount - (int) $alloc->amount);
+                $newRemaining = max(0, (int) $invoice->total_ttc - $newPaid);
+
+                $newStatus = $invoice->status;
+                if ($newRemaining === (int) $invoice->total_ttc) {
+                    $newStatus = 'emise';
+                } elseif ($newRemaining > 0 && $invoice->status === 'payee') {
+                    $newStatus = 'partiellement_payee';
+                }
+
+                $invoice->update([
+                    'paid_amount'      => $newPaid,
+                    'remaining_amount' => $newRemaining,
+                    'status'           => $newStatus,
+                ]);
+            }
+            $payment->allocations()->delete();
+
+            // 2. Contre-passation de l'écriture comptable
+            $entry = \App\Models\JournalEntry::where('reference', $payment->number)
+                ->where('company_id', $payment->company_id)
+                ->where('status', 'valide')
+                ->first();
+            if ($entry) {
+                $this->accountingService->reverseEntry(
+                    $entry,
+                    'Annulation encaissement ' . $payment->number . ' — ' . $reason
+                );
+            }
+
+            // 3. Restitution caisse : mouvement inverse (débit de ce qui avait été
+            //    crédité). recordTransaction refuse un solde négatif → l'annulation
+            //    échoue proprement si l'argent est déjà ressorti.
+            $cashTx = \App\Models\CashTransaction::where(function ($q) use ($payment) {
+                $q->where('reference_type', 'ClientPayment')->where('reference_id', $payment->id);
+            })->orWhere(function ($q) use ($payment) {
+                $q->where('reference_type', 'App\\Models\\ClientPayment')->where('reference_id', $payment->id);
+            })->first();
+            if ($cashTx && $payment->cashAccount) {
+                $this->cashService->recordTransaction($payment->cashAccount, [
+                    'type'             => 'debit',
+                    'reference_type'   => 'ClientPayment',
+                    'reference_id'     => $payment->id,
+                    'amount'           => $payment->amount,
+                    'label'            => 'Annulation encaissement ' . $payment->number,
+                    'transaction_date' => today(),
+                ]);
+            }
+
+            // 4. Statut annulé + motif tracé
+            $cancelNote = sprintf(
+                '[ANNULATION %s par %s] %s',
+                now()->format('d/m/Y H:i'),
+                Auth::user()?->name ?? 'système',
+                $reason
+            );
+            $payment->update([
+                'status'             => 'annule',
+                'unallocated_amount' => 0,
+                'allocated_amount'   => 0,
+                'notes'              => trim(($payment->notes ?? '') . "\n\n" . $cancelNote),
+            ]);
+
+            // 5. Solde client recalculé
+            $payment->client?->recalculateBalance();
+
+            return $payment->fresh();
+        });
+    }
 }
