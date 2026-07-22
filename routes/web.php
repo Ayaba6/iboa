@@ -1041,6 +1041,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    // [UX] Alias des URL « intuitives » constatées en recette : redirection
+    // permanente vers les vraies pages plutôt qu'un 404 sec.
+    Route::redirect('/gestion/articles', '/products', 301);
+    Route::redirect('/articles', '/products', 301);
+    Route::redirect('/analytique', '/analytique/centres-couts', 301);
+    Route::redirect('/rh-paie', '/rh/employes', 301);
+    Route::redirect('/rh', '/rh/employes', 301);
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
