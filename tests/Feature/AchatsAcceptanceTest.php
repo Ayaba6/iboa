@@ -128,11 +128,16 @@ it('exécute la chaîne Achats bout-en-bout avec statuts, stock et écritures co
     $payment = app(SupplierPaymentService::class)->create([
         'supplier_id' => $supplier->id, 'cash_account_id' => $cash->id,
         'amount' => (int) $invoice->total_ttc, 'method' => 'virement', 'payment_date' => now()->toDateString(),
-        'allocations' => [['supplier_invoice_id' => $invoice->id, 'amount' => (int) $invoice->total_ttc]],
+        'allocations' => [['supplier_invoice_id' => $invoice->id, 'allocated_amount' => (int) $invoice->total_ttc]],
     ]);
     $glPayment = JournalEntry::where('reference', $payment->number)->first();
     expect($glPayment)->not->toBeNull()
         ->and($glPayment->total_debit)->toBe($glPayment->total_credit);
+
+    // [Scénario E QA] La facture fournisseur est soldée et passe « payee ».
+    $invoice->refresh();
+    expect((int) $invoice->remaining_amount)->toBe(0)
+        ->and($invoice->status)->toBe('payee');
 
     // ── Retour fournisseur : sortie de stock automatique ─────────────────────
     $return = app(SupplierReturnService::class)->create([
