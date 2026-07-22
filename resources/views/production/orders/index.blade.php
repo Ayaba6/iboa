@@ -18,19 +18,24 @@
 @endphp
 <div class="space-y-4">
 
-    {{-- Bandeau --}}
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Ordres de fabrication</h1>
-            <p class="text-[12px] text-gray-500">Lancement, suivi &amp; clôture de la production tôle bac</p>
+    {{-- ═══ Bandeau SAGE X3 ═══ --}}
+    <div class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <div>
+                <h2 class="text-[22px] font-bold text-gray-900 leading-tight">Ordres de fabrication</h2>
+                <p class="text-[11.5px] text-gray-400">Lancement, suivi &amp; clôture de la production</p>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+                @can('production.create')
+                <a href="{{ route('production.orders.create') }}"
+                   class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">Nouvel OF</a>
+                @endcan
+                <a href="{{ route('production.orders.eligible') }}"
+                   class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Éligibles MTO</a>
+                <a href="{{ route('production.orders.mts') }}"
+                   class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">Planification MTS</a>
+            </div>
         </div>
-        @can('production.create')
-        <a href="{{ route('production.orders.create') }}"
-           class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-semibold px-4 py-1.5 rounded-[4px] flex items-center gap-1.5 transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouvel OF
-        </a>
-        @endcan
     </div>
 
     {{-- KPI --}}
