@@ -1439,5 +1439,14 @@
         </div>
     </div>
     @endcan
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px] print:hidden">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">OF {{ $order->number }}</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
 </div>
 @endsection
