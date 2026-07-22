@@ -28,7 +28,7 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-sm">
             <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>

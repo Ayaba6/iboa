@@ -88,7 +88,7 @@
     </div>
 
     {{-- Table --}}
-    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-x-auto">
         @if($isFam)
         {{-- Vue Familles : sous-familles à plat avec catégorie parente --}}
         @if($families->isEmpty())

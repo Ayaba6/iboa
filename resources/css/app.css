@@ -533,6 +533,17 @@ html.dark .erp-content .bg-gray-100 { background-color: var(--surface-muted) !im
 /* gray-200 : pistes de toggle off, séparateurs pleins, fonds désactivés */
 html.dark .erp-content .bg-gray-200 { background-color: var(--border) !important; }
 html.dark .erp-content .bg-gray-50\/30 { background-color: transparent !important; }
+/* Bandeaux X3 en dégradé (bg-gradient-to-b from-gray-50 to-white, ~54 vues) :
+   les classes gradient ne passent pas par background-color — sans ce remap,
+   bandeau clair éblouissant en mode sombre. Dégradé aplati sur les surfaces. */
+html.dark .erp-content .from-gray-50 {
+    --tw-gradient-from: var(--surface-muted) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: transparent var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+html.dark .erp-content .to-white {
+    --tw-gradient-to: var(--surface-card) var(--tw-gradient-to-position) !important;
+}
 
 /* Texte */
 html.dark .erp-content .text-gray-900,

@@ -71,7 +71,7 @@
         <button class="h-8 text-[12.5px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 rounded-[3px]">Filtrer</button>
     </form>
 
-    <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
+    <div class="bg-white rounded-[4px] border border-gray-300 overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-sm">
             <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
