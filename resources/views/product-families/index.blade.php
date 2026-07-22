@@ -15,35 +15,38 @@
 
 <div class="space-y-3">
 
-    {{-- Header --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Familles d'articles</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $isFam ? 'Sous-familles rattachées à leur famille parente' : 'Familles racines et leur arborescence de sous-familles (classement commercial — la gestion relève des catégories)' }}</p>
-        </div>
-        <div class="flex items-center gap-2 self-start">
-            {{-- Bascule Familles (arborescence) / Sous-familles (à plat) --}}
-            @php $statutToutes = request('statut') === 'toutes'; @endphp
-            <div class="inline-flex rounded-[4px] border border-gray-300 overflow-hidden text-[13px] font-semibold">
-                <a href="{{ route('product-families.index', array_filter(['statut' => request('statut')])) }}"
-                   class="px-3 py-2 {{ ! $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Familles</a>
-                <a href="{{ route('product-families.index', array_filter(['niveau' => 'famille', 'statut' => request('statut')])) }}"
-                   class="px-3 py-2 border-l border-gray-300 {{ $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Sous-familles</a>
+    {{-- ═══ Bandeau SAGE X3 (même squelette que fiche/modification) ═══ --}}
+    @php $statutToutes = request('statut') === 'toutes'; @endphp
+    <div class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <div>
+                <h2 class="text-[22px] font-bold text-gray-900 leading-tight">Familles d'articles</h2>
+                <p class="text-[11.5px] text-gray-400">{{ $isFam ? 'Sous-familles rattachées à leur famille parente' : 'Classement commercial et statistique — la gestion relève des catégories' }}</p>
             </div>
-            {{-- Bascule Actives / Toutes (archivées incluses) --}}
-            <div class="inline-flex rounded-[4px] border border-gray-300 overflow-hidden text-[13px] font-semibold">
-                <a href="{{ route('product-families.index', array_filter(['niveau' => request('niveau')])) }}"
-                   class="px-3 py-2 {{ ! $statutToutes ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Actives</a>
-                <a href="{{ route('product-families.index', array_filter(['niveau' => request('niveau'), 'statut' => 'toutes'])) }}"
-                   class="px-3 py-2 border-l border-gray-300 {{ $statutToutes ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Toutes</a>
+            <div class="flex items-center gap-1.5 flex-wrap">
+                {{-- Bascule Familles (arborescence) / Sous-familles (à plat) --}}
+                <div class="inline-flex rounded-[4px] border border-gray-300 overflow-hidden text-[13px] font-semibold">
+                    <a href="{{ route('product-families.index', array_filter(['statut' => request('statut')])) }}"
+                       class="px-3 py-2 {{ ! $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Familles</a>
+                    <a href="{{ route('product-families.index', array_filter(['niveau' => 'famille', 'statut' => request('statut')])) }}"
+                       class="px-3 py-2 border-l border-gray-300 {{ $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Sous-familles</a>
+                </div>
+                {{-- Bascule Actives / Toutes (archivées incluses) --}}
+                <div class="inline-flex rounded-[4px] border border-gray-300 overflow-hidden text-[13px] font-semibold">
+                    <a href="{{ route('product-families.index', array_filter(['niveau' => request('niveau')])) }}"
+                       class="px-3 py-2 {{ ! $statutToutes ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Actives</a>
+                    <a href="{{ route('product-families.index', array_filter(['niveau' => request('niveau'), 'statut' => 'toutes'])) }}"
+                       class="px-3 py-2 border-l border-gray-300 {{ $statutToutes ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Toutes</a>
+                </div>
+                <a href="{{ route('product-families.create') }}"
+                   class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">
+                    {{ $isFam ? 'Nouvelle sous-famille' : 'Nouvelle famille' }}
+                </a>
+                <a href="{{ route('articles.categories.index') }}"
+                   class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">
+                    Catégories
+                </a>
             </div>
-            <a href="{{ route('product-families.create') }}"
-               class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-2.5 rounded-[4px] transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                {{ $isFam ? 'Nouvelle sous-famille' : 'Nouvelle famille' }}
-            </a>
         </div>
     </div>
 
