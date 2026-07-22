@@ -18,7 +18,11 @@
     $flag = fn ($name, $label) => '<label class="flex items-center gap-1.5 text-[12.5px] text-gray-700"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1" class="' . $chk . '" ' . (old($name, $c->$name) ? 'checked' : '') . '>' . $label . '</label>';
 @endphp
 
-<form method="POST" action="{{ $c->exists ? route('articles.categories.update', $c) : route('articles.categories.store') }}" class="space-y-3 max-w-5xl">
+<div class="flex items-start gap-4">
+    @include('articles.categories._selector', ['selectorCategories' => $formData['selectorCategories'] ?? collect()])
+    <div class="flex-1 min-w-0">
+
+<form method="POST" action="{{ $c->exists ? route('articles.categories.update', $c) : route('articles.categories.store') }}" class="space-y-3">
     @csrf
     @if($c->exists)@method('PUT')@endif
 
@@ -164,4 +168,16 @@
         <a href="{{ route('articles.categories.index') }}" class="text-[12.5px] font-semibold text-gray-600 border border-gray-300 bg-white hover:bg-gray-50 px-4 py-2 rounded-[4px]">Abandon</a>
     </div>
 </form>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">Catégorie d'article</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
+
+    </div>
+</div>
 @endsection

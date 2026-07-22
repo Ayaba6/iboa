@@ -183,6 +183,10 @@ class ItemCategoryController extends Controller
             'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'lines'      => \App\Modules\Production\Models\ProductionLine::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'accounts'   => \App\Models\Account::orderBy('code')->limit(500)->get(['id', 'code', 'name']),
+            // [SAGE parité] Panneau gauche « sélection » des formulaires.
+            'selectorCategories' => ItemCategory::where('is_active', true)
+                ->orderBy('sort_order')->orderBy('code')->limit(20)
+                ->get(['id', 'code', 'name', 'strategy']),
         ];
     }
 }
