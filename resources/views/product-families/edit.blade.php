@@ -31,6 +31,10 @@
                         class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">
                     Enregistrer
                 </button>
+                <a href="{{ route('product-families.show', $family) }}"
+                   class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">
+                    Fiche
+                </a>
                 <a href="{{ route('product-families.index') }}"
                    class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">
                     Abandon
