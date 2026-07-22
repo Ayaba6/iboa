@@ -92,7 +92,7 @@ class BudgetController extends Controller
 
         $data['company_id'] = currentCompany()->id;
         $data['created_by'] = Auth::id();
-        $data['version']    = $data['version'] ?: 'V1';
+        $data['version']    = ($data['version'] ?? null) ?: 'V1';
 
         $budget = AccountingBudget::create($data);
 
