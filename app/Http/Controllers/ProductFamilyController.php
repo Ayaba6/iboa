@@ -67,7 +67,7 @@ class ProductFamilyController extends Controller
     /** [X3 §16] Fiche famille à onglets : Général / Sous-familles / Articles / Statistiques. */
     public function show(ProductFamily $family)
     {
-        return view('product-families.show', $this->ficheData($family));
+        return view('product-families.show', array_merge($this->ficheData($family), $this->formData()));
     }
 
     public function edit(ProductFamily $family)
