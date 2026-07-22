@@ -137,23 +137,31 @@ class AttendanceController extends Controller
                     $arrival   = Carbon::createFromFormat('H:i', $arrivalStr);
                     $departure = Carbon::createFromFormat('H:i', $departureStr);
                     if ($departure->greaterThan($arrival)) {
-                        $workedHours = round($departure->diffInMinutes($arrival) / 60, 2);
+                        // [FIX Carbon 3] diffInMinutes est SIGNÉ : departure->diff(arrival)
+                        // donnait des heures NÉGATIVES (−10 h pour 08:00→18:00).
+                        $workedHours = round($arrival->diffInMinutes($departure) / 60, 2);
                     }
                 }
 
-                Attendance::updateOrCreate(
-                    ['company_id' => $companyId, 'employee_id' => $employeeId, 'date' => $date],
-                    [
-                        'status'         => $entry['status'],
-                        'arrival_time'   => $arrivalStr,
-                        'departure_time' => $departureStr,
-                        'worked_hours'   => $workedHours,
-                        'overtime_hours' => $entry['overtime_hours'] ?? 0,
-                        'note'           => $entry['note'] ?? null,
-                        'created_by'     => $userId,
-                        'updated_at'     => $now,
-                    ]
-                );
+                // [FIX resaisie] updateOrCreate comparait la date via le cast
+                // (« Y-m-d H:i:s ») : la ligne existante n'était pas retrouvée et
+                // l'insert violait l'unique (company, employee, date) → 500 à la
+                // re-saisie du même jour. Recherche par whereDate, portable.
+                $attendance = Attendance::where('company_id', $companyId)
+                    ->where('employee_id', $employeeId)
+                    ->whereDate('date', $date)
+                    ->first() ?? new Attendance([
+                        'company_id' => $companyId, 'employee_id' => $employeeId, 'date' => $date,
+                    ]);
+                $attendance->fill([
+                    'status'         => $entry['status'],
+                    'arrival_time'   => $arrivalStr,
+                    'departure_time' => $departureStr,
+                    'worked_hours'   => $workedHours,
+                    'overtime_hours' => $entry['overtime_hours'] ?? 0,
+                    'note'           => $entry['note'] ?? null,
+                    'created_by'     => $userId,
+                ])->save();
             }
         });
 

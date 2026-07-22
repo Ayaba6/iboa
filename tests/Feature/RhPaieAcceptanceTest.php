@@ -185,3 +185,65 @@ it('génère le livre de paie en PDF (documents)', function () {
     $resp->assertOk();
     expect($resp->headers->get('content-type'))->toContain('pdf');
 });
+
+// ─── [QA 1-4] Renfort pointage / congés ──────────────────────────────────────
+
+it('refuse un congé chevauchant une demande en attente ou approuvée', function () {
+    $user     = rhpAdmin();
+    $company  = rhpCompany();
+    $employee = rhpEmployee($company, 150000);
+    $this->actingAs($user);
+
+    $type = LeaveType::create(['company_id' => $company->id, 'name' => 'CA Overlap', 'code' => 'CAO', 'days_per_year' => 30]);
+    LeaveRequest::create([
+        'employee_id' => $employee->id, 'leave_type_id' => $type->id,
+        'start_date' => '2025-07-07', 'end_date' => '2025-07-11', 'days' => 5, 'status' => 'approuve', 'created_by' => $user->id,
+    ]);
+
+    $this->post(route('rh.conges.store'), [
+        'employee_id' => $employee->id, 'leave_type_id' => $type->id,
+        'start_date' => '2025-07-10', 'end_date' => '2025-07-15',
+    ])->assertSessionHas('error');
+
+    expect(LeaveRequest::where('employee_id', $employee->id)->count())->toBe(1);
+});
+
+it('refuse l\'approbation si un congé approuvé chevauche déjà la période', function () {
+    $user     = rhpAdmin();
+    $company  = rhpCompany();
+    $employee = rhpEmployee($company, 150000);
+    $this->actingAs($user);
+
+    $type = LeaveType::create(['company_id' => $company->id, 'name' => 'CA Overlap2', 'code' => 'CAO2', 'days_per_year' => 30]);
+    LeaveRequest::create([
+        'employee_id' => $employee->id, 'leave_type_id' => $type->id,
+        'start_date' => '2025-08-04', 'end_date' => '2025-08-08', 'days' => 5, 'status' => 'approuve', 'created_by' => $user->id,
+    ]);
+    $pending = LeaveRequest::create([
+        'employee_id' => $employee->id, 'leave_type_id' => $type->id,
+        'start_date' => '2025-08-06', 'end_date' => '2025-08-12', 'days' => 5, 'status' => 'en_attente', 'created_by' => $user->id,
+    ]);
+
+    $this->post(route('rh.conges.approve', $pending))->assertSessionHas('error');
+    expect($pending->fresh()->status)->toBe('en_attente');
+});
+
+it('saisit le pointage du jour et reste idempotent par employé et date', function () {
+    $user     = rhpAdmin();
+    $company  = rhpCompany();
+    $employee = rhpEmployee($company, 150000);
+    $this->actingAs($user);
+
+    $payload = fn (string $depart) => ['date' => '2025-09-01', 'entries' => [[
+        'employee_id' => $employee->id, 'status' => 'present',
+        'arrival_time' => '08:00', 'departure_time' => $depart, 'overtime_hours' => 1,
+    ]]];
+
+    $this->post(route('rh.presences.store'), $payload('17:00'))->assertRedirect();
+    $this->post(route('rh.presences.store'), $payload('18:00'))->assertRedirect();
+
+    $rows = \App\Models\Attendance::where('employee_id', $employee->id)->whereDate('date', '2025-09-01')->get();
+    expect($rows)->toHaveCount(1)
+        ->and($rows->first()->departure_time)->toContain('18:00')
+        ->and((float) $rows->first()->worked_hours)->toBe(10.0);
+});

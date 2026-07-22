@@ -77,6 +77,17 @@ class LeaveController extends Controller
             'reason'        => ['nullable', 'string'],
         ]);
 
+        // [GARDE chevauchement] Refuser une demande qui recouvre un congé déjà
+        // en attente ou approuvé du même employé (double décompte de solde).
+        $overlap = LeaveRequest::where('employee_id', $data['employee_id'])
+            ->whereIn('status', ['en_attente', 'approuve'])
+            ->where('start_date', '<=', $data['end_date'])
+            ->where('end_date', '>=', $data['start_date'])
+            ->exists();
+        if ($overlap) {
+            return back()->with('error', 'Une demande de congé en attente ou approuvée chevauche déjà cette période pour cet employé.')->withInput();
+        }
+
         // Calcul jours ouvrés (hors samedi/dimanche)
         $start = \Carbon\Carbon::parse($data['start_date']);
         $end   = \Carbon\Carbon::parse($data['end_date']);
@@ -100,6 +111,18 @@ class LeaveController extends Controller
     {
         if ($leave->status !== 'en_attente') {
             return back()->with('error', 'Cette demande ne peut plus être approuvée.');
+        }
+
+        // [GARDE chevauchement] Re-vérifier contre les congés APPROUVÉS (une autre
+        // demande chevauchante a pu être approuvée entre-temps).
+        $overlap = LeaveRequest::where('employee_id', $leave->employee_id)
+            ->where('id', '!=', $leave->id)
+            ->where('status', 'approuve')
+            ->where('start_date', '<=', $leave->end_date)
+            ->where('end_date', '>=', $leave->start_date)
+            ->exists();
+        if ($overlap) {
+            return back()->with('error', 'Un congé approuvé chevauche déjà cette période — approbation refusée.');
         }
 
         // [FIX-RH-SOLDE] Vérifier le solde disponible avant approbation.
