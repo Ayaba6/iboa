@@ -79,6 +79,23 @@ it('liste des articles : requêtes stables à 100 articles', function () {
     expect($q100 - $q10)->toBeLessThanOrEqual(10);
 });
 
+it('liste des articles : tient le palier de 1 000 articles (requêtes et durée bornées)', function () {
+    $this->actingAs(perfUser());
+
+    Product::factory()->count(100)->create();
+    $q100 = perfQueryCount(fn () => $this->get('/products')->assertOk());
+
+    Product::factory()->count(900)->create();
+    $start = microtime(true);
+    $q1000 = perfQueryCount(fn () => $this->get('/products')->assertOk());
+    $ms = (microtime(true) - $start) * 1000;
+
+    // Pagination serveur : le nombre de requêtes ne doit pas croître avec le
+    // volume (×10), et la page reste sous 5 s même en environnement de test.
+    expect($q1000 - $q100)->toBeLessThanOrEqual(10)
+        ->and($ms)->toBeLessThan(5000);
+});
+
 it('dashboard : budget de requêtes borné', function () {
     $this->actingAs(perfUser());
     perfSeedOrders(30);
