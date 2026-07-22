@@ -224,3 +224,27 @@ it('journalise l’historique du cycle de vie de la facture fournisseur (histori
     $logs = AuditLog::where('model_type', SupplierInvoice::class)->where('model_id', $invoice->id)->count();
     expect($logs)->toBeGreaterThan(0);
 });
+
+// [FIX-TRESO recette] Le bouton « Payer » de la fiche FF doit débiter la caisse.
+it('recordPayment débite le compte de trésorerie et journalise la transaction', function () {
+    $co = achCompany();
+    achAdmin();
+    $supplier = achSupplier();
+
+    $inv = \App\Models\SupplierInvoice::create([
+        'company_id' => $co->id, 'supplier_id' => $supplier->id,
+        'number' => 'FF-TRESO-' . uniqid(), 'status' => 'validee',
+        'received_at' => now()->toDateString(),
+        'subtotal_ht' => 10000, 'total_tax' => 1800, 'total_ttc' => 11800,
+        'paid_amount' => 0, 'remaining_amount' => 11800,
+    ]);
+    $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'banque', 'current_balance' => 50000, 'is_active' => true]);
+
+    app(\App\Services\SupplierInvoiceService::class)->recordPayment($inv, [
+        'amount' => 11800, 'payment_date' => now()->toDateString(),
+        'cash_account_id' => $cash->id,
+    ]);
+
+    expect((int) $cash->fresh()->current_balance)->toBe(50000 - 11800)
+        ->and(\App\Models\CashTransaction::where('reference_type', 'SupplierPayment')->where('cash_account_id', $cash->id)->where('type', 'debit')->count())->toBe(1);
+});

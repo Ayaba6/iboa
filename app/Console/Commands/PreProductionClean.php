@@ -53,6 +53,10 @@ class PreProductionClean extends Command
         'analytic_lines', 'journal_entry_lines', 'journal_entries',
         // Paie (runs ; employés et paramètres préservés)
         'payroll_run_lines', 'payroll_runs',
+        // Trésorerie : mouvements de caisse (oubli initial — laissait des
+        // transactions orphelines contredisant les soldes remis à zéro)
+        'cash_transactions', 'cash_closures', 'bank_deposit_items', 'bank_deposits',
+        'bank_statement_lines', 'bank_reconciliations',
         // Journaux techniques
         'audit_logs', 'sync_logs', 'document_sequence_audits',
         'notifications',

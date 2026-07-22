@@ -197,6 +197,24 @@ class SupplierInvoiceService
             // [FIX-MAJEUR] Post supplier payment to GL (was missing from this path)
             $this->accountingService->postSupplierPayment($payment->fresh(['supplier', 'company']));
 
+            // [FIX-TRESO] Débit du compte de trésorerie — ce chemin (bouton « Payer »
+            // de la fiche facture fournisseur) créait paiement + allocation + GL
+            // mais AUCUNE transaction de caisse : le solde du compte ne bougeait
+            // pas (constaté en recette : DEC-2026-001, Coris Bank intact).
+            if (! empty($payment->cash_account_id)) {
+                $cashAccount = \App\Models\CashAccount::find($payment->cash_account_id);
+                if ($cashAccount) {
+                    app(\App\Services\CashAccountService::class)->recordTransaction($cashAccount, [
+                        'type'             => 'debit',
+                        'reference_type'   => 'SupplierPayment',
+                        'reference_id'     => $payment->id,
+                        'amount'           => $payment->amount,
+                        'label'            => 'Décaissement ' . $payment->number . ' — ' . ($inv->supplier?->name ?? ''),
+                        'transaction_date' => $payment->payment_date ?? today(),
+                    ]);
+                }
+            }
+
             // Recalculate supplier balance after payment (remaining_amount has changed)
             $inv->supplier?->recalculateBalance();
 
