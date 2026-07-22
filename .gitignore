@@ -19,6 +19,7 @@
 /storage/*.key
 /storage/pail
 /storage/framework/views/
+/storage/backups/
 /storage/framework/cache/data
 /storage/framework/sessions
 /storage/fonts
