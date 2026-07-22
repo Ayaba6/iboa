@@ -10,16 +10,29 @@
 @section('content')
 <div class="space-y-3">
 
-    <div class="flex items-center justify-between flex-wrap gap-2">
-        <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Catégories d'article</h1>
-            <p class="text-[11.5px] text-gray-400">Modèles de gestion (X3) — déterminent le fonctionnement des articles. Distinctes des familles (classement commercial).</p>
-        </div>
-        <div class="flex gap-2">
-            @can('categories.create')
-            <a href="{{ route('articles.categories.create') }}" class="text-[12.5px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 rounded-[4px]">+ Nouvelle catégorie</a>
-            @endcan
-            <a href="{{ route('product-families.index') }}" class="text-[12.5px] font-semibold text-gray-600 border border-gray-300 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-[4px]">Familles</a>
+    {{-- ═══ Bandeau SAGE X3 (même squelette que le module familles) ═══ --}}
+    <div class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <div>
+                <h2 class="text-[22px] font-bold text-gray-900 leading-tight">Catégories d'article</h2>
+                <p class="text-[11.5px] text-gray-400">Modèles de gestion (X3) — déterminent le fonctionnement des articles. Distinctes des <a href="{{ route('product-families.index') }}" class="underline">familles</a> (classement commercial).</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+                @can('categories.create')
+                <a href="{{ route('articles.categories.create') }}"
+                   class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">
+                    Nouvelle catégorie
+                </a>
+                @endcan
+                <a href="{{ route('product-families.index') }}"
+                   class="text-[14px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-5 py-2 rounded-[4px] transition-colors">
+                    Familles
+                </a>
+                <a href="{{ route('products.index') }}"
+                   class="text-[14px] font-semibold text-gray-500 hover:text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded-[4px] transition-colors">
+                    Articles
+                </a>
+            </div>
         </div>
     </div>
 
@@ -99,6 +112,15 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+        <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
+        <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
+        <span class="border-l border-white/10 pl-6">Référentiel : <span class="text-white font-semibold">catégories d'article</span></span>
+        <span class="ml-auto">Utilisateur : <span class="text-white font-semibold">{{ auth()->user()->name }}</span></span>
+        <span class="border-l border-white/10 pl-6 tabular-nums">{{ now()->format('d/m/Y H:i') }}</span>
     </div>
 </div>
 @endsection
