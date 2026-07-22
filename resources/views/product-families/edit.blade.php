@@ -12,22 +12,17 @@
 @section('content')
 <div class="flex items-start gap-4">
     @include('product-families._selector')
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 space-y-3" x-data="{ tab: 'general' }">
 
-    <form method="POST" action="{{ route('product-families.update', $family) }}" enctype="multipart/form-data" class="space-y-3">
-        @csrf
-        @method('PUT')
-
-        {{-- Barre d'en-tête façon SAGE X3 : titre fiche + actions à droite --}}
-        <div class="flex items-center justify-between bg-white border border-gray-300 rounded-[4px] px-3 py-2.5">
-            <div>
-                <h1 class="text-[22px] font-bold text-gray-900 leading-tight">
-                    Familles : <span class="font-mono text-emerald-700">{{ $family->code }}</span>
-                </h1>
-                <p class="text-[12px] text-gray-500">{{ $family->name }}</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <button type="submit"
+    {{-- ═══ Bandeau + onglets SAGE X3 (même squelette que le form article) ═══ --}}
+    <div class="bg-white border border-gray-300 rounded-[4px]">
+        <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
+            <h2 class="text-[22px] font-bold text-gray-900 leading-tight">
+                Familles : Modification
+                <span class="font-mono text-emerald-700 text-[18px] ml-1">{{ $family->code ?: $family->name }}</span>
+            </h2>
+            <div class="flex items-center gap-1.5">
+                <button type="submit" form="family-form"
                         class="text-[14px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2 rounded-[4px] transition-colors">
                     Enregistrer
                 </button>
@@ -46,19 +41,97 @@
             </div>
         </div>
 
-        @if($errors->any())
-        <div class="bg-red-50 border border-red-300 text-red-700 px-3 py-2.5 rounded-[4px] text-[13px]">
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-            </ul>
-        </div>
-        @endif
+        <nav class="flex items-stretch border-b border-gray-200 px-2 overflow-x-auto">
+            @foreach([
+                'general'      => 'Général',
+                'sousfamilles' => 'Sous-familles (' . $family->children->count() . ')',
+                'articles'     => 'Articles (' . $articlesCount . ')',
+                'stats'        => 'Statistiques',
+            ] as $key => $label)
+            {{-- [SAGE X3] Onglet = ancre : sections toutes visibles, clic = scroll --}}
+            <button type="button"
+                    @click="tab = '{{ $key }}'; document.getElementById('fam-sec-{{ $key }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                    class="px-3 py-1.5 text-[13px] font-semibold border-b-2 transition-colors whitespace-nowrap"
+                    :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-800' : 'border-transparent text-gray-500 hover:text-gray-700'">
+                {{ $label }}
+            </button>
+            @endforeach
+        </nav>
 
-        @include('product-families._form')
-    </form>
+        <div class="p-4 space-y-4">
+            {{-- ══ GÉNÉRAL (éditable) ══ --}}
+            <div id="fam-sec-general" class="scroll-mt-28">
+                <form id="family-form" method="POST" action="{{ route('product-families.update', $family) }}" class="space-y-3">
+                    @csrf
+                    @method('PUT')
+                    @include('product-families._form')
+                </form>
+            </div>
+
+            {{-- ══ SOUS-FAMILLES (lecture) ══ --}}
+            <section id="fam-sec-sousfamilles" class="border border-gray-200 rounded-[4px] overflow-hidden scroll-mt-28">
+                <div class="px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[12px] font-bold text-emerald-900 uppercase">Sous-familles ({{ $family->children->count() }})</div>
+                <div class="p-4">
+                    @forelse($family->children as $sf)
+                    <div class="flex items-center justify-between border-b border-gray-100 py-1.5 text-[12.5px]">
+                        <span><a href="{{ route('product-families.edit', $sf) }}" class="font-mono text-emerald-800 hover:underline">{{ $sf->code }}</a> — {{ $sf->name }}</span>
+                        <span class="text-gray-500">{{ $sf->sub_products_count }} article(s) · {{ $sf->is_active ? 'Active' : 'Inactive' }}</span>
+                    </div>
+                    @empty
+                    <p class="text-gray-400 text-[12.5px]">{{ $family->parent_id ? 'Une sous-famille ne porte pas de sous-familles.' : 'Aucune sous-famille.' }}</p>
+                    @endforelse
+                </div>
+            </section>
+
+            {{-- ══ ARTICLES (lecture) ══ --}}
+            <section id="fam-sec-articles" class="border border-gray-200 rounded-[4px] overflow-hidden scroll-mt-28">
+                <div class="px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[12px] font-bold text-emerald-900 uppercase">Articles ({{ $articlesCount }})</div>
+                <div class="p-4">
+                    @if($articles->isEmpty())
+                    <p class="text-gray-400 text-[12.5px]">Aucun article dans cette famille.</p>
+                    @else
+                    <table class="min-w-full text-[12.5px]">
+                        <thead><tr class="text-left text-[10.5px] font-bold text-gray-500 uppercase">
+                            <th class="py-1 pr-4">Référence</th><th class="py-1 pr-4">Désignation</th><th class="py-1 pr-4">Catégorie</th><th class="py-1">Statut</th>
+                        </tr></thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @foreach($articles as $a)
+                            <tr>
+                                <td class="py-1 pr-4 font-mono"><a href="{{ route('products.show', $a) }}" class="text-emerald-800 hover:underline">{{ $a->reference }}</a></td>
+                                <td class="py-1 pr-4">{{ $a->name }}</td>
+                                <td class="py-1 pr-4 font-mono text-gray-500">{{ $a->itemCategory?->code ?? '—' }}</td>
+                                <td class="py-1">{{ $a->is_active ? 'Actif' : 'Inactif' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    @endif
+                </div>
+            </section>
+
+            {{-- ══ STATISTIQUES (lecture) ══ --}}
+            <section id="fam-sec-stats" class="border border-gray-200 rounded-[4px] overflow-hidden scroll-mt-28">
+                <div class="px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[12px] font-bold text-emerald-900 uppercase">Statistiques</div>
+                <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="border border-gray-200 rounded-[4px] p-3 text-center">
+                        <div class="text-[10.5px] font-bold text-gray-500 uppercase">Articles</div>
+                        <div class="text-[18px] font-bold text-gray-900 tabular-nums">{{ $articlesCount }}</div>
+                    </div>
+                    <div class="border border-gray-200 rounded-[4px] p-3 text-center">
+                        <div class="text-[10.5px] font-bold text-gray-500 uppercase">Sous-familles</div>
+                        <div class="text-[18px] font-bold text-gray-900 tabular-nums">{{ $family->children->count() }}</div>
+                    </div>
+                    <div class="border border-gray-200 rounded-[4px] p-3 text-center col-span-2">
+                        <div class="text-[10.5px] font-bold text-gray-500 uppercase">CA facturé HT {{ now()->year }}</div>
+                        <div class="text-[18px] font-bold text-blue-700 tabular-nums">{{ number_format($caYtd, 0, ',', ' ') }} FCFA</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
 
     {{-- ── Barre de contexte pied de page [X3] ─────────────────────────────── --}}
-    <div class="mt-3 bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
+    <div class="bg-[#232a30] text-gray-300 rounded-[4px] px-4 py-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]">
         <span>Société : <span class="text-white font-semibold">{{ currentCompany()?->name }}</span></span>
         <span class="border-l border-white/10 pl-6">Site : <span class="text-white font-semibold">01</span></span>
         <span class="border-l border-white/10 pl-6">Fiche : <span class="text-white font-semibold">Famille article</span></span>

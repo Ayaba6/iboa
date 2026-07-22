@@ -67,6 +67,22 @@ class ProductFamilyController extends Controller
     /** [X3 §16] Fiche famille à onglets : Général / Sous-familles / Articles / Statistiques. */
     public function show(ProductFamily $family)
     {
+        return view('product-families.show', $this->ficheData($family));
+    }
+
+    public function edit(ProductFamily $family)
+    {
+        // [X3] L'écran de modification porte les mêmes onglets que la fiche
+        // (Général éditable + Sous-familles / Articles / Statistiques en lecture).
+        return view('product-families.edit', array_merge(
+            $this->ficheData($family),
+            $this->formData($family->id)
+        ));
+    }
+
+    /** Données de fiche partagées show/edit (onglets X3). */
+    private function ficheData(ProductFamily $family): array
+    {
         $family->load(['parent', 'children' => fn ($q) => $q->withCount('subProducts')])
             ->loadCount('products');
 
@@ -84,15 +100,7 @@ class ProductFamilyController extends Controller
 
         $articlesCount = (clone $articlesQuery)->count();
 
-        return view('product-families.show', compact('family', 'articles', 'caYtd', 'articlesCount'));
-    }
-
-    public function edit(ProductFamily $family)
-    {
-        return view('product-families.edit', array_merge(
-            ['family' => $family],
-            $this->formData($family->id)
-        ));
+        return compact('family', 'articles', 'caYtd', 'articlesCount');
     }
 
     /**
