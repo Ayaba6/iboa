@@ -89,7 +89,21 @@ class RoleController extends Controller
     {
         $this->authorize('viewAny', Role::class);
 
-        $roles = Role::withCount(['permissions', 'users'])->orderBy('id')->get();
+        // [FIX guard] withCount('users') passe par la relation Spatie qui résout
+        // le modèle User via le guard PAR DÉFAUT du process : hors requête web
+        // (worker, Octane, batch), si le défaut n'est plus « web », le guard
+        // sanctum sans provider donne un modèle null → crash « Class name must
+        // be a valid object or a string ». Comptage direct sur le pivot,
+        // indépendant du guard.
+        $userCounts = \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->where('model_type', User::class)
+            ->groupBy('role_id')
+            ->selectRaw('role_id, COUNT(*) n')
+            ->pluck('n', 'role_id');
+
+        $roles = Role::withCount('permissions')->orderBy('id')->get()
+            ->each(fn ($r) => $r->users_count = (int) ($userCounts[$r->id] ?? 0));
+
         return view('roles.index', compact('roles'));
     }
 
