@@ -104,7 +104,8 @@ class ProductFamilyController extends Controller
     private function formData(?int $excludeId = null): array
     {
         return [
-            'selectorFamilies' => ProductFamily::orderByDesc('id')->limit(20)
+            'selectorFamilies' => ProductFamily::where('is_active', true)
+                                    ->orderByDesc('id')->limit(20)
                                     ->get(['id', 'code', 'name', 'parent_id']),
         ];
     }
