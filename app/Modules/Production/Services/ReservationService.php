@@ -68,6 +68,14 @@ class ReservationService
      */
     public function reserveStockForOrder(\App\Models\Order $order): float
     {
+        // [GARDE anti-résa fantôme] Un OrderConfirmed ré-émis (re-validation
+        // workflow) sur une commande déjà livrée/facturée/annulée re-réservait
+        // du stock jamais libéré ensuite (cas réel : CMD-2026-050 re-réservée
+        // 2 h après la validation de son BL).
+        if (in_array($order->status, ['livre', 'facture', 'annule'], true)) {
+            return 0.0;
+        }
+
         $analysis = app(SalesProductionService::class)->stockAnalysis($order);
         $totalReserved = 0.0;
 

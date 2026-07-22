@@ -67,3 +67,22 @@ it('prevents double reservation', function(){
     $this->post(route('production.orders.reserve',$o))->assertSessionHas('error');
     expect(StockReservation::where('production_order_id',$o->id)->where('status','reserved')->count())->toBe(1);
 });
+
+// [Analyse avancée 22/07] Une commande déjà livrée/facturée ne doit plus pouvoir
+// re-réserver du stock (résa fantôme CMD-2026-050).
+test('reserveStockForOrder refuse une commande livrée ou facturée', function () {
+    resAdmin();
+    $co = \App\Models\Company::first();
+    $order = \App\Models\Order::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'client_id' => \App\Models\Client::factory()->create()->id,
+        'number' => 'CMD-RESA-' . uniqid(), 'status' => 'facture',
+        'issued_at' => now(), 'total_ttc' => 100000,
+    ]);
+
+    $reserved = app(\App\Modules\Production\Services\ReservationService::class)
+        ->reserveStockForOrder($order);
+
+    expect($reserved)->toBe(0.0)
+        ->and(\Illuminate\Support\Facades\DB::table('stock_reservations')->where('order_id', $order->id)->count())->toBe(0);
+});
