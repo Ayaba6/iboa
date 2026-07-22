@@ -263,6 +263,22 @@ class ProductionService
             return;
         }
 
+        // [Scénario B CDC] L'approbation gérant (motif obligatoire, validité datée,
+        // permission production.approve_financial) EST l'autorisation métier de
+        // produire sans règlement : la gate la reconnaît — sinon la commande
+        // apparaissait éligible au tableau mais le lancement exigeait une seconde
+        // autorisation DAF redondante.
+        if ($salesOrder->hasValidProductionApproval()) {
+            $order->update([
+                'financial_authorization' => 'approved',
+                'financial_authorized_at' => now(),
+                'financial_authorized_by' => $salesOrder->production_approved_by,
+                'financial_notes'         => 'Approbation gérant sur la commande : ' . ($salesOrder->production_approval_reason ?? ''),
+            ]);
+
+            return;
+        }
+
         // [MTO §1.3 — méthode centrale] Encaissements confirmés de la commande :
         // allocations factures + paiements caisse (BP) + acomptes libres client.
         // Même source que l'éligibilité du tableau coordinateur (Order::confirmedReceipts).
