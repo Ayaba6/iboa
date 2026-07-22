@@ -52,6 +52,23 @@ class ClientPaymentService
                 }
             }
 
+            // [GARDE DEVISE] Les agrégats financiers (imputation, balance, éligibilité
+            // production) somment les montants bruts : un paiement dans une devise
+            // différente de la facture fausserait tout. ERP mono-devise XOF de fait —
+            // refus explicite de tout mélange.
+            if (! empty($allocations)) {
+                $payCur = strtoupper($data['currency_code'] ?? 'XOF');
+                $invCurs = Invoice::whereIn('id', collect($allocations)->pluck('invoice_id'))
+                    ->pluck('currency_code', 'id');
+                foreach ($invCurs as $invId => $cur) {
+                    if (strtoupper($cur ?? 'XOF') !== $payCur) {
+                        throw new \RuntimeException(
+                            "Devise du paiement ({$payCur}) différente de celle de la facture #{$invId} (" . strtoupper($cur ?? 'XOF') . ') — imputation refusée.'
+                        );
+                    }
+                }
+            }
+
             $data['created_by'] = Auth::id();
 
             // [DOUBLE-PAYMENT-GUARD] Protection anti-doublon AVANT toute écriture :

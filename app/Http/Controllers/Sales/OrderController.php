@@ -366,6 +366,15 @@ class OrderController extends Controller
                 : null,
         ]);
 
+        \App\Notifications\ValidationStepNotification::sendToRoles(
+            ['chef_production', 'chef_atelier'],
+            'Commande approuvée pour production',
+            'La commande ' . $commande->numero . ' (impayé ' . number_format($unpaid, 0, ',', ' ') . ' FCFA) a été approuvée par ' . $request->user()->name . ' : ' . $request->input('motif'),
+            route('production.orders.eligible'),
+            'Order', $commande->id,
+            'production_approval', 'check-badge', 'green',
+        );
+
         return back()->with('success', 'Commande approuvée pour la production — éligible à la création d\'OF.');
     }
 
@@ -382,6 +391,10 @@ class OrderController extends Controller
             return back()->with('error', 'Un OF actif existe déjà — annulez d\'abord l\'OF avant de révoquer l\'approbation.');
         }
 
+        // [GO conditionnel #2] Mémoriser l'approbateur d'origine avant effacement
+        // pour le prévenir de la révocation.
+        $previousApproverId = $commande->production_approved_by;
+
         $commande->update([
             'production_approved'            => false,
             'production_approved_at'         => null,
@@ -390,6 +403,24 @@ class OrderController extends Controller
             'production_approval_unpaid'     => null,
             'production_approval_expires_at' => null,
         ]);
+
+        \App\Notifications\ValidationStepNotification::sendToRoles(
+            ['chef_production', 'chef_atelier'],
+            'Approbation de production révoquée',
+            'L\'approbation de la commande ' . $commande->numero . ' a été révoquée par ' . $request->user()->name . ' — la commande n\'est plus éligible à un OF.',
+            route('ventes.commandes.show', $commande),
+            'Order', $commande->id,
+            'production_approval_revoked', 'x-circle', 'red',
+        );
+        if ($previousApproverId && $previousApproverId !== $request->user()->id) {
+            \App\Models\User::find($previousApproverId)?->notify(new \App\Notifications\ValidationStepNotification(
+                'Votre approbation de production a été révoquée',
+                'L\'approbation que vous aviez accordée sur la commande ' . $commande->numero . ' a été révoquée par ' . $request->user()->name . '.',
+                route('ventes.commandes.show', $commande),
+                'Order', $commande->id,
+                'production_approval_revoked', 'x-circle', 'red',
+            ));
+        }
 
         return back()->with('success', 'Approbation de production révoquée.');
     }

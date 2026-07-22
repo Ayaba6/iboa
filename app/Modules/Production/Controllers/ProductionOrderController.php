@@ -101,7 +101,14 @@ class ProductionOrderController extends Controller
         // Pré-filtre SQL (structure + approbation/BP), puis règle financière exacte :
         // montant encaissé ≥ montant requis — MÊME méthode que la gate de lancement OF.
         // Un BP partiel (ex. 50 000 sur 500 000 requis) n'apparaît donc plus ici.
+        //
+        // [PERF — décision documentée] confirmedReceipts() exécute ~5 requêtes par
+        // commande évaluée. Volume réel MTO simultané ≈ dizaine : un refactor batch
+        // divergerait de la gate OF pour un gain nul. La borne limit(200) protège
+        // contre toute dégénérescence future ; si elle est atteinte, il faudra un
+        // précalcul par lot partagé avec la gate.
         $orders = Order::eligibleForProduction()
+            ->limit(200)
             ->with([
                 'client:id,name,trade_name,payment_mode',
                 'productionApprovedBy:id,name',
