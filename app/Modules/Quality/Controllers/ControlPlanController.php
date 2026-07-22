@@ -92,7 +92,7 @@ class ControlPlanController extends Controller
     {
         return [
             'plan'       => $plan,
-            'products'   => Product::orderBy('name')->get(['id', 'name', 'code']),
+            'products'   => Product::orderBy('name')->get(['id', 'name', 'code_article as code']),
             'families'   => ProductFamily::orderBy('name')->get(['id', 'name']),
         ];
     }

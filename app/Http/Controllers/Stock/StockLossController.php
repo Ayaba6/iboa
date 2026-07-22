@@ -91,7 +91,7 @@ class StockLossController extends Controller
     {
         return [
             'loss'        => $loss,
-            'products'    => Product::orderBy('name')->get(['id', 'name', 'code']),
+            'products'    => Product::orderBy('name')->get(['id', 'name', 'code_article as code']),
             'warehouses'  => Warehouse::orderBy('name')->get(['id', 'name', 'code']),
             'employees'   => Employee::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ];
