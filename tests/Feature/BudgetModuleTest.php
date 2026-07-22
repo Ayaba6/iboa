@@ -36,3 +36,22 @@ it('crée un budget comptable et refuse une période inversée', function () {
 it('refuse l\'accès budgets sans authentification', function () {
     $this->get('/comptabilite/budgets')->assertRedirect();
 });
+
+it('ajoute une ligne budgétaire puis verrouille après validation', function () {
+    $this->actingAs(budAdmin());
+    $co = Company::first();
+    $account = \App\Models\Account::create(['company_id' => $co->id, 'account_class_id' => \App\Models\AccountClass::firstOrCreate(['company_id' => $co->id, 'number' => 6], ['name' => 'Charges'])->id, 'code' => '601BUD', 'name' => 'Achats BUD', 'type' => 'charge', 'is_detail' => 1, 'is_active' => 1]);
+
+    $budget = AccountingBudget::create(['company_id' => $co->id, 'code' => 'BUD-L', 'label' => 'Lignes', 'version' => 'V1', 'period_from' => 1, 'period_to' => 12, 'status' => 'en_cours', 'created_by' => auth()->id()]);
+
+    // Ligne acceptée, updateOrCreate idempotent par compte+section
+    $this->post(route('comptabilite.budgets.lines.store', $budget), ['account_id' => $account->id, 'initial_amount' => 500000])->assertRedirect();
+    $this->post(route('comptabilite.budgets.lines.store', $budget), ['account_id' => $account->id, 'initial_amount' => 750000])->assertRedirect();
+    expect($budget->lines()->count())->toBe(1)
+        ->and((int) $budget->lines()->first()->initial_amount)->toBe(750000);
+
+    // Validation puis verrouillage des lignes
+    $this->post(route('comptabilite.budgets.validate', $budget))->assertRedirect();
+    expect($budget->fresh()->status)->not->toBe('en_cours');
+    $this->post(route('comptabilite.budgets.lines.store', $budget), ['account_id' => $account->id, 'initial_amount' => 1])->assertForbidden();
+});
