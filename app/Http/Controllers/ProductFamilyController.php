@@ -20,11 +20,15 @@ class ProductFamilyController extends Controller
     {
         // [X3] Deux sous-modules : Catégories (racines, arborescence) / Familles (sous-familles, à plat)
         $niveau = $request->input('niveau') === 'famille' ? 'famille' : 'categorie';
+        // Défaut : actives seulement — les familles archivées (ex-référentiel plat)
+        // restent consultables via ?statut=toutes.
+        $toutes = $request->input('statut') === 'toutes';
 
         if ($niveau === 'famille') {
             $families = ProductFamily::with('parent:id,code,name')
                 ->withCount('subProducts')
                 ->whereNotNull('parent_id')
+                ->when(! $toutes, fn ($q) => $q->where('is_active', true))
                 ->orderBy('sort_order')->orderBy('name')
                 ->paginate(20)
                 ->withQueryString();
@@ -32,6 +36,7 @@ class ProductFamilyController extends Controller
             $families = ProductFamily::with(['children' => fn($q) => $q->withCount('subProducts')])
                 ->withCount('products')
                 ->whereNull('parent_id')
+                ->when(! $toutes, fn ($q) => $q->where('is_active', true))
                 ->orderBy('sort_order')->orderBy('name')
                 ->paginate(20)
                 ->withQueryString();

@@ -23,11 +23,19 @@
         </div>
         <div class="flex items-center gap-2 self-start">
             {{-- Bascule Familles (arborescence) / Sous-familles (à plat) --}}
+            @php $statutToutes = request('statut') === 'toutes'; @endphp
             <div class="inline-flex rounded-[4px] border border-gray-300 overflow-hidden text-[13px] font-semibold">
-                <a href="{{ route('product-families.index') }}"
+                <a href="{{ route('product-families.index', array_filter(['statut' => request('statut')])) }}"
                    class="px-3 py-2 {{ ! $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Familles</a>
-                <a href="{{ route('product-families.index', ['niveau' => 'famille']) }}"
+                <a href="{{ route('product-families.index', array_filter(['niveau' => 'famille', 'statut' => request('statut')])) }}"
                    class="px-3 py-2 border-l border-gray-300 {{ $isFam ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Sous-familles</a>
+            </div>
+            {{-- Bascule Actives / Toutes (archivées incluses) --}}
+            <div class="inline-flex rounded-[4px] border border-gray-300 overflow-hidden text-[13px] font-semibold">
+                <a href="{{ route('product-families.index', array_filter(['niveau' => request('niveau')])) }}"
+                   class="px-3 py-2 {{ ! $statutToutes ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Actives</a>
+                <a href="{{ route('product-families.index', array_filter(['niveau' => request('niveau'), 'statut' => 'toutes'])) }}"
+                   class="px-3 py-2 border-l border-gray-300 {{ $statutToutes ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50' }}">Toutes</a>
             </div>
             <a href="{{ route('product-families.create') }}"
                class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-2.5 rounded-[4px] transition-colors">
