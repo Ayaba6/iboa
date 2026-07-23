@@ -388,3 +388,28 @@ it('refuse la suppression physique d\'une facture annulée', function () {
     }
     expect(\App\Models\Invoice::find($inv->id))->not->toBeNull();
 });
+
+// [Phase 2.3 — ancrage fiscal] Un document fiscalement transmis (accepté) est
+// immuable : le socle est prêt AVANT tout branchement à l'administration.
+it('refuse toute modification d\'une facture fiscalement transmise', function () {
+    [$co, $client] = afSetup();
+    $inv = afInvoice($co, $client, 25000, now()->toDateString());
+    $inv->update(['status' => 'brouillon']); // seul statut modifiable, pour isoler la garde fiscale
+
+    \App\Models\FiscalTransmission::create([
+        'company_id' => $co->id, 'document_type' => \App\Models\Invoice::class, 'document_id' => $inv->id,
+        'status' => 'accepte', 'external_reference' => 'DGI-2026-000123',
+        'idempotency_key' => 'fiscal:' . $inv->id, 'transmitted_at' => now(), 'responded_at' => now(),
+    ]);
+
+    try {
+        app(\App\Services\InvoiceService::class)->update($inv->fresh(), ['notes' => 'tentative']);
+        $this->fail('La modification aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        expect($e->getMessage())->toContain('administration fiscale');
+    }
+    // Une transmission REJETÉE ne verrouille pas
+    \App\Models\FiscalTransmission::where('document_id', $inv->id)->update(['status' => 'rejete']);
+    app(\App\Services\InvoiceService::class)->update($inv->fresh(), ['notes' => 'ok après rejet']);
+    expect($inv->fresh()->notes)->toBe('ok après rejet');
+});

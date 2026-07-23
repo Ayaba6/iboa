@@ -346,7 +346,7 @@ Manque (NON TESTÉ / NON IMPLÉMENTÉ) :
 |---|---|---|---|
 | Transfert partiellement reçu | TRANCHÉ 23/07 : la saisie partielle existait déjà (quantités par ligne) mais l'écart s'évaporait sans comptabilisation | Décision : PERTE EN TRANSIT comptabilisée — D 6097 / C 3111 à la réception partielle, idempotente, journalisée (audit_logs) | **LIVRÉ + PROUVÉ** (écart 5×6 000 = 30 000 : écriture équilibrée, réception complète = aucune écriture) |
 | BL par lot/bobine/emplacement | TRANCHÉ 23/07 : lot_number déclaratif (texte) insuffisant | Décision : LIEN FORMEL lot_id sur lignes BL + décrément stock_lots à la validation + lot imprimé sur le BL | **LIVRÉ + PROUVÉ (back-end)** : décrément à la validation, réintégration à l'annulation, gardes quantité/produit, lot_number aligné pour le PDF. Reste : sélecteur de lot dans l'UI de préparation (le champ lot_number texte reste utilisable en attendant) |
-| Intégration fiscale (facture normalisée) | Échéance réglementaire au Burkina ? | concevoir dès maintenant les ancrages : statut fiscal distinct, référence externe, idempotence, payload conservé, interdiction de modifier un document transmis | NON IMPLÉMENTÉ — conception à faire |
+| Intégration fiscale (facture normalisée) | SOCLE LIVRÉ 23/07 : table fiscal_transmissions (statut fiscal distinct du statut commercial, référence externe, clé idempotence unique, payloads requête/réponse conservés, rejets + retry tracés) + garde : document ACCEPTÉ = immuable (rejeté = déverrouillé) — PROUVÉ | Reste : le connecteur vers l'administration (aucun flux exposé à ce jour) — brancher via FiscalTransmission quand la réglementation l'exigera |
 
 ## 6. Contrôles de `a3:audit-database` — liste exacte actuelle
 

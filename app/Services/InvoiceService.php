@@ -319,6 +319,11 @@ class InvoiceService
     public function update(Invoice $invoice, array $data): Invoice
     {
         return DB::transaction(function () use ($invoice, $data) {
+            // [FISCAL] Un document fiscalement transmis (accepté) est IMMUABLE.
+            if (\App\Models\FiscalTransmission::isDocumentLocked($invoice)) {
+                throw new \RuntimeException("La facture {$invoice->number} a été transmise à l'administration fiscale — toute modification est interdite. Émettez un avoir.");
+            }
+
             // [CONCURRENCE] Verrou optimiste : détecte les modifications concurrentes
             $this->assertVersion($invoice, $data['_lock_version'] ?? null);
             unset($data['_lock_version'], $data['_idempotency_key']);
