@@ -52,13 +52,18 @@ class ReservationService
                         $salesOrder->number, $salesOrder->status
                     )]);
                 }
-                $resteALivrer = (float) $salesOrder->items
-                    ->where('product_id', $order->product_id)
-                    ->sum(fn ($i) => max(0, (float) $i->quantity - (float) $i->delivered_quantity));
-                if ($resteALivrer <= 0) {
-                    throw ValidationException::withMessages(['order' => 'Les quantités de la commande sont déjà entièrement livrées — aucune réservation à créer.']);
+                // Le plafond au reliquat ne vaut que si la commande porte des
+                // lignes du produit (sans ligne, impossible de calculer un
+                // reliquat — comportement historique conservé).
+                $lignesProduit = $salesOrder->items->where('product_id', $order->product_id);
+                if ($lignesProduit->isNotEmpty()) {
+                    $resteALivrer = (float) $lignesProduit
+                        ->sum(fn ($i) => max(0, (float) $i->quantity - (float) $i->delivered_quantity));
+                    if ($resteALivrer <= 0) {
+                        throw ValidationException::withMessages(['order' => 'Les quantités de la commande sont déjà entièrement livrées — aucune réservation à créer.']);
+                    }
+                    $qty = min($qty, $resteALivrer);
                 }
-                $qty = min($qty, $resteALivrer);
             }
         }
 
