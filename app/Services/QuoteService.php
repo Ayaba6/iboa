@@ -88,6 +88,25 @@ class QuoteService
             $this->assertVersion($quote, $data['_lock_version'] ?? null);
             unset($data['_lock_version'], $data['_idempotency_key']);
 
+            // [LOT 3 — modification post-validation] Un devis CONVERTI en commande
+            // est figé (sinon le devis signé et la commande divergent) ; un devis
+            // validé/accepté ne se modifie pas silencieusement — repasser par un
+            // nouveau devis ou une révision explicite.
+            $quote = Quote::lockForUpdate()->findOrFail($quote->id);
+            if ($quote->converted_to_order_id) {
+                throw new \RuntimeException(
+                    'Ce devis a été converti en commande ' . ($quote->convertedOrder?->number ?? '') .
+                    ' — il est figé. Modifiez la commande ou créez un nouveau devis.'
+                );
+            }
+            if (! in_array($quote->status, [Quote::STATUS_DRAFT, 'en_attente_validation', 'refuse'], true)) {
+                throw new \RuntimeException(sprintf(
+                    'Le devis %s est « %s » — un devis validé ne se modifie pas silencieusement. Créez une nouvelle version.',
+                    $quote->number,
+                    $quote->status
+                ));
+            }
+
             $items = $data['items'] ?? null;
             unset($data['items']);
 

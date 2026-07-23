@@ -261,3 +261,36 @@ it('refuse de valider une facture sans lignes (écriture déséquilibrée)', fun
     expect(fn () => app(\App\Services\InvoiceService::class)->validate($inv->fresh()))
         ->toThrow(\RuntimeException::class);
 });
+
+// [Lot 3 — modification post-validation] Un devis converti ou validé est figé.
+it('refuse de modifier un devis converti ou validé', function () {
+    [$co, $client, $cash] = afSetup();
+    $p = \App\Models\Product::factory()->create(['is_sellable' => true, 'sale_price' => 1000]);
+
+    $svc = app(\App\Services\QuoteService::class);
+    $quote = $svc->create([
+        'client_id' => $client->id, 'issued_at' => now()->toDateString(),
+        'items' => [['product_id' => $p->id, 'description' => 'L', 'quantity' => 2, 'unit_price' => 1000, 'discount_percent' => 0, 'tax_rate_value' => 0]],
+    ]);
+
+    // Devis validé : modification refusée
+    $quote->update(['status' => \App\Models\Quote::STATUS_VALIDATED]);
+    expect(fn () => $svc->update($quote->fresh(), ['notes' => 'modif silencieuse']))
+        ->toThrow(\RuntimeException::class, 'validé');
+
+    // Devis converti : figé
+    $quote->update(['status' => \App\Models\Quote::STATUS_CONVERTED, 'converted_to_order_id' => null]);
+    $order = \App\Models\Order::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'client_id' => $client->id, 'number' => 'CMD-L3-' . uniqid(),
+        'status' => 'confirme', 'issued_at' => now(), 'total_ttc' => 2000,
+    ]);
+    $quote->update(['converted_to_order_id' => $order->id]);
+    expect(fn () => $svc->update($quote->fresh(), ['notes' => 'modif après conversion']))
+        ->toThrow(\RuntimeException::class, 'figé');
+
+    // Brouillon : reste modifiable
+    $quote->update(['status' => \App\Models\Quote::STATUS_DRAFT, 'converted_to_order_id' => null]);
+    $svc->update($quote->fresh(), ['notes' => 'modif légitime']);
+    expect($quote->fresh()->notes)->toBe('modif légitime');
+});
