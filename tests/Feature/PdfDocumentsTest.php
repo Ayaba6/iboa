@@ -56,3 +56,27 @@ it('rend le PDF d\'un devis', function () {
     $res->assertOk();
     expect($res->headers->get('content-type'))->toContain('pdf');
 });
+
+// [CDC §7] Le PDF d'une révision porte la mention de version (sinon deux offres
+// identiques circulent chez le client sans distinction).
+it('rend le PDF d\'une révision de devis avec mention de version', function () {
+    $this->actingAs(pdfUser());
+    $co = Company::first();
+    $p  = Product::factory()->create();
+    $svc = app(\App\Services\QuoteService::class);
+    $quote = $svc->create([
+        'client_id' => Client::factory()->create()->id,
+        'issued_at' => now()->toDateString(),
+        'items' => [[
+            'product_id' => $p->id, 'description' => 'Tôle', 'quantity' => 2,
+            'unit_price' => 5000, 'tax_rate_value' => 0,
+        ]],
+    ]);
+    $svc->send($quote);
+    $rev = $svc->revise($quote->fresh());
+
+    $res = $this->get(route('ventes.devis.pdf', $rev));
+    $res->assertOk();
+    expect($res->headers->get('content-type'))->toContain('pdf')
+        ->and($rev->revision_of_id)->toBe($quote->id);
+});

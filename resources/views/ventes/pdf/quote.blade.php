@@ -100,6 +100,9 @@
         <div class="header-right">
             <div class="doc-title">DEVIS</div>
             <div class="doc-number">{{ $quote->number }}</div>
+            @if($quote->revision_of_id && $quote->revisionOf)
+            <div class="doc-date">Révision n°{{ $quote->revision_number }} — remplace {{ $quote->revisionOf->number }}</div>
+            @endif
             <div class="doc-date">Émis le {{ $quote->issued_at?->format('d/m/Y') ?? '—' }}</div>
             @if($quote->expires_at)
             <div class="doc-date">Valable jusqu'au {{ $quote->expires_at->format('d/m/Y') }}</div>
