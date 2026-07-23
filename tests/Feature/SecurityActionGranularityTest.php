@@ -55,8 +55,8 @@ it('refuse l\'annulation d\'un encaissement à un simple lecteur trésorerie', f
     expect($pay->fresh()->status)->toBe('confirme'); // rien n'a bougé
 });
 
-it('autorise l\'annulation avec treasury.write', function () {
-    secUserWith(['treasury.view', 'payments.view', 'treasury.write']);
+it('autorise l\'annulation avec la permission dédiée treasury.cancel', function () {
+    secUserWith(['treasury.view', 'payments.view', 'treasury.cancel']);
     $co = secCompany();
     $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 100000, 'is_active' => true]);
     $pay = app(\App\Services\ClientPaymentService::class)->create([
@@ -119,7 +119,7 @@ it('coupe la session d\'un utilisateur désactivé en cours de route', function 
 
 // [SEC-PHASE2] Les annulations financières alimentent le journal d'audit.
 it('journalise l\'annulation d\'un encaissement dans audit_logs', function () {
-    secUserWith(['treasury.view', 'treasury.write', 'payments.view']);
+    secUserWith(['treasury.view', 'treasury.cancel', 'payments.view']);
     $co = secCompany();
     $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 50000, 'is_active' => true]);
     $pay = app(\App\Services\ClientPaymentService::class)->create([
@@ -136,4 +136,35 @@ it('journalise l\'annulation d\'un encaissement dans audit_logs', function () {
     expect($log)->not->toBeNull()
         ->and($log->new_values['motif'] ?? null)->toBe('Erreur de saisie caissier')
         ->and($log->user_id)->not->toBeNull();
+});
+
+// [SEC-PHASE2 §3] treasury.write (saisie courante) n'est PAS un passe-partout :
+// l'annulation exige la permission dédiée treasury.cancel.
+it('refuse l\'annulation d\'un encaissement à un porteur de treasury.write seul', function () {
+    secUserWith(['treasury.view', 'treasury.write', 'payments.view']);
+    $co = secCompany();
+    $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 50000, 'is_active' => true]);
+    $pay = ClientPayment::create([
+        'company_id' => $co->id, 'client_id' => Client::factory()->create()->id,
+        'number' => 'ENC-W-' . uniqid(), 'amount' => 5000, 'payment_date' => now(),
+        'payment_method' => 'espece', 'cash_account_id' => $cash->id, 'status' => 'confirme',
+    ]);
+
+    $this->post(route('tresorerie.encaissements.cancel', $pay), ['reason' => 'Tentative writer'])
+        ->assertForbidden();
+    expect($pay->fresh()->status)->toBe('confirme');
+});
+
+// [SEC-PHASE2 §3] Créer une réception n'autorise plus à la VALIDER (effet stock).
+it('refuse la validation de réception à un porteur de receptions.create seul', function () {
+    secUserWith(['receptions.view', 'receptions.create']);
+    $co = secCompany();
+    $reception = \App\Models\Reception::create([
+        'company_id' => $co->id, 'supplier_id' => \App\Models\Supplier::factory()->create()->id,
+        'number' => 'REC-SEC-' . uniqid(), 'status' => 'brouillon', 'received_at' => now(), 'type' => 'totale',
+    ]);
+
+    $this->post(route('achats.receptions.validate', $reception), ['items' => []])
+        ->assertForbidden();
+    expect($reception->fresh()->status)->toBe('brouillon');
 });

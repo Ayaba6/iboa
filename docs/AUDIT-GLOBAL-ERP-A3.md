@@ -105,9 +105,48 @@ séparation créateur/valideur exigerait des permissions dédiées.
 - Rate limiting : PROUVÉ par lecture (login 5/min + email+IP,
   api/auth/token throttle:api_auth, API 60/min/user).
 
-Restant NON TESTÉ : requêtes forgées inter-tiers (ID d'autrui dans les
-payloads d'allocation), couverture du journal au-delà des annulations
-(validations, approbations, clôtures). Suivi : tâche Phase 2.1.
+### Matrice des permissions par action (4e incrément, 23/07)
+
+Migration `2026_07_23_120000_add_granular_action_permissions` : 10 permissions
+dédiées créées ; compatibilité assurée (chaque nouvelle permission est donnée
+aux rôles porteurs de la permission source — personne ne perd d'accès au
+déploiement ; la séparation stricte se fait ensuite par retrait, écran Rôles).
+
+| Action | Permission avant | Permission cible (appliquée) | Séparation possible | Seuil | Journal |
+|---|---|---|---|---|---|
+| Annuler encaissement | treasury.view (hérité) → treasury.write (1er fix) | **treasury.cancel** | write ≠ cancel PROUVÉ (test 403) | — | ✅ encaissement.annulation |
+| Annuler décaissement | treasury.view (hérité) | **treasury.cancel** | idem | — | ✅ decaissement.annulation |
+| Approuver/rejeter décaissement | treasury.view (hérité) | **treasury.validate** (route) + seuil TreasuryApprovalService | maker ≠ checker : NON IMPLÉMENTÉ | ✅ par montant | à brancher |
+| Valider avoir (stock+GL) | credit_notes.create | **credit_notes.validate** | create ≠ validate | — | à brancher |
+| Annuler avoir | sales.cancel | credit_notes.cancel (créée, route déjà sur sales.cancel — équivalent) | ✅ | — | ✅ avoir.annulation |
+| Valider réception (stock) | receptions.create | **receptions.validate** | create ≠ validate PROUVÉ (test 403) | — | à brancher |
+| Annuler réception | receptions.create | **receptions.cancel** | ✅ | — | à brancher |
+| Confirmer CF | purchase_orders.create | **purchase_orders.confirm** | create ≠ confirm | — | à brancher |
+| Approuver CF (seuils) | purchase_orders.view | purchase_orders.view + garde service (règle de seuil OU purchase_requests.approve) | maker ≠ checker : NON IMPLÉMENTÉ | ✅ par règle | à brancher |
+| Valider clôture caisse | treasury.write | **cash_closures.validate** | ✅ | — | à brancher |
+| Rouvrir clôture caisse | (pas de route) | cash_closures.reopen (créée, réservée) | ✅ | — | — |
+| Valider facture / annuler | invoices.validate | invoices.validate (déjà dédiée) | — | — | ✅ facture.annulation |
+| Valider écriture | accounting.validate | déjà dédiée | auteur ≠ posteur : NON IMPLÉMENTÉ | — | à brancher |
+| Payer virement paie | rh.payroll.validate | déjà dédiée | préparateur ≠ valideur : NON IMPLÉMENTÉ | — | à brancher |
+
+### Requêtes forgées / cohérence inter-entités (4e incrément)
+
+- Allocation paiement→facture d'un AUTRE client : REFUSÉE sur les deux chemins
+  (create + addAllocation, contrôle client_id + lockForUpdate) — vérifié code.
+- Allocation décaissement→FF d'un autre fournisseur : REFUSÉE (contrôle
+  supplier_id l.128) — vérifié code.
+- Avoir←facture, BL←commande, FF←CF : identifiants du tiers TOUJOURS hérités
+  du document parent, jamais du payload — vérifié code.
+- Mass assignment : aucun Form Request critique n'accepte status/paid_amount/
+  approved_by/created_by ; aucun `request->all()` dans les contrôleurs
+  financiers — scan programmatique.
+
+Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : maker-checker configurable
+(créateur ≠ valideur), désactivation des tokens API à la désactivation du
+compte, tests webhooks avancés (rejeu, timestamp, référence mutée), extension
+du journal (validations/approbations/clôtures/exports/consultations paie),
+protection d'intégrité du journal (chaînage), analyse qualité des 21 rôles,
+contrainte DB d'unicité de révision active.
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 

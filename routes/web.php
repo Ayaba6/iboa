@@ -479,7 +479,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('avoirs/{avoir}/pdf', [\App\Http\Controllers\Sales\CreditNoteController::class, 'pdf'])->name('avoirs.pdf');
         });
         Route::middleware('permission:credit_notes.create')->group(function () {
-            Route::post('avoirs/{avoir}/validate', [\App\Http\Controllers\Sales\CreditNoteController::class, 'validateNote'])->name('avoirs.validate');
+            // [SEC-PHASE2 §3] Valider un avoir (stock + GL) ≠ le créer
+            Route::post('avoirs/{avoir}/validate', [\App\Http\Controllers\Sales\CreditNoteController::class, 'validateNote'])->middleware('permission:credit_notes.validate')->name('avoirs.validate');
             Route::post('avoirs/{avoir}/apply', [\App\Http\Controllers\Sales\CreditNoteController::class, 'applyToInvoice'])->name('avoirs.apply');
             // [VEN Retour] Génère un BL de remplacement depuis un avoir validé
             Route::post('avoirs/{avoir}/remplacement', [\App\Http\Controllers\Sales\CreditNoteController::class, 'replacement'])->name('avoirs.replacement');
@@ -560,7 +561,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('commandes/{commande}/pdf', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'pdf'])->name('commandes.pdf');
         });
         Route::middleware('permission:purchase_orders.create')->group(function () {
-            Route::post('commandes/{commande}/confirm', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'confirm'])->name('commandes.confirm');
+            // [SEC-PHASE2 §3] Confirmer une CF = engagement fournisseur ≠ la créer
+            Route::post('commandes/{commande}/confirm', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'confirm'])->middleware('permission:purchase_orders.confirm')->name('commandes.confirm');
             Route::post('commandes/{commande}/duplicate', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'duplicate'])->name('commandes.duplicate');
         });
         Route::middleware('permission:receptions.create')->group(function () {
@@ -572,8 +574,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('receptions/{reception}', [\App\Http\Controllers\Purchases\ReceptionController::class, 'show'])->name('receptions.show');
         });
         Route::middleware('permission:receptions.create')->group(function () {
-            Route::post('receptions/{reception}/validate', [\App\Http\Controllers\Purchases\ReceptionController::class, 'validateReception'])->name('receptions.validate');
-            Route::post('receptions/{reception}/cancel', [\App\Http\Controllers\Purchases\ReceptionController::class, 'cancelReception'])->name('receptions.cancel');
+            // [SEC-PHASE2 §3] Valider/annuler une réception (stock) ≠ la créer
+            Route::post('receptions/{reception}/validate', [\App\Http\Controllers\Purchases\ReceptionController::class, 'validateReception'])->middleware('permission:receptions.validate')->name('receptions.validate');
+            Route::post('receptions/{reception}/cancel', [\App\Http\Controllers\Purchases\ReceptionController::class, 'cancelReception'])->middleware('permission:receptions.cancel')->name('receptions.cancel');
         });
         Route::middleware('permission:supplier_invoices.create')->group(function () {
             Route::post('commandes/{commande}/facture', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'createSupplierInvoice'])->name('commandes.facture');
@@ -894,8 +897,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('encaissements/{encaissement}/recu', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'recu'])->name('encaissements.recu');
             // Imputation a posteriori (lettrage)
             Route::post('encaissements/{encaissement}/imputer', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'imputer'])->name('encaissements.imputer');
-            // [SEC-PHASE2] Annuler un encaissement = extourne + débit caisse : permission d'écriture exigée
-            Route::post('encaissements/{encaissement}/cancel', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'cancel'])->middleware('permission:treasury.write')->name('encaissements.cancel');
+            // [SEC-PHASE2 §3] Annuler un encaissement = extourne + débit caisse : permission
+            // DÉDIÉE (treasury.write = saisie courante, trop large pour une action irréversible)
+            Route::post('encaissements/{encaissement}/cancel', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'cancel'])->middleware('permission:treasury.cancel')->name('encaissements.cancel');
             Route::resource('encaissements', \App\Http\Controllers\Treasury\ClientPaymentController::class)
                 ->only(['index', 'create', 'store', 'show'])
                 ->parameters(['encaissements' => 'encaissement']);
@@ -905,7 +909,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('decaissements/{decaissement}/recu', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'recu'])->name('decaissements.recu');
             // [TRESO] Annulation décaissement : contre-passation compta + restauration facture
             // [SEC-PHASE2] Écriture exigée (l'ancienne route héritait de treasury.view|payments.view)
-            Route::post('decaissements/{decaissement}/cancel', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'cancel'])->middleware('permission:treasury.write')->name('decaissements.cancel');
+            Route::post('decaissements/{decaissement}/cancel', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'cancel'])->middleware('permission:treasury.cancel')->name('decaissements.cancel');
             // [TRESO-WORKFLOW] Validation / rejet par seuil — treasury.validate en plus de la
             // garde de niveau du service (TreasuryApprovalService::userCanApprove)
             Route::post('decaissements/{decaissement}/approve', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'approve'])->middleware('permission:treasury.validate')->name('decaissements.approve');
@@ -975,7 +979,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('permission:treasury.write')->group(function () {
             Route::get('clotures/create', [\App\Http\Controllers\Treasury\CashClosureController::class, 'create'])->name('clotures.create');
             Route::post('clotures',       [\App\Http\Controllers\Treasury\CashClosureController::class, 'store'])->name('clotures.store');
-            Route::post('clotures/{cloture}/validate', [\App\Http\Controllers\Treasury\CashClosureController::class, 'validateClosure'])->name('clotures.validate');
+            // [SEC-PHASE2 §3] Valider une clôture de caisse : permission dédiée
+            Route::post('clotures/{cloture}/validate', [\App\Http\Controllers\Treasury\CashClosureController::class, 'validateClosure'])->middleware('permission:cash_closures.validate')->name('clotures.validate');
         });
         Route::middleware('permission:payments.view')->group(function () {
             Route::get('clotures',            [\App\Http\Controllers\Treasury\CashClosureController::class, 'index'])->name('clotures.index');
