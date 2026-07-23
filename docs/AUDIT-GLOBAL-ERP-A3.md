@@ -226,11 +226,39 @@ rollbacks) + best-effort audit_logs. Jamais de secret dans ces journaux.
   Le DÉTECTEUR est prouvé : tests qui suppriment une table ou insèrent une
   migration fantôme → exit 1. Base réelle : AUDIT SCHÉMA PROPRE.
 
-Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : seuils par
-agence/dépôt/nature, extension maker-checker au-delà des 5 points,
-webhooks avancés (rejeu, timestamp, référence mutée), extension du journal,
-chaînage cryptographique du journal, E2E API réels, cache Spatie en session,
-lien user_id fournisseurs/clients (décision de modélisation).
+### Webhooks Mobile Money durcis (8e incrément, 23/07)
+
+3 bugs réels corrigés, dont 2 découverts par les nouveaux tests :
+
+1. **`ltrim($signature, 'sha256=')`** strippait une LISTE de caractères, pas
+   un préfixe : toute signature commençant par s/h/a/2/5/6/= était tronquée →
+   faux rejets. Corrigé (preg_replace du préfixe) et PROUVÉ par un test qui
+   force une signature commençant par un caractère de la liste.
+2. **Le job de traitement n'était JAMAIS lancé sur une première livraison
+   SUCCESS** : la transaction se créait directement en 'confirmed' et le test
+   « status !== confirmed » (évalué APRÈS création) était toujours faux. Le
+   cas nominal (webhook unique confirmant le paiement) ne déclenchait rien.
+   Corrigé : dispatch si la confirmation est NOUVELLE (état mémorisé avant).
+3. **Recherche par `orWhere` avec référence nulle** → `whereNull` pouvait
+   rattacher un webhook à une transaction étrangère. Recherche stricte par
+   (provider, external_reference) puis (provider, internal_reference).
+
+Durcissements : contrainte UNIQUE (provider, external_reference) en base —
+deux livraisons simultanées ne créent qu'une transaction (le perdant recharge
+l'existante) ; **référence mutée rejetée** (même référence, montant différent
+→ rejected + security.log : le HMAC prouve l'origine, pas la légitimité) ;
+rejeu exact neutre (1 transaction, 1 job — prouvé).
+
+Vérifiés sains : hash_equals (timing-safe), secret chiffré en base (cast
+encrypted), secrets séparés par intégration, throttling. NON COUVERT
+(consigné) : validation d'horodatage (aucun champ timestamp standard dans
+les payloads opérateurs — le rejeu tardif est neutralisé par l'idempotence),
+rotation des secrets (procédure d'exploitation à documenter Phase 2.7).
+
+Restant Phase 2.1 : seuils par agence/dépôt/nature, extension maker-checker
+au-delà des 5 points, extension du journal, chaînage cryptographique du
+journal, E2E API réels, cache Spatie en session, lien user_id
+fournisseurs/clients (décision de modélisation).
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 

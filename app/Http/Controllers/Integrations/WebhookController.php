@@ -105,11 +105,41 @@ class WebhookController extends Controller
         $externalRef = $result['external_reference'] ?? null;
         $internalRef = $payload['reference'] ?? $payload['order_id'] ?? null;
 
-        $transaction = ExternalTransaction::where('external_reference', $externalRef)
-            ->orWhere(function ($q) use ($internalRef) {
-                if ($internalRef) $q->where('internal_reference', $internalRef);
-            })
-            ->first();
+        // [SEC-PHASE2] Recherche STRICTE : l'ancien where('external_reference',
+        // $externalRef) avec une référence nulle devenait whereNull et pouvait
+        // rattacher le webhook à une transaction étrangère.
+        $transaction = null;
+        if ($externalRef !== null && $externalRef !== '') {
+            $transaction = ExternalTransaction::where('external_reference', $externalRef)
+                ->where('provider', $provider)->first();
+        }
+        if (! $transaction && $internalRef) {
+            $transaction = ExternalTransaction::where('internal_reference', $internalRef)
+                ->where('provider', $provider)->first();
+        }
+
+        // [SEC-PHASE2] Même référence, CONTENU différent : un webhook dont le
+        // montant diverge de la transaction connue est rejeté et journalisé —
+        // le HMAC prouve l'origine, pas la légitimité métier.
+        if ($transaction && $result['amount'] !== null
+            && (int) $transaction->amount !== 0
+            && (int) $result['amount'] !== (int) $transaction->amount) {
+            Log::channel('security')->warning('webhook.montant_divergent', [
+                'provider'     => $provider,
+                'external_ref' => $externalRef,
+                'attendu'      => (int) $transaction->amount,
+                'recu'         => (int) $result['amount'],
+                'ip'           => $ip,
+            ]);
+
+            return response()->json(['status' => 'rejected', 'reason' => 'amount_mismatch'], 200);
+        }
+
+        // [SEC-PHASE2] Mémoriser l'état AVANT traitement : le dispatch doit avoir
+        // lieu quand la confirmation est NOUVELLE — y compris à la création
+        // directe en 'confirmed' (l'ancien test « status !== confirmed » après
+        // création ne déclenchait JAMAIS le job sur une première livraison SUCCESS).
+        $wasConfirmed = $transaction?->status === 'confirmed';
 
         if (! $transaction) {
             // Try to find linked invoice
@@ -118,22 +148,15 @@ class WebhookController extends Controller
                 ? \App\Models\Invoice::where('number', $invoiceRef)->first()
                 : null;
 
-            $transaction = ExternalTransaction::create([
-                'internal_reference' => ExternalTransaction::generateReference(),
-                'external_reference' => $externalRef,
-                'api_integration_id' => $integration->id,
-                'provider'           => $provider,
-                'type'               => 'payment',
-                'amount'             => (float) ($result['amount'] ?? 0),
-                'currency'           => 'XOF',
-                'status'             => $result['status'],
-                'phone_number'       => $result['phone'] ?? null,
-                'provider_data'      => $result['raw'],
-                'invoice_id'         => $invoice?->id,
-                'client_id'          => $invoice?->client_id,
-                'direction'          => 'inbound',
-                'initiated_by'       => 'webhook',
-            ]);
+            try {
+                $transaction = $this->createTransaction($integration, $provider, $result, $externalRef, $invoice);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                // [SEC-PHASE2] Deux webhooks simultanés : la contrainte unique
+                // (provider, external_reference) fait perdre la course au second —
+                // on recharge la transaction créée par le premier.
+                $transaction = ExternalTransaction::where('external_reference', $externalRef)
+                    ->where('provider', $provider)->firstOrFail();
+            }
         } else {
             // Update existing — but never downgrade status (confirmed stays confirmed)
             if ($transaction->status !== 'confirmed') {
@@ -144,8 +167,8 @@ class WebhookController extends Controller
             }
         }
 
-        // ── 6. Dispatch job if confirmed ──────────────────────────────────────
-        if ($result['status'] === 'confirmed' && $transaction->status !== 'confirmed') {
+        // ── 6. Dispatch job if NEWLY confirmed ────────────────────────────────
+        if ($result['status'] === 'confirmed' && ! $wasConfirmed) {
             ProcessExternalPayment::dispatch($transaction->fresh())
                 ->onQueue('payments');
 
@@ -157,5 +180,30 @@ class WebhookController extends Controller
         }
 
         return response()->json(['status' => 'ok'], 200);
+    }
+
+    private function createTransaction(
+        ApiIntegration $integration,
+        string $provider,
+        array $result,
+        ?string $externalRef,
+        ?\App\Models\Invoice $invoice,
+    ): ExternalTransaction {
+        return ExternalTransaction::create([
+            'internal_reference' => ExternalTransaction::generateReference(),
+            'external_reference' => $externalRef,
+            'api_integration_id' => $integration->id,
+            'provider'           => $provider,
+            'type'               => 'payment',
+            'amount'             => (float) ($result['amount'] ?? 0),
+            'currency'           => 'XOF',
+            'status'             => $result['status'],
+            'phone_number'       => $result['phone'] ?? null,
+            'provider_data'      => $result['raw'],
+            'invoice_id'         => $invoice?->id,
+            'client_id'          => $invoice?->client_id,
+            'direction'          => 'inbound',
+            'initiated_by'       => 'webhook',
+        ]);
     }
 }

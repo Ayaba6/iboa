@@ -104,7 +104,9 @@ class MoovMoneyService extends BaseApiService implements PaymentGatewayInterface
         if (! $signature) return false;
 
         $computed = hash_hmac('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE), $secret);
-        return hash_equals($computed, ltrim($signature, 'sha256='));
+        // [SEC-PHASE2] ltrim strippe une LISTE de caractères, pas un préfixe :
+        // une signature commençant par s/h/a/2/5/6/= était tronquée → faux rejets.
+        return hash_equals($computed, preg_replace('/^sha256=/', '', $signature));
     }
 
     // ── Ping ─────────────────────────────────────────────────────────────────
