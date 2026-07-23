@@ -894,7 +894,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('encaissements/{encaissement}/recu', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'recu'])->name('encaissements.recu');
             // Imputation a posteriori (lettrage)
             Route::post('encaissements/{encaissement}/imputer', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'imputer'])->name('encaissements.imputer');
-            Route::post('encaissements/{encaissement}/cancel', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'cancel'])->name('encaissements.cancel');
+            // [SEC-PHASE2] Annuler un encaissement = extourne + débit caisse : permission d'écriture exigée
+            Route::post('encaissements/{encaissement}/cancel', [\App\Http\Controllers\Treasury\ClientPaymentController::class, 'cancel'])->middleware('permission:treasury.write')->name('encaissements.cancel');
             Route::resource('encaissements', \App\Http\Controllers\Treasury\ClientPaymentController::class)
                 ->only(['index', 'create', 'store', 'show'])
                 ->parameters(['encaissements' => 'encaissement']);
@@ -903,10 +904,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Reçu PDF décaissement
             Route::get('decaissements/{decaissement}/recu', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'recu'])->name('decaissements.recu');
             // [TRESO] Annulation décaissement : contre-passation compta + restauration facture
-            Route::post('decaissements/{decaissement}/cancel', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'cancel'])->name('decaissements.cancel');
-            // [TRESO-WORKFLOW] Validation / rejet par seuil
-            Route::post('decaissements/{decaissement}/approve', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'approve'])->name('decaissements.approve');
-            Route::post('decaissements/{decaissement}/reject',  [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'reject'])->name('decaissements.reject');
+            // [SEC-PHASE2] Écriture exigée (l'ancienne route héritait de treasury.view|payments.view)
+            Route::post('decaissements/{decaissement}/cancel', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'cancel'])->middleware('permission:treasury.write')->name('decaissements.cancel');
+            // [TRESO-WORKFLOW] Validation / rejet par seuil — treasury.validate en plus de la
+            // garde de niveau du service (TreasuryApprovalService::userCanApprove)
+            Route::post('decaissements/{decaissement}/approve', [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'approve'])->middleware('permission:treasury.validate')->name('decaissements.approve');
+            Route::post('decaissements/{decaissement}/reject',  [\App\Http\Controllers\Treasury\SupplierPaymentController::class, 'reject'])->middleware('permission:treasury.validate')->name('decaissements.reject');
             Route::resource('decaissements', \App\Http\Controllers\Treasury\SupplierPaymentController::class)
                 ->only(['index', 'create', 'store', 'show'])
                 ->parameters(['decaissements' => 'decaissement']);

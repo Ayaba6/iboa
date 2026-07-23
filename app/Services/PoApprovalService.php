@@ -89,6 +89,14 @@ class PoApprovalService
                     . "Règle applicable : « {$rule->name} »."
                 );
             }
+            // [SEC-PHASE2] Sans règle de seuil configurée, l'approbation n'est pas
+            // libre pour autant : la route n'exige que purchase_orders.view, donc
+            // un simple lecteur pourrait approuver. Droit d'approbation de base requis.
+            if (!$rule && !$user->hasRole('super_admin') && !$user->can('purchase_requests.approve')) {
+                throw new \RuntimeException(
+                    "Aucune règle de seuil n'est configurée : l'approbation exige le droit d'approbation achats (purchase_requests.approve)."
+                );
+            }
 
             $po->update([
                 'approval_status' => 'approuve',

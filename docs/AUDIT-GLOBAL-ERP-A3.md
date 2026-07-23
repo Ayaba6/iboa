@@ -64,11 +64,37 @@ opérateur ≠ clôtureur de son OF).
 | Routes mutantes auth-seule (sans middleware permission) | **19**, toutes inspectées : profil/password/notifications (scopées utilisateur), redirects, edit-lock (release scopé, force-release = gate admin), attachments (policy `authorize`), company switch (appartenance ou super_admin), api/auth/token (login par credentials) — **saines** |
 | Toutes les autres routes mutantes | middleware `PermissionMiddleware` présent |
 
-Limites de la preuve : le middleware de groupe porte souvent la permission
-`.view` du module — la granularité PAR ACTION (delete/validate/cancel exigent-ils
-une permission plus forte que view ?) reste à vérifier, ainsi que les requêtes
-forgées, l'utilisateur désactivé, le rate limiting de `api/auth/token` et le
-journal d'audit. Suivi : tâche Phase 2.1.
+### Granularité par action (audit du 23/07, ~70 routes critiques analysées)
+
+Sains : production (permissions dédiées par étape validate_chef/responsable/
+declaration/cancel), circuit interne ventes (sales.validate/cancel/reject),
+factures (invoices.validate pour validate ET cancel), DA
+(purchase_requests.approve), clôtures caisse (treasury.write), périodes RH
+(rh.settings), exercices (settings.manage), inventaires (inventory.validate).
+Rate limiting : login web (throttle 5/min + email+IP), api/auth/token
+(throttle:api_auth), API authentifiée (60/min/user) — PROUVÉ par lecture,
+gardes présentes.
+
+**3 trous corrigés (commit associé)** :
+1. `encaissements/{id}/cancel` héritait de treasury.view|payments.view → un
+   lecteur pouvait déclencher extourne + débit caisse. Middleware
+   `permission:treasury.write` ajouté (test 403 + test passant avec write).
+2. `decaissements/{id}/cancel|approve|reject` : idem → treasury.write pour
+   cancel, treasury.validate pour approve/reject (le service gardait déjà
+   l'approbation par seuil ; la route est désormais alignée).
+3. `PoApprovalService::approve` sans règle de seuil configurée = approbation
+   libre pour tout porteur de purchase_orders.view → garde de base ajoutée
+   (purchase_requests.approve ou super_admin exigé quand aucune règle).
+
+Notables non corrigés (choix à confirmer, MOYEN) : `credit_notes.create`
+autorise la validation d'avoir (créer ≠ valider) ; `receptions.create`
+autorise validate/cancel de réception ; `purchase_orders.create` autorise
+confirm. Cohérents avec un profil « acheteur/magasinier » unique, mais une
+séparation créateur/valideur exigerait des permissions dédiées.
+
+Restant NON TESTÉ : requêtes forgées inter-tiers (ID d'autrui), utilisateur
+désactivé en session, journal d'audit systématique des actions sensibles.
+Suivi : tâche Phase 2.1.
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 
