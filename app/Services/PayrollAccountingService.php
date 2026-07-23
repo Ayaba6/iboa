@@ -21,11 +21,11 @@ use Illuminate\Support\Facades\Log;
  *   D 671 — Indemnités et allocations diverses  = Σ indemnités non imposables (transport, logement…)
  *   ─────────────────────────────────────────────────────────────────
  *   C 422 — Personnel, rémunérations dues       = Σ nets à payer (inclut indemnités non imposables)
- *   C 451 — CNSS (salarié + patronal)           = Σ CNSS total
+ *   C 431 — CNSS (salarié + patronal)           = Σ CNSS total
  *   C 447 — État, impôts retenus à la source    = Σ IUTS + Effort de paix salarié
  *
  * Vérification :
- *   D661 + D664 + D671 = C422 + C451 + C447
+ *   D661 + D664 + D671 = C422 + C431 + C447
  *   ⟺ brut + CNSS_pat + nonTax = net + CNSS_tot + IUTS + EP   ✓
  */
 class PayrollAccountingService
@@ -36,7 +36,8 @@ class PayrollAccountingService
         '664' => ['name' => 'Charges sociales patronales',                  'type' => 'charge'],
         '671' => ['name' => 'Indemnités et allocations diverses du personnel','type' => 'charge'],
         '422' => ['name' => 'Personnel, rémunérations dues',                'type' => 'passif'],
-        '451' => ['name' => 'Caisse nationale de sécurité sociale',         'type' => 'passif'],
+        // [SYSCOHADA] 431 = Sécurité sociale (451 = « Opérations groupe » — écart corrigé avant production)
+        '431' => ['name' => 'Caisse nationale de sécurité sociale',         'type' => 'passif'],
         '447' => ['name' => 'État — impôts retenus à la source',            'type' => 'passif'],
     ];
 
@@ -232,7 +233,7 @@ class PayrollAccountingService
             if ($totalCnssAll > 0) {
                 $lines[] = [
                     'journal_entry_id'  => $entry->id,
-                    'account_id'        => $accounts['451']->id,
+                    'account_id'        => $accounts['431']->id,
                     'label'             => "CNSS (salarié + patronal) — {$run->period_label}",
                     'debit'             => 0,
                     'credit'            => $totalCnssAll,

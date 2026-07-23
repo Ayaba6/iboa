@@ -53,7 +53,9 @@ class AccountingService
         'ventes_produits_finis' => ['702', 'Ventes de produits finis',       'produit', 7],
         'achats'              => ['6011', 'Achats de marchandises',          'charge',  6],
         'tva_collectee'       => ['4431', 'TVA facturée sur ventes',         'passif',  4],
-        'tva_deductible'      => ['4432', 'TVA récupérable sur achats',      'actif',   4],
+        // [SYSCOHADA] 445 = État, TVA récupérable (4432 était une subdivision
+        // de 443 « TVA facturée » — écart au plan corrigé avant production)
+        'tva_deductible'      => ['4452', 'État — TVA récupérable sur achats', 'actif',  4],
         'retours_ventes'      => ['7085', 'Remises accordées et retours',    'produit', 7],
         'banque'              => ['521',  'Banques, chèques postaux',        'actif',   5],
         'caisse'              => ['571',  'Caisse',                          'actif',   5],
