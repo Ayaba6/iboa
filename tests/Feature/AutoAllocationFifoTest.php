@@ -197,3 +197,67 @@ it('refuse la double validation d\'une facture', function () {
     $svc->validate($inv->fresh());
     expect(fn () => $svc->validate($inv->fresh()))->toThrow(\RuntimeException::class);
 });
+
+// [Preuve §1] Facture réglée par DEUX paiements : annuler l'un ne touche que
+// SES allocations — l'autre paiement reste intact, la facture redevient
+// partiellement payée avec le bon reste dû.
+it('annulation partielle : seul le paiement annulé est défait, l\'autre reste', function () {
+    [$co, $client, $cash] = afSetup();
+    $inv = afInvoice($co, $client, 59000, '2026-04-01');
+
+    $svc = app(\App\Services\ClientPaymentService::class);
+    $p1 = $svc->create(['client_id' => $client->id, 'amount' => 30000, 'status' => 'confirme', 'method' => 'especes', 'payment_date' => now()->toDateString(), 'cash_account_id' => $cash->id]);
+    $p2 = $svc->create(['client_id' => $client->id, 'amount' => 29000, 'status' => 'confirme', 'method' => 'especes', 'payment_date' => now()->toDateString(), 'cash_account_id' => $cash->id, 'force_duplicate' => true]);
+    expect((int) $inv->fresh()->remaining_amount)->toBe(0)
+        ->and($inv->fresh()->status)->toBe('payee');
+
+    $svc->cancel($p1->fresh(), 'Erreur de saisie sur le premier règlement');
+
+    $inv->refresh();
+    expect((int) $inv->remaining_amount)->toBe(30000)          // seul p1 (30 000) défait
+        ->and((int) $inv->paid_amount)->toBe(29000)            // p2 intact
+        ->and($inv->status)->toBe('partiellement_payee')
+        ->and(\App\Models\ClientPaymentAllocation::where('client_payment_id', $p2->id)->count())->toBe(1)
+        ->and($p2->fresh()->status)->toBe('confirme')
+        // Caisse : 59 000 entrés, 30 000 restitués
+        ->and((int) $cash->fresh()->current_balance)->toBe(29000);
+});
+
+// [Preuve §1] Un encaissement qui finance un OF ACTIF est inannulable.
+it('refuse d\'annuler un encaissement finançant un OF actif', function () {
+    [$co, $client, $cash] = afSetup();
+    $client->update(['payment_mode' => 'comptant']);
+    $p = \App\Models\Product::factory()->create(['production_mode' => 'mto']);
+    $order = \App\Models\Order::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'client_id' => $client->id, 'number' => 'CMD-OFA-' . uniqid(),
+        'status' => 'confirme', 'issued_at' => now(), 'total_ttc' => 100000,
+    ]);
+    \App\Modules\Production\Models\ProductionOrder::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'OF-OFA-' . uniqid(), 'status' => 'en_cours',
+        'order_id' => $order->id, 'product_id' => $p->id, 'quantity_requested' => 10,
+    ]);
+
+    $svc = app(\App\Services\ClientPaymentService::class);
+    $acompte = $svc->create([
+        'client_id' => $client->id, 'amount' => 100000, 'status' => 'confirme',
+        'is_acompte' => true, 'method' => 'especes', 'payment_date' => now()->toDateString(),
+        'cash_account_id' => $cash->id, 'force_duplicate' => true,
+    ]);
+
+    expect(fn () => $svc->cancel($acompte->fresh(), 'tentative annulation'))
+        ->toThrow(\RuntimeException::class, 'production EN COURS');
+});
+
+// [Preuve §7] Une facture SANS lignes est refusée à la validation (garde
+// d'équilibre comptable) — le test précédent l'avait révélé par accident,
+// celui-ci le fige en invariant.
+it('refuse de valider une facture sans lignes (écriture déséquilibrée)', function () {
+    [$co, $client, $cash] = afSetup();
+    $inv = afInvoice($co, $client, 50000, '2026-05-01');
+    $inv->update(['status' => 'brouillon']);
+
+    expect(fn () => app(\App\Services\InvoiceService::class)->validate($inv->fresh()))
+        ->toThrow(\RuntimeException::class);
+});

@@ -491,6 +491,29 @@ class ClientPaymentService
 
             $payment->load('allocations', 'cashAccount', 'client');
 
+            // [RÈGLE MÉTIER — production financée] Un encaissement qui rend un OF
+            // ACTIF financièrement éligible ne s'annule pas : la production
+            // reposerait sur de l'argent disparu. Détection conservatrice : pour
+            // chaque commande du client ayant un OF actif, si le retrait de ce
+            // montant fait passer sous le requis (et sans approbation gérant
+            // valide), l'annulation est refusée.
+            $activeOfOrders = \App\Models\Order::where('client_id', $payment->client_id)
+                ->whereHas('productionOrders', fn ($q) => $q->whereNotIn('status', ['annule', 'termine', 'brouillon']))
+                ->get();
+            foreach ($activeOfOrders as $o) {
+                $required = $o->requiredBeforeProduction();
+                if ($required === null || $o->hasValidProductionApproval()) {
+                    continue; // crédit ou approbation gérant : l'OF ne dépend pas de cet argent
+                }
+                if (($o->confirmedReceipts() - (int) $payment->amount) < $required) {
+                    throw new \RuntimeException(sprintf(
+                        'Cet encaissement finance la production EN COURS de la commande %s (OF actif). ' .
+                        'Terminez ou annulez l\'OF, ou obtenez une approbation gérant, avant d\'annuler cet encaissement.',
+                        $o->number
+                    ));
+                }
+            }
+
             // 1. Restaurer chaque facture allouée
             foreach ($payment->allocations as $alloc) {
                 $invoice = Invoice::lockForUpdate()->find($alloc->invoice_id);
@@ -536,15 +559,28 @@ class ClientPaymentService
             })->orWhere(function ($q) use ($payment) {
                 $q->where('reference_type', 'App\\Models\\ClientPayment')->where('reference_id', $payment->id);
             })->first();
+            // [Distinction métier] L'ANNULATION neutralise l'entrée de caisse du
+            // jour même (mouvement inverse daté d'aujourd'hui — les clôtures de
+            // caisse antérieures restent intactes). Le REMBOURSEMENT PHYSIQUE au
+            // client est une autre opération (décaissement dédié) : si la caisse
+            // ne contient plus les fonds, l'annulation est refusée avec ce guidage.
             if ($cashTx && $payment->cashAccount) {
-                $this->cashService->recordTransaction($payment->cashAccount, [
-                    'type'             => 'debit',
-                    'reference_type'   => 'ClientPayment',
-                    'reference_id'     => $payment->id,
-                    'amount'           => $payment->amount,
-                    'label'            => 'Annulation encaissement ' . $payment->number,
-                    'transaction_date' => today(),
-                ]);
+                try {
+                    $this->cashService->recordTransaction($payment->cashAccount, [
+                        'type'             => 'debit',
+                        'reference_type'   => 'ClientPayment',
+                        'reference_id'     => $payment->id,
+                        'amount'           => $payment->amount,
+                        'label'            => 'Annulation encaissement ' . $payment->number,
+                        'transaction_date' => today(),
+                    ]);
+                } catch (\RuntimeException $e) {
+                    throw new \RuntimeException(
+                        'La caisse « ' . $payment->cashAccount->name . ' » ne contient plus les fonds de cet encaissement (' .
+                        $e->getMessage() . '). Enregistrez d\'abord un approvisionnement ou traitez le cas comme un ' .
+                        'remboursement client via un décaissement dédié, puis annulez.'
+                    );
+                }
             }
 
             // 4. Statut annulé + motif tracé
