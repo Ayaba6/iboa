@@ -372,3 +372,19 @@ it('relevé client : exclut règlements annulés, inclut avoirs appliqués', fun
         // Vérité facture alignée : remaining = 40 000 (paiement défait, avoir appliqué)
         ->and((int) $inv->fresh()->remaining_amount)->toBe(40000);
 });
+
+// [POST-VALID-01] Facture annulée = numéro définitif + écritures : jamais supprimée.
+it('refuse la suppression physique d\'une facture annulée', function () {
+    [$co, $client] = afSetup();
+    $inv = afInvoice($co, $client, 15000, now()->toDateString());
+    app(\App\Services\InvoiceService::class)->cancel($inv, 'Erreur de saisie');
+    expect($inv->fresh()->status)->toBe('annulee');
+
+    try {
+        app(\App\Services\InvoiceService::class)->delete($inv->fresh());
+        $this->fail('La suppression aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        expect($e->getMessage())->toContain('brouillon');
+    }
+    expect(\App\Models\Invoice::find($inv->id))->not->toBeNull();
+});

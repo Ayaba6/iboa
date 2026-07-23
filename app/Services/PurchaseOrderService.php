@@ -114,8 +114,16 @@ class PurchaseOrderService
 
     public function delete(PurchaseOrder $po): bool
     {
+        // [POST-VALID-02] Une commande confirmée est un engagement envoyé au
+        // fournisseur : elle s'annule (trace conservée), elle ne se supprime pas.
+        if (!in_array($po->status, ['brouillon', 'annule'])) {
+            throw new \RuntimeException('Seules les commandes achat en brouillon ou annulées peuvent être supprimées. Une commande confirmée doit d\'abord être annulée.');
+        }
         if ($po->receptions()->exists()) {
             throw new \RuntimeException('Impossible de supprimer cette commande : des réceptions sont liées.');
+        }
+        if ($po->supplierInvoices()->exists()) {
+            throw new \RuntimeException('Impossible de supprimer cette commande : des factures fournisseurs sont liées.');
         }
 
         return $po->delete();

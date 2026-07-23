@@ -377,3 +377,21 @@ it('annule un décaissement : FF restaurée, caisse re-créditée, extourne', fu
 
     expect(fn () => $svc->cancel($payment->fresh(), 'encore'))->toThrow(\RuntimeException::class);
 });
+
+// [POST-VALID-02] Commande achat confirmée = engagement fournisseur : suppression
+// physique interdite, seule l'annulation trace l'événement.
+it('refuse la suppression physique d\'une commande achat confirmée', function () {
+    achAdmin();
+    $co = achCompany();
+    $supplier = achSupplier();
+    $product = Product::factory()->create(['is_stockable' => true]);
+    $po = achConfirmedPo($co, $supplier, $product, 10, 1000);
+
+    try {
+        app(PurchaseOrderService::class)->delete($po);
+        $this->fail('La suppression aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        expect($e->getMessage())->toContain('annulées');
+    }
+    expect(PurchaseOrder::find($po->id))->not->toBeNull();
+});

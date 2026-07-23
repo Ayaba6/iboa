@@ -665,8 +665,12 @@ class InvoiceService
 
     public function delete(Invoice $invoice): bool
     {
-        if (!in_array($invoice->status, ['brouillon', 'annulee'])) {
-            throw new \RuntimeException('Seules les factures en brouillon ou annulées peuvent être supprimées.');
+        // [POST-VALID-01] Une facture annulée a un numéro définitif et des écritures
+        // (origine + extourne) : sa suppression casserait la séquence de numérotation
+        // et laisserait des écritures référençant un document disparu. Elle reste
+        // consultable ; seul le brouillon (jamais numéroté ni comptabilisé) se supprime.
+        if ($invoice->status !== 'brouillon') {
+            throw new \RuntimeException('Seules les factures en brouillon peuvent être supprimées. Une facture émise s\'annule (elle reste consultable), elle ne se supprime pas.');
         }
 
         return DB::transaction(function () use ($invoice) {
