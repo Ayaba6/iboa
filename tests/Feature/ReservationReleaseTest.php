@@ -43,6 +43,10 @@ it('releases OF-linked reservations when OF cancelled', function(){
     app(ReservationService::class)->reserveForOrder($of);
     expect((float)ProductStock::where('product_id',$p->id)->first()->reserved_quantity)->toEqual(8.0);
     $of->update(['status'=>'en_cours']); // make cancellable
-    app(\App\Modules\Production\Services\ProductionService::class)->cancel($of,'test');
+    // [Règle formelle] Un OF avec déclaration vivante est inannulable : extourner d'abord.
+    expect(fn()=>app(\App\Modules\Production\Services\ProductionService::class)->cancel($of->fresh(),'test'))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+    $of->outputs()->update(['status'=>'annulee']);
+    app(\App\Modules\Production\Services\ProductionService::class)->cancel($of->fresh(),'test');
     expect((float)ProductStock::where('product_id',$p->id)->first()->reserved_quantity)->toEqual(0.0);
 });
