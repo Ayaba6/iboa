@@ -208,14 +208,29 @@ ses tokens a échoué (update de masse, SQL brut).
 (storage/logs/security.log, rotation 365 j, hors transaction — survit aux
 rollbacks) + best-effort audit_logs. Jamais de secret dans ces journaux.
 
-Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : validateur ≠ bénéficiaire
-(relations métier fiables), seuils par agence/dépôt/nature, extension du
-maker-checker au-delà des 5 points (réceptions, inventaires, ajustements,
-clôtures période, immobilisations, NC/rebuts), webhooks avancés (rejeu,
-timestamp, référence mutée), extension du journal (validations/clôtures/
-exports/consultations paie), chaînage cryptographique du journal, audit de
-dérive de schéma systématique (suite à la découverte Sanctum), tests E2E
-API réels, retrait de permission en session (cache Spatie).
+### Bénéficiaire + audit de dérive de schéma (7e incrément, 23/07)
+
+- **Validateur ≠ bénéficiaire** : `assertNotBeneficiary` — TOUJOURS actif,
+  indépendant de la config maker-checker, sans exemption, journalisé
+  (security.log + audit_logs). Branché où la relation métier est fiable
+  (`employees.user_id`) : approbation de prêt et d'avance sur salaire.
+  PROUVÉ : le salarié lié refuse (approved_by inchangé), un autre
+  utilisateur RH habilité passe. Fournisseurs/clients : AUCUN lien
+  user_id modélisé — le contrôle bénéficiaire n'y est PAS implémentable en
+  l'état (consigné : décision de modélisation si besoin).
+- **`a3:audit-schema`** (nouvelle commande, lecture seule, exit 1) :
+  1) tables exigées par la CONFIG active (Sanctum, queue/cache/session
+  database, audit) ; 2) chaque modèle Eloquent → table existante ;
+  3) migrations enregistrées sans fichier / jamais exécutées ;
+  4) colonnes $fillable des 11 modèles financiers → colonnes réelles.
+  Le DÉTECTEUR est prouvé : tests qui suppriment une table ou insèrent une
+  migration fantôme → exit 1. Base réelle : AUDIT SCHÉMA PROPRE.
+
+Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : seuils par
+agence/dépôt/nature, extension maker-checker au-delà des 5 points,
+webhooks avancés (rejeu, timestamp, référence mutée), extension du journal,
+chaînage cryptographique du journal, E2E API réels, cache Spatie en session,
+lien user_id fournisseurs/clients (décision de modélisation).
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 

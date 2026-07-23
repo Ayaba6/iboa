@@ -112,6 +112,17 @@ class EmployeeLoanController extends Controller
         $company = currentCompany();
         abort_if($pret->company_id !== $company->id, 403);
 
+        // [SEC-PHASE2 §6] Un salarié ne valide jamais son propre prêt
+        try {
+            app(\App\Services\MakerCheckerService::class)->assertNotBeneficiary(
+                $pret->employee?->user_id ? (int) $pret->employee->user_id : null,
+                "le prêt de {$pret->employee?->full_name}",
+                $pret
+            );
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         $pret->update([
             'approved_by' => Auth::id(),
             'approved_at' => now(),

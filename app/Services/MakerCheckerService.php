@@ -11,6 +11,38 @@ use Illuminate\Support\Facades\Auth;
 class MakerCheckerService
 {
     /**
+     * [SEC-PHASE2 §6] Le valideur ne peut JAMAIS être le bénéficiaire de
+     * l'opération (conflit d'intérêt direct) — contrôle TOUJOURS actif,
+     * indépendant de la configuration maker-checker, sans exemption.
+     * S'applique quand le bénéficiaire est identifiable par une relation
+     * métier fiable (ex. employees.user_id pour prêts/avances/bulletins).
+     *
+     * @throws \RuntimeException
+     */
+    public function assertNotBeneficiary(?int $beneficiaryUserId, string $documentLabel, ?object $model = null): void
+    {
+        $user = Auth::user();
+        if (! $user || $beneficiaryUserId === null) {
+            return;
+        }
+
+        if ((int) $user->id === (int) $beneficiaryUserId) {
+            \Illuminate\Support\Facades\Log::channel('security')->warning('beneficiaire.refus', [
+                'user_id'  => $user->id,
+                'document' => $documentLabel,
+                'model'    => $model ? get_class($model) . '#' . $model->getKey() : null,
+                'ip'       => request()?->ip(),
+            ]);
+            app(AuditService::class)->log('beneficiaire.refus', $model, [], ['document' => $documentLabel]);
+
+            throw new \RuntimeException(sprintf(
+                'Conflit d\'intérêt : vous êtes le bénéficiaire de %s — la validation doit être faite par un autre utilisateur habilité.',
+                $documentLabel
+            ));
+        }
+    }
+
+    /**
      * Refuse l'opération si le contrôle est actif pour cette action et que le
      * valideur courant est l'auteur de l'opération. Tentative journalisée.
      *

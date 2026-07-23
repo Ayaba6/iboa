@@ -58,6 +58,18 @@ class SalaryAdvanceController extends Controller
         if ($advance->status !== 'en_attente') {
             return back()->with('error', 'Cette avance ne peut plus être approuvée.');
         }
+
+        // [SEC-PHASE2 §6] Un salarié ne valide jamais sa propre avance
+        try {
+            app(\App\Services\MakerCheckerService::class)->assertNotBeneficiary(
+                $advance->employee?->user_id ? (int) $advance->employee->user_id : null,
+                "l'avance de {$advance->employee?->full_name}",
+                $advance
+            );
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         $advance->update([
             'status'      => 'approuve',
             'approved_by' => auth()->id(),

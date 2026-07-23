@@ -225,3 +225,26 @@ it('révoque les tokens API à la désactivation du compte', function () {
 
     expect($u->tokens()->count())->toBe(0);
 });
+
+// [SEC-PHASE2 §6] Contrôle bénéficiaire TOUJOURS actif : un salarié ne valide
+// pas son propre prêt — indépendant de la config maker-checker.
+it('refuse au bénéficiaire l\'approbation de son propre prêt', function () {
+    config(['security.maker_checker.enabled' => false]); // même désactivé, le contrôle bénéficiaire tient
+    $u = secUserWith(['rh.loans.manage']);
+    $co = secCompany();
+    $emp = \App\Models\Employee::factory()->create(['company_id' => $co->id, 'user_id' => $u->id]);
+    $loan = \App\Models\EmployeeLoan::create([
+        'company_id' => $co->id, 'employee_id' => $emp->id, 'loan_number' => 'PRT-SEC-' . uniqid(),
+        'amount' => 200000, 'monthly_deduction' => 20000, 'remaining_balance' => 200000,
+        'start_date' => now(), 'status' => 'actif',
+    ]);
+
+    $res = $this->post(route('rh.prets.approve', $loan));
+    $res->assertSessionHas('error');
+    expect($loan->fresh()->approved_by)->toBeNull();
+
+    // Un AUTRE utilisateur RH approuve sans problème
+    secUserWith(['rh.loans.manage', 'x2']);
+    $this->post(route('rh.prets.approve', $loan));
+    expect($loan->fresh()->approved_by)->not->toBeNull();
+});
