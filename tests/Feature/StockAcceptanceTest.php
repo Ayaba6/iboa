@@ -170,3 +170,49 @@ it('annulation de transfert : réintégration en transit, refus après réceptio
     $svc->receive($t2->fresh());
     expect(fn () => $svc->cancel($t2->fresh(), 'trop tard'))->toThrow(\RuntimeException::class);
 });
+
+// [DÉCISION 23/07] Transfert partiellement reçu : l'écart est une PERTE EN
+// TRANSIT comptabilisée (D 6097 / C 3111) — plus d'évaporation silencieuse.
+it('comptabilise la perte en transit d\'un transfert partiellement reçu', function () {
+    $ctx = stkSetup();
+    $co  = $ctx['co'];
+    $whA = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-PL1'], ['name' => 'Dépôt PL1', 'is_active' => true]);
+    $whB = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-PL2'], ['name' => 'Dépôt PL2', 'is_active' => true]);
+    $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    stkSeedStock($co, $whA, $product, 50, 6000);
+    $svc = app(StockTransferService::class);
+
+    $t = $svc->create([
+        'from_warehouse_id' => $whA->id, 'to_warehouse_id' => $whB->id, 'transfer_date' => now()->toDateString(),
+        'items' => [['product_id' => $product->id, 'quantity' => 20]],
+    ]);
+    $svc->ship($t);
+
+    // Réception partielle : 15 reçues sur 20 → écart 5 × 6 000 = 30 000
+    $item = $t->fresh('items')->items->first();
+    $svc->receive($t->fresh(), [$item->id => 15]);
+
+    expect((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $whB->id)->value('quantity'))->toBe(15.0)
+        ->and((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $whA->id)->value('quantity'))->toBe(30.0);
+
+    // Écriture de perte : D 6097 / C 3111 = 30 000, équilibrée, idempotente
+    $entry = \App\Models\JournalEntry::where('reference', 'PERTE-TRANSIT-' . $t->number)->first();
+    expect($entry)->not->toBeNull()
+        ->and((int) $entry->total_debit)->toBe(30000)
+        ->and((int) $entry->total_debit)->toBe((int) $entry->total_credit);
+    $c6097 = \App\Models\Account::where('code', '6097')->first();
+    expect((int) $c6097->debit_balance)->toBe(30000);
+
+    // Journal d'audit alimenté
+    expect(\App\Models\AuditLog::where('action', 'transfert.perte_transit')->where('model_id', $t->id)->exists())->toBeTrue();
+
+    // Réception complète d'un autre transfert → AUCUNE écriture de perte
+    stkSeedStock($co, $whA, $product, 10, 6000);
+    $t2 = $svc->create([
+        'from_warehouse_id' => $whA->id, 'to_warehouse_id' => $whB->id, 'transfer_date' => now()->toDateString(),
+        'items' => [['product_id' => $product->id, 'quantity' => 10]],
+    ]);
+    $svc->ship($t2);
+    $svc->receive($t2->fresh());
+    expect(\App\Models\JournalEntry::where('reference', 'PERTE-TRANSIT-' . $t2->number)->exists())->toBeFalse();
+});

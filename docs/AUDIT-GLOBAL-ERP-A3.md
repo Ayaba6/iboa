@@ -344,8 +344,8 @@ Manque (NON TESTÉ / NON IMPLÉMENTÉ) :
 
 | Sujet | Question à trancher | Options | État |
 |---|---|---|---|
-| Transfert partiellement reçu | Les navettes inter-dépôts d'OA METAL peuvent-elles arriver incomplètes (perte, casse, dates multiples) ? | a) implémenter réception partielle par ligne avec écarts ; b) décision documentée « réception = tout » signée gérant | EN ATTENTE DE DÉCISION |
-| BL par lot/bobine/emplacement | Une livraison de tôles doit-elle tracer bobine d'origine, lot production, OF, machine, CQ jusqu'au client ? | a) ventilation lot/emplacement sur lignes BL ; b) traçabilité via OF lié (existante) jugée suffisante, documentée | EN ATTENTE DE DÉCISION — l'OF lié donne déjà bobine+machine+CQ, le chaînon BL→lot PF n'est pas formalisé |
+| Transfert partiellement reçu | TRANCHÉ 23/07 : la saisie partielle existait déjà (quantités par ligne) mais l'écart s'évaporait sans comptabilisation | Décision : PERTE EN TRANSIT comptabilisée — D 6097 / C 3111 à la réception partielle, idempotente, journalisée (audit_logs) | **LIVRÉ + PROUVÉ** (écart 5×6 000 = 30 000 : écriture équilibrée, réception complète = aucune écriture) |
+| BL par lot/bobine/emplacement | TRANCHÉ 23/07 : lot_number déclaratif (texte) insuffisant | Décision : LIEN FORMEL lot_id sur lignes BL + décrément stock_lots à la validation + lot imprimé sur le BL | À IMPLÉMENTER (prochain incrément, ~1-1,5 j) |
 | Intégration fiscale (facture normalisée) | Échéance réglementaire au Burkina ? | concevoir dès maintenant les ancrages : statut fiscal distinct, référence externe, idempotence, payload conservé, interdiction de modifier un document transmis | NON IMPLÉMENTÉ — conception à faire |
 
 ## 6. Contrôles de `a3:audit-database` — liste exacte actuelle

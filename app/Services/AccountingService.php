@@ -861,6 +861,35 @@ class AccountingService
     }
 
     /**
+     * [DÉCISION 23/07] Perte en transit sur transfert partiellement reçu :
+     *   DR 6097 Pertes sur inventaire / CR 3111 Stocks  = valeur de l'écart.
+     * Le stock physique reflète déjà la perte (sortie source sans entrée
+     * destination) — cette écriture aligne la valorisation comptable.
+     */
+    public function postTransferLoss(\App\Models\StockTransfer $transfer, int $amount): ?JournalEntry
+    {
+        $company = $this->company($transfer->company_id);
+        if (! $company || $amount <= 0) {
+            return null;
+        }
+
+        $reference = 'PERTE-TRANSIT-' . $transfer->number;
+        if ($this->entryExists($company, $reference)) {
+            return null; // idempotent : une seule écriture de perte par transfert
+        }
+        $label = 'Perte en transit — transfert ' . $transfer->number;
+
+        return $this->post($company, 'operations_diverses', [
+            'entry_date'  => today(),
+            'reference'   => $reference,
+            'description' => $label,
+        ], [
+            $this->line($this->account($company, 'pertes_inventaire'), $label, $amount, 0),
+            $this->line($this->account($company, 'stocks'), $label, 0, $amount),
+        ]);
+    }
+
+    /**
      * [COMPTA-BANQUE] Remise en banque validée.
      *
      * Écriture générée lors de la validation d'une remise :

@@ -279,6 +279,28 @@ class StockTransferService
                 }
             }
 
+            // [DÉCISION 23/07 — écart de transfert] Les unités expédiées et non
+            // reçues sont une PERTE EN TRANSIT : le stock physique la reflète déjà
+            // (sortie source sans entrée destination) ; la valorisation comptable
+            // doit suivre (D 6097 Pertes / C 311x Stocks), sinon la perte est
+            // invisible en balance.
+            $lossTotal = 0;
+            $lossDetails = [];
+            foreach ($transfer->items as $item) {
+                $ecart = (float) $item->quantity - (float) ($item->received_quantity ?? $item->quantity);
+                if ($ecart > 0.0001) {
+                    $val = (int) round($ecart * (float) ($item->unit_cost ?? 0));
+                    $lossTotal += $val;
+                    $lossDetails[] = ($item->product?->name ?? '#' . $item->product_id) . " : -{$ecart} (" . number_format($val, 0, ',', ' ') . ' FCFA)';
+                }
+            }
+            if ($lossTotal > 0) {
+                app(AccountingService::class)->postTransferLoss($transfer, $lossTotal);
+                app(AuditService::class)->log('transfert.perte_transit', $transfer, [], [
+                    'montant' => $lossTotal, 'detail' => implode(' ; ', $lossDetails),
+                ]);
+            }
+
             $transfer->update([
                 'status'      => 'recu',
                 'received_at' => now(),
