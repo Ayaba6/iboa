@@ -399,3 +399,40 @@ sécurité (CSP, HSTS) ; failed_jobs ; limitation de tentatives sur login.
 9. Ergonomie et modules incomplets
 
 Chaque chantier met à jour ce registre (état + preuve + limites de la preuve).
+
+## Phase 2.5 — Parcours E2E UI navigateur (23/07, PROUVÉS)
+
+Réalisés en conditions réelles (MySQL, session navigateur, formulaires) :
+
+- **A. MTO complet** : devis formulaire → validation → conversion (18 880
+  exact) → commande → BP crédit → BL BLOQUÉ par guard production (message
+  exact) → OF (chef → responsable → allocation → REFUS lancement sans
+  autorisation DAF → autorisation motivée → lancement → consommation bobine
+  4 kg, lot MP synchronisé → déclaration 4 tôles → QC conforme) → BL validé
+  (stock 4→0) → facture (GL équilibrée) → encaissement → facture PAYÉE →
+  balance client 0 → caisse 18 880.
+- **C. Achat complet** : DA formulaire → approbation → CF 17 700 →
+  confirmation → réception (bobine auto-générée) → FF (GL) → REFUS paiement
+  sans provision (« Solde insuffisant ») → transfert trésorerie 18 000 →
+  décaissement → FF PAYÉE → Coris 300 = 18 000 − 17 700 exact.
+- **D. Retour client** : avoir 4 720 exact depuis facture payée, disposition
+  rebut = AUCUN retour en stock vendable (prouvé), GL équilibrée, crédit
+  disponible.
+- **E. Production avec anomalie** : déchet déclaré (0,5 kg, motif) →
+  validation chef REFUSÉE sans analyse de cause (garde CDC §13.9) → cause +
+  action corrective → visa chef → visa qualité → clôture OF REFUSÉE sans
+  visa chef d'équipe sur la déclaration → visa → OF TERMINÉ.
+- **F. Paie** : run créé et calculé depuis l'UI (brut 260 000, CNSS 14 300 =
+  5,5 % exact, net 218 443) → validation → écriture GÉNÉRÉE AVEC LE COMPTE
+  431 CORRIGÉ : D661 260 000 + D664 ventilé 8,5/1,5/6 % exact / C422 +
+  C431 55 900 + C447 — équilibrée 301 600.
+- **B. MTS** : NON déroulé au navigateur (aucun stock PF en recette — le
+  fabriquer artificiellement n'aurait rien prouvé). Couvert par : parcours A
+  moins le volet production (toutes les étapes communes prouvées ci-dessus)
+  + tests E2eMtoApprovedAndMts et ReservationRelease. Risque résiduel :
+  FAIBLE (spécificité = réservation sur stock, testée).
+
+2 bugs réels corrigés pendant ces parcours (commit bba3ff6) : enum
+stock_lots (consommation bobine cassée en MySQL), canonicalisation du hash
+du journal. 2 gardes découvertes et documentées : provision de trésorerie
+obligatoire au décaissement, analyse de cause obligatoire sur les déchets.
