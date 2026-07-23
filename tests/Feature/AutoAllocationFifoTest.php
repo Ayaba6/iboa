@@ -294,3 +294,38 @@ it('refuse de modifier un devis converti ou validé', function () {
     $svc->update($quote->fresh(), ['notes' => 'modif légitime']);
     expect($quote->fresh()->notes)->toBe('modif légitime');
 });
+
+// [Matrice — facture période close] L'annulation n'altère JAMAIS l'écriture
+// d'origine : extourne datée du jour, lignes originales intactes.
+it('annule une facture ancienne : écriture d\'origine intacte, extourne du jour', function () {
+    [$co, $client, $cash] = afSetup();
+    $inv = afInvoice($co, $client, 40000, '2026-01-15');
+    $inv->update(['status' => 'brouillon', 'subtotal_ht' => 40000, 'total_tax' => 0]);
+    $p = \App\Models\Product::factory()->create();
+    $inv->items()->create([
+        'product_id' => $p->id, 'description' => 'L', 'quantity' => 1,
+        'unit_price' => 40000, 'discount_percent' => 0, 'tax_rate_value' => 0,
+        'line_total_ht' => 40000, 'line_tax' => 0, 'line_total_ttc' => 40000,
+    ]);
+
+    $svc = app(\App\Services\InvoiceService::class);
+    $svc->validate($inv->fresh());
+    $inv->fresh()->update(['status' => 'emise']);
+
+    $origin = \App\Models\JournalEntry::where('reference', $inv->number)->first();
+    // Simuler une écriture ANCIENNE (période janvier, close depuis)
+    $origin->update(['entry_date' => '2026-01-15']);
+    $originalLines = $origin->lines()->orderBy('id')->get(['account_id', 'debit', 'credit'])->toArray();
+
+    $svc->cancel($inv->fresh(), 'Erreur de facturation détectée tardivement');
+
+    $origin->refresh();
+    // Écriture d'origine : lignes et date INTACTES, seulement liée à son extourne
+    expect($origin->entry_date->toDateString())->toBe('2026-01-15')
+        ->and($origin->lines()->orderBy('id')->get(['account_id', 'debit', 'credit'])->toArray())->toBe($originalLines)
+        ->and($origin->reversed_by_entry_id)->not->toBeNull();
+    // Extourne : datée du JOUR (période ouverte), équilibrée
+    $reversal = \App\Models\JournalEntry::find($origin->reversed_by_entry_id);
+    expect($reversal->entry_date->toDateString())->toBe(now()->toDateString())
+        ->and((int) $reversal->total_debit)->toBe((int) $reversal->total_credit);
+});

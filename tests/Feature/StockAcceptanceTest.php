@@ -132,3 +132,41 @@ it('génère l’export PDF de l’état des stocks (documents)', function () {
     $resp->assertOk();
     expect($resp->headers->get('content-type'))->toContain('pdf');
 });
+
+// [Matrice annulations — transfert] Annulation en transit réintègre la source ;
+// après réception ou double annulation : refus.
+it('annulation de transfert : réintégration en transit, refus après réception et double annulation', function () {
+    $ctx = stkSetup();
+    $co  = $ctx['co'];
+    $whA = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-TC1'], ['name' => 'Dépôt TC1', 'is_active' => true]);
+    $whB = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-TC2'], ['name' => 'Dépôt TC2', 'is_active' => true]);
+    $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    stkSeedStock($co, $whA, $product, 50);
+    $svc = app(StockTransferService::class);
+
+    // 1. En transit → annulation réintègre la source, rien en destination
+    $t1 = $svc->create([
+        'from_warehouse_id' => $whA->id, 'to_warehouse_id' => $whB->id, 'transfer_date' => now()->toDateString(),
+        'items' => [['product_id' => $product->id, 'quantity' => 20]],
+    ]);
+    $svc->ship($t1);
+    expect((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $whA->id)->value('quantity'))->toBe(30.0);
+
+    $svc->cancel($t1->fresh(), 'Camion rappelé');
+    expect($t1->fresh()->status)->toBe('annule')
+        ->and((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $whA->id)->value('quantity'))->toBe(50.0)
+        ->and((float) (ProductStock::where('product_id', $product->id)->where('warehouse_id', $whB->id)->value('quantity') ?? 0))->toBe(0.0);
+
+    // 2. Double annulation → refusée (aucune double réintégration)
+    expect(fn () => $svc->cancel($t1->fresh(), 'encore'))->toThrow(\RuntimeException::class);
+    expect((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $whA->id)->value('quantity'))->toBe(50.0);
+
+    // 3. Transfert REÇU → annulation refusée (flux terminé)
+    $t2 = $svc->create([
+        'from_warehouse_id' => $whA->id, 'to_warehouse_id' => $whB->id, 'transfer_date' => now()->toDateString(),
+        'items' => [['product_id' => $product->id, 'quantity' => 10]],
+    ]);
+    $svc->ship($t2);
+    $svc->receive($t2->fresh());
+    expect(fn () => $svc->cancel($t2->fresh(), 'trop tard'))->toThrow(\RuntimeException::class);
+});
