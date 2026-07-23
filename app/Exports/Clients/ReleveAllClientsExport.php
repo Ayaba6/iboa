@@ -156,9 +156,10 @@ class RecapAllClientsSheet implements FromArray, WithTitle, WithColumnWidths, Wi
             ->whereNotIn('status', ['brouillon', 'annulee'])
             ->whereDate('issued_at', '<', $this->dateFrom)->sum('total_ttc');
         $avoirAvant = CreditNote::where('client_id', $client->id)
-            ->where('status', 'valide')
+            ->whereIn('status', ['valide', 'applique'])
             ->whereDate('issued_at', '<', $this->dateFrom)->sum('total_ttc');
         $reglAvant  = ClientPayment::where('client_id', $client->id)
+            ->whereNotIn('status', ['annule', 'rejete'])
             ->whereDate('payment_date', '<', $this->dateFrom)->sum('amount');
         $soldeOuv   = $factAvant - $avoirAvant - $reglAvant;
 
@@ -167,11 +168,12 @@ class RecapAllClientsSheet implements FromArray, WithTitle, WithColumnWidths, Wi
             ->whereBetween('issued_at', [$this->dateFrom, $this->dateTo])->orderBy('issued_at')->get() as $inv) {
             $lines->push(['date' => $inv->issued_at, 'debit' => $inv->total_ttc, 'credit' => 0]);
         }
-        foreach (CreditNote::where('client_id', $client->id)->where('status', 'valide')
+        foreach (CreditNote::where('client_id', $client->id)->whereIn('status', ['valide', 'applique'])
             ->whereBetween('issued_at', [$this->dateFrom, $this->dateTo])->orderBy('issued_at')->get() as $av) {
             $lines->push(['date' => $av->issued_at, 'debit' => 0, 'credit' => $av->total_ttc]);
         }
         foreach (ClientPayment::where('client_id', $client->id)
+            ->whereNotIn('status', ['annule', 'rejete'])
             ->whereBetween('payment_date', [$this->dateFrom, $this->dateTo])->orderBy('payment_date')->get() as $r) {
             $lines->push(['date' => $r->payment_date, 'debit' => 0, 'credit' => $r->amount]);
         }

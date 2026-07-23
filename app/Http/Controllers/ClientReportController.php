@@ -33,11 +33,12 @@ class ClientReportController extends Controller
             ->sum('total_ttc');
 
         $avoirAvant = CreditNote::where('client_id', $client->id)
-            ->where('status', 'valide')
+            ->whereIn('status', ['valide', 'applique'])
             ->whereDate('issued_at', '<', $dateFrom)
             ->sum('total_ttc');
 
         $reglAvant = ClientPayment::where('client_id', $client->id)
+            ->whereNotIn('status', ['annule', 'rejete'])
             ->whereDate('payment_date', '<', $dateFrom)
             ->sum('amount');
 
@@ -61,7 +62,7 @@ class ClientReportController extends Controller
         }
 
         foreach (CreditNote::where('client_id', $client->id)
-            ->where('status', 'valide')
+            ->whereIn('status', ['valide', 'applique'])
             ->whereBetween('issued_at', [$dateFrom, $dateTo])
             ->orderBy('issued_at')->get() as $av) {
             $lines->push([
@@ -76,6 +77,7 @@ class ClientReportController extends Controller
         }
 
         foreach (ClientPayment::where('client_id', $client->id)
+            ->whereNotIn('status', ['annule', 'rejete'])
             ->whereBetween('payment_date', [$dateFrom, $dateTo])
             ->orderBy('payment_date')->get() as $r) {
             $lines->push([

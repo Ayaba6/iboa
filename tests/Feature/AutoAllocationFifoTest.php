@@ -329,3 +329,46 @@ it('annule une facture ancienne : écriture d\'origine intacte, extourne du jour
     expect($reversal->entry_date->toDateString())->toBe(now()->toDateString())
         ->and((int) $reversal->total_debit)->toBe((int) $reversal->total_credit);
 });
+
+// [Lot 4 — agrégats] Un règlement ANNULÉ ne compte plus dans les relevés ;
+// un avoir APPLIQUÉ (statut 'applique') y figure toujours.
+it('relevé client : exclut règlements annulés, inclut avoirs appliqués', function () {
+    [$co, $client, $cash] = afSetup();
+    $inv = afInvoice($co, $client, 50000, now()->toDateString());
+    $svc = app(\App\Services\ClientPaymentService::class);
+
+    // Règlement 20 000 confirmé puis ANNULÉ (allocation défaite, extourne, caisse inversée)
+    $pay = $svc->create([
+        'company_id' => $co->id, 'client_id' => $client->id, 'amount' => 20000,
+        'payment_date' => now()->toDateString(), 'payment_method' => 'espece',
+        'cash_account_id' => $cash->id, 'status' => 'confirme',
+        'allocations' => [['invoice_id' => $inv->id, 'amount' => 20000]],
+    ]);
+    $svc->cancel($pay->fresh(), 'Erreur de saisie');
+
+    // Avoir 10 000 validé puis appliqué intégralement (statut → 'applique')
+    $cnSvc = app(\App\Services\CreditNoteService::class);
+    $cn = $cnSvc->createFromInvoice($inv->fresh(), [
+        'reason' => 'Geste commercial', 'items' => [[
+            'description' => 'Remise', 'quantity' => 1, 'unit_price' => 10000, 'tax_rate_value' => 0,
+        ]],
+    ]);
+    $cnSvc->validate($cn);
+    $cnSvc->applyToInvoice($cn->fresh());
+    expect($cn->fresh()->status)->toBe('applique');
+
+    // Mêmes filtres que relevés (exports + controllers corrigés)
+    $regl = \App\Models\ClientPayment::where('client_id', $client->id)
+        ->whereNotIn('status', ['annule', 'rejete'])->sum('amount');
+    $avoirs = \App\Models\CreditNote::where('client_id', $client->id)
+        ->whereIn('status', ['valide', 'applique'])->sum('total_ttc');
+    $fact = \App\Models\Invoice::where('client_id', $client->id)
+        ->whereNotIn('status', ['brouillon', 'annulee'])->sum('total_ttc');
+
+    // Solde relevé = 50 000 − 0 (règlement annulé) − 10 000 (avoir) = 40 000
+    expect((int) $regl)->toBe(0)
+        ->and((int) $avoirs)->toBe(10000)
+        ->and((int) ($fact - $avoirs - $regl))->toBe(40000)
+        // Vérité facture alignée : remaining = 40 000 (paiement défait, avoir appliqué)
+        ->and((int) $inv->fresh()->remaining_amount)->toBe(40000);
+});

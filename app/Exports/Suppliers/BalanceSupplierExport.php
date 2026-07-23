@@ -59,7 +59,7 @@ class BalanceSupplierExport implements FromArray, WithTitle, WithColumnWidths, W
                 'name'         => $s->name,
                 'total_fact'   => SupplierInvoice::where('supplier_id', $s->id)->whereNotIn('status', ['brouillon', 'annulee'])->sum('total_ttc'),
                 'total_retour' => SupplierReturn::where('supplier_id', $s->id)->where('status', 'valide')->sum('total_ttc'),
-                'total_paye'   => SupplierPayment::where('supplier_id', $s->id)->sum('amount'),
+                'total_paye'   => SupplierPayment::where('supplier_id', $s->id)->whereNotIn('status', ['annule', 'rejete'])->sum('amount'),
             ];
         })->map(fn($r) => array_merge($r, ['solde' => $r['total_fact'] - $r['total_retour'] - $r['total_paye']]))
           ->filter(fn($r) => $r['total_fact'] > 0 || $r['solde'] != 0)

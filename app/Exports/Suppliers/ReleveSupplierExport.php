@@ -114,7 +114,7 @@ class ReleveSupplierExport implements FromArray, WithTitle, WithColumnWidths, Wi
 
         $factAvant   = SupplierInvoice::where('supplier_id', $supplier->id)->whereNotIn('status', ['brouillon', 'annulee'])->whereDate('received_at', '<', $this->dateFrom)->sum('total_ttc');
         $retourAvant = SupplierReturn::where('supplier_id', $supplier->id)->where('status', 'valide')->whereDate('returned_at', '<', $this->dateFrom)->sum('total_ttc');
-        $reglAvant   = SupplierPayment::where('supplier_id', $supplier->id)->whereDate('payment_date', '<', $this->dateFrom)->sum('amount');
+        $reglAvant   = SupplierPayment::where('supplier_id', $supplier->id)->whereNotIn('status', ['annule', 'rejete'])->whereDate('payment_date', '<', $this->dateFrom)->sum('amount');
         $soldeOuv    = $factAvant - $retourAvant - $reglAvant;
 
         $lines = collect();
@@ -125,7 +125,7 @@ class ReleveSupplierExport implements FromArray, WithTitle, WithColumnWidths, Wi
         foreach (SupplierReturn::where('supplier_id', $supplier->id)->where('status', 'valide')->whereBetween('returned_at', [$this->dateFrom, $this->dateTo])->orderBy('returned_at')->get() as $ret) {
             $lines->push(['date' => $ret->returned_at, 'type' => 'retour', 'reference' => $ret->number, 'echeance' => null, 'debit' => 0, 'credit' => $ret->total_ttc]);
         }
-        foreach (SupplierPayment::where('supplier_id', $supplier->id)->whereBetween('payment_date', [$this->dateFrom, $this->dateTo])->orderBy('payment_date')->get() as $p) {
+        foreach (SupplierPayment::where('supplier_id', $supplier->id)->whereNotIn('status', ['annule', 'rejete'])->whereBetween('payment_date', [$this->dateFrom, $this->dateTo])->orderBy('payment_date')->get() as $p) {
             $lines->push(['date' => $p->payment_date, 'type' => 'paiement', 'reference' => $p->number, 'echeance' => null, 'debit' => 0, 'credit' => $p->amount]);
         }
 

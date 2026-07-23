@@ -220,7 +220,7 @@ class SupplierReportController extends Controller
 
         $factAvant   = SupplierInvoice::where('supplier_id', $supplier->id)->whereNotIn('status', ['brouillon', 'annulee'])->whereDate('received_at', '<', $dateFrom)->sum('total_ttc');
         $retourAvant = SupplierReturn::where('supplier_id', $supplier->id)->where('status', 'valide')->whereDate('returned_at', '<', $dateFrom)->sum('total_ttc');
-        $reglAvant   = SupplierPayment::where('supplier_id', $supplier->id)->whereDate('payment_date', '<', $dateFrom)->sum('amount');
+        $reglAvant   = SupplierPayment::where('supplier_id', $supplier->id)->whereNotIn('status', ['annule', 'rejete'])->whereDate('payment_date', '<', $dateFrom)->sum('amount');
         $soldeOuv    = $factAvant - $retourAvant - $reglAvant;
 
         $lines = collect();
@@ -230,7 +230,7 @@ class SupplierReportController extends Controller
         foreach (SupplierReturn::where('supplier_id', $supplier->id)->where('status', 'valide')->whereBetween('returned_at', [$dateFrom, $dateTo])->orderBy('returned_at')->get() as $ret) {
             $lines->push(['date' => $ret->returned_at, 'type' => 'retour', 'reference' => $ret->number, 'echeance' => null, 'debit' => 0, 'credit' => $ret->total_ttc]);
         }
-        foreach (SupplierPayment::where('supplier_id', $supplier->id)->whereBetween('payment_date', [$dateFrom, $dateTo])->orderBy('payment_date')->get() as $p) {
+        foreach (SupplierPayment::where('supplier_id', $supplier->id)->whereNotIn('status', ['annule', 'rejete'])->whereBetween('payment_date', [$dateFrom, $dateTo])->orderBy('payment_date')->get() as $p) {
             $lines->push(['date' => $p->payment_date, 'type' => 'paiement', 'reference' => $p->number, 'echeance' => null, 'debit' => 0, 'credit' => $p->amount]);
         }
 
@@ -251,7 +251,7 @@ class SupplierReportController extends Controller
         $rows = $query->get()->map(function ($s) {
             $totalFact  = SupplierInvoice::where('supplier_id', $s->id)->whereNotIn('status', ['brouillon', 'annulee'])->sum('total_ttc');
             $totalRetour = SupplierReturn::where('supplier_id', $s->id)->where('status', 'valide')->sum('total_ttc');
-            $totalPaye  = SupplierPayment::where('supplier_id', $s->id)->sum('amount');
+            $totalPaye  = SupplierPayment::where('supplier_id', $s->id)->whereNotIn('status', ['annule', 'rejete'])->sum('amount');
             $solde      = $totalFact - $totalRetour - $totalPaye;
             return ['id' => $s->id, 'code' => $s->code, 'name' => $s->name, 'total_fact' => $totalFact, 'total_retour' => $totalRetour, 'total_paye' => $totalPaye, 'solde' => $solde];
         })->filter(fn($r) => $r['total_fact'] > 0 || $r['solde'] != 0)->sortByDesc('solde')->values();

@@ -52,6 +52,7 @@ class ClientStatementController extends Controller
             $avoirsAvant = (int) CreditNote::where('client_id', $client->id)
                 ->whereIn('status', ['valide', 'applique'])->whereDate('issued_at', '<', $dateFrom)->sum('total_ttc');
             $pmtAvant = (int) ClientPayment::where('client_id', $client->id)
+                ->whereNotIn('status', ['annule', 'rejete'])
                 ->whereDate('payment_date', '<', $dateFrom)->sum('amount');
             $soldeInitial = $factAvant - $avoirsAvant - $pmtAvant;
 
@@ -103,6 +104,7 @@ class ClientStatementController extends Controller
 
             // ── Encaissements de la période
             foreach (ClientPayment::with('allocations')->where('client_id', $client->id)
+                ->whereNotIn('status', ['annule', 'rejete'])
                 ->whereDate('payment_date', '>=', $dateFrom)->whereDate('payment_date', '<=', $dateTo)
                 ->orderBy('payment_date')->get() as $pmt) {
                 $alloue = (int) $pmt->allocations->sum('amount');
