@@ -373,6 +373,14 @@ class ClientPaymentService
     public function addAllocation(ClientPayment $payment, int $invoiceId, int $amount): void
     {
         DB::transaction(function () use ($payment, $invoiceId, $amount) {
+            // [CONCURRENCE] Verrouiller le PAIEMENT : deux imputations simultanées
+            // liraient le même unallocated_amount et sur-alloueraient. Et un
+            // paiement annulé ne doit plus être imputable.
+            $payment = ClientPayment::lockForUpdate()->findOrFail($payment->id);
+            if ($payment->status === 'annule') {
+                throw new \RuntimeException('Cet encaissement est annulé — imputation impossible.');
+            }
+
             if ($amount <= 0) {
                 throw new \RuntimeException('Le montant à imputer doit être positif.');
             }

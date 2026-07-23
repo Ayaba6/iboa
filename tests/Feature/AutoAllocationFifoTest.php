@@ -149,3 +149,51 @@ it('annule un encaissement : facture restaurée, GL extourné, caisse restituée
     // Double annulation refusée
     expect(fn () => $svc->cancel($payment->fresh(), 'encore'))->toThrow(\RuntimeException::class);
 });
+
+// [Lot 2 idempotence] Double soumission et paiement annulé.
+it('refuse la sur-imputation séquentielle et l\'imputation d\'un paiement annulé', function () {
+    [$co, $client, $cash] = afSetup();
+    $inv = afInvoice($co, $client, 100000, '2026-02-01');
+
+    $svc = app(\App\Services\ClientPaymentService::class);
+    $payment = $svc->create([
+        'client_id' => $client->id, 'amount' => 60000, 'status' => 'confirme',
+        'is_acompte' => true, 'method' => 'especes', 'payment_date' => now()->toDateString(),
+        'force_duplicate' => true,
+    ]);
+
+    // 1re imputation : 60 000 → OK, plus rien de disponible
+    $svc->addAllocation($payment->fresh(), $inv->id, 60000);
+    expect((int) $payment->fresh()->unallocated_amount)->toBe(0);
+
+    // 2e clic identique : refusé (dépasse le non-imputé)
+    expect(fn () => $svc->addAllocation($payment->fresh(), $inv->id, 60000))
+        ->toThrow(\RuntimeException::class);
+
+    // Paiement annulé : plus imputable
+    $p2 = $svc->create([
+        'client_id' => $client->id, 'amount' => 10000, 'status' => 'confirme',
+        'is_acompte' => true, 'method' => 'especes', 'payment_date' => now()->toDateString(),
+        'force_duplicate' => true,
+    ]);
+    $svc->cancel($p2->fresh(), 'test annulation');
+    expect(fn () => $svc->addAllocation($p2->fresh(), $inv->id, 5000))
+        ->toThrow(\RuntimeException::class);
+});
+
+// [Lot 2 idempotence] Double validation de facture refusée (garde + lock).
+it('refuse la double validation d\'une facture', function () {
+    [$co, $client, $cash] = afSetup();
+    $inv = afInvoice($co, $client, 50000, '2026-03-01');
+    $inv->update(['status' => 'brouillon', 'subtotal_ht' => 50000, 'total_tax' => 0]);
+    $p = \App\Models\Product::factory()->create();
+    $inv->items()->create([
+        'product_id' => $p->id, 'description' => 'Ligne', 'quantity' => 1,
+        'unit_price' => 50000, 'discount_percent' => 0, 'tax_rate_value' => 0,
+        'line_total_ht' => 50000, 'line_tax' => 0, 'line_total_ttc' => 50000,
+    ]);
+
+    $svc = app(\App\Services\InvoiceService::class);
+    $svc->validate($inv->fresh());
+    expect(fn () => $svc->validate($inv->fresh()))->toThrow(\RuntimeException::class);
+});
