@@ -16,9 +16,11 @@ class EnsureUserIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::user();
+        // $request->user() couvre le guard résolu de la requête (web OU sanctum) —
+        // Auth::user() seul manquait le canal API (guard sanctum).
+        $user = $request->user() ?: Auth::user();
 
-        if ($user && ! $user->is_active) {
+        if ($user && ! $user->fresh()->is_active) {
             // [SEC-PHASE2 §7] Canal API : même si la révocation des tokens a
             // échoué (update de masse, SQL brut), un token existant ne donne
             // JAMAIS accès à un compte désactivé.

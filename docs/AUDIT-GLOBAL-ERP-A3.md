@@ -272,10 +272,44 @@ rotation des secrets (procédure d'exploitation à documenter Phase 2.7).
   invalide son cache au retrait). Limite : cache multi-serveurs non testé
   (mono-serveur en production actuelle).
 
-Restant Phase 2.1 (dernier lot) : seuils structurés par
-agence/dépôt/nature (matrice d'approbation configurable), E2E API réels,
-scan des permissions orphelines (qualité des rôles §10), lien user_id
-fournisseurs/clients (décision de modélisation).
+### Clôture Phase 2.1 (11e incrément, 23/07)
+
+- **E2E API réel PROUVÉ** : cycle complet — 401 sans token, émission par
+  credentials, 200 avec permission, 403 sans permission, 422 mauvais
+  identifiants, désactivation → refus (double couche : token révoqué +
+  middleware). Bug corrigé au passage : EnsureUserIsActive interrogeait
+  Auth::user() (guard web) — le canal sanctum passait au travers ;
+  désormais $request->user() (guard résolu) + fresh().
+- **Permissions orphelines** : 17/161 sans référence route/code —
+  5 créées en réserve par la phase (payments.confirm/cancel,
+  purchase_orders.cancel, credit_notes.cancel, cash_closures.reopen :
+  routes à brancher quand les flux correspondants seront exposés),
+  12 historiques (purchase_requests.validate_l1/l2/l3, sales.create,
+  company.view, families.view/disable, quality.nc.manage,
+  stocks.lot.trace, production.approve_modification,
+  articles.change_category/override_category_defaults). Aucune
+  suppression (inoffensives) — liste publiée pour arbitrage.
+- **Décisions consignées** :
+  1. Seuils par agence/dépôt/nature : NON IMPLÉMENTÉ par décision —
+     OA METAL est mono-site (une usine, Ouagadougou) ; l'axe « agence »
+     n'existe pas dans le modèle. Les seuils par MONTANT existent
+     (trésorerie + CF) et « absence de règle ≠ autorisation libre » est
+     garanti. À rouvrir si multi-agences.
+  2. user_id sur fournisseurs/clients : NON MODÉLISÉ par décision — le
+     contrôle bénéficiaire couvre les salariés (seul lien fiable).
+     À rouvrir si des tiers reçoivent des comptes ERP.
+
+**BILAN PHASE 2.1 — 11 incréments, 9 bugs réels corrigés** (annulation
+par lecteur ×3, approbation sans règle, session survivante, table Sanctum
+jamais migrée, signature webhook tronquée, job webhook jamais lancé,
+rattachement webhook erroné, FK audit_logs bloquant la suppression de
+compte, canal sanctum ignoré par le middleware). 10 permissions dédiées +
+retraits effectifs sur 4 rôles, maker-checker 7 points fail-closed,
+bénéficiaire toujours actif, journal chaîné cryptographiquement,
+3 commandes d'audit permanentes. ~35 tests de sécurité automatisés.
+Risque résiduel : FAIBLE sur les chemins couverts ; scénarios non
+couverts : multi-serveurs (cache), multi-agences (hors modèle), E2E UI
+navigateur (Phase 2.5).
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 
