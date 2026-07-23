@@ -30,9 +30,23 @@ class AuditService
         // Une suppression ou modification casse la chaîne (a3:audit-security §8).
         $prevHash = AuditLog::orderByDesc('id')->value('row_hash') ?? str_repeat('0', 64);
         $attributes['prev_hash'] = $prevHash;
-        $attributes['row_hash']  = self::computeRowHash($attributes, $prevHash);
 
-        AuditLog::create($attributes);
+        $log = AuditLog::create($attributes);
+
+        // [FIX canonicalisation] Le hash est calculé sur les valeurs PERSISTÉES
+        // (rechargées) : des objets Carbon dans old/new_values se sérialisent en
+        // ISO à l'écriture mais se relisent au format SQL — hash divergent sinon
+        // (rupture de chaîne constatée en recette UI sur les logs « updated »).
+        $log->refresh();
+        $log->updateQuietly(['row_hash' => self::computeRowHash([
+            'user_id'    => $log->user_id,
+            'action'     => $log->action,
+            'model_type' => $log->model_type,
+            'model_id'   => $log->model_id,
+            'old_values' => $log->old_values,
+            'new_values' => $log->new_values,
+            'ip_address' => $log->ip_address,
+        ], $prevHash)]);
     }
 
     /** Empreinte déterministe d'une entrée (indépendante de l'ordre PHP des clés). */

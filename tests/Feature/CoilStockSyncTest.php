@@ -158,7 +158,10 @@ describe('Consommation bobine synchronisée', function () {
 
         expect((float) $coil->fresh()->remaining_weight)->toBe(380.0)
             ->and((float) $lot->fresh()->quantity)->toBe(1080.0)
-            ->and($lot->fresh()->status)->toBe('partiellement_consomme')
+            // [Analyse règle] 'partiellement_consomme' était HORS ENUM : SQLite le tolérait,
+            // MySQL production le tronquait (Data truncated) — la consommation bobine cassait.
+            // Règle corrigée : le reliquat d'un lot entamé reste 'disponible'.
+            ->and($lot->fresh()->status)->toBe('disponible')
             ->and((float) ProductStock::where('product_id', $mp->id)->value('quantity'))->toBe(2880.0);
 
         $movements = StockMovement::where('production_consumption_id', $consumption->id)->get();

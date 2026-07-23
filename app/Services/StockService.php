@@ -266,13 +266,13 @@ class StockService
                         );
                     }
                     $newQty = max(0, $newQty);
+                    // [FIX enum] stock_lots.status = enum(disponible|reserve|expire|consomme).
+                    // 'epuise'/'partiellement_consomme' n'existaient pas → MySQL strict
+                    // tronquait (« Data truncated ») et cassait la consommation bobine.
+                    // Sémantique alignée : lot vidé = consomme ; reliquat = disponible.
                     $lot->update([
                         'quantity' => $newQty,
-                        'status'   => $newQty <= 0.001
-                            ? 'epuise'
-                            : ((float) ($lot->initial_quantity ?? 0) > 0 && $newQty < (float) $lot->initial_quantity
-                                ? 'partiellement_consomme'
-                                : 'disponible'),
+                        'status'   => $newQty <= 0.001 ? 'consomme' : 'disponible',
                     ]);
                 }
             }
