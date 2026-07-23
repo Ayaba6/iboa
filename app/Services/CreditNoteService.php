@@ -401,6 +401,9 @@ class CreditNoteService
                     ));
             }
 
+            // [SEC-PHASE2] Journal d'audit : annulation d'avoir tracée
+            app(AuditService::class)->log('avoir.annulation', $creditNote, [], ['motif' => $motif, 'montant' => $creditNote->total_ttc]);
+
             $creditNote->update([
                 'status'           => 'annule',
                 'remaining_credit' => 0,

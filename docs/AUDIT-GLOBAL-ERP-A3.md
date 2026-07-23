@@ -92,9 +92,22 @@ autorise validate/cancel de réception ; `purchase_orders.create` autorise
 confirm. Cohérents avec un profil « acheteur/magasinier » unique, mais une
 séparation créateur/valideur exigerait des permissions dédiées.
 
-Restant NON TESTÉ : requêtes forgées inter-tiers (ID d'autrui), utilisateur
-désactivé en session, journal d'audit systématique des actions sensibles.
-Suivi : tâche Phase 2.1.
+### Session, journal d'audit (23/07, 3e incrément)
+
+- **Utilisateur désactivé en session** : PROUVÉ — `is_active` n'était contrôlé
+  qu'au login ; middleware `EnsureUserIsActive` (global web) coupe la session
+  au premier aller-retour (test : profil accessible → désactivation →
+  redirection login + session invalidée).
+- **Journal d'audit** : table `audit_logs` + `AuditService` existaient mais
+  quasi débranchés. Branchés sur les 4 annulations financières
+  (encaissement, décaissement, facture, avoir) : action, modèle, motif,
+  montant, user, IP, URL. PROUVÉ sur encaissement.annulation.
+- Rate limiting : PROUVÉ par lecture (login 5/min + email+IP,
+  api/auth/token throttle:api_auth, API 60/min/user).
+
+Restant NON TESTÉ : requêtes forgées inter-tiers (ID d'autrui dans les
+payloads d'allocation), couverture du journal au-delà des annulations
+(validations, approbations, clôtures). Suivi : tâche Phase 2.1.
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 

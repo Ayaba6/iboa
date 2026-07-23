@@ -102,3 +102,38 @@ it('refuse l\'approbation d\'une CF sans règle de seuil à un utilisateur sans 
     }
     expect($po->fresh()->approval_status)->toBe('en_attente');
 });
+
+// [SEC-PHASE2] Un compte désactivé en cours de session est déconnecté au
+// premier aller-retour — le contrôle au login seul ne suffit pas.
+it('coupe la session d\'un utilisateur désactivé en cours de route', function () {
+    $u = secUserWith(['treasury.view']);
+    // Session vivante : la requête n'aboutit PAS sur la page de login
+    $first = $this->get(route('profile.edit'));
+    expect($first->headers->get('Location'))->not->toBe(route('login'));
+
+    $u->update(['is_active' => false]);
+
+    $this->get(route('profile.edit'))->assertRedirect(route('login'));
+    expect(auth()->check())->toBeFalse();
+});
+
+// [SEC-PHASE2] Les annulations financières alimentent le journal d'audit.
+it('journalise l\'annulation d\'un encaissement dans audit_logs', function () {
+    secUserWith(['treasury.view', 'treasury.write', 'payments.view']);
+    $co = secCompany();
+    $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 50000, 'is_active' => true]);
+    $pay = app(\App\Services\ClientPaymentService::class)->create([
+        'company_id' => $co->id, 'client_id' => Client::factory()->create()->id,
+        'amount' => 7000, 'payment_date' => now()->toDateString(),
+        'payment_method' => 'espece', 'cash_account_id' => $cash->id, 'status' => 'confirme',
+        'force_duplicate' => true,
+    ]);
+
+    app(\App\Services\ClientPaymentService::class)->cancel($pay->fresh(), 'Erreur de saisie caissier');
+
+    $log = \App\Models\AuditLog::where('action', 'encaissement.annulation')
+        ->where('model_id', $pay->id)->first();
+    expect($log)->not->toBeNull()
+        ->and($log->new_values['motif'] ?? null)->toBe('Erreur de saisie caissier')
+        ->and($log->user_id)->not->toBeNull();
+});

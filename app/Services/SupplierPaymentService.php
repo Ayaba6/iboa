@@ -390,6 +390,9 @@ class SupplierPaymentService
                 'notes'  => trim(($payment->notes ?? '') . "\n\n" . $cancelNote),
             ]);
 
+            // [SEC-PHASE2] Journal d'audit : annulation financière tracée
+            app(AuditService::class)->log('decaissement.annulation', $payment, [], ['motif' => $reason, 'montant' => $payment->amount]);
+
             return $payment->fresh();
         });
     }

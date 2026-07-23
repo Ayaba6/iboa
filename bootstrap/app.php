@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            // [SEC-PHASE2] Coupe la session d'un compte désactivé (le login seul ne suffit pas)
+            \App\Http\Middleware\EnsureUserIsActive::class,
             \App\Http\Middleware\SetCurrentCompany::class,
             \App\Http\Middleware\TrackLastLogin::class,
             \App\Http\Middleware\SecurityHeaders::class,

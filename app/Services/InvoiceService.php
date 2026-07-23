@@ -625,6 +625,9 @@ class InvoiceService
                 'notes'            => $newNotes,
             ]);
 
+            // [SEC-PHASE2] Journal d'audit : annulation de facture tracée
+            app(AuditService::class)->log('facture.annulation', $invoice, [], ['motif' => $reason, 'montant' => $invoice->total_ttc]);
+
             // [FIX-VENTES-03] Decrement invoiced_quantity on each linked order item so
             // the order can be re-invoiced after this cancellation.
             if ($invoice->order_id) {

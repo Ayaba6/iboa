@@ -600,6 +600,9 @@ class ClientPaymentService
             // 5. Solde client recalculé
             $payment->client?->recalculateBalance();
 
+            // [SEC-PHASE2] Journal d'audit : annulation financière tracée
+            app(AuditService::class)->log('encaissement.annulation', $payment, ['status' => 'confirme'], ['status' => 'annule', 'motif' => $reason, 'montant' => $payment->amount]);
+
             return $payment->fresh();
         });
     }
