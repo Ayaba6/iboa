@@ -52,6 +52,8 @@ class Quote extends Model
         'validated_by',
         'validated_at',
         'converted_to_order_id',
+        'revision_of_id',
+        'revision_number',
         'submitted_by',
         'submitted_at',
         'rejected_by',
@@ -124,6 +126,29 @@ class Quote extends Model
     public function convertedOrder(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'converted_to_order_id');
+    }
+
+    /** Devis d'origine que cette version révise. */
+    public function revisionOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'revision_of_id');
+    }
+
+    /** Révisions créées à partir de ce devis. */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(self::class, 'revision_of_id');
+    }
+
+    /** Une révision non annulée/refusée remplace ce devis. */
+    public function hasActiveRevision(): bool
+    {
+        return $this->revisions()->whereNotIn('status', ['annule', 'refuse'])->exists();
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast() && ! $this->expires_at->isToday();
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────

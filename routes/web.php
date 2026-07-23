@@ -333,6 +333,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('permission:quotes.create')->group(function () {
             // [VENTES-PRO] Action Duplicate (équivalent Odoo)
             Route::post('devis/{devis}/duplicate', [\App\Http\Controllers\Sales\QuoteController::class, 'duplicate'])->name('devis.duplicate');
+            Route::post('devis/{devis}/revise', [\App\Http\Controllers\Sales\QuoteController::class, 'revise'])->name('devis.revise');
         });
         // [WORKFLOW-V2] Transformer un devis validé en commande (sales.transform)
         Route::middleware('permission:sales.transform')->group(function () {

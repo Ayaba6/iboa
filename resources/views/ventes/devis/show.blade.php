@@ -80,6 +80,17 @@
                         Dupliquer
                     </button>
                 </form>
+                @if(! $quote->converted_to_order_id && ! in_array($quote->status, ['brouillon', 'annule']) && ! $quote->hasActiveRevision())
+                <form action="{{ route('ventes.devis.revise', $quote) }}" method="POST" class="inline">
+                    @csrf
+                    <button type="submit" class="{{ $btnOutline }}" title="Créer une révision : nouvelle version liée, ce devis reste consultable mais ne sera plus convertible">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Réviser
+                    </button>
+                </form>
+                @endif
                 @endcan
 
                 {{-- ───────────────────── BROUILLON ───────────────────── --}}
@@ -278,6 +289,22 @@
             </div>
         </div>
     </div>
+
+    {{-- [CDC §7] Traçabilité de révision --}}
+    @if($quote->revision_of_id && $quote->revisionOf)
+    <div class="mx-6 mt-4 rounded border border-blue-200 bg-blue-50 px-4 py-2.5 text-[13px] text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+        Révision n°{{ $quote->revision_number }} — remplace le devis
+        <a href="{{ route('ventes.devis.show', $quote->revisionOf) }}" class="font-semibold underline">{{ $quote->revisionOf->number }}</a>.
+    </div>
+    @endif
+    @php $activeRev = $quote->revisions()->whereNotIn('status', ['annule', 'refuse'])->latest('id')->first(); @endphp
+    @if($activeRev)
+    <div class="mx-6 mt-4 rounded border border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        Ce devis a été remplacé par la révision
+        <a href="{{ route('ventes.devis.show', $activeRev) }}" class="font-semibold underline">{{ $activeRev->number }}</a>
+        — il n'est plus convertible en commande.
+    </div>
+    @endif
 
     {{-- Letterhead : logo + infos société + badge document --}}
     @php

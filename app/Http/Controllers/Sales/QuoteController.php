@@ -182,6 +182,20 @@ class QuoteController extends Controller
             ->with('success', "Devis dupliqué : {$new->number}. Modifiez puis enregistrez.");
     }
 
+    /** [CDC §7] Révision : nouvelle version liée, l'original devient non convertible. */
+    public function revise(Quote $devis)
+    {
+        $this->authorize('create', Quote::class);
+        try {
+            $rev = $this->service->revise($devis);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        return redirect()
+            ->route('ventes.devis.edit', $rev)
+            ->with('success', "Révision n°{$rev->revision_number} créée : {$rev->number} (remplace {$devis->number}).");
+    }
+
     /**
      * POST ventes/devis/{quote}/convert — transformer le devis validé en commande.
      * Requiert : sales.transform — déclenché uniquement sur devis au statut 'valide'.

@@ -254,6 +254,9 @@ class QuoteService
         if ($quote->converted_to_order_id) {
             throw new \RuntimeException('Ce devis a déjà été converti en commande.');
         }
+        // [CDC §7] Gardes AVANT le passage en 'accepte' : si la conversion est
+        // impossible, le devis ne doit pas changer d'état.
+        $this->assertConvertible($quote);
 
         // Accept first, then convert — all in one DB transaction
         $quote->update([
@@ -280,6 +283,7 @@ class QuoteService
         if ($quote->converted_to_order_id) {
             throw new \RuntimeException('Ce devis a déjà été converti en commande.');
         }
+        $this->assertConvertible($quote);
 
         return DB::transaction(function () use ($quote) {
             $company = currentCompany();
@@ -349,6 +353,62 @@ class QuoteService
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * [CDC §7 — versionnement] Gardes communes de conversion :
+     *  - un devis expiré n'engage plus la société → le réviser pour re-valider ;
+     *  - un devis remplacé par une révision active se convertit via la révision.
+     */
+    private function assertConvertible(Quote $quote): void
+    {
+        if ($quote->isExpired()) {
+            throw new \RuntimeException(sprintf(
+                'Le devis %s a expiré le %s — il ne peut plus être converti. Créez une révision pour proposer une offre à jour.',
+                $quote->number,
+                $quote->expires_at->format('d/m/Y')
+            ));
+        }
+        if ($quote->hasActiveRevision()) {
+            $rev = $quote->revisions()->whereNotIn('status', ['annule', 'refuse'])->latest('id')->first();
+            throw new \RuntimeException(sprintf(
+                'Le devis %s a été remplacé par la révision %s — convertissez la révision.',
+                $quote->number,
+                $rev->number
+            ));
+        }
+    }
+
+    /**
+     * [CDC §7 — versionnement] Crée une révision d'un devis figé : nouvelle
+     * version en brouillon liée au devis d'origine (revision_of_id), numéro de
+     * révision incrémenté. L'original reste intact et consultable (son PDF est
+     * reproductible) ; il devient non convertible tant que la révision est active.
+     */
+    public function revise(Quote $quote): Quote
+    {
+        return DB::transaction(function () use ($quote) {
+            $quote = Quote::lockForUpdate()->findOrFail($quote->id);
+
+            if ($quote->converted_to_order_id) {
+                throw new \RuntimeException('Ce devis a été converti en commande — il ne peut plus être révisé.');
+            }
+            if (in_array($quote->status, ['brouillon', 'annule'], true)) {
+                throw new \RuntimeException('Un devis en brouillon se modifie directement ; un devis annulé ne se révise pas.');
+            }
+            if ($quote->hasActiveRevision()) {
+                throw new \RuntimeException('Une révision active existe déjà pour ce devis.');
+            }
+
+            $revision = $this->duplicate($quote);
+            $revision->update([
+                'revision_of_id'  => $quote->id,
+                'revision_number' => (int) $quote->revision_number + 1,
+                'reference'       => $quote->reference,
+            ]);
+
+            return $revision->fresh('items');
+        });
+    }
 
     private function syncItems(Quote $quote, array $items): void
     {
