@@ -50,3 +50,41 @@ it('releases OF-linked reservations when OF cancelled', function(){
     app(\App\Modules\Production\Services\ProductionService::class)->cancel($of->fresh(),'test');
     expect((float)ProductStock::where('product_id',$p->id)->first()->reserved_quantity)->toEqual(0.0);
 });
+
+// [FIX réservation fantôme — 23/07] Un OF clôturé APRÈS la livraison (visa
+// tardif) ne réserve pas un PF déjà parti : commande facturée = refus.
+it('ne crée pas de réservation à la clôture d\'un OF dont la commande est déjà facturée', function () {
+    $this->actingAs(relAdmin());
+    $co = Company::first(); $wh = Warehouse::first();
+    $p = Product::factory()->create(['is_stockable' => true]);
+    $order = Order::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'client_id' => Client::factory()->create()->id, 'number' => 'CMD-GHOST-' . uniqid(),
+        'status' => 'facture', 'issued_at' => now(),
+    ]);
+    $order->items()->create([
+        'product_id' => $p->id, 'description' => 'PF', 'quantity' => 4, 'delivered_quantity' => 4,
+        'unit_price' => 1000, 'line_total_ht' => 4000, 'line_tax' => 0, 'line_total_ttc' => 4000,
+    ]);
+    $of = ProductionOrder::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'OF-GHOST', 'status' => 'termine', 'order_id' => $order->id,
+        'product_id' => $p->id, 'quantity_requested' => 4, 'quantity_produced' => 4, 'finished_at' => now(),
+    ]);
+    $of->outputs()->create(['company_id' => $co->id, 'product_id' => $p->id, 'length' => 6, 'quantity' => 4, 'total_meters' => 24, 'warehouse_id' => $wh->id, 'produced_at' => now()]);
+
+    try {
+        app(ReservationService::class)->reserveForOrder($of);
+        $this->fail('La réservation aurait dû être refusée.');
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        expect(implode(' ', array_map(fn ($m) => implode(' ', $m), $e->errors())))->toContain('livré');
+    }
+    expect(StockReservation::where('production_order_id', $of->id)->count())->toBe(0);
+
+    // Commande partiellement livrée : la réservation est plafonnée au reliquat
+    $order->items()->first()->update(['delivered_quantity' => 3]);
+    $order->update(['status' => 'partiellement_livre']);
+    ProductStock::create(['product_id' => $p->id, 'warehouse_id' => $wh->id, 'quantity' => 4, 'reserved_quantity' => 0, 'avg_cost' => 100]);
+    $resa = app(ReservationService::class)->reserveForOrder($of->fresh());
+    expect((float) $resa->quantity)->toBe(1.0); // reliquat, pas les 4 produites
+});

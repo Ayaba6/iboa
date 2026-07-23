@@ -39,6 +39,29 @@ class ReservationService
             throw ValidationException::withMessages(['status' => 'Le produit fini de cet OF est déjà réservé.']);
         }
 
+        // [FIX réservation fantôme] Un OF clôturé APRÈS la livraison (visa tardif)
+        // ne doit pas réserver un PF déjà parti chez le client : la commande
+        // livrée/facturée/annulée n'a plus rien à réserver, et une commande
+        // partiellement livrée n'a besoin que du reliquat.
+        if ($order->order_id) {
+            $salesOrder = \App\Models\Order::with('items')->find($order->order_id);
+            if ($salesOrder) {
+                if (in_array($salesOrder->status, ['livre', 'facture', 'annule'], true)) {
+                    throw ValidationException::withMessages(['order' => sprintf(
+                        'La commande %s est « %s » — le produit fini a déjà été livré, aucune réservation à créer.',
+                        $salesOrder->number, $salesOrder->status
+                    )]);
+                }
+                $resteALivrer = (float) $salesOrder->items
+                    ->where('product_id', $order->product_id)
+                    ->sum(fn ($i) => max(0, (float) $i->quantity - (float) $i->delivered_quantity));
+                if ($resteALivrer <= 0) {
+                    throw ValidationException::withMessages(['order' => 'Les quantités de la commande sont déjà entièrement livrées — aucune réservation à créer.']);
+                }
+                $qty = min($qty, $resteALivrer);
+            }
+        }
+
         $warehouseId = $order->outputs()->whereNotNull('warehouse_id')->value('warehouse_id')
             ?? Warehouse::where('company_id', $order->company_id)->orderByDesc('is_default')->value('id');
 
