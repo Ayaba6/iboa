@@ -277,3 +277,46 @@ it('journalise les échecs de connexion et les validations de facture', function
 
     expect(\App\Models\AuditLog::where('action', 'facture.validation')->where('model_id', $inv->id)->exists())->toBeTrue();
 });
+
+// [SEC-PHASE2 §9] Chaînage du journal : altération/suppression détectée.
+it('détecte l\'altération et la suppression d\'entrées du journal d\'audit', function () {
+    secUserWith(['treasury.view']);
+    $svc = app(\App\Services\AuditService::class);
+    $svc->log('test.a');
+    $svc->log('test.b');
+    $svc->log('test.c');
+
+    // Chaîne saine
+    expect($svc->verifyChain())->toBe([]);
+
+    // Altération d'une entrée (contournement du modèle, SQL direct)
+    \Illuminate\Support\Facades\DB::table('audit_logs')
+        ->where('action', 'test.b')->update(['action' => 'test.b.falsifie']);
+    expect($svc->verifyChain())->not->toBe([]);
+
+    // Restaure puis SUPPRIME une entrée du milieu → rupture prev_hash
+    \Illuminate\Support\Facades\DB::table('audit_logs')
+        ->where('action', 'test.b.falsifie')->update(['action' => 'test.b']);
+    expect($svc->verifyChain())->toBe([]);
+    \Illuminate\Support\Facades\DB::table('audit_logs')->where('action', 'test.b')->delete();
+    expect($svc->verifyChain())->not->toBe([]);
+});
+
+// [SEC-PHASE2 §11] Retrait de permission en cours de session : effet immédiat.
+it('applique immédiatement le retrait d\'une permission en cours de session', function () {
+    $u = secUserWith(['treasury.view', 'treasury.cancel', 'payments.view']);
+    $co = secCompany();
+    $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 10000, 'is_active' => true]);
+    $pay = ClientPayment::create([
+        'company_id' => $co->id, 'client_id' => Client::factory()->create()->id,
+        'number' => 'ENC-RT-' . uniqid(), 'amount' => 3000, 'payment_date' => now(),
+        'payment_method' => 'espece', 'cash_account_id' => $cash->id, 'status' => 'confirme',
+    ]);
+
+    // Retrait de la permission au rôle PENDANT la session (Spatie invalide son cache)
+    $u->roles->first()->revokePermissionTo('treasury.cancel');
+
+    $this->post(route('tresorerie.encaissements.cancel', $pay), ['reason' => 'Après retrait'])
+        ->assertForbidden();
+    expect($pay->fresh()->status)->toBe('confirme');
+});

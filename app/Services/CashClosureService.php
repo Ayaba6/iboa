@@ -63,6 +63,10 @@ class CashClosureService
         return DB::transaction(function () use ($closure) {
             $closure = CashClosure::lockForUpdate()->findOrFail($closure->id);
 
+            // [SEC-PHASE2 §2] Maker-checker : le caissier qui a préparé la clôture
+            // ne la valide pas lui-même (écarts de caisse auto-approuvés sinon)
+            app(MakerCheckerService::class)->assert($closure->created_by, 'cash_closure.validate', "la clôture {$closure->number}", $closure);
+
             if (! $closure->isValidatable()) {
                 throw new \RuntimeException('Cette clôture est déjà validée.');
             }

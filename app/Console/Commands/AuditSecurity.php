@@ -105,6 +105,13 @@ class AuditSecurity extends Command
             }
         }
 
+        // 8. Intégrité de la chaîne du journal d'audit
+        $broken = app(\App\Services\AuditService::class)->verifyChain();
+        if ($broken !== []) {
+            $this->fail_('Chaîne du journal d\'audit ROMPUE aux entrées : ' . implode(', ', array_slice($broken, 0, 10))
+                . (count($broken) > 10 ? '…' : '') . ' — altération ou suppression détectée.');
+        }
+
         $this->newLine();
         if ($this->anomalies === 0) {
             $this->info('AUDIT SÉCURITÉ PROPRE — aucune anomalie détectée.');

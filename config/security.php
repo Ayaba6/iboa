@@ -28,6 +28,8 @@ return [
             'credit_note.validate'   => true,
             'journal_entry.validate' => true,
             'payroll_run.validate'   => true,
+            'cash_closure.validate'  => true,
+            'reception.validate'     => true,
         ],
 
         /*

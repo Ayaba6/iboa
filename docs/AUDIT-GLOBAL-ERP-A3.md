@@ -255,9 +255,26 @@ encrypted), secrets séparés par intégration, throttling. NON COUVERT
 les payloads opérateurs — le rejeu tardif est neutralisé par l'idempotence),
 rotation des secrets (procédure d'exploitation à documenter Phase 2.7).
 
-Restant Phase 2.1 : seuils par agence/dépôt/nature, extension maker-checker
-au-delà des 5 points, extension du journal, chaînage cryptographique du
-journal, E2E API réels, cache Spatie en session, lien user_id
+### Chaînage du journal + maker-checker étendu + cache session (10e incrément, 23/07)
+
+- **Chaînage cryptographique du journal** : `row_hash = SHA-256(prev_hash |
+  user | action | modèle | valeurs | ip)` sur chaque entrée ;
+  `AuditService::verifyChain()` intégrée à `a3:audit-security` (§8).
+  PROUVÉ : altération d'une entrée par SQL direct → détectée ; suppression
+  d'une entrée du milieu → rupture prev_hash détectée ; chaîne saine → [].
+  Entrées antérieures au déploiement (hash null) ignorées.
+- **Maker-checker étendu à 7 points** : + validation de clôture de caisse
+  (le caissier n'auto-approuve pas ses écarts), + validation de réception
+  (celui qui saisit ne certifie pas l'entrée de stock — couvre le conflit
+  magasinier documenté à la matrice des rôles).
+- **Retrait de permission en session** : PROUVÉ — révocation de
+  treasury.cancel au rôle pendant la session → 403 immédiat (Spatie
+  invalide son cache au retrait). Limite : cache multi-serveurs non testé
+  (mono-serveur en production actuelle).
+
+Restant Phase 2.1 (dernier lot) : seuils structurés par
+agence/dépôt/nature (matrice d'approbation configurable), E2E API réels,
+scan des permissions orphelines (qualité des rôles §10), lien user_id
 fournisseurs/clients (décision de modélisation).
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ

@@ -95,6 +95,15 @@ class ReceptionController extends Controller
             'items.*.received_quantity.min'      => 'La quantité reçue ne peut pas être négative.',
         ]);
 
+        // [SEC-PHASE2 §2] Maker-checker (mode strict production) : celui qui a
+        // saisi la réception ne la valide pas — l'entrée de stock est certifiée
+        // par un second regard. Configurable (petites équipes : désactivé).
+        try {
+            app(\App\Services\MakerCheckerService::class)->assert($reception->created_by, 'reception.validate', "la réception {$reception->number}", $reception);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         // Compteurs pour message final transparent à l'utilisateur
         $movementsCreated = 0;
         $linesSkipped     = 0;
