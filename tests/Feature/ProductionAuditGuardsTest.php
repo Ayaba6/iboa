@@ -226,3 +226,76 @@ it('refuse d\'annuler un OF avec consommation ou production vivante', function (
     app(\App\Modules\Production\Services\ProductionService::class)->cancel($of->fresh(), 'annulation après extourne');
     expect($of->fresh()->status)->toBe('annule');
 });
+
+// [Machine à états OF — annulation] Couverture explicite par état.
+it('machine à états annulation OF : planifié OK, terminé refusé, double annulation refusée', function () {
+    $co = agCompany();
+    $u = agAdmin($co);
+    test()->actingAs($u);
+    $p = Product::factory()->create(['production_mode' => 'mto', 'is_manufacturable' => true]);
+    $svc = app(\App\Modules\Production\Services\ProductionService::class);
+
+    // 1. OF PLANIFIÉ (rien d'engagé) → annulation simple autorisée
+    $ofPlan = ProductionOrder::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'OF-ETAT-P' . uniqid(), 'status' => 'brouillon',
+        'product_id' => $p->id, 'quantity_requested' => 5,
+    ]);
+    $svc->cancel($ofPlan, 'planification abandonnée');
+    expect($ofPlan->fresh()->status)->toBe('annule');
+
+    // 2. Double annulation → refusée (idempotence)
+    expect(fn () => $svc->cancel($ofPlan->fresh(), 'encore'))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+
+    // 3. OF TERMINÉ → annulation directe interdite (correction = opération dédiée)
+    $ofDone = ProductionOrder::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'OF-ETAT-T' . uniqid(), 'status' => 'termine',
+        'product_id' => $p->id, 'quantity_requested' => 5, 'quantity_produced' => 5,
+    ]);
+    expect(fn () => $svc->cancel($ofDone, 'tentative'))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+    expect($ofDone->fresh()->status)->toBe('termine');
+});
+
+// [Machine à états OF] PF déjà LIVRÉ : l'extourne de la déclaration échoue
+// (le stock est sorti) → l'OF reste inannulable par transitivité.
+it('un output dont le PF est déjà livré ne peut pas être extourné (stock sorti)', function () {
+    $co = agCompany();
+    $u = agAdmin($co);
+    test()->actingAs($u);
+    $wh = \App\Models\Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-ETAT'], ['name' => 'Dépôt ETAT', 'is_default' => true, 'is_active' => true]);
+    $p = Product::factory()->create(['production_mode' => 'mto', 'is_manufacturable' => true, 'is_stockable' => true, 'allow_negative_stock' => false]);
+
+    $of = ProductionOrder::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'OF-ETAT-L' . uniqid(), 'status' => 'en_cours',
+        'product_id' => $p->id, 'quantity_requested' => 10,
+    ]);
+    // Production déclarée : 10 PF entrent en stock
+    $output = app(\App\Modules\Production\Services\ProductionStockService::class)->recordOutput($of, [
+        'product_id' => $p->id, 'warehouse_id' => $wh->id,
+        'quantity' => 10, 'length' => 1, 'unit_cost' => 1000,
+    ]);
+    // Livraison : les 10 PF sortent (mouvement direct simulant le BL validé)
+    app(\App\Services\StockService::class)->recordMovement([
+        'product_id' => $p->id, 'warehouse_id' => $wh->id, 'type' => 'sortie',
+        'quantity' => 10, 'unit_cost' => 1000, 'reference_type' => 'delivery_note', 'reference_id' => 999,
+    ]);
+    expect((float) \App\Models\ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(0.0);
+
+    // Extourner la déclaration exigerait de ressortir 10 PF d'un stock à 0 → refus
+    $thrown = false;
+    try {
+        app(\App\Modules\Production\Services\ProductionStockService::class)->reverseOutput($output->fresh());
+    } catch (\Throwable $e) {
+        $thrown = true;
+        expect($e->getMessage())->toContain('insuffisant');
+    }
+    expect($thrown)->toBeTrue();
+
+    // Et l'annulation de l'OF reste refusée (output vivant)
+    expect(fn () => app(\App\Modules\Production\Services\ProductionService::class)->cancel($of->fresh(), 'tentative'))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+});
