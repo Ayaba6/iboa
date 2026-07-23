@@ -66,6 +66,9 @@ class CreditNoteService
             // [FIX-IDEM-03] Lock to prevent concurrent double-validation.
             $creditNote = CreditNote::lockForUpdate()->findOrFail($creditNote->id);
 
+            // [SEC-PHASE2 §2] Maker-checker : l'auteur de l'avoir ne le valide pas lui-même
+            app(MakerCheckerService::class)->assert($creditNote->created_by, 'credit_note.validate', "l'avoir {$creditNote->number}", $creditNote);
+
             if ($creditNote->status !== 'brouillon') {
                 throw new \RuntimeException('Seuls les avoirs en brouillon peuvent être validés.');
             }

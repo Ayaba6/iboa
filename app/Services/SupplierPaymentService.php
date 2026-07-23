@@ -236,6 +236,9 @@ class SupplierPaymentService
                 throw new \RuntimeException('Ce décaissement n\'est pas en attente de validation.');
             }
 
+            // [SEC-PHASE2 §2] Maker-checker : l'auteur du décaissement ne l'approuve pas lui-même
+            app(MakerCheckerService::class)->assert($payment->created_by, 'decaissement.approve', "le décaissement {$payment->number}", $payment);
+
             $user = Auth::user();
             $rule = $this->approvalService->findRequiredRule((int) $payment->company_id, (int) $payment->amount);
             if (! $this->approvalService->userCanApprove($user, $rule)) {

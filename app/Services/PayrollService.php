@@ -217,6 +217,9 @@ class PayrollService
         return DB::transaction(function () use ($run) {
             $run = PayrollRun::lockForUpdate()->findOrFail($run->id);
 
+            // [SEC-PHASE2 §2] Maker-checker : le préparateur du run ne le valide pas définitivement
+            app(\App\Services\MakerCheckerService::class)->assert($run->created_by, 'payroll_run.validate', "le run de paie {$run->period_month}/{$run->period_year}", $run);
+
             if ($run->status !== 'calcule') {
                 throw new \RuntimeException('Seuls les bulletins calculés peuvent être validés.');
             }

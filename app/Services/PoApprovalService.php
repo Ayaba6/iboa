@@ -82,6 +82,9 @@ class PoApprovalService
                 throw new \RuntimeException("Ce PO n'est pas en attente d'approbation (statut : {$po->approval_status}).");
             }
 
+            // [SEC-PHASE2 §2] Maker-checker : l'auteur de la commande ne l'approuve pas lui-même
+            app(\App\Services\MakerCheckerService::class)->assert($po->created_by, 'purchase_order.approve', "la commande {$po->number}", $po);
+
             $rule = $this->findRequiredRule($po);
             if ($rule && !$rule->canBeApprovedBy($user)) {
                 throw new \RuntimeException(

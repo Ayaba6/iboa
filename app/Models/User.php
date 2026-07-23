@@ -51,4 +51,19 @@ class User extends Authenticatable
     {
         return $query->where('is_active', true);
     }
+
+    /**
+     * [SEC-PHASE2 §4] La désactivation d'un compte révoque immédiatement tous
+     * ses tokens API (Sanctum) — le middleware EnsureUserIsActive couvre le
+     * canal web, ceci couvre API/mobile. Central : agit quel que soit le
+     * chemin qui désactive (écran users, script, import).
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (self $user) {
+            if ($user->wasChanged('is_active') && ! $user->is_active) {
+                $user->tokens()->delete();
+            }
+        });
+    }
 }

@@ -168,3 +168,60 @@ it('refuse la validation de réception à un porteur de receptions.create seul',
         ->assertForbidden();
     expect($reception->fresh()->status)->toBe('brouillon');
 });
+
+// [SEC-PHASE2 §2] Maker-checker actif : l'auteur ne valide pas sa propre opération.
+it('maker-checker : refuse l\'auto-approbation d\'un décaissement quand le contrôle est actif', function () {
+    config(['security.maker_checker.enabled' => true]);
+    $u = secUserWith(['treasury.view', 'treasury.validate', 'payments.view']);
+    $co = secCompany();
+    $pay = \App\Models\SupplierPayment::create([
+        'company_id' => $co->id, 'supplier_id' => \App\Models\Supplier::factory()->create()->id,
+        'number' => 'DEC-MC-' . uniqid(), 'amount' => 100000, 'payment_date' => now(),
+        'payment_method' => 'espece', 'status' => 'en_attente',
+        'validation_status' => 'en_attente_validation', 'created_by' => $u->id,
+    ]);
+
+    try {
+        app(\App\Services\SupplierPaymentService::class)->approve($pay);
+        $this->fail('L\'auto-approbation aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        expect($e->getMessage())->toContain('Séparation des tâches');
+    }
+    // Limite connue : le log du refus est écrit dans la transaction du service,
+    // que l'exception fait rollback — la journalisation fiable des refus exige
+    // une connexion DB dédiée (planifiée, incrément « intégrité du journal »).
+    expect($pay->fresh()->validation_status)->toBe('en_attente_validation');
+
+    // Un AUTRE utilisateur habilité approuve
+    secUserWith(['treasury.view', 'treasury.validate', 'payments.view', 'x-autre']);
+    app(\App\Services\SupplierPaymentService::class)->approve($pay->fresh());
+    expect($pay->fresh()->validation_status)->toBe('valide');
+});
+
+// [SEC-PHASE2 §2] Contrôle désactivé (défaut petites équipes) : l'auteur peut approuver.
+it('maker-checker : inactif par défaut, l\'auteur peut approuver', function () {
+    config(['security.maker_checker.enabled' => false]);
+    $u = secUserWith(['treasury.view', 'treasury.validate', 'payments.view']);
+    $co = secCompany();
+    $pay = \App\Models\SupplierPayment::create([
+        'company_id' => $co->id, 'supplier_id' => \App\Models\Supplier::factory()->create()->id,
+        'number' => 'DEC-MC2-' . uniqid(), 'amount' => 100000, 'payment_date' => now(),
+        'payment_method' => 'espece', 'status' => 'en_attente',
+        'validation_status' => 'en_attente_validation', 'created_by' => $u->id,
+    ]);
+
+    app(\App\Services\SupplierPaymentService::class)->approve($pay);
+    expect($pay->fresh()->validation_status)->toBe('valide');
+});
+
+// [SEC-PHASE2 §4] Désactiver un compte révoque ses tokens API Sanctum.
+it('révoque les tokens API à la désactivation du compte', function () {
+    $u = secUserWith(['treasury.view']);
+    $u->createToken('mobile');
+    $u->createToken('poste-2');
+    expect($u->tokens()->count())->toBe(2);
+
+    $u->update(['is_active' => false]);
+
+    expect($u->tokens()->count())->toBe(0);
+});

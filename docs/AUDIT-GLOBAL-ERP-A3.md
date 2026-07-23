@@ -141,12 +141,35 @@ déploiement ; la séparation stricte se fait ensuite par retrait, écran Rôles
   approved_by/created_by ; aucun `request->all()` dans les contrôleurs
   financiers — scan programmatique.
 
-Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : maker-checker configurable
-(créateur ≠ valideur), désactivation des tokens API à la désactivation du
-compte, tests webhooks avancés (rejeu, timestamp, référence mutée), extension
-du journal (validations/approbations/clôtures/exports/consultations paie),
-protection d'intégrité du journal (chaînage), analyse qualité des 21 rôles,
-contrainte DB d'unicité de révision active.
+### Maker-checker + désactivation multi-canaux (5e incrément, 23/07)
+
+- **Maker-checker configurable** : config/security.php
+  (`SECURITY_MAKER_CHECKER`, désactivé par défaut, À ACTIVER EN PRODUCTION,
+  exemptable par action). Branché au niveau service sur 5 points :
+  approbation décaissement, approbation CF, validation avoir, validation
+  écriture comptable, validation run de paie — l'auteur (`created_by`) ne
+  valide pas sa propre opération, super_admin exempté. PROUVÉ : auto-
+  approbation refusée quand actif + un autre utilisateur habilité passe ;
+  inactif → l'auteur passe (mode petites équipes).
+- **Tokens API révoqués à la désactivation** : User::booted() supprime tous
+  les tokens Sanctum quand is_active passe à false — couvre API/mobile en
+  plus du web (middleware). PROUVÉ (2 tokens → désactivation → 0).
+- **BUG DE COMPLÉTUDE DÉCOUVERT PAR CE TEST** : la table
+  `personal_access_tokens` n'avait JAMAIS été migrée (ni test, ni MySQL
+  production) — `api/auth/token` répondait 500 au premier appel : l'API
+  Sanctum n'avait jamais fonctionné. Migration standard ajoutée.
+- **Limite consignée** : le log d'audit d'un refus maker-checker est écrit
+  dans la transaction du service, que l'exception fait rollback — la
+  journalisation fiable des REFUS exige une connexion DB dédiée pour
+  audit_logs (planifiée avec l'incrément « intégrité du journal »).
+
+Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : validateur ≠ bénéficiaire,
+seuils par agence/dépôt/nature (seuls les seuils par montant existent),
+tests webhooks avancés (rejeu, timestamp, référence mutée), extension du
+journal (validations/clôtures/exports/consultations paie), intégrité du
+journal (connexion dédiée + chaînage), analyse qualité des 21 rôles,
+contrainte DB d'unicité de révision active, retrait de permission en session
+(cache Spatie).
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 
