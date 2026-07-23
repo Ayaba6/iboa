@@ -395,6 +395,9 @@ class InvoiceService
             $fresh = $invoice->fresh(['client', 'company']);
             $this->applyValidationSideEffects($fresh);
 
+            // [SEC-PHASE2 §8] Journal (succès = après commit)
+            DB::afterCommit(fn () => app(AuditService::class)->log('facture.validation', $fresh, [], ['montant' => $fresh->total_ttc]));
+
             return $fresh;
         });
     }

@@ -178,7 +178,10 @@ trait RefreshDatabase
 
         $connections = $this->connectionsToTransact();
 
-        $this->app->instance('db.transactions', $transactionsManager = new \Illuminate\Database\DatabaseTransactionsManager(
+        // [SEC-PHASE2 §8] Manager de TESTING (pas celui de prod) : il exécute
+        // les callbacks DB::afterCommit au commit de niveau 1 (transaction des
+        // services), indispensable pour tester la journalisation post-commit.
+        $this->app->instance('db.transactions', $transactionsManager = new \Illuminate\Foundation\Testing\DatabaseTransactionsManager(
             $connections,
         ));
 

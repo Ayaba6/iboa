@@ -248,3 +248,32 @@ it('refuse au bénéficiaire l\'approbation de son propre prêt', function () {
     $this->post(route('rh.prets.approve', $loan));
     expect($loan->fresh()->approved_by)->not->toBeNull();
 });
+
+// [SEC-PHASE2 §8] Extension du journal : authentification + validations.
+it('journalise les échecs de connexion et les validations de facture', function () {
+    // Échec de connexion → journal (email tenté, jamais le mot de passe)
+    $this->post(route('login'), ['email' => 'inconnu@iboa.test', 'password' => 'mauvais']);
+    $failed = \App\Models\AuditLog::where('action', 'auth.failed')->first();
+    expect($failed)->not->toBeNull()
+        ->and($failed->new_values['email'] ?? null)->toBe('inconnu@iboa.test')
+        ->and(json_encode($failed->new_values))->not->toContain('mauvais');
+
+    // Validation de facture → journal après commit
+    secUserWith(['invoices.validate']);
+    $co = secCompany();
+    $p = \App\Models\Product::factory()->create();
+    $inv = \App\Models\Invoice::create([
+        'company_id' => $co->id, 'client_id' => Client::factory()->create()->id,
+        'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'FA-JRN-' . uniqid(), 'status' => 'brouillon', 'issued_at' => now(),
+        'subtotal_ht' => 20000, 'total_tax' => 0, 'total_ttc' => 20000, 'remaining_amount' => 20000,
+    ]);
+    $inv->items()->create([
+        'product_id' => $p->id, 'description' => 'L', 'quantity' => 1, 'unit_price' => 20000,
+        'discount_percent' => 0, 'tax_rate_value' => 0,
+        'line_total_ht' => 20000, 'line_tax' => 0, 'line_total_ttc' => 20000,
+    ]);
+    app(\App\Services\InvoiceService::class)->validate($inv);
+
+    expect(\App\Models\AuditLog::where('action', 'facture.validation')->where('model_id', $inv->id)->exists())->toBeTrue();
+});

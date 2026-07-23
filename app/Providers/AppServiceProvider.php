@@ -108,6 +108,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // ── Event → Listener bindings ──────────────────────────────────────────
+        // [SEC-PHASE2 §8] Journal d'audit des authentifications
+        Event::listen(\Illuminate\Auth\Events\Login::class,  [\App\Listeners\AuditAuthEvents::class, 'handleLogin']);
+        Event::listen(\Illuminate\Auth\Events\Failed::class, [\App\Listeners\AuditAuthEvents::class, 'handleFailed']);
+        Event::listen(\Illuminate\Auth\Events\Logout::class, [\App\Listeners\AuditAuthEvents::class, 'handleLogout']);
+
         // Commandes
         Event::listen(OrderConfirmed::class,            ReserveStockOnOrderConfirmed::class);
         Event::listen(OrderConfirmed::class,            TriggerMtoProductionOnOrderConfirmed::class);

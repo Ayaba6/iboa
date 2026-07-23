@@ -252,6 +252,9 @@ class PayrollService
                 );
             }
 
+            // [SEC-PHASE2 §8] Journal (succès = après commit)
+            \Illuminate\Support\Facades\DB::afterCommit(fn () => app(\App\Services\AuditService::class)->log('paie.validation_run', $run, [], ['periode' => $run->period_month . '/' . $run->period_year, 'net' => $run->total_net]));
+
             return $run;
         });
     }

@@ -147,6 +147,9 @@ class JournalEntryService
             $companyId = $entry->company_id;
             $this->flushFinancialReportCache($companyId);
 
+            // [SEC-PHASE2 §8] Journal (succès = après commit)
+            DB::afterCommit(fn () => app(AuditService::class)->log('ecriture.validation', $entry, [], ['debit' => $entry->total_debit]));
+
             return $entry->fresh();
         });
     }
