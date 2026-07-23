@@ -163,13 +163,59 @@ déploiement ; la séparation stricte se fait ensuite par retrait, écran Rôles
   journalisation fiable des REFUS exige une connexion DB dédiée pour
   audit_logs (planifiée avec l'incrément « intégrité du journal »).
 
-Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : validateur ≠ bénéficiaire,
-seuils par agence/dépôt/nature (seuls les seuils par montant existent),
-tests webhooks avancés (rejeu, timestamp, référence mutée), extension du
-journal (validations/clôtures/exports/consultations paie), intégrité du
-journal (connexion dédiée + chaînage), analyse qualité des 21 rôles,
-contrainte DB d'unicité de révision active, retrait de permission en session
-(cache Spatie).
+### Séparation EFFECTIVE + fail-closed (6e incrément, 23/07 — réponse à la critique)
+
+**Matrice réelle des rôles (21 rôles, 21 utilisateurs actifs, 0 permission
+directe hors rôle)** — après retraits :
+
+| Rôle | Créer | Valider | Annuler | Payer | Clôturer caisse | Conflit restant |
+|---|---|---|---|---|---|---|
+| caissier | enc./déc. ✓ | ✗ | **✗ (retiré)** | ✓ saisie | crée ✓ / **valide ✗ (retiré)** | aucun |
+| commercial | devis/avoirs ✓ | **avoirs ✗ (retiré)** | ✗ | ✗ | ✗ | aucun |
+| acheteur | DA/CF ✓ | **réceptions ✗ (retiré)** | **CF ✗ (retiré)** | ✗ | ✗ | aucun |
+| magasinier | réceptions ✓ | réceptions ✓ (constat physique) | **✗ (retiré)** | ✗ | ✗ | valide sa propre saisie — assumé (constat physique), maker-checker à étendre si exigé |
+| comptable | écritures ✓ | écritures ✓ + clôtures ✓ | trésorerie ✓ | ✓ | ✓ | rôle de contrôle — maker-checker impose l'altérité individuelle |
+| daf / directeur | supervision | ✓ | ✓ | ✓ | ✓ | rôles de contrôle assumés |
+| autres (RH, production, qualité, lecture) | périmètre propre | par étape dédiée | — | — | — | RAS |
+
+Retraits appliqués EN BASE (migration 130000, réversible) : caissier
+−treasury.cancel/−cash_closures.validate/−payments.cancel ; commercial
+−credit_notes.validate ; acheteur −purchase_orders.confirm/cancel
+−receptions.validate/cancel ; magasinier −receptions.cancel. Ajout : daf
++purchase_orders.confirm/cancel (l'acheteur ne peut plus confirmer).
+Utilisateurs affectés : 4 (1 par rôle opérationnel) — vérifié en base.
+
+**Fail closed** : maker-checker ACTIF PAR DÉFAUT en production (variable
+absente = actif) ; exemptions par action IGNORÉES en production pour les
+actions non exemptables (annulations/validations financières listées en
+config). `a3:audit-security` (nouvelle commande, lecture seule, exit 1) :
+maker-checker off en prod = CRITIQUE, conflits de séparation par rôle,
+permissions critiques sans détenteur ou >10 détenteurs, >2 super-admins,
+actifs sans rôle, permissions directes, tokens de comptes désactivés.
+Premier passage : a détecté un compte factory actif sans rôle en base
+réelle (désactivé) — AUDIT SÉCURITÉ PROPRE ensuite.
+
+**Contrainte DB unicité révision active** : colonne générée MySQL
+`active_revision_key` + index UNIQUE. PROUVÉ EN SQL BRUT (hors service) :
+2e révision active → Duplicate entry refusé par MySQL ; révision annulée
+libère l'emplacement. SQLite tests : couverture par le service (consigné).
+
+**Canal API** : middleware EnsureUserIsActive ajouté au groupe api — un
+compte désactivé est refusé (403) à chaque requête MÊME SI la révocation de
+ses tokens a échoué (update de masse, SQL brut).
+
+**Refus maker-checker** : journal de sécurité FICHIER dédié
+(storage/logs/security.log, rotation 365 j, hors transaction — survit aux
+rollbacks) + best-effort audit_logs. Jamais de secret dans ces journaux.
+
+Restant Phase 2.1 (NON IMPLÉMENTÉ / NON TESTÉ) : validateur ≠ bénéficiaire
+(relations métier fiables), seuils par agence/dépôt/nature, extension du
+maker-checker au-delà des 5 points (réceptions, inventaires, ajustements,
+clôtures période, immobilisations, NC/rebuts), webhooks avancés (rejeu,
+timestamp, référence mutée), extension du journal (validations/clôtures/
+exports/consultations paie), chaînage cryptographique du journal, audit de
+dérive de schéma systématique (suite à la découverte Sanctum), tests E2E
+API réels, retrait de permission en session (cache Spatie).
 
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 

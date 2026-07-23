@@ -52,6 +52,17 @@ return [
 
     'channels' => [
 
+        // [SEC-PHASE2 §10] Journal de sécurité indépendant : refus d'accès,
+        // refus maker-checker, échecs de signature webhook. Fichier structuré
+        // hors transaction DB — survit aux rollbacks. Jamais de secret dedans.
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => 365,
+            'replace_placeholders' => true,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

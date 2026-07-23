@@ -21,7 +21,11 @@ class MakerCheckerService
         if (! config('security.maker_checker.enabled')) {
             return;
         }
-        if (! (config('security.maker_checker.actions')[$action] ?? true)) {
+        // Exemption par action : jamais honorée en production pour les actions
+        // non exemptables (fail closed).
+        $exempted = ! (config('security.maker_checker.actions')[$action] ?? true);
+        $nonExemptable = in_array($action, config('security.maker_checker.non_exemptable', []), true);
+        if ($exempted && ! (app()->environment('production') && $nonExemptable)) {
             return;
         }
 
@@ -34,6 +38,16 @@ class MakerCheckerService
         }
 
         if ((int) $user->id === (int) $makerId) {
+            // [SEC-PHASE2 §10] Refus = catégorie « action refusée » : journal de
+            // sécurité FICHIER (hors transaction DB, survit au rollback), puis
+            // best-effort en base (annulé si transaction englobante rollback).
+            \Illuminate\Support\Facades\Log::channel('security')->warning('maker_checker.refus', [
+                'user_id'  => $user->id,
+                'action'   => $action,
+                'document' => $documentLabel,
+                'model'    => $model ? get_class($model) . '#' . $model->getKey() : null,
+                'ip'       => request()?->ip(),
+            ]);
             app(AuditService::class)->log(
                 'maker_checker.refus',
                 $model,

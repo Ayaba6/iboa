@@ -31,6 +31,11 @@ return Application::configure(basePath: dirname(__DIR__))
             // (s'active uniquement si le champ _idempotency_key est présent)
             \App\Http\Middleware\IdempotencyMiddleware::class,
         ]);
+        // [SEC-PHASE2 §7] Canal API : un compte désactivé est refusé à chaque
+        // requête, indépendamment de l'existence de son token.
+        $middleware->api(append: [
+            \App\Http\Middleware\EnsureUserIsActive::class,
+        ]);
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,

@@ -19,6 +19,13 @@ class EnsureUserIsActive
         $user = Auth::user();
 
         if ($user && ! $user->is_active) {
+            // [SEC-PHASE2 §7] Canal API : même si la révocation des tokens a
+            // échoué (update de masse, SQL brut), un token existant ne donne
+            // JAMAIS accès à un compte désactivé.
+            if ($request->expectsJson() || $request->is('api/*')) {
+                abort(403, 'Compte désactivé.');
+            }
+
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
