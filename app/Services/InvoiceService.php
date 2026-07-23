@@ -471,7 +471,20 @@ class InvoiceService
             if (! $product) {
                 continue;
             }
-            $cost = (float) ($product->weighted_avg_cost ?: 0);
+            // [FIX VALORISATION] Le coût des ventes se fige au CMP RÉEL du stock
+            // (product_stocks.avg_cost, moyenne pondérée par les quantités) — la
+            // colonne products.weighted_avg_cost n'est maintenue nulle part (0)
+            // et le repli direct sur le prix d'achat CATALOGUE faussait la marge
+            // comptable dès que le catalogue divergeait du CMP (constaté :
+            // sortie valorisée 593 136 au lieu de 48 000 au CMP).
+            // Même cascade que StockInsightsService (valorisation des stocks).
+            $cost = (float) (\App\Models\ProductStock::where('product_id', $product->id)
+                ->where('quantity', '>', 0)
+                ->selectRaw('SUM(quantity * COALESCE(avg_cost, 0)) / NULLIF(SUM(quantity), 0) AS cmp')
+                ->value('cmp') ?? 0);
+            if ($cost <= 0) {
+                $cost = (float) ($product->weighted_avg_cost ?: 0);
+            }
             if ($cost <= 0) {
                 $cost = (float) ($product->purchase_price ?? 0);
             }
