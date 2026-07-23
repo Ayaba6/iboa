@@ -93,9 +93,20 @@ class CreditNoteService
                         continue;
                     }
 
+                    // [ULTIMATUM parcours D] Quarantaine : le retour entre au DÉPÔT
+                    // QUARANTAINE (jamais en stock vendable) — la remise en vente
+                    // exige un transfert décidé par la qualité.
+                    $targetWarehouseId = $warehouseId;
+                    if (($item->disposition ?? 'restock') === 'quarantaine') {
+                        $targetWarehouseId = \App\Models\Warehouse::where('company_id', $creditNote->company_id)
+                            ->where(fn ($q) => $q->where('code', 'like', '%QUAR%')->orWhere('name', 'like', '%uarantaine%'))
+                            ->value('id')
+                            ?? throw new \RuntimeException('Aucun dépôt de quarantaine configuré — créez un dépôt QUAR avant de valider un retour en quarantaine.');
+                    }
+
                     $this->stockService->recordMovement([
                         'product_id'     => $item->product_id,
-                        'warehouse_id'   => $warehouseId,
+                        'warehouse_id'   => $targetWarehouseId,
                         'type'           => 'retour_client',
                         'quantity'       => (float) $item->quantity,
                         'unit_cost'      => (float) $item->unit_price,
@@ -299,7 +310,7 @@ class CreditNoteService
 
             $creditNote->items()->create([
                 'product_id'     => $item['product_id']     ?? null,
-                'disposition'    => in_array($item['disposition'] ?? 'restock', ['restock', 'rebut'], true)
+                'disposition'    => in_array($item['disposition'] ?? 'restock', ['restock', 'rebut', 'quarantaine'], true)
                     ? ($item['disposition'] ?? 'restock') : 'restock',
                 'description'    => $item['description']    ?? '',
                 'unit_id'        => $item['unit_id']        ?? null,
@@ -341,6 +352,55 @@ class CreditNoteService
      *
      * @throws \RuntimeException
      */
+    /**
+     * [ULTIMATUM parcours D — remboursement réel] Rembourse en espèces/banque le
+     * crédit restant d'un avoir validé : transaction de caisse (débit) +
+     * écriture D 411 Clients / C 5xx (le client est désintéressé, sa créance
+     * d'avoir s'éteint), statut 'rembourse', journalisé. Le remboursement est
+     * exclusif de l'imputation (remaining_credit passe à 0).
+     */
+    public function refund(CreditNote $creditNote, int $cashAccountId, ?string $reference = null): CreditNote
+    {
+        return DB::transaction(function () use ($creditNote, $cashAccountId, $reference) {
+            $creditNote = CreditNote::lockForUpdate()->findOrFail($creditNote->id);
+
+            if (! in_array($creditNote->status, ['valide'], true)) {
+                throw new \RuntimeException('Seul un avoir validé (non annulé, non déjà appliqué en totalité) peut être remboursé.');
+            }
+            $amount = (int) $creditNote->remaining_credit;
+            if ($amount <= 0) {
+                throw new \RuntimeException('Cet avoir n\'a plus de crédit restant à rembourser.');
+            }
+            $cashAccount = \App\Models\CashAccount::lockForUpdate()->findOrFail($cashAccountId);
+
+            // Sortie de trésorerie (la garde de solde du service caisse s'applique)
+            app(\App\Services\CashAccountService::class)->recordTransaction($cashAccount, [
+                'type'           => 'debit',
+                'reference_type' => 'CreditNoteRefund',
+                'reference_id'   => $creditNote->id,
+                'amount'         => $amount,
+                'label'          => 'Remboursement avoir ' . $creditNote->number . ' — ' . ($creditNote->client?->name ?? ''),
+                'occurred_at'    => now(),
+            ]);
+
+            // Écriture : D 411 (extinction de la dette envers le client née de
+            // l'avoir) / C 5xx (sortie de fonds)
+            app(AccountingService::class)->postCreditNoteRefund($creditNote, $cashAccount, $amount);
+
+            $creditNote->update([
+                'status'           => 'rembourse',
+                'remaining_credit' => 0,
+            ]);
+            $creditNote->client?->recalculateBalance();
+
+            app(AuditService::class)->log('avoir.remboursement', $creditNote, [], [
+                'montant' => $amount, 'caisse' => $cashAccount->name, 'reference' => $reference,
+            ]);
+
+            return $creditNote->fresh();
+        });
+    }
+
     public function cancel(CreditNote $creditNote, string $motif): CreditNote
     {
         $motif = trim($motif);

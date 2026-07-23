@@ -11,8 +11,9 @@ class CreditNoteItem extends Model
 
     /** [VEN Retour] Sort des biens retournés. */
     public const DISPOSITIONS = [
-        'restock' => 'Remis en stock',
-        'rebut'   => 'Rebut (non remis en stock)',
+        'restock'     => 'Remis en stock',
+        'rebut'       => 'Rebut (non remis en stock)',
+        'quarantaine' => 'Quarantaine (décision qualité requise)',
     ];
 
     protected $fillable = [

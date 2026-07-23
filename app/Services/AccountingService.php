@@ -861,6 +861,39 @@ class AccountingService
     }
 
     /**
+     * [ULTIMATUM parcours D] Remboursement réel d'un avoir client :
+     *   D 411 Clients / C 571 ou 521 (selon le compte de trésorerie).
+     * L'avoir avait crédité 411 (dette envers le client) ; le remboursement
+     * éteint cette dette par une sortie de fonds.
+     */
+    public function postCreditNoteRefund(CreditNote $creditNote, \App\Models\CashAccount $cashAccount, int $amount): ?JournalEntry
+    {
+        $company = $this->company($creditNote->company_id);
+        if (! $company || $amount <= 0) {
+            return null;
+        }
+        $treasuryKey = $cashAccount->type === 'caisse' ? 'caisse'
+            : ($cashAccount->type === 'mobile_money' ? 'mobile_money' : 'banque');
+        $reference = 'REMB-' . $creditNote->number;
+        if ($this->entryExists($company, $reference)) {
+            return null; // idempotent
+        }
+        $label = 'Remboursement avoir ' . $creditNote->number;
+        // Journal selon le support de paiement (enum journal_types :
+        // caisse | banque — « tresorerie » n'existe pas dans l'enum)
+        $journal = $cashAccount->type === 'caisse' ? 'caisse' : 'banque';
+
+        return $this->post($company, $journal, [
+            'entry_date'  => today(),
+            'reference'   => $reference,
+            'description' => $label,
+        ], [
+            $this->line($this->account($company, 'clients'), $label, $amount, 0),
+            $this->line($this->account($company, $treasuryKey), $label, 0, $amount),
+        ]);
+    }
+
+    /**
      * [DÉCISION 23/07] Perte en transit sur transfert partiellement reçu :
      *   DR 6097 Pertes sur inventaire / CR 3111 Stocks  = valeur de l'écart.
      * Le stock physique reflète déjà la perte (sortie source sans entrée
