@@ -204,6 +204,29 @@ class DeliveryNoteService
                 ->where('warehouse_id', $warehouseId)
                 ->value('avg_cost') ?? 0;
 
+            // [DÉCISION 23/07 — BL par lot] Ligne rattachée à un lot formel :
+            // le lot est décrémenté avec la sortie (traçabilité lot → client).
+            if ($item->stock_lot_id) {
+                $lot = \App\Models\StockLot::lockForUpdate()->find($item->stock_lot_id);
+                if (! $lot || (int) $lot->product_id !== (int) $item->product_id) {
+                    throw new \RuntimeException(sprintf(
+                        'Ligne %s : le lot sélectionné n\'existe pas ou ne correspond pas à l\'article.',
+                        $item->product?->name ?? '#' . $item->product_id
+                    ));
+                }
+                if ((float) $lot->quantity < $deliveredQty) {
+                    throw new \RuntimeException(sprintf(
+                        'Lot %s : quantité insuffisante (%s disponible, %s à livrer).',
+                        $lot->lot_number, $lot->quantity, $deliveredQty
+                    ));
+                }
+                $lot->decrement('quantity', $deliveredQty);
+                // lot_number affiché sur le BL/PDF aligné sur le lot formel
+                if ($item->lot_number !== $lot->lot_number) {
+                    $item->updateQuietly(['lot_number' => $lot->lot_number]);
+                }
+            }
+
             $this->stockService->recordMovement([
                 'product_id'      => $item->product_id,
                 'warehouse_id'    => $warehouseId,
@@ -215,7 +238,7 @@ class DeliveryNoteService
                 'reference_id'    => $dn->id,
                 // [CDC sync stock] Rejouer la validation du BL ne double pas la sortie
                 'idempotency_key' => 'delivery-note:' . $dn->id . ':' . $item->id,
-                'notes'           => 'BL ' . $dn->number,
+                'notes'           => 'BL ' . $dn->number . ($item->stock_lot_id ? ' — lot ' . $item->lot_number : ''),
             ]);
 
             // Update delivered_quantity on the linked order item
@@ -388,6 +411,12 @@ class DeliveryNoteService
                     ->value('avg_cost') ?? 0;
 
                 $reversedQty = abs((float) $item->quantity);
+
+                // [DÉCISION 23/07 — BL par lot] Le lot formellement livré est réintégré
+                if ($item->stock_lot_id) {
+                    \App\Models\StockLot::lockForUpdate()->find($item->stock_lot_id)
+                        ?->increment('quantity', $reversedQty);
+                }
 
                 $this->stockService->recordMovement([
                     'product_id'      => $item->product_id,

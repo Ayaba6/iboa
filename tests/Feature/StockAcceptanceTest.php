@@ -216,3 +216,76 @@ it('comptabilise la perte en transit d\'un transfert partiellement reçu', funct
     $svc->receive($t2->fresh());
     expect(\App\Models\JournalEntry::where('reference', 'PERTE-TRANSIT-' . $t2->number)->exists())->toBeFalse();
 });
+
+// [DÉCISION 23/07 — BL par lot] Lien formel : la validation du BL décrémente le
+// lot rattaché, l'annulation le réintègre ; gardes quantité et cohérence produit.
+it('BL lié à un lot : décrément à la validation, gardes, réintégration à l\'annulation', function () {
+    $ctx = stkSetup();
+    $co  = $ctx['co'];
+    $wh  = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-LOT'], ['name' => 'Dépôt LOT', 'is_default' => true, 'is_active' => true]);
+    $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    stkSeedStock($co, $wh, $product, 30, 5000);
+    $lot = \App\Models\StockLot::create([
+        'company_id' => $co->id, 'product_id' => $product->id, 'warehouse_id' => $wh->id,
+        'lot_number' => 'LOT-TB-001', 'quantity' => 12, 'status' => 'disponible',
+    ]);
+
+    $dn = \App\Models\DeliveryNote::create([
+        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
+        'number' => 'BL-LOT-' . uniqid(), 'status' => 'brouillon',
+        'warehouse_id' => $wh->id, 'issued_at' => now(), 'delivery_date' => now(),
+    ]);
+    $dn->items()->create([
+        'product_id' => $product->id, 'description' => 'Tôle bac', 'quantity' => 8,
+        'stock_lot_id' => $lot->id,
+    ]);
+
+    $svc = app(\App\Services\DeliveryNoteService::class);
+    $svc->validate($dn);
+
+    expect((float) $lot->fresh()->quantity)->toBe(4.0)                       // 12 − 8
+        ->and($dn->fresh()->items->first()->lot_number)->toBe('LOT-TB-001')  // n° aligné pour le PDF
+        ->and((float) ProductStock::where('product_id', $product->id)->value('quantity'))->toBe(22.0);
+
+    // Annulation : lot ET stock réintégrés
+    $svc->cancelValidated($dn->fresh());
+    expect((float) $lot->fresh()->quantity)->toBe(12.0)
+        ->and((float) ProductStock::where('product_id', $product->id)->value('quantity'))->toBe(30.0);
+
+    // Garde : quantité de lot insuffisante → refus AVANT toute sortie
+    $dn2 = \App\Models\DeliveryNote::create([
+        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
+        'number' => 'BL-LOT2-' . uniqid(), 'status' => 'brouillon',
+        'warehouse_id' => $wh->id, 'issued_at' => now(), 'delivery_date' => now(),
+    ]);
+    $dn2->items()->create([
+        'product_id' => $product->id, 'description' => 'Tôle bac', 'quantity' => 25,
+        'stock_lot_id' => $lot->id,
+    ]);
+    try {
+        $svc->validate($dn2);
+        $this->fail('La validation aurait dû être refusée (lot insuffisant).');
+    } catch (\RuntimeException $e) {
+        expect($e->getMessage())->toContain('insuffisante');
+    }
+    expect((float) $lot->fresh()->quantity)->toBe(12.0);
+
+    // Garde : lot d'un AUTRE produit → refus
+    $autre = Product::factory()->create(['is_stockable' => true]);
+    stkSeedStock($co, $wh, $autre, 5, 1000);
+    $dn3 = \App\Models\DeliveryNote::create([
+        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
+        'number' => 'BL-LOT3-' . uniqid(), 'status' => 'brouillon',
+        'warehouse_id' => $wh->id, 'issued_at' => now(), 'delivery_date' => now(),
+    ]);
+    $dn3->items()->create([
+        'product_id' => $autre->id, 'description' => 'Autre', 'quantity' => 2,
+        'stock_lot_id' => $lot->id, // lot du produit tôle, ligne d'un autre article
+    ]);
+    try {
+        $svc->validate($dn3);
+        $this->fail('La validation aurait dû être refusée (lot étranger).');
+    } catch (\RuntimeException $e) {
+        expect($e->getMessage())->toContain('ne correspond pas');
+    }
+});

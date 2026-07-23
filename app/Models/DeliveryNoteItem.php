@@ -20,6 +20,7 @@ class DeliveryNoteItem extends Model
         'metrage_par_tole',
         'unit_price',
         'lot_number',
+        'stock_lot_id',
         'serial_number',
         'expiry_date',
         'sort_order',
@@ -54,5 +55,11 @@ class DeliveryNoteItem extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** [Décision 23/07] Lot de stock formellement livré par cette ligne. */
+    public function stockLot(): BelongsTo
+    {
+        return $this->belongsTo(StockLot::class);
     }
 }
