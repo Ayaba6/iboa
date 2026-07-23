@@ -40,8 +40,10 @@ class AutomationDaily extends Command
 
         $stats = [];
 
-        // 1. Devis expirés
-        $expiredQuotesQuery = Quote::whereIn('status', ['envoye'])
+        // 1. Devis expirés — offres émises non converties : envoyées ou validées
+        // en interne. Le brouillon n'est pas une offre ; un devis accepté avant
+        // expiration reste accepté.
+        $expiredQuotesQuery = Quote::whereIn('status', ['envoye', 'valide'])
             ->whereNotNull('expires_at')
             ->whereDate('expires_at', '<', $today);
 

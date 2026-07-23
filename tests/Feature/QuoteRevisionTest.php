@@ -118,3 +118,28 @@ it('libère l\'original quand la révision est annulée, et la révision se conv
     // Une révision d'un devis converti est refusée
     expect(fn () => $svc->revise($quote->fresh()))->toThrow(\RuntimeException::class);
 });
+
+// [Automation] Le batch quotidien expire les offres émises (envoye + valide),
+// pas les brouillons ni les devis acceptés avant expiration.
+it('automation:daily expire les devis envoyés ET validés à échéance dépassée', function () {
+    qrvAdmin();
+    $svc = app(QuoteService::class);
+
+    $envoye = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
+    $svc->send($envoye);
+    $valide = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
+    $valide->update(['status' => 'valide']);
+    $brouillon = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
+    $accepte = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
+    $accepte->update(['status' => 'accepte']);
+    $enCours = qrvQuote(['expires_at' => now()->addDays(10)->toDateString()]);
+    $svc->send($enCours);
+
+    $this->artisan('automation:daily')->assertExitCode(0);
+
+    expect($envoye->fresh()->status)->toBe('expire')
+        ->and($valide->fresh()->status)->toBe('expire')
+        ->and($brouillon->fresh()->status)->toBe('brouillon')
+        ->and($accepte->fresh()->status)->toBe('accepte')
+        ->and($enCours->fresh()->status)->toBe('envoye');
+});
