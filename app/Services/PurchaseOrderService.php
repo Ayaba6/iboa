@@ -67,6 +67,24 @@ class PurchaseOrderService
     public function update(PurchaseOrder $po, array $data): PurchaseOrder
     {
         return DB::transaction(function () use ($po, $data) {
+            // [POST-VALID-03] Garde centrale : la mise à jour recrée les lignes
+            // (items()->delete() + resync), ce qui écraserait received_quantity.
+            // Interdite dès qu'une réception ou une facture fournisseur existe,
+            // ou que la commande a dépassé le stade confirmé.
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($po->id);
+            if (!in_array($po->status, ['brouillon', 'confirme'], true)) {
+                throw new \RuntimeException(sprintf(
+                    'La commande %s est « %s » — la modification est interdite.',
+                    $po->number, $po->status
+                ));
+            }
+            if ($po->receptions()->where('status', '!=', 'annulee')->exists() || $po->supplierInvoices()->exists()) {
+                throw new \RuntimeException(sprintf(
+                    'La commande %s a des réceptions ou factures liées — la modification est interdite. Passez par un avenant ou une annulation.',
+                    $po->number
+                ));
+            }
+
             // [CONCURRENCE] Verrou optimiste
             $this->assertVersion($po, $data['_lock_version'] ?? null);
             unset($data['_lock_version'], $data['_idempotency_key']);

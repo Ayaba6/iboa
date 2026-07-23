@@ -395,3 +395,36 @@ it('refuse la suppression physique d\'une commande achat confirmée', function (
     }
     expect(PurchaseOrder::find($po->id))->not->toBeNull();
 });
+
+// [POST-VALID-03] update() recrée les lignes (items delete + resync) : interdit
+// dès qu'une réception existe, sinon received_quantity serait détruit.
+it('refuse la modification d\'une commande achat déjà réceptionnée', function () {
+    achAdmin();
+    $co = achCompany();
+    $supplier = achSupplier();
+    $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
+    Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-UPD'], ['name' => 'Dépôt UPD', 'is_default' => true, 'is_active' => true]);
+    $po = achConfirmedPo($co, $supplier, $product, 10, 1000);
+
+    $svc = app(PurchaseOrderService::class);
+    $wh = Warehouse::where('code', 'WH-UPD')->first();
+    $reception = $svc->createReception($po);
+    $this->post(route('achats.receptions.validate', $reception), [
+        'warehouse_id' => $wh->id,
+        'items' => [$reception->items->first()->id => ['received_quantity' => 4]],
+    ])->assertRedirect();
+    expect((float) $po->fresh()->items->first()->received_quantity)->toBe(4.0);
+
+    try {
+        $svc->update($po->fresh(), ['items' => [
+            ['product_id' => $product->id, 'description' => 'Remplacé', 'quantity' => 99, 'unit_price' => 1],
+        ]]);
+        $this->fail('La modification aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        // Refusée par la garde statut (partiellement_recu) ou la garde réceptions/factures
+        expect($e->getMessage())->toContain('interdite');
+    }
+    // Lignes intactes, received_quantity préservé
+    expect((float) $po->fresh()->items->first()->received_quantity)->toBe(4.0)
+        ->and((float) $po->fresh()->items->first()->quantity)->toBe(10.0);
+});
