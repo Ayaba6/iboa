@@ -56,6 +56,20 @@ opérateur ≠ clôtureur de son OF).
 
 État : NON TESTÉ systématiquement (des tests 403 ponctuels existent).
 
+### Constats du 23/07 (cartographie middleware, 1 098 routes)
+
+| Constat | Verdict |
+|---|---|
+| Routes mutantes (POST/PUT/DELETE) sans authentification | **2** : webhooks moov-money / orange-money — légitime, HMAC vérifié sur corps brut (contrôleur inspecté) |
+| Routes mutantes auth-seule (sans middleware permission) | **19**, toutes inspectées : profil/password/notifications (scopées utilisateur), redirects, edit-lock (release scopé, force-release = gate admin), attachments (policy `authorize`), company switch (appartenance ou super_admin), api/auth/token (login par credentials) — **saines** |
+| Toutes les autres routes mutantes | middleware `PermissionMiddleware` présent |
+
+Limites de la preuve : le middleware de groupe porte souvent la permission
+`.view` du module — la granularité PAR ACTION (delete/validate/cancel exigent-ils
+une permission plus forte que view ?) reste à vérifier, ainsi que les requêtes
+forgées, l'utilisateur désactivé, le rate limiting de `api/auth/token` et le
+journal d'audit. Suivi : tâche Phase 2.1.
+
 ## 3. Reproductibilité documentaire — INCOMPLET / ÉLEVÉ
 
 Constat honnête : le figement du document (gardes update) fige les lignes et
