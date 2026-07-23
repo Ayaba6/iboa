@@ -326,4 +326,94 @@ class CreditNoteService
         }
         return [$subtotal, $taxTotal];
     }
+
+    /**
+     * [Matrice annulations] Annulation d'un avoir — inverse TOUS les effets de
+     * la validation, jamais un simple changement de statut :
+     *   - application à la facture défaite (paid/remaining/statut restaurés) ;
+     *   - contre-mouvements de stock pour les lignes réintégrées (échec propre
+     *     si la marchandise a déjà été revendue — stock insuffisant) ;
+     *   - extourne des écritures comptables (liée à l'origine, période ouverte) ;
+     *   - statut « annule » + motif + auteur, pas de suppression physique.
+     *
+     * @throws \RuntimeException
+     */
+    public function cancel(CreditNote $creditNote, string $motif): CreditNote
+    {
+        $motif = trim($motif);
+        if ($motif === '') {
+            throw new \RuntimeException('Motif d\'annulation obligatoire.');
+        }
+
+        return DB::transaction(function () use ($creditNote, $motif) {
+            $creditNote = CreditNote::lockForUpdate()->findOrFail($creditNote->id);
+
+            if ($creditNote->status === 'annule') {
+                throw new \RuntimeException('Cet avoir est déjà annulé.');
+            }
+
+            if (in_array($creditNote->status, ['valide', 'applique'], true)) {
+                // 1. Défaire l'application à la facture.
+                $applied = (int) ($creditNote->applied_amount ?? 0);
+                if ($applied > 0 && $creditNote->invoice_id) {
+                    $invoice = Invoice::lockForUpdate()->findOrFail($creditNote->invoice_id);
+                    $invoice->paid_amount      = max(0, (int) $invoice->paid_amount - $applied);
+                    $invoice->remaining_amount = min((int) $invoice->total_ttc, (int) $invoice->remaining_amount + $applied);
+                    $invoice->status = $invoice->remaining_amount >= (int) $invoice->total_ttc
+                        ? 'emise'
+                        : ($invoice->paid_amount > 0 ? 'partiellement_payee' : 'emise');
+                    $invoice->save();
+                }
+
+                // 2. Contre-mouvements de stock des lignes réintégrées.
+                $creditNote->load('items.product');
+                $warehouseId = $this->resolveReturnWarehouse($creditNote);
+                if ($warehouseId) {
+                    foreach ($creditNote->items as $item) {
+                        if (! $item->product_id || ! ($item->product?->is_stockable ?? true)
+                            || $item->quantity <= 0 || ($item->disposition ?? 'restock') === 'rebut') {
+                            continue;
+                        }
+                        $this->stockService->recordMovement([
+                            'product_id'      => $item->product_id,
+                            'warehouse_id'    => $warehouseId,
+                            'type'            => 'sortie',
+                            'quantity'        => (float) $item->quantity,
+                            'unit_cost'       => (float) $item->unit_price,
+                            'occurred_at'     => now(),
+                            'reference_type'  => 'credit_note',
+                            'reference_id'    => $creditNote->id,
+                            'notes'           => 'Annulation avoir ' . $creditNote->number . ' — ' . $motif,
+                            'idempotency_key' => 'credit-note-cancel:' . $creditNote->id . ':' . $item->id,
+                        ]);
+                    }
+                }
+
+                // 3. Extourne des écritures comptables de l'avoir.
+                \App\Models\JournalEntry::where('company_id', $creditNote->company_id)
+                    ->where('reference', $creditNote->number)
+                    ->where('status', 'valide')
+                    ->whereNull('reversed_by_entry_id')
+                    ->get()
+                    ->each(fn ($entry) => $this->accountingService->reverseEntry(
+                        $entry,
+                        'Annulation avoir ' . $creditNote->number . ' — ' . $motif
+                    ));
+            }
+
+            $creditNote->update([
+                'status'           => 'annule',
+                'remaining_credit' => 0,
+                'applied_amount'   => 0,
+                'notes'            => trim(($creditNote->notes ?? '') . "\n\n" . sprintf(
+                    '[ANNULATION %s par %s] %s',
+                    now()->format('d/m/Y H:i'),
+                    Auth::user()?->name ?? 'système',
+                    $motif
+                )),
+            ]);
+
+            return $creditNote->fresh();
+        });
+    }
 }

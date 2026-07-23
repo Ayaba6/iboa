@@ -104,3 +104,48 @@ it('génère un BL de remplacement brouillon lié reprenant les articles', funct
     expect(fn () => app(CreditNoteService::class)->createReplacementDelivery($cn->fresh()))
         ->toThrow(RuntimeException::class);
 });
+
+// [Matrice annulations] Annuler un avoir VALIDÉ inverse tout : stock ressorti,
+// application facture défaite, écritures extournées — plus un simple statut.
+it('annule un avoir validé : stock ressorti, facture restaurée, GL extourné', function () {
+    cnrAdmin();
+    $co = currentCompany();
+    $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'DEF'], ['name' => 'Dépôt', 'is_default' => true]);
+    $client = Client::factory()->create();
+    $p = Product::factory()->create(['is_stockable' => true, 'purchase_price' => 500]);
+
+    $invoice = Invoice::create([
+        'company_id' => $co->id, 'client_id' => $client->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'FA-CANCN-' . uniqid(), 'status' => 'emise', 'issued_at' => now(),
+        'currency_code' => 'XOF',
+        'subtotal_ht' => 10000, 'total_tax' => 0, 'total_ttc' => 10000, 'remaining_amount' => 10000, 'paid_amount' => 0,
+    ]);
+
+    $svc = app(CreditNoteService::class);
+    $cn = $svc->createFromInvoice($invoice, [
+        'reason' => 'Retour marchandise', 'items' => [[
+            'product_id' => $p->id, 'description' => 'Retour', 'quantity' => 2,
+            'unit_price' => 5000, 'tax_rate_value' => 0, 'disposition' => 'restock',
+        ]],
+    ]);
+    $svc->validate($cn);
+    $svc->applyToInvoice($cn->fresh());
+
+    $stockApres = (float) \App\Models\ProductStock::where('product_id', $p->id)->value('quantity');
+    expect($stockApres)->toBe(2.0)                                       // retour entré
+        ->and((int) $invoice->fresh()->remaining_amount)->toBe(0)        // avoir appliqué
+        ->and($invoice->fresh()->status)->toBe('payee');
+    $glAvant = \App\Models\JournalEntry::count();
+
+    app(\App\Services\CommercialWorkflowService::class)->cancel($cn->fresh(), 'Avoir émis par erreur');
+
+    expect($cn->fresh()->status)->toBe('annule')
+        ->and((float) \App\Models\ProductStock::where('product_id', $p->id)->value('quantity'))->toBe(0.0)  // stock ressorti
+        ->and((int) $invoice->fresh()->remaining_amount)->toBe(10000)    // application défaite
+        ->and($invoice->fresh()->status)->toBe('emise')
+        ->and(\App\Models\JournalEntry::count())->toBeGreaterThan($glAvant); // extourne(s)
+
+    // Idempotence
+    expect(fn () => app(\App\Services\CommercialWorkflowService::class)->cancel($cn->fresh(), 'encore'))
+        ->toThrow(\RuntimeException::class);
+});

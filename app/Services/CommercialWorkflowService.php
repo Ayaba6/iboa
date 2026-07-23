@@ -323,6 +323,16 @@ class CommercialWorkflowService
     {
         $this->assertPermission('sales.cancel');
 
+        // [Matrice annulations] L'avoir a des effets riches (stock, GL,
+        // application facture) : son annulation passe par le service dédié qui
+        // inverse tout — un simple changement de statut laissait le stock
+        // gonflé, la facture faussée et l'écriture en place.
+        if ($document instanceof \App\Models\CreditNote) {
+            app(\App\Services\CreditNoteService::class)->cancel($document, $motif);
+
+            return;
+        }
+
         // Statut d'annulation selon le type
         $cancelledStatus = match (true) {
             $document instanceof Invoice => 'annulee',
