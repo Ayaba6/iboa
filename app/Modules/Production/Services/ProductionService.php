@@ -707,6 +707,26 @@ class ProductionService
             throw ValidationException::withMessages(['status' => 'OF déjà clôturé — annulation impossible.']);
         }
 
+        // [RÈGLE FORMELLE — OF partiellement produit] Un OF qui a RÉELLEMENT
+        // consommé de la matière ou déclaré de la production ne s'annule pas en
+        // un clic : la matière est physiquement transformée. Deux issues guidées :
+        //   1. clôturer avec écart assumé (« Terminer ») — le reliquat est abandonné ;
+        //   2. extourner d'abord les déclarations et consommations (reverse),
+        //      puis annuler l'OF redevenu vierge.
+        $consosVivantes = \App\Modules\Production\Models\ProductionConsumption::where('production_order_id', $order->id)
+            ->whereNull('reversed_at')->count();
+        $outputsVivants = \App\Modules\Production\Models\ProductionOutput::where('production_order_id', $order->id)
+            ->where('status', '!=', 'annulee')->count();
+        if ($consosVivantes > 0 || $outputsVivants > 0) {
+            throw ValidationException::withMessages(['status' => sprintf(
+                'Cet OF a %d consommation(s) matière et %d déclaration(s) de production vivantes — ' .
+                'la matière est physiquement engagée. Clôturez l\'OF avec écart assumé (« Terminer »), ' .
+                'ou extournez d\'abord les déclarations et consommations avant d\'annuler.',
+                $consosVivantes,
+                $outputsVivants
+            )]);
+        }
+
         $note = $order->notes;
         if ($reason) {
             $note = trim(($note ? $note . "\n" : '') . 'Annulé : ' . $reason);

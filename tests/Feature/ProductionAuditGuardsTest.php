@@ -194,3 +194,35 @@ it('une marchandise achetée-revendue ne déclenche jamais d\'OF ni n\'est élig
         // Et aucun OF auto n'existe
         ->and(ProductionOrder::where('order_id', $order->id)->count())->toBe(0);
 });
+
+// [Règle formelle — matrice annulations] Un OF ayant consommé de la matière ou
+// déclaré de la production ne s'annule pas en un clic.
+it('refuse d\'annuler un OF avec consommation ou production vivante', function () {
+    $co = agCompany();
+    $u = agAdmin($co);
+    test()->actingAs($u);
+    $p = Product::factory()->create(['production_mode' => 'mto', 'is_manufacturable' => true]);
+    $of = ProductionOrder::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'OF-CANC-' . uniqid(), 'status' => 'en_cours',
+        'product_id' => $p->id, 'quantity_requested' => 10,
+    ]);
+    $coil = \App\Modules\Production\Models\Coil::create([
+        'company_id' => $co->id, 'reference' => 'BOB-CANC', 'initial_weight' => 100,
+        'remaining_weight' => 80, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'status' => 'disponible',
+    ]);
+    \App\Modules\Production\Models\ProductionConsumption::create([
+        'company_id' => $co->id, 'production_order_id' => $of->id, 'coil_id' => $coil->id,
+        'weight_consumed' => 20, 'consumed_at' => now(), 'consumption_source' => 'manuelle',
+    ]);
+
+    expect(fn () => app(\App\Modules\Production\Services\ProductionService::class)->cancel($of->fresh(), 'test'))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+    expect($of->fresh()->status)->toBe('en_cours');
+
+    // Consommation extournée → l'annulation redevient possible
+    \App\Modules\Production\Models\ProductionConsumption::where('production_order_id', $of->id)
+        ->update(['reversed_at' => now()]);
+    app(\App\Modules\Production\Services\ProductionService::class)->cancel($of->fresh(), 'annulation après extourne');
+    expect($of->fresh()->status)->toBe('annule');
+});
