@@ -108,6 +108,17 @@ class ClientPaymentService
             }
 
             foreach ($allocations as $alloc) {
+                // [FIX-ALLOC-CLE] Alias 'amount' accepté (cohérent avec addAllocation) ;
+                // une clé de montant absente sur une allocation ciblant une facture est
+                // une ERREUR, pas un silence (même piège corrigé côté fournisseur).
+                if (! isset($alloc['allocated_amount']) && isset($alloc['amount'])) {
+                    $alloc['allocated_amount'] = $alloc['amount'];
+                }
+                if (! empty($alloc['invoice_id']) && ! isset($alloc['allocated_amount'])) {
+                    throw new \RuntimeException(
+                        'Allocation invalide : clé de montant absente (attendu « allocated_amount » ou « amount »).'
+                    );
+                }
                 if (empty($alloc['invoice_id']) || empty($alloc['allocated_amount'])) {
                     continue;
                 }

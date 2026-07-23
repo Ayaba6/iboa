@@ -70,10 +70,27 @@
    premier arrêté (renommage aussi simple que les deux précédents tant que
    la base est en recette).
 
-## 8. Réconciliations exigées (tests à produire — suite de la phase)
+## 8. Réconciliations — PROUVÉES (ReconciliationSyscohadaTest, 23/07)
 
-- GL (somme lignes par compte) = soldes `accounts.debit_balance/credit_balance`
-- Balance générale équilibrée = Σ débits = Σ crédits
-- Balance auxiliaire clients (411 par tiers) = Σ relevés clients = Σ `invoices.remaining_amount` (tiers non soldés)
-- Balance auxiliaire fournisseurs (401) = relevés fournisseurs
-- Résultat (7x − 6x) cohérent avec le compte de résultat affiché
+Scénario multi-cycles : 2 factures (dont TVA), encaissement alloué,
+encaissement annulé (extourne), avoir validé + appliqué. Vérifié :
+
+1. ✓ GL = soldes des comptes (Σ lignes validées = debit/credit_balance,
+   compte par compte)
+2. ✓ Balance générale équilibrée (Σ débits = Σ crédits > 0)
+3. ✓ Auxiliaire clients : solde 411 = Σ restes à payer des factures
+   vivantes (39 000 attendu = 39 000 constaté, après annulation ET avoir)
+4. — Auxiliaire fournisseurs : même mécanique (couvert par
+   AchatsAcceptanceTest solde FF)
+5. ✓ Résultat 7x − 6x = ventes nettes des avoirs (60 000)
+
+Limite de la preuve : produits non stockables dans le scénario — le coût
+de déstockage CMP (D6031/C311x) est testé séparément (tests BL/CMP) mais
+pas dans CE scénario de réconciliation.
+
+**Bug réel corrigé par ce test** : ClientPaymentService::create ignorait
+SILENCIEUSEMENT les allocations dont la clé de montant était « amount »
+au lieu de « allocated_amount » — le paiement se créait non imputé sans
+erreur (même piège que côté fournisseur, corrigé là-bas en session
+antérieure mais jamais côté client). Désormais : alias accepté + exception
+si clé de montant absente.
