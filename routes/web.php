@@ -1743,3 +1743,16 @@ Route::middleware(['auth', 'verified', 'permission:analytic.view'])->prefix('ana
 });
 
 require __DIR__.'/auth.php';
+
+// [PHASE 2.5 — E2E UI] Connexion de recette SANS saisie de mot de passe.
+// STRICTEMENT environnement local : inexistante en production/staging.
+if (app()->environment('local')) {
+    Route::get('/dev-login/{role?}', function (?string $role = null) {
+        $user = $role
+            ? \App\Models\User::where('is_active', true)->role($role)->firstOrFail()
+            : \App\Models\User::where('is_active', true)->role('super_admin')->firstOrFail();
+        \Illuminate\Support\Facades\Auth::login($user);
+
+        return redirect('/dashboard');
+    })->name('dev.login');
+}
