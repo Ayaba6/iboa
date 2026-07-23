@@ -53,6 +53,19 @@ Avant de démarrer : saisir les **prix de vente** des articles testés (fiches a
 - [ ] Congé : demande → approbation (solde décrémenté) ; demande chevauchante REFUSÉE
 - [ ] Run de paie : calculer → valider → écriture équilibrée → bulletin PDF
 
+## Scénario G — Annulations et révisions (nouveautés 23/07)
+Chaque annulation doit inverser TOUS les effets (voir docs/AUDIT-ANNULATIONS.md — matrice PROUVÉ).
+- [ ] Encaissement client annulé (motif obligatoire) : facture redevient impayée, caisse débitée en retour, écriture extournée datée du jour
+- [ ] Décaissement fournisseur annulé : miroir du précédent
+- [ ] Réception annulée : stock ressorti, quantités reçues reprises sur la CF, bobines/lots supprimés — refus si FF validée ou bobine entamée
+- [ ] Avoir appliqué annulé : facture restaurée, stock ressorti, extourne — et l'avoir APPLIQUÉ figure toujours au relevé client
+- [ ] Règlement annulé absent des relevés/balances (client ET fournisseur)
+- [ ] OF avec consommation vivante : annulation refusée avec guidage (clôturer avec écart OU extourner)
+- [ ] Transfert en transit annulé : stock revenu au dépôt source ; transfert reçu inannulable
+- [ ] Suppression physique refusée : facture annulée, CF confirmée, CF réceptionnée (modification aussi)
+- [ ] Devis envoyé → « Réviser » : nouvelle version liée (bandeau bleu), original non convertible (bandeau ambre), PDF de la révision porte « Révision n°2 — remplace DEV-... »
+- [ ] Devis expiré : conversion refusée ; après le batch de 05:45 (ou `php artisan automation:daily`), statut « Expiré » sur devis envoyés ET validés
+
 ## Transverses
 - [ ] Mode sombre : bandeaux X3 sombres (familles, catégories, production)
 - [ ] Mobile 375 px : tables défilent dans leur carte, pas la page
