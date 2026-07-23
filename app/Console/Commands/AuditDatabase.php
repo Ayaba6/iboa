@@ -150,6 +150,82 @@ class AuditDatabase extends Command
             $this->report($n, "$n réservation(s) fantôme(s) (aucune ligne de réservation vivante)");
         });
 
+        // [PHASE 2.3] Contrôles supplémentaires exigés par la directive du 23/07
+        $this->section('6. Documents sans lignes', function () {
+            foreach ([
+                ['invoices', 'invoice_items', 'invoice_id', ['brouillon', 'annulee']],
+                ['orders', 'order_items', 'order_id', ['brouillon', 'annule']],
+                ['quotes', 'quote_items', 'quote_id', ['brouillon', 'annule']],
+                ['purchase_orders', 'purchase_order_items', 'purchase_order_id', ['brouillon', 'annule']],
+                ['credit_notes', 'credit_note_items', 'credit_note_id', ['brouillon', 'annule']],
+            ] as [$parent, $child, $fk, $okStatuses]) {
+                if (! Schema::hasTable($parent) || ! Schema::hasTable($child)) {
+                    continue;
+                }
+                $n = DB::table($parent)->whereNotIn('status', $okStatuses)
+                    ->when(Schema::hasColumn($parent, 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
+                    ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from($child)->whereColumn("$child.$fk", "$parent.id"))
+                    ->count();
+                $this->report($n, "$parent : $n document(s) validé(s) SANS ligne");
+            }
+        });
+
+        $this->section('7. Cohérence trésorerie ↔ paiements', function () {
+            // Paiement client confirmé en caisse sans transaction de trésorerie
+            $n = DB::table('client_payments as p')
+                ->where('p.status', 'confirme')->whereNotNull('p.cash_account_id')
+                ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('cash_transactions as t')
+                    ->whereColumn('t.reference_id', 'p.id')->where('t.reference_type', 'like', '%ClientPayment%'))
+                ->count();
+            $this->report($n, "$n encaissement(s) confirmé(s) en caisse SANS transaction de trésorerie");
+
+            // Transaction de caisse orpheline de son paiement source
+            $n = DB::table('cash_transactions as t')
+                ->where('t.reference_type', 'like', '%ClientPayment%')
+                ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('client_payments as p')->whereColumn('p.id', 't.reference_id'))
+                ->count();
+            $this->report($n, "$n transaction(s) de caisse sans paiement source");
+        });
+
+        $this->section('8. Bobines et lots', function () {
+            if (Schema::hasTable('coils') && Schema::hasColumn('coils', 'remaining_weight')) {
+                $n = DB::table('coils')->whereColumn('remaining_weight', '>', 'initial_weight')->count();
+                $this->report($n, "$n bobine(s) au poids restant > poids initial");
+                $n = DB::table('coils')->where('remaining_weight', '<', 0)->count();
+                $this->report($n, "$n bobine(s) au poids restant négatif");
+            }
+            if (Schema::hasTable('stock_lots')) {
+                $n = DB::table('stock_lots')->where('quantity', '<', 0)->count();
+                $this->report($n, "$n lot(s) à quantité négative");
+            }
+        });
+
+        $this->section('9. Dates et périodes', function () {
+            $n = DB::table('invoices')->whereNotNull('due_at')->whereColumn('due_at', '<', 'issued_at')->count();
+            $this->report($n, "$n facture(s) à échéance antérieure à l'émission");
+
+            // Écritures VALIDÉES sur période verrouillée (posées avant le verrou = normal ;
+            // ce contrôle attrape une écriture postée APRÈS coup sur un mois verrouillé)
+            if (Schema::hasTable('accounting_period_locks')) {
+                $n = count(DB::select("
+                    SELECT je.id FROM journal_entries je
+                    JOIN accounting_period_locks l ON l.company_id = je.company_id
+                     AND l.year = " . $this->yearExpr('je.entry_date') . "
+                     AND l.month = " . $this->monthExpr('je.entry_date') . "
+                    WHERE je.status = 'valide' AND je.validated_at > l.created_at"));
+                $this->report($n, "$n écriture(s) validée(s) APRÈS le verrouillage de leur période");
+            }
+        });
+
+        $this->section('10. Paie', function () {
+            if (Schema::hasTable('payroll_bulletins')) {
+                $n = DB::table('payroll_bulletins as b')
+                    ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('payroll_runs as r')->whereColumn('r.id', 'b.payroll_run_id'))
+                    ->count();
+                $this->report($n, "$n bulletin(s) sans run de paie");
+            }
+        });
+
         $this->newLine();
         if ($this->anomalies === 0) {
             $this->info('AUDIT PROPRE — aucune anomalie détectée.');
@@ -178,5 +254,16 @@ class AuditDatabase extends Command
             $this->warn('  ⚠ ' . $message);
             $this->anomalies += $count;
         }
+    }
+
+    /** Expression SQL année/mois portable MySQL + SQLite. */
+    private function yearExpr(string $col): string
+    {
+        return DB::getDriverName() === "sqlite" ? "CAST(strftime('%Y', $col) AS INTEGER)" : "YEAR($col)";
+    }
+
+    private function monthExpr(string $col): string
+    {
+        return DB::getDriverName() === "sqlite" ? "CAST(strftime('%m', $col) AS INTEGER)" : "MONTH($col)";
     }
 }
