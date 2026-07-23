@@ -279,3 +279,101 @@ it('génère automatiquement bobine et lot à la validation de réception (stock
         ->and((float) ProductStock::where('product_id', $bobine->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(200.0)
         ->and(\App\Models\StockMovement::where('product_id', $bobine->id)->where('type', 'entree')->count())->toBe(1);
 });
+
+// [Audit annulations] Annulation technique de réception : stock contre-passé,
+// bobines/lots retirés, PO réouvert ; refus si facturée ou bobine consommée.
+it('annule techniquement une réception : contre-mouvements, bobines retirées, PO réouvert', function () {
+    $co = achCompany();
+    achAdmin();
+    $supplier = achSupplier();
+    $catBobine = \App\Models\ItemCategory::firstOrCreate(
+        ['code' => 'MP_BOB_T2'],
+        ['name' => 'Bobines T2', 'nature' => 'matiere_premiere', 'strategy' => 'achat_revente',
+         'is_purchasable' => 1, 'is_stockable' => 1, 'coil_managed' => 1, 'lot_managed' => 1, 'is_active' => 1]
+    );
+    $bobine = Product::factory()->create(['is_stockable' => true, 'item_category_id' => $catBobine->id, 'has_lot_number' => true]);
+    $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-CANC'], ['name' => 'Dépôt CANC', 'is_default' => true, 'is_active' => true]);
+
+    $po = achConfirmedPo($co, $supplier, $bobine, 100, 1500);
+    $reception = app(PurchaseOrderService::class)->createReception($po);
+    $this->post(route('achats.receptions.validate', $reception), [
+        'warehouse_id' => $wh->id,
+        'items' => [$reception->items->first()->id => ['received_quantity' => 100]],
+    ])->assertRedirect();
+
+    expect((float) ProductStock::where('product_id', $bobine->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(100.0)
+        ->and(\App\Modules\Production\Models\Coil::where('reception_id', $reception->id)->count())->toBe(1);
+
+    // Annulation technique
+    $this->post(route('achats.receptions.cancel', $reception), ['reason' => 'Réception saisie par erreur'])
+        ->assertSessionHas('success');
+
+    $reception->refresh();
+    expect($reception->status)->toBe('annule')
+        ->and((float) ProductStock::where('product_id', $bobine->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(0.0)
+        ->and(\App\Modules\Production\Models\Coil::where('reception_id', $reception->id)->count())->toBe(0)
+        ->and($po->fresh()->status)->toBe('confirme')                 // PO réouvert
+        ->and((float) $po->fresh()->items->first()->received_quantity)->toBe(0.0);
+
+    // Double annulation refusée
+    $this->post(route('achats.receptions.cancel', $reception), ['reason' => 'encore une fois'])
+        ->assertSessionHas('error');
+});
+
+it('refuse d\'annuler une réception déjà facturée', function () {
+    $co = achCompany();
+    achAdmin();
+    $supplier = achSupplier();
+    $product  = Product::factory()->create(['is_stockable' => true]);
+    $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-CANC2'], ['name' => 'Dépôt CANC2', 'is_default' => true, 'is_active' => true]);
+
+    $po = achConfirmedPo($co, $supplier, $product, 10, 1000);
+    $reception = app(PurchaseOrderService::class)->createReception($po);
+    $this->post(route('achats.receptions.validate', $reception), [
+        'warehouse_id' => $wh->id,
+        'items' => [$reception->items->first()->id => ['received_quantity' => 10]],
+    ])->assertRedirect();
+
+    app(PurchaseOrderService::class)->createSupplierInvoice($po->fresh());
+
+    $this->post(route('achats.receptions.cancel', $reception), ['reason' => 'tentative après facture'])
+        ->assertSessionHas('error');
+    expect($reception->fresh()->status)->toBe('valide')
+        ->and((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(10.0);
+});
+
+// [Matrice annulations] Miroir : cancel décaissement — FF restaurée, caisse
+// re-créditée, extourne, double annulation refusée.
+it('annule un décaissement : FF restaurée, caisse re-créditée, extourne', function () {
+    $co = achCompany();
+    achAdmin();
+    $supplier = achSupplier();
+    $inv = SupplierInvoice::create([
+        'company_id' => $co->id, 'supplier_id' => $supplier->id,
+        'number' => 'FF-CAN-' . uniqid(), 'status' => 'validee',
+        'received_at' => now()->toDateString(),
+        'subtotal_ht' => 10000, 'total_tax' => 0, 'total_ttc' => 10000,
+        'paid_amount' => 0, 'remaining_amount' => 10000,
+    ]);
+    $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'banque', 'current_balance' => 50000, 'is_active' => true]);
+
+    $svc = app(SupplierPaymentService::class);
+    $payment = $svc->create([
+        'supplier_id' => $supplier->id, 'cash_account_id' => $cash->id,
+        'amount' => 10000, 'method' => 'virement', 'payment_date' => now()->toDateString(),
+        'allocations' => [['supplier_invoice_id' => $inv->id, 'allocated_amount' => 10000]],
+    ]);
+    expect((int) $cash->fresh()->current_balance)->toBe(40000)
+        ->and($inv->fresh()->status)->toBe('payee');
+    $glBefore = JournalEntry::count();
+
+    $svc->cancel($payment->fresh(), 'Erreur de virement');
+
+    expect($payment->fresh()->status)->toBe('annule')
+        ->and($inv->fresh()->status)->toBe('validee')
+        ->and((int) $inv->fresh()->remaining_amount)->toBe(10000)
+        ->and((int) $cash->fresh()->current_balance)->toBe(50000)     // re-crédité
+        ->and(JournalEntry::count())->toBeGreaterThan($glBefore);      // extourne
+
+    expect(fn () => $svc->cancel($payment->fresh(), 'encore'))->toThrow(\RuntimeException::class);
+});

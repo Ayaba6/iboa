@@ -372,4 +372,106 @@ class PurchaseOrderService
             'total_ttc'   => $total,
         ]);
     }
+
+    /**
+     * [Audit annulations] Annulation TECHNIQUE d'une réception validée saisie
+     * par erreur — distincte du retour fournisseur (marchandise réellement
+     * reçue puis renvoyée) :
+     *   - refusée si une facture fournisseur existe sur la commande ;
+     *   - refusée si une bobine issue de la réception a été consommée ;
+     *   - contre-mouvements de sortie (jamais de falsification de l'entrée) ;
+     *   - bobines/lots de la réception soft-supprimés ;
+     *   - quantités reçues du PO décrémentées, statut PO recalculé ;
+     *   - statut « annule » + motif + auteur (pas de suppression physique).
+     *
+     * @throws \RuntimeException
+     */
+    public function cancelReception(Reception $reception, ?string $reason = null): Reception
+    {
+        $reason = trim((string) $reason);
+        if ($reason === '') {
+            throw new \RuntimeException('Motif d\'annulation obligatoire.');
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($reception, $reason) {
+            $reception = Reception::lockForUpdate()->findOrFail($reception->id);
+
+            if ($reception->status !== 'valide') {
+                throw new \RuntimeException('Seule une réception validée peut être annulée (statut actuel : ' . $reception->status . ').');
+            }
+
+            // Garde 1 : facture fournisseur déjà émise sur la commande → inannulable.
+            if ($reception->purchase_order_id
+                && SupplierInvoice::where('purchase_order_id', $reception->purchase_order_id)
+                    ->where('status', '!=', 'annulee')->exists()) {
+                throw new \RuntimeException('Une facture fournisseur existe pour cette commande — annulez ou traitez la facture d\'abord (ou utilisez un retour fournisseur).');
+            }
+
+            // Garde 2 : bobine de la réception consommée → flux physique engagé.
+            $coils = \App\Modules\Production\Models\Coil::where('reception_id', $reception->id)->get();
+            foreach ($coils as $coil) {
+                if ((float) $coil->remaining_weight < (float) $coil->initial_weight) {
+                    throw new \RuntimeException("La bobine {$coil->reference} issue de cette réception a déjà été consommée — utilisez un retour fournisseur pour le reliquat.");
+                }
+            }
+
+            $reception->loadMissing('items');
+            $stock = app(\App\Services\StockService::class);
+
+            foreach ($reception->items as $item) {
+                $qty = (float) $item->received_quantity;
+                if ($qty <= 0 || ! $item->product_id) {
+                    continue;
+                }
+
+                // Contre-mouvement de sortie (échoue proprement si le stock a déjà
+                // été consommé par ailleurs — assertSufficientStock du service).
+                $stock->recordMovement([
+                    'product_id'      => $item->product_id,
+                    'warehouse_id'    => $reception->warehouse_id,
+                    'type'            => 'sortie',
+                    'quantity'        => $qty,
+                    'unit_cost'       => (float) $item->unit_cost,
+                    'reference_type'  => Reception::class,
+                    'reference_id'    => $reception->id,
+                    'notes'           => 'Annulation réception ' . $reception->number . ' — ' . $reason,
+                    'idempotency_key' => 'reception-cancel:' . $reception->id . ':' . $item->id,
+                ]);
+
+                // Reprendre la quantité reçue sur la ligne de commande.
+                if ($item->purchase_order_item_id && ($poItem = $item->purchaseOrderItem)) {
+                    $poItem->update([
+                        'received_quantity' => max(0, (float) $poItem->received_quantity - $qty),
+                    ]);
+                }
+            }
+
+            // Bobines + lots de la réception : retirés (non consommés, garanti par la garde 2).
+            foreach ($coils as $coil) {
+                if ($coil->stock_lot_id) {
+                    \App\Models\StockLot::where('id', $coil->stock_lot_id)->delete();
+                }
+                $coil->delete();
+            }
+
+            // Statut PO recalculé.
+            if ($reception->purchase_order_id && ($po = $reception->purchaseOrder)) {
+                $po->load('items');
+                $anyReceived = $po->items->sum('received_quantity') > 0;
+                $po->update(['status' => $anyReceived ? 'partiellement_recu' : 'confirme']);
+            }
+
+            $reception->update([
+                'status' => 'annule',
+                'notes'  => trim(($reception->notes ?? '') . "\n\n" . sprintf(
+                    '[ANNULATION %s par %s] %s',
+                    now()->format('d/m/Y H:i'),
+                    \Illuminate\Support\Facades\Auth::user()?->name ?? 'système',
+                    $reason
+                )),
+            ]);
+
+            return $reception->fresh();
+        });
+    }
 }

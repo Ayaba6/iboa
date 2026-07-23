@@ -572,6 +572,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
         Route::middleware('permission:receptions.create')->group(function () {
             Route::post('receptions/{reception}/validate', [\App\Http\Controllers\Purchases\ReceptionController::class, 'validateReception'])->name('receptions.validate');
+            Route::post('receptions/{reception}/cancel', [\App\Http\Controllers\Purchases\ReceptionController::class, 'cancelReception'])->name('receptions.cancel');
         });
         Route::middleware('permission:supplier_invoices.create')->group(function () {
             Route::post('commandes/{commande}/facture', [\App\Http\Controllers\Purchases\PurchaseOrderController::class, 'createSupplierInvoice'])->name('commandes.facture');

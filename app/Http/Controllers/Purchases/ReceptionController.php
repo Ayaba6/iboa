@@ -232,4 +232,28 @@ class ReceptionController extends Controller
             ->route('achats.receptions.show', $reception)
             ->with($linesSkipped > 0 ? 'warning' : 'success', $msg);
     }
+
+    /**
+     * [Audit annulations] Annulation technique d'une réception validée par
+     * erreur — gardes et inversions dans PurchaseOrderService::cancelReception.
+     */
+    public function cancelReception(Request $request, Reception $reception): RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+        ], [
+            'reason.required' => 'Le motif d\'annulation est obligatoire.',
+            'reason.min'      => 'Le motif doit faire au moins 5 caractères.',
+        ]);
+
+        try {
+            app(\App\Services\PurchaseOrderService::class)->cancelReception($reception, $data['reason']);
+
+            return redirect()
+                ->route('achats.receptions.show', $reception)
+                ->with('success', 'Réception ' . $reception->number . ' annulée — stock contre-passé, bobines retirées, commande fournisseur réouverte.');
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
 }
