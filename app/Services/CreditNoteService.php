@@ -359,17 +359,28 @@ class CreditNoteService
      * d'avoir s'éteint), statut 'rembourse', journalisé. Le remboursement est
      * exclusif de l'imputation (remaining_credit passe à 0).
      */
-    public function refund(CreditNote $creditNote, int $cashAccountId, ?string $reference = null): CreditNote
+    public function refund(CreditNote $creditNote, int $cashAccountId, ?int $amount = null, ?string $reference = null): CreditNote
     {
-        return DB::transaction(function () use ($creditNote, $cashAccountId, $reference) {
+        return DB::transaction(function () use ($creditNote, $cashAccountId, $amount, $reference) {
             $creditNote = CreditNote::lockForUpdate()->findOrFail($creditNote->id);
 
-            if (! in_array($creditNote->status, ['valide'], true)) {
-                throw new \RuntimeException('Seul un avoir validé (non annulé, non déjà appliqué en totalité) peut être remboursé.');
+            if (! in_array($creditNote->status, ['valide', 'rembourse'], true)) {
+                throw new \RuntimeException('Seul un avoir validé peut être remboursé.');
             }
-            $amount = (int) $creditNote->remaining_credit;
-            if ($amount <= 0) {
+            $available = (int) $creditNote->remaining_credit;
+            if ($available <= 0) {
                 throw new \RuntimeException('Cet avoir n\'a plus de crédit restant à rembourser.');
+            }
+            // [R2 §2] Montant demandé (partiel possible) ; défaut = tout le solde.
+            $amount = $amount === null ? $available : (int) $amount;
+            if ($amount <= 0) {
+                throw new \RuntimeException('Le montant à rembourser doit être positif.');
+            }
+            if ($amount > $available) {
+                throw new \RuntimeException(sprintf(
+                    'Montant demandé (%s) supérieur au crédit restant (%s FCFA).',
+                    number_format($amount, 0, ',', ' '), number_format($available, 0, ',', ' ')
+                ));
             }
             $cashAccount = \App\Models\CashAccount::lockForUpdate()->findOrFail($cashAccountId);
 
@@ -383,18 +394,34 @@ class CreditNoteService
                 'occurred_at'    => now(),
             ]);
 
-            // Écriture : D 411 (extinction de la dette envers le client née de
-            // l'avoir) / C 5xx (sortie de fonds)
-            app(AccountingService::class)->postCreditNoteRefund($creditNote, $cashAccount, $amount);
+            // Écriture D 411 / C 5xx — référence unique par remboursement (partiels
+            // successifs = plusieurs écritures) pour lever la garde d'idempotence.
+            app(AccountingService::class)->postCreditNoteRefund($creditNote, $cashAccount, $amount, (int) $creditNote->refunded_amount);
 
+            $newRefunded  = (int) $creditNote->refunded_amount + $amount;
+            $newRemaining = $available - $amount;
             $creditNote->update([
-                'status'           => 'rembourse',
-                'remaining_credit' => 0,
+                'refunded_amount'  => $newRefunded,
+                'remaining_credit' => $newRemaining,
+                // « rembourse » seulement quand le solde est épuisé ; sinon reste « valide »
+                'status'           => $newRemaining <= 0 ? 'rembourse' : 'valide',
             ]);
+
+            // [R2 §2] INVARIANT dur : total = imputé + remboursé + disponible
+            $cn = $creditNote->fresh();
+            $sum = (int) $cn->applied_amount + (int) $cn->refunded_amount + (int) $cn->remaining_credit;
+            if ($sum !== (int) $cn->total_ttc) {
+                throw new \RuntimeException(sprintf(
+                    'Invariant avoir rompu : %d imputé + %d remboursé + %d disponible = %d ≠ %d total.',
+                    $cn->applied_amount, $cn->refunded_amount, $cn->remaining_credit, $sum, $cn->total_ttc
+                ));
+            }
+
             $creditNote->client?->recalculateBalance();
 
             app(AuditService::class)->log('avoir.remboursement', $creditNote, [], [
                 'montant' => $amount, 'caisse' => $cashAccount->name, 'reference' => $reference,
+                'remboursé_cumulé' => $newRefunded, 'restant' => $newRemaining,
             ]);
 
             return $creditNote->fresh();

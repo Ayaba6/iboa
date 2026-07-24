@@ -866,7 +866,7 @@ class AccountingService
      * L'avoir avait crédité 411 (dette envers le client) ; le remboursement
      * éteint cette dette par une sortie de fonds.
      */
-    public function postCreditNoteRefund(CreditNote $creditNote, \App\Models\CashAccount $cashAccount, int $amount): ?JournalEntry
+    public function postCreditNoteRefund(CreditNote $creditNote, \App\Models\CashAccount $cashAccount, int $amount, int $alreadyRefunded = 0): ?JournalEntry
     {
         $company = $this->company($creditNote->company_id);
         if (! $company || $amount <= 0) {
@@ -874,9 +874,11 @@ class AccountingService
         }
         $treasuryKey = $cashAccount->type === 'caisse' ? 'caisse'
             : ($cashAccount->type === 'mobile_money' ? 'mobile_money' : 'banque');
-        $reference = 'REMB-' . $creditNote->number;
+        // [R2 §2] Référence unique PAR remboursement (partiels successifs) :
+        // suffixe = cumul déjà remboursé, pour ne pas retomber sur l'idempotence.
+        $reference = 'REMB-' . $creditNote->number . ($alreadyRefunded > 0 ? '-' . $alreadyRefunded : '');
         if ($this->entryExists($company, $reference)) {
-            return null; // idempotent
+            return null; // idempotent (rejeu exact du même remboursement partiel)
         }
         $label = 'Remboursement avoir ' . $creditNote->number;
         // Journal selon le support de paiement (enum journal_types :

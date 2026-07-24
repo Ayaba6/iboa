@@ -114,7 +114,7 @@ it('D-remboursement réel : caisse débitée, statut rembourse ; refus sans prov
         $svc->refund($cn->fresh(), $cash->id);
         $this->fail('Le double remboursement aurait dû être refusé.');
     } catch (\RuntimeException $e) {
-        expect($e->getMessage())->toContain('remboursé');
+        expect(strtolower($e->getMessage()))->toContain('restant');
     }
     // Journal d'audit
     expect(\App\Models\AuditLog::where('action', 'avoir.remboursement')->where('model_id', $cn->id)->exists())->toBeTrue();
@@ -137,4 +137,60 @@ it('D-annulation : annuler un avoir restock inverse le stock ET la facture', fun
     expect($cn->fresh()->status)->toBe('annule')
         ->and((float) ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(0.0)
         ->and((int) $inv->fresh()->remaining_amount)->toBe(50000); // restauré
+});
+
+it('D-remboursement PARTIEL et successifs : invariant total = imputé + remboursé + disponible', function () {
+    [$co, $wh, $quar, $p, $client, $inv] = retSetup();
+    $svc = app(\App\Services\CreditNoteService::class);
+    $cn = $svc->createFromInvoice($inv, [
+        'reason' => 'Remboursement fractionné',
+        'items' => [['product_id' => $p->id, 'description' => 'R', 'quantity' => 4, 'unit_price' => 5000, 'tax_rate_value' => 0, 'disposition' => 'rebut']],
+    ]);
+    $svc->validate($cn); // avoir 20 000, remaining 20 000
+    $cash = \App\Models\CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 100000, 'is_active' => true]);
+
+    // Invariant initial : 0 + 0 + 20 000 = 20 000
+    $inv0 = fn() => (int) $cn->fresh()->applied_amount + (int) $cn->fresh()->refunded_amount + (int) $cn->fresh()->remaining_credit;
+    expect($inv0())->toBe(20000);
+
+    // 1er remboursement PARTIEL 8 000
+    $svc->refund($cn->fresh(), $cash->id, 8000);
+    expect((int) $cn->fresh()->refunded_amount)->toBe(8000)
+        ->and((int) $cn->fresh()->remaining_credit)->toBe(12000)
+        ->and($cn->fresh()->status)->toBe('valide')       // pas encore soldé
+        ->and($inv0())->toBe(20000);                       // invariant tenu
+
+    // 2e remboursement PARTIEL 7 000
+    $svc->refund($cn->fresh(), $cash->id, 7000);
+    expect((int) $cn->fresh()->refunded_amount)->toBe(15000)
+        ->and((int) $cn->fresh()->remaining_credit)->toBe(5000)
+        ->and($inv0())->toBe(20000);
+
+    // Sur-remboursement : demande 9 000 sur 5 000 restants → refus
+    try {
+        $svc->refund($cn->fresh(), $cash->id, 9000);
+        $this->fail('Le sur-remboursement aurait dû être refusé.');
+    } catch (\RuntimeException $e) {
+        expect($e->getMessage())->toContain('supérieur');
+    }
+    expect((int) $cn->fresh()->remaining_credit)->toBe(5000); // inchangé
+
+    // 3e remboursement : le solde exact 5 000 → soldé
+    $svc->refund($cn->fresh(), $cash->id, 5000);
+    expect((int) $cn->fresh()->refunded_amount)->toBe(20000)
+        ->and((int) $cn->fresh()->remaining_credit)->toBe(0)
+        ->and($cn->fresh()->status)->toBe('rembourse')
+        ->and($inv0())->toBe(20000);
+
+    // Plus rien à rembourser
+    try {
+        $svc->refund($cn->fresh(), $cash->id, 1000);
+        $this->fail('Remboursement sur avoir soldé aurait dû être refusé.');
+    } catch (\RuntimeException $e) {
+        expect(strtolower($e->getMessage()))->toContain('restant');
+    }
+
+    // Caisse : 100 000 − 20 000 = 80 000 ; 3 écritures de remboursement distinctes
+    expect((int) $cash->fresh()->current_balance)->toBe(80000)
+        ->and(\App\Models\JournalEntry::where('reference', 'like', 'REMB-' . $cn->number . '%')->count())->toBe(3);
 });

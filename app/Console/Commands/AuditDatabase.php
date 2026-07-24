@@ -217,6 +217,21 @@ class AuditDatabase extends Command
             }
         });
 
+        $this->section('11. Invariant des avoirs', function () {
+            // [R2 §2] total_ttc = applied_amount + refunded_amount + remaining_credit
+            if (Schema::hasColumn('credit_notes', 'refunded_amount')) {
+                $n = DB::table('credit_notes')->whereNull('deleted_at')
+                    ->whereRaw('total_ttc <> applied_amount + refunded_amount + remaining_credit')
+                    ->count();
+                $this->report($n, "$n avoir(s) à invariant rompu (total ≠ imputé + remboursé + disponible)");
+
+                $n = DB::table('credit_notes')
+                    ->where(fn ($q) => $q->where('applied_amount', '<', 0)->orWhere('refunded_amount', '<', 0)->orWhere('remaining_credit', '<', 0))
+                    ->count();
+                $this->report($n, "$n avoir(s) à composante négative");
+            }
+        });
+
         $this->section('10. Paie', function () {
             if (Schema::hasTable('payroll_bulletins')) {
                 $n = DB::table('payroll_bulletins as b')
