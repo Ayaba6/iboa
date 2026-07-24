@@ -392,6 +392,36 @@ class Product extends Model
     }
 
     /**
+     * Coil-managed items must keep their physical bobine workflow and should
+     * not be backflushed like a standard stock component.
+     *
+     * Source of truth: explicit item category flag.
+     */
+    public function isCoilManaged(): bool
+    {
+        return (bool) ($this->itemCategory?->coil_managed ?? false);
+    }
+
+    /**
+     * Legacy signal used by audits/migrations: this article already has a
+     * physical bobine history even if no explicit category flag exists yet.
+     */
+    public function hasLegacyCoilHistory(): bool
+    {
+        if ($this->relationLoaded('coils') && $this->coils->isNotEmpty()) {
+            return true;
+        }
+
+        if ($this->relationLoaded('stockMovements')
+            && $this->stockMovements->contains(fn ($movement) => ! empty($movement->coil_id))) {
+            return true;
+        }
+
+        return $this->coils()->exists()
+            || $this->stockMovements()->whereNotNull('coil_id')->exists();
+    }
+
+    /**
      * Stock à terme = stock actuel + réceptions PO en attente − livraisons SO confirmées en attente.
      * Formule : actuel + (PO approuvés non reçus) − (commandes confirmées non livrées).
      */

@@ -25,6 +25,97 @@ Limite de la preuve : 775 tests couvrent les scénarios écrits et leurs asserti
 rien d'autre. Les parcours UI réels (navigateur), la concurrence multi-processus
 réelle et les volumes de production ne sont pas couverts par cette suite.
 
+
+## 0 bis. Mise a jour du 24/07/2026
+
+| Mesure | Valeur constatee |
+|---|---|
+| Application | A3 ERP |
+| Chemin projet | `C:\laragon\www\iboa` |
+| Depot Git | `https://github.com/rrodyz/iboa.git` |
+| Branche active | `fix/erp-cdc-prod-compta-rh` |
+| SHA audite | `9d7b98dfd308a7aac11141263f6f60647a3d203e` |
+| Environnement | `local` |
+| PHP / Laravel / MySQL | `8.2.28` / `12.64.0` / `8.4.3` |
+| Base active | `iboa_erp` |
+| Routes | 1099 |
+| Controleurs | 159 |
+| Services | 94 |
+| Modeles | 180 |
+| Migrations | 335 |
+| Fichiers de tests | 200 |
+| Roles / permissions | 21 / 161 |
+
+### Lot du 24/07/2026 - stock, production et audit
+
+- Cause racine 1 corrigee : `erp:check-stock` utilisait `stock_movements.quantity` au lieu de `quantity_in_stock_uom` pour les mouvements convertis `ML -> KG`, ce qui creait une fausse anomalie de `20` unites sur le produit `1` / depot `2`.
+- Cause racine 2 corrigee : `ProductionStockService::consumeBomComponents()` pouvait encore backflusher un reliquat sur un composant explicitement gere en bobines apres une consommation physique reelle, ce qui decrementait `product_stocks` sans decrementer bobines/lot.
+- Donnee reelle corrigee : reconciliation tracee `opening_reconciliation` appliquee le 24/07/2026 sur `product_id=1`, `warehouse_id=2`, pour aligner `product_stocks` sur le physique bobines/lots (`+3,01 kg`).
+- Audit stock apres correction : `php artisan erp:check-stock` = propre ; `php artisan stock:audit-coil-lots --product=1 --warehouse=2` = `0 ecart`.
+- Validation automatisee : lot cible execute en SQLite puis MySQL = `19 passed / 84 assertions` sur `StockAuditCommandTest`, `CoilStockSyncTest`, `ProductionCostDedupTest`, `MtoReportRound2FixesTest`.
+
+### Risques residuels apres ce lot
+
+- Les suites completes SQLite et MySQL n'ont pas ete reexecutees dans ce lot du 24/07/2026 ; seule la zone stock/production/audit corrigee a ete rejouee sur les deux drivers.
+- Le registre historique ci-dessous contient encore des mesures du 23/07/2026 ; la presente section `0 bis` fait foi pour l'etat re-mesure du 24/07/2026.
+- La recommandation production reste `NO-GO` a ce stade faute de preuve globale reexecutee sur l'ensemble des parcours critiques navigateur, de la parite complete et des matrices metier exhaustives.
+
+## 0 ter. Validation renforcee du 24/07/2026
+
+### Preuves d'execution au meme SHA de depart `9d7b98dfd308a7aac11141263f6f60647a3d203e`
+
+| Controle | Commande | Resultat |
+|---|---|---|
+| Tests cibles SQLite | `php artisan test tests/Feature/AuditCoilLotsCommandTest.php tests/Feature/CoilManagementRulesTest.php tests/Feature/CoilBackflushCumulativeTest.php tests/Feature/StockAuditCommandTest.php tests/Feature/CoilStockSyncTest.php` | `23 passed / 101 assertions / exit 0` |
+| Tests cibles MySQL | `php artisan test -c phpunit.mysql.xml tests/Feature/AuditCoilLotsCommandTest.php tests/Feature/CoilManagementRulesTest.php tests/Feature/CoilBackflushCumulativeTest.php tests/Feature/StockAuditCommandTest.php tests/Feature/CoilStockSyncTest.php` | `23 passed / 101 assertions / exit 0` |
+| Suite complete SQLite | `php artisan test` | `879 passed / 3064 assertions / 1457.02 s / exit 0` |
+| Suite complete MySQL | `php artisan test -c phpunit.mysql.xml` | `879 passed / 3064 assertions / 216.45 s / exit 0` |
+| Parite | `php artisan a3:test-parity` | `200 tests / 0 exclusion / PARITE OK / exit 0` |
+| Concurrence SQLite | `php artisan test tests/Feature/ConcurrencyGuardsTest.php` | `9 passed / 27 assertions / exit 0` |
+| Concurrence MySQL | `php artisan test -c phpunit.mysql.xml tests/Feature/ConcurrencyGuardsTest.php` | `9 passed / 27 assertions / exit 0` |
+
+### Audits detailles
+
+| Audit | Base | Portee | Lecture seule | Resultat |
+|---|---|---|---|---|
+| `a3:audit-security` | MySQL `iboa_erp` | maker-checker, separation des taches, comptes actifs, permissions directes, tokens, roles | Oui | `exit 0`, aucune anomalie detectee en local ; avertissement tolere : maker-checker inactif hors production |
+| `a3:audit-schema` | MySQL `iboa_erp` | tables d'infrastructure, tables des modeles Eloquent, migrations, colonnes financieres | Oui | `exit 0`, aucune derive detectee |
+| `erp:check-accounting` | MySQL `iboa_erp` | equilibre debit/credit, totaux, factures valides sans ecriture, lettrage, doublons | Oui | `exit 0`, aucune anomalie detectee |
+| `erp:check-stock` | MySQL `iboa_erp` | stock negatif, sur-reservation, mouvements sans reference, coherence niveaux/mouvements, lots expires | Oui | `exit 0`, aucune anomalie detectee |
+| `stock:audit-coil-lots` | MySQL `iboa_erp` | bobines, lots, `product_stocks`, `stock_movements`, valorisation A/B/C, avertissements historiques | Dry-run par defaut ; `--fix` modifie | `exit 0`, `1 groupe`, `1 produit`, `1 depot`, `2 bobines`, `2 lots`, `5 mouvements`, `0 anomalie`, `0 correction candidate` |
+
+### Durcissement de `stock:audit-coil-lots`
+
+- Nouveaux garde-fous : `--run-id`, `--revert-run`, `--report`, `--force`, dry-run par defaut et confirmation explicite hors tests.
+- Preuve d'idempotence : un meme `--run-id` rejoue la reconciliation sans creer de nouveau mouvement ; le rapport renvoie `applied = 0` au second passage.
+- Preuve d'extourne : `--revert-run` cree des ajustements inverses traces sans rewriter l'historique.
+- Rapport JSON avant/apres : `storage/logs/validation-20260724/audit-coil-lots-report.json`.
+- Limite explicite de la commande : aucune ecriture comptable automatique n'est postee ; la regularisation GL doit etre decidee separement.
+
+### Donnee locale corrigee et traces retrouvees
+
+- Correction deja appliquee sur la base locale avant ce durcissement : `php artisan stock:audit-coil-lots --product=1 --warehouse=2 --fix`.
+- Sauvegarde dediee avant cette correction : `AUCUNE PREUVE TROUVEE`. Seuls des dumps plus anciens (12/07, 13/07, 22/07) ont ete retrouves.
+- Mouvement de regularisation retrouve : `stock_movements.id = 76`, type `ajustement`, `quantity_in_stock_uom = 3.0100`, `uom = KG`, `unit_cost = 0`, `idempotency_key = opening-reconciliation:1:2:20260724`, horodatage `2026-07-24 12:11:37`.
+- Avant cette regularisation : `product_stocks = 4.9948`, `lots = 8.0000`, `bobines = 8.0000`, `mouvements = 4.9948`.
+- Etat local actuel : `product_stocks = 8.0048`, `lots = 8.0000`, `bobines = 8.0000`, `mouvements = 8.0048`.
+- Ecritures comptables liees a cette regularisation : `0` ecriture trouvee.
+
+### Regles metier renforcees dans le code
+
+- `CheckStock` calcule maintenant le theorique en unite de stock via `quantity_in_stock_uom`, avec repli historique sur `quantity` si la colonne n'existe pas encore.
+- `Product::isCoilManaged()` s'appuie uniquement sur un flag metier explicite de categorie ; `hasLegacyCoilHistory()` sert a l'audit et aux migrations.
+- `ItemCategory::assertCoilManagementToggleAllowed()` interdit le changement de mode bobine apres historique physique ; le controle est branche dans `ItemCategoryController::update()`.
+- `CoilReceptionService` ne cree plus de bobines pour un simple article gere par lot sans flag bobine.
+- `ProductionStockService` n'ajoute plus de backflush residuel si une consommation physique reelle a deja couvert le composant bobine.
+
+### Risques residuels apres validation renforcee
+
+- Les parcours navigateur critiques exiges par la mission ne sont toujours pas reproouves dans ce lot.
+- Le script multi-processus OS reel `scripts/coil-concurrency-test.php` a ete ajoute pour prouver les collisions sur bobines, mais il echoue encore localement dans les workers PHP enfants lors de l'ouverture PDO MySQL ; la concurrence deterministe via la suite de tests reste, elle, prouvee.
+- La regularisation locale du 24/07/2026 a ete appliquee sans sauvegarde dediee prealable retrouvee ; ce point reste un defaut de procedure.
+- L'audit quantitatif bobines/lots/stocks/mouvements est propre dans son perimetre, mais la reconciliation valorisation/GL globale n'est pas reproouvee bout en bout.
+- Decision conservee : `NO-GO`.
 ## 1. Inventaire des modules
 
 | Module | Routes | État global | Priorité restante | Détail |

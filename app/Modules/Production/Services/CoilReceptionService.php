@@ -63,7 +63,7 @@ class CoilReceptionService
                 // un consommable standard reçu sur la même réception n'a pas
                 // de bobine.
                 $p = $item->product;
-                $tracked = $p && (($p->itemCategory?->coil_managed ?? false) || $p->has_lot_number);
+                $tracked = $p && $p->isCoilManaged();
                 if ($onlyTracked && ! $tracked) {
                     continue;
                 }

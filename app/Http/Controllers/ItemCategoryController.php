@@ -70,6 +70,9 @@ class ItemCategoryController extends Controller
     public function update(Request $request, ItemCategory $category): RedirectResponse
     {
         $data = $this->validateData($request, $category);
+        if (array_key_exists('coil_managed', $data)) {
+            $category->assertCoilManagementToggleAllowed((bool) $data['coil_managed']);
+        }
         $old = $category->only(array_keys($data));
         $category->update($data);
         Log::info('[X3] Catégorie modifiée', ['code' => $category->code, 'user_id' => auth()->id(), 'avant' => $old, 'apres' => $data]);

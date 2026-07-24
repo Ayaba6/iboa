@@ -366,6 +366,44 @@ describe('Backflush au reliquat', function () {
 
 describe('Cohérence multi-bobines / multi-lots', function () {
 
+    it('n ajoute pas de reliquat backflush sur un composant explicitement gere en bobines', function () {
+        [$company, $wh, $mp, , $order] = cslBomSetup();
+
+        $category = \App\Models\ItemCategory::create([
+            'company_id' => $company->id,
+            'code' => 'BOB-SYNC',
+            'name' => 'Bobine sync',
+            'nature' => 'matiere_premiere',
+            'strategy' => 'mto',
+            'is_active' => true,
+            'is_stockable' => true,
+            'is_purchasable' => true,
+            'usable_in_bom' => true,
+            'coil_managed' => true,
+        ]);
+        $mp->update([
+            'item_category_id' => $category->id,
+            'has_lot_number' => true,
+        ]);
+
+        $lot  = cslLot($company, $mp, $wh, 1200);
+        $coil = cslCoil($company, $mp, $wh, ['stock_lot_id' => $lot->id]);
+
+        app(CoilConsumptionService::class)->consume($order, $coil, 420);
+        expect((float) ProductStock::where('product_id', $mp->id)->value('quantity'))->toBe(2580.0);
+
+        app(\App\Modules\Production\Services\ProductionStockService::class)
+            ->recordOutput($order->fresh(), ['quantity' => 100, 'warehouse_id' => $wh->id]);
+
+        expect((float) ProductStock::where('product_id', $mp->id)->value('quantity'))->toBe(2580.0)
+            ->and((float) $coil->fresh()->remaining_weight)->toBe(80.0)
+            ->and((float) $lot->fresh()->quantity)->toBe(780.0);
+
+        $backflush = StockMovement::where('product_id', $mp->id)
+            ->where('type', 'sortie')->whereNull('production_consumption_id')->get();
+        expect($backflush)->toHaveCount(0);
+    });
+
     it('consomme sur une bobine d\'un lot multi-bobines sans toucher les autres', function () {
         $company = cslCompany();
         $wh      = cslWarehouse($company);

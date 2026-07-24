@@ -102,9 +102,9 @@ class CheckStock extends Command
             ->groupBy('product_id', 'warehouse_id')
             ->select('product_id', 'warehouse_id', DB::raw(
                 'SUM(CASE
-                    WHEN type IN (\'entree\',\'retour_client\') THEN quantity
-                    WHEN type IN (\'sortie\',\'retour_fournisseur\') THEN -quantity
-                    WHEN type = \'ajustement\' THEN quantity
+                    WHEN type IN (\'entree\',\'retour_client\') THEN COALESCE(quantity_in_stock_uom, quantity)
+                    WHEN type IN (\'sortie\',\'retour_fournisseur\') THEN -COALESCE(quantity_in_stock_uom, quantity)
+                    WHEN type = \'ajustement\' THEN COALESCE(quantity_in_stock_uom, quantity)
                     ELSE 0
                 END) as theoretical_qty'
             ))

@@ -239,7 +239,7 @@ class ProductionStockService
             return;
         }
 
-        $order->load('billOfMaterial.lines.product', 'consumptions.coil');
+        $order->load('billOfMaterial.lines.product.itemCategory', 'billOfMaterial.lines.product.family', 'consumptions.coil');
         $bom = $order->billOfMaterial;
         if (! $bom) {
             return; // OF sans nomenclature : rien à consommer
@@ -268,6 +268,13 @@ class ProductionStockService
             $consumedReal = (float) $order->consumptions
                 ->filter(fn ($c) => $c->coil?->product_id === $product->id && ! $c->reversed_at)
                 ->sum('weight_consumed');
+
+            // Once a coil-managed component has a real physical consumption,
+            // the bobine remains the source of truth and no residual backflush
+            // may decrement only product_stocks.
+            if ($consumedReal > 0 && $product->isCoilManaged()) {
+                continue;
+            }
 
             // Backflush déjà journalisé pour ce composant sur cet OF
             // (sorties sans production_consumption_id = mouvements backflush).

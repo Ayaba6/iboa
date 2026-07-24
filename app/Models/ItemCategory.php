@@ -110,4 +110,30 @@ class ItemCategory extends Model
     {
         return $this->products()->exists();
     }
+
+    /**
+     * Le mode bobine est un param?tre m?tier structurant : apr?s usage
+     * physique, il ne peut plus ?tre bascul? sans migration contr?l?e.
+     */
+    public function assertCoilManagementToggleAllowed(bool $nextValue): void
+    {
+        if ((bool) $this->coil_managed === $nextValue) {
+            return;
+        }
+
+        $hasPhysicalHistory = $this->products()
+            ->where(function ($q) {
+                $q->whereHas('coils')
+                    ->orWhereHas('stockMovements', fn ($w) => $w->whereNotNull('coil_id'))
+                    ->orWhereHas('stockLots')
+                    ->orWhereHas('productStocks', fn ($w) => $w->where('quantity', '>', 0));
+            })
+            ->exists();
+
+        if ($hasPhysicalHistory) {
+            throw new \RuntimeException(
+                'Changement du mode bobine refus? : la cat?gorie est d?j? utilis?e sur des articles avec historique physique. Dupliquez la cat?gorie et passez par une migration contr?l?e.'
+            );
+        }
+    }
 }
