@@ -156,6 +156,48 @@ it('double validation de facture : la seconde est refusée', function () {
     expect($inv->fresh()->status)->toBe('envoyee'); // pas de double transition
 });
 
+it('double webhook de paiement : la seconde confirmation est idempotente (aucun retraitement)', function () {
+    [$co] = concSetup();
+    $tx = \App\Models\ExternalTransaction::create([
+        'company_id' => $co->id, 'internal_reference' => 'INT-' . uniqid(), 'external_reference' => 'EXT-' . uniqid(),
+        'provider' => 'orange_money', 'type' => 'payment', 'amount' => 10000, 'currency' => 'XOF',
+        'status' => 'pending', 'direction' => 'inbound',
+    ]);
+    $svc = app(\App\Services\Integrations\PaymentConfirmationService::class);
+
+    expect($svc->confirm($tx->fresh()))->toBeTrue()
+        ->and($tx->fresh()->status)->toBe('confirmed');
+    $firstAt = $tx->fresh()->transacted_at;
+
+    // 2e livraison du MÊME webhook → garde d'idempotence : déjà confirmé, no-op.
+    expect($svc->confirm($tx->fresh()))->toBeTrue()
+        ->and($tx->fresh()->status)->toBe('confirmed')
+        ->and($tx->fresh()->transacted_at->equalTo($firstAt))->toBeTrue(); // pas re-daté
+});
+
+it('double validation de clôture de caisse : la seconde est refusée', function () {
+    [$co] = concSetup();
+    $cash = CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 0, 'is_active' => true]);
+    $closure = \App\Models\CashClosure::create([
+        'company_id' => $co->id, 'cash_account_id' => $cash->id, 'number' => 'CL-' . uniqid(),
+        'closure_date' => today(), 'currency_code' => 'XOF',
+        'theoretical_balance' => 0, 'counted_balance' => 0, 'difference' => 0, 'status' => 'brouillon',
+        'created_by' => auth()->id(),
+    ]);
+    $svc = app(\App\Services\CashClosureService::class);
+
+    $svc->validateClosure($closure->fresh()); // 1re : brouillon → valide
+    expect($closure->fresh()->status)->toBe('valide');
+
+    try {
+        $svc->validateClosure($closure->fresh()); // 2e : refus
+        test()->fail('La seconde validation de clôture aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        expect(strtolower($e->getMessage()))->toContain('déjà validée');
+    }
+    expect($closure->fresh()->status)->toBe('valide'); // pas de double validation
+});
+
 it('double reverse de consommation bobine : une seule restitution de poids', function () {
     [$co, $fy, $wh] = concSetup();
     $mp = Product::factory()->create(['is_stockable' => true]);
