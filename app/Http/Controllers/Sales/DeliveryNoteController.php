@@ -271,6 +271,11 @@ class DeliveryNoteController extends Controller
 
             $filename = 'BL_' . str_replace(['/', '\\', ' '], '-', $deliveryNote->number) . '.pdf';
 
+            // [Phase 2.8] Archiver l'exemplaire émis d'un BL validé
+            if ($deliveryNote->status === 'valide') {
+                app(\App\Services\DocumentArchiveService::class)->archive($deliveryNote, $pdf->output(), $deliveryNote->number);
+            }
+
             return $request->boolean('preview')
                 ? $pdf->stream($filename)
                 : $pdf->download($filename);

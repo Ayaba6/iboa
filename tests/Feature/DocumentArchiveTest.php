@@ -73,3 +73,28 @@ it('archive à la génération du PDF d\'une facture émise (chemin contrôleur)
         ->and($archive->verifyIntegrity())->toBeTrue()
         ->and($archive->byte_size)->toBeGreaterThan(0);
 });
+
+it('archive polymorphiquement avoirs et BL (types distincts, coexistants)', function () {
+    $co = Company::firstOrCreate(['name' => 'ARC'], ['email' => 'arc@iboa.test']);
+    app()->instance('current_company', $co);
+    $svc = app(DocumentArchiveService::class);
+
+    $cn = \App\Models\CreditNote::create([
+        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
+        'number' => 'AV-ARC-' . uniqid(), 'status' => 'valide', 'issued_at' => now(),
+        'currency_code' => 'XOF', 'total_ttc' => 5000, 'remaining_credit' => 5000,
+    ]);
+    $dn = \App\Models\DeliveryNote::create([
+        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
+        'number' => 'BL-ARC-' . uniqid(), 'status' => 'valide', 'issued_at' => now(), 'delivery_date' => now(),
+    ]);
+
+    $aCn = $svc->archive($cn, '%PDF avoir', $cn->number);
+    $aDn = $svc->archive($dn, '%PDF bl', $dn->number);
+
+    expect($aCn->document_type)->toBe(\App\Models\CreditNote::class)
+        ->and($aDn->document_type)->toBe(\App\Models\DeliveryNote::class)
+        ->and($aCn->verifyIntegrity())->toBeTrue()
+        ->and($aDn->verifyIntegrity())->toBeTrue()
+        ->and(DocumentArchive::count())->toBe(2); // deux types, deux archives distinctes
+});

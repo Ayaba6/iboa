@@ -105,9 +105,12 @@ intègre.
 
 ## 8. Risques résiduels (formulation rigoureuse)
 
-- **Concurrence multi-processus réelle** : les verrous `lockForUpdate` sont
-  en place et testés en séquentiel ; deux requêtes HTTP simultanées sur le
-  même stock ne sont pas exercées par la suite (limite du test unitaire).
+- **Concurrence multi-processus réelle** : PROUVÉE le 24/07 —
+  `scripts/concurrency-test.sh` lance 5 processus OS parallèles (verrous
+  InnoDB) se disputant un stock de 10, chacun réservant 3 (demande 15) :
+  résultat **3 OK + 2 refus, réservé 9 ≤ 10, aucune survente**. Le
+  `lockForUpdate` sérialise correctement. Reste non couvert : charge
+  soutenue (centaines de req/s) et contention sur d'autres agrégats.
 - **Volumes** : mesurés jusqu'à 1 000 écritures / 300 factures / 100 salariés ;
   au-delà non mesuré.
 - **UI navigateur** : parcours A et C cliqués intégralement ; B/D/E/F prouvés

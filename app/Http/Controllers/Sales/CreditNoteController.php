@@ -188,6 +188,11 @@ class CreditNoteController extends Controller
 
         $filename = 'Avoir_' . str_replace(['/', '\\', ' '], '-', $creditNote->number) . '.pdf';
 
+        // [Phase 2.8] Archiver l'exemplaire émis d'un avoir validé/appliqué/remboursé
+        if (! in_array($creditNote->status, ['brouillon', 'annule'], true)) {
+            app(\App\Services\DocumentArchiveService::class)->archive($creditNote, $pdf->output(), $creditNote->number);
+        }
+
         return $request->boolean('preview')
             ? $pdf->stream($filename)
             : $pdf->download($filename);
