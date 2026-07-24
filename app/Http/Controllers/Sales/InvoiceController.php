@@ -375,6 +375,13 @@ class InvoiceController extends Controller
 
             $filename = 'Facture_' . str_replace(['/', '\\', ' '], '-', $invoice->number) . '.pdf';
 
+            // [Phase 2.8] Archiver l'exemplaire émis (une seule fois) : dès qu'une
+            // facture n'est plus en brouillon, le PDF réellement produit est figé
+            // + empreinté. La régénération ultérieure ne réécrit jamais l'original.
+            if (! in_array($invoice->status, ['brouillon', 'annulee'], true)) {
+                app(\App\Services\DocumentArchiveService::class)->archive($invoice, $pdf->output(), $invoice->number);
+            }
+
             return $request->boolean('preview')
                 ? $pdf->stream($filename)
                 : $pdf->download($filename);
