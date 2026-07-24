@@ -194,3 +194,119 @@ it('D-remboursement PARTIEL et successifs : invariant total = imputé + rembours
     expect((int) $cash->fresh()->current_balance)->toBe(80000)
         ->and(\App\Models\JournalEntry::where('reference', 'like', 'REMB-' . $cn->number . '%')->count())->toBe(3);
 });
+
+it('D-annulation remboursement : caisse recréditée, écriture extournée, crédit restauré, invariant tenu', function () {
+    [$co, $wh, $quar, $p, $client, $inv] = retSetup();
+    $svc = app(\App\Services\CreditNoteService::class);
+    $cn  = $svc->createFromInvoice($inv, [
+        'reason' => 'Remboursement à annuler',
+        'items'  => [['product_id' => $p->id, 'description' => 'R', 'quantity' => 4, 'unit_price' => 5000, 'tax_rate_value' => 0, 'disposition' => 'rebut']],
+    ]);
+    $svc->validate($cn); // avoir 20 000, remaining 20 000
+    $cash = \App\Models\CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 100000, 'is_active' => true]);
+
+    // Remboursement partiel 12 000 → caisse 100 000 − 12 000 = 88 000
+    $svc->refund($cn->fresh(), $cash->id, 12000);
+    expect((int) $cn->fresh()->refunded_amount)->toBe(12000)
+        ->and((int) $cn->fresh()->remaining_credit)->toBe(8000)
+        ->and((int) $cash->fresh()->current_balance)->toBe(88000);
+    $remb = \App\Models\JournalEntry::where('reference', 'like', 'REMB-' . $cn->number . '%')->first();
+    expect($remb)->not->toBeNull();
+
+    // Annulation du remboursement : caisse 88 000 + 12 000 = 100 000, crédit restauré
+    $svc->cancelRefund($cn->fresh(), 'Erreur de caisse');
+    $inv0 = fn () => (int) $cn->fresh()->applied_amount + (int) $cn->fresh()->refunded_amount + (int) $cn->fresh()->remaining_credit;
+    expect((int) $cn->fresh()->refunded_amount)->toBe(0)
+        ->and((int) $cn->fresh()->remaining_credit)->toBe(20000)  // 8 000 + 12 000 restauré
+        ->and($cn->fresh()->status)->toBe('valide')
+        ->and((int) $cash->fresh()->current_balance)->toBe(100000) // recrédité
+        ->and($inv0())->toBe(20000)                                // invariant tenu
+        ->and($remb->fresh()->reversed_by_entry_id)->not->toBeNull(); // écriture extournée
+    // Journal d'audit de l'annulation
+    expect(\App\Models\AuditLog::where('action', 'avoir.remboursement.annulation')->where('model_id', $cn->id)->exists())->toBeTrue();
+
+    // Le crédit redevient remboursable : remboursement complet → caisse 100 000 − 20 000 = 80 000
+    $svc->refund($cn->fresh(), $cash->id, 20000);
+    expect($cn->fresh()->status)->toBe('rembourse')
+        ->and((int) $cash->fresh()->current_balance)->toBe(80000);
+});
+
+it('D-annulation avoir déjà remboursé : refusée tant que le remboursement n\'est pas annulé', function () {
+    [$co, $wh, $quar, $p, $client, $inv] = retSetup();
+    $svc = app(\App\Services\CreditNoteService::class);
+    $cn  = $svc->createFromInvoice($inv, [
+        'reason' => 'Remboursé',
+        'items'  => [['product_id' => $p->id, 'description' => 'R', 'quantity' => 3, 'unit_price' => 5000, 'tax_rate_value' => 0, 'disposition' => 'rebut']],
+    ]);
+    $svc->validate($cn); // 15 000
+    $cash = \App\Models\CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 50000, 'is_active' => true]);
+    $svc->refund($cn->fresh(), $cash->id); // remboursement total → rembourse
+
+    // L'annulation de l'avoir doit refuser (argent déjà sorti)
+    try {
+        $svc->cancel($cn->fresh(), 'Annulation tardive');
+        $this->fail('L\'annulation d\'un avoir remboursé aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        expect(strtolower($e->getMessage()))->toContain('remboursement');
+    }
+    expect($cn->fresh()->status)->toBe('rembourse')          // inchangé
+        ->and((int) $cash->fresh()->current_balance)->toBe(35000); // 50 000 − 15 000, pas recréditée
+});
+
+it('D-retour article déjà revendu : annulation d\'avoir échoue proprement (stock insuffisant), rien n\'est modifié', function () {
+    [$co, $wh, $quar, $p, $client, $inv] = retSetup();
+    $svc = app(\App\Services\CreditNoteService::class);
+    $cn  = $svc->createFromInvoice($inv, [
+        'reason' => 'Retour restock',
+        'items'  => [['product_id' => $p->id, 'description' => 'R', 'quantity' => 2, 'unit_price' => 5000, 'tax_rate_value' => 0, 'disposition' => 'restock']],
+    ]);
+    $svc->validate($cn);            // stock vendable +2
+    $svc->applyToInvoice($cn->fresh()); // facture 50 000 − 10 000 = 40 000
+    expect((float) ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(2.0)
+        ->and((int) $inv->fresh()->remaining_amount)->toBe(40000);
+
+    // Les 2 unités réintégrées sont revendues avant l'annulation → stock vendable = 0
+    ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->update(['quantity' => 0]);
+
+    // L'annulation tente une contre-sortie de 2 u sur un stock nul → refus propre
+    try {
+        $svc->cancel($cn->fresh(), 'Annulation après revente');
+        $this->fail('L\'annulation aurait dû échouer faute de stock à ressortir.');
+    } catch (\Throwable $e) {
+        expect(strtolower($e->getMessage()))->toContain('insuffisant');
+    }
+    // Transaction annulée : avoir toujours appliqué, facture inchangée, stock inchangé
+    expect($cn->fresh()->status)->toBe('applique')
+        ->and((int) $inv->fresh()->remaining_amount)->toBe(40000)
+        ->and((float) ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(0.0);
+});
+
+it('D-remboursement : maker-checker refuse que l\'auteur de l\'avoir le rembourse lui-même', function () {
+    config(['security.maker_checker.enabled' => true]);
+    [$co, $wh, $quar, $p, $client, $inv] = retSetup();
+    $admin  = auth()->user(); // super_admin issu de retSetup (valide en dérogation)
+    $auteur = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]); // sans rôle : pas super_admin
+    $svc = app(\App\Services\CreditNoteService::class);
+
+    // L'auteur crée l'avoir (created_by = auteur)
+    test()->actingAs($auteur);
+    $cn = $svc->createFromInvoice($inv, [
+        'reason' => 'MC refund',
+        'items'  => [['product_id' => $p->id, 'description' => 'R', 'quantity' => 2, 'unit_price' => 5000, 'tax_rate_value' => 0, 'disposition' => 'rebut']],
+    ]);
+    // Un valideur distinct (admin) valide
+    test()->actingAs($admin);
+    $cn = $svc->validate($cn); // 10 000
+
+    // L'auteur tente de rembourser SON propre avoir → séparation des tâches
+    test()->actingAs($auteur);
+    $cash = \App\Models\CashAccount::factory()->create(['company_id' => $co->id, 'type' => 'caisse', 'current_balance' => 50000, 'is_active' => true]);
+    try {
+        $svc->refund($cn->fresh(), $cash->id);
+        $this->fail('Le remboursement par l\'auteur de l\'avoir aurait dû être refusé.');
+    } catch (\RuntimeException $e) {
+        expect(strtolower($e->getMessage()))->toContain('séparation');
+    }
+    expect((int) $cash->fresh()->current_balance)->toBe(50000) // aucune sortie
+        ->and((int) $cn->fresh()->refunded_amount)->toBe(0);
+});

@@ -367,6 +367,18 @@ class CreditNoteService
             if (! in_array($creditNote->status, ['valide', 'rembourse'], true)) {
                 throw new \RuntimeException('Seul un avoir validé peut être remboursé.');
             }
+
+            // [R2 §2] Maker-checker : celui qui rembourse ≠ auteur de l'avoir
+            // (sortie de trésorerie à effet irréversible — non exemptable en prod).
+            app(MakerCheckerService::class)->assert(
+                $creditNote->created_by, 'credit_note.refund', "le remboursement de l'avoir {$creditNote->number}", $creditNote
+            );
+            // [R2 §2] Conflit d'intérêt : l'opérateur ne rembourse pas un avoir dont
+            // le client est lié à son propre compte utilisateur.
+            app(MakerCheckerService::class)->assertNotBeneficiary(
+                $creditNote->client?->user_id, "le remboursement de l'avoir {$creditNote->number}", $creditNote
+            );
+
             $available = (int) $creditNote->remaining_credit;
             if ($available <= 0) {
                 throw new \RuntimeException('Cet avoir n\'a plus de crédit restant à rembourser.');
@@ -428,6 +440,98 @@ class CreditNoteService
         });
     }
 
+    /**
+     * [R2 §2 — annulation d'un remboursement] Défait TOUT le remboursement d'un
+     * avoir (jamais un simple changement de statut) :
+     *   - recrédite chaque caisse d'où l'argent était sorti (net par compte, pour
+     *     rester correct après un cycle rembourse → annule → rembourse) ;
+     *   - extourne chaque écriture REMB-* liée (période ouverte) ;
+     *   - restaure le crédit disponible (remaining += refunded, refunded → 0) ;
+     *   - INVARIANT dur maintenu : total = imputé + remboursé + disponible.
+     * Le crédit redevient imputable/remboursable ; aucune suppression physique.
+     *
+     * @throws \RuntimeException
+     */
+    public function cancelRefund(CreditNote $creditNote, string $motif): CreditNote
+    {
+        $motif = trim($motif);
+        if ($motif === '') {
+            throw new \RuntimeException('Motif d\'annulation du remboursement obligatoire.');
+        }
+
+        return DB::transaction(function () use ($creditNote, $motif) {
+            $creditNote = CreditNote::lockForUpdate()->findOrFail($creditNote->id);
+
+            $refunded = (int) $creditNote->refunded_amount;
+            if ($refunded <= 0) {
+                throw new \RuntimeException('Aucun remboursement à annuler sur cet avoir.');
+            }
+
+            // 1. Recréditer chaque caisse : NET par compte = Σ débits remboursement
+            //    − Σ crédits d'annulation déjà passés (gère les caisses multiples et
+            //    les cycles successifs sans double recrédit).
+            $movements = \App\Models\CashTransaction::whereIn('reference_type', ['CreditNoteRefund', 'CreditNoteRefundCancel'])
+                ->where('reference_id', $creditNote->id)
+                ->get()
+                ->groupBy('cash_account_id');
+
+            $restored = 0;
+            foreach ($movements as $accountId => $txs) {
+                $net = (int) $txs->sum(fn ($t) => $t->type === 'debit' ? (int) $t->amount : -(int) $t->amount);
+                if ($net <= 0) {
+                    continue;
+                }
+                $account = \App\Models\CashAccount::lockForUpdate()->findOrFail($accountId);
+                app(\App\Services\CashAccountService::class)->recordTransaction($account, [
+                    'type'           => 'credit',
+                    'reference_type' => 'CreditNoteRefundCancel',
+                    'reference_id'   => $creditNote->id,
+                    'amount'         => $net,
+                    'label'          => 'Annulation remboursement avoir ' . $creditNote->number . ' — ' . $motif,
+                    'occurred_at'    => now(),
+                ]);
+                $restored += $net;
+            }
+
+            // 2. Extourne des écritures de remboursement (REMB-<numéro>[-cumul]).
+            \App\Models\JournalEntry::where('company_id', $creditNote->company_id)
+                ->where('reference', 'like', 'REMB-' . $creditNote->number . '%')
+                ->where('status', 'valide')
+                ->whereNull('reversed_by_entry_id')
+                ->get()
+                ->each(fn ($entry) => $this->accountingService->reverseEntry(
+                    $entry,
+                    'Annulation remboursement avoir ' . $creditNote->number . ' — ' . $motif
+                ));
+
+            // 3. Restaurer le crédit disponible.
+            $newRemaining = (int) $creditNote->remaining_credit + $refunded;
+            $creditNote->update([
+                'refunded_amount'  => 0,
+                'remaining_credit' => $newRemaining,
+                'status'           => (int) $creditNote->applied_amount >= (int) $creditNote->total_ttc ? 'applique' : 'valide',
+            ]);
+
+            // 4. INVARIANT dur : total = imputé + remboursé(0) + disponible.
+            $cn  = $creditNote->fresh();
+            $sum = (int) $cn->applied_amount + (int) $cn->refunded_amount + (int) $cn->remaining_credit;
+            if ($sum !== (int) $cn->total_ttc) {
+                throw new \RuntimeException(sprintf(
+                    'Invariant avoir rompu après annulation remboursement : %d + %d + %d = %d ≠ %d.',
+                    $cn->applied_amount, $cn->refunded_amount, $cn->remaining_credit, $sum, $cn->total_ttc
+                ));
+            }
+
+            $creditNote->client?->recalculateBalance();
+
+            app(AuditService::class)->log('avoir.remboursement.annulation', $creditNote, [], [
+                'montant_recredite' => $restored, 'motif' => $motif,
+            ]);
+
+            return $creditNote->fresh();
+        });
+    }
+
     public function cancel(CreditNote $creditNote, string $motif): CreditNote
     {
         $motif = trim($motif);
@@ -440,6 +544,16 @@ class CreditNoteService
 
             if ($creditNote->status === 'annule') {
                 throw new \RuntimeException('Cet avoir est déjà annulé.');
+            }
+
+            // [R2 §2] Un avoir déjà remboursé (argent sorti) ne peut être annulé
+            // tel quel : le remboursement doit d'abord être annulé (recrédit caisse
+            // + extourne), sinon la trésorerie serait faussée en silence.
+            if ((int) $creditNote->refunded_amount > 0) {
+                throw new \RuntimeException(sprintf(
+                    'Cet avoir a été remboursé (%s FCFA) : annulez d\'abord le remboursement.',
+                    number_format((int) $creditNote->refunded_amount, 0, ',', ' ')
+                ));
             }
 
             if (in_array($creditNote->status, ['valide', 'applique'], true)) {

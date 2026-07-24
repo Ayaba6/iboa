@@ -53,7 +53,7 @@ Colonnes = a-t-il au moins une permission du verbe. `X` = oui.
 | comptable, daf, directeur | cumul créer+valider+annuler+… | **Rôles de CONTRÔLE assumés** : le cumul y est intentionnel (direction/supervision). L'altérité individuelle est imposée par le maker-checker sur les points financiers (décaissement, avoir, écriture, paie). |
 | caissier | `payments.create` + `payments.confirm` (permissions) | **PAS un conflit à deux étapes** : vérifié dans le code, il n'existe aucune action `confirm` distincte — un encaissement caissier se saisit en UNE étape avec statut `confirme` (normal pour une caisse). Le contrôle financier réel sur la caisse est la **clôture journalière** (`cash_closure.validate`, point MC 6) : le caissier ne valide pas sa propre clôture. Et l'ANNULATION d'encaissement (`treasury.cancel`) lui a été retirée. Conflit réel : aucun. |
 
-## §7 — Les 7 points maker-checker (sites d'appel réels de `assert()`)
+## §7 — Les 8 points maker-checker (sites d'appel réels de `assert()`)
 
 Tous fail-closed en production (`config/security.php`, actif par défaut si APP_ENV=production) :
 
@@ -64,11 +64,14 @@ Tous fail-closed en production (`config/security.php`, actif par défaut si APP_
 5. `payroll_run.validate` — `PayrollService::validate`
 6. `cash_closure.validate` — `CashClosureService::validateClosure`
 7. `reception.validate` — `ReceptionController::validateReception`
+8. `credit_note.refund` — `CreditNoteService::refund` *(ajouté R2 §2 : celui qui
+   rembourse ≠ auteur de l'avoir ; sortie de trésorerie irréversible)*
 
 Plus le contrôle **bénéficiaire** (`assertNotBeneficiary`, TOUJOURS actif, sans
-exemption) sur prêts et avances sur salaire.
+exemption) sur prêts et avances sur salaire, **et sur le remboursement d'avoir**
+(client lié à un compte utilisateur — R2 §2).
 
-**Limite reconnue (R2 §7)** : 7 points ne couvrent pas encore toutes les
+**Limite reconnue (R2 §7)** : 8 points ne couvrent pas encore toutes les
 opérations. NON couverts par MC à ce jour : `payments.confirm` (encaissement),
 validation d'inventaire, validation d'ajustement de stock, clôture de période
 comptable, sortie/cession d'immobilisation. À arbitrer avant GO production.
