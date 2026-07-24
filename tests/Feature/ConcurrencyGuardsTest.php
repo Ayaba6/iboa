@@ -198,6 +198,24 @@ it('double validation de clôture de caisse : la seconde est refusée', function
     expect($closure->fresh()->status)->toBe('valide'); // pas de double validation
 });
 
+it('double révision de devis : la seconde est refusée (une seule révision active)', function () {
+    [$co] = concSetup();
+    $client = Client::factory()->create();
+    $quote = \App\Models\Quote::factory()->create(['company_id' => $co->id, 'client_id' => $client->id, 'status' => 'envoye']);
+    $svc = app(\App\Services\QuoteService::class);
+
+    $r1 = $svc->revise($quote->fresh()); // 1re révision : nouvelle version brouillon
+    expect((int) $r1->revision_of_id)->toBe($quote->id);
+
+    try {
+        $svc->revise($quote->fresh()); // 2e : une révision active existe déjà
+        test()->fail('La seconde révision aurait dû être refusée.');
+    } catch (\RuntimeException $e) {
+        expect(strtolower($e->getMessage()))->toContain('révision active');
+    }
+    expect(\App\Models\Quote::where('revision_of_id', $quote->id)->count())->toBe(1); // une seule
+});
+
 it('double reverse de consommation bobine : une seule restitution de poids', function () {
     [$co, $fy, $wh] = concSetup();
     $mp = Product::factory()->create(['is_stockable' => true]);
