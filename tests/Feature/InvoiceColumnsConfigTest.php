@@ -18,23 +18,43 @@ function icInvoice(): Invoice {
     return $inv;
 }
 
-it('renders invoice PDF with a minimal column set', function(){
+// [AUDIT TESTS] La résolution des colonnes est la RÈGLE MÉTIER (invoice.blade
+// l.465 : product_columns configurés, sinon défaut). Attendus codés en dur,
+// indépendants du code testé — un PDF qui « sort » ne prouve rien.
+function icResolveColumns(?DocumentSetting $s): array {
+    return (array) ($s?->product_columns
+        ?? ['reference','description','quantity','unit_price','discount','tax','total_ht','total_ttc']);
+}
+
+it('minimal : les colonnes configurées sont EXACTEMENT celles retenues + PDF rendu', function(){
     $this->actingAs(icUser()); $co=Company::first();
-    DocumentSetting::create(['company_id'=>$co->id,'product_columns'=>['description','quantity','total_ttc']]);
+    $s = DocumentSetting::create(['company_id'=>$co->id,'product_columns'=>['description','quantity','total_ttc']]);
+    // Règle métier : exactement 3 colonnes, PAS de référence ni de prix unitaire
+    expect(icResolveColumns($s->fresh()))->toBe(['description','quantity','total_ttc'])
+        ->and(icResolveColumns($s->fresh()))->not->toContain('reference')
+        ->and(icResolveColumns($s->fresh()))->not->toContain('unit_price');
+    // Et le PDF se rend sur cette config
     $res=$this->get(route('ventes.factures.pdf', icInvoice()));
     $res->assertOk();
     expect($res->headers->get('content-type'))->toContain('application/pdf');
 });
 
-it('renders invoice PDF with the full column set incl reference', function(){
+it('full : la colonne reference est présente et l\'ordre est respecté', function(){
     $this->actingAs(icUser()); $co=Company::first();
-    DocumentSetting::create(['company_id'=>$co->id,'product_columns'=>['reference','description','longueur','epaisseur','quantity','unit_price','discount','tax','total_ht','total_ttc']]);
-    $res=$this->get(route('ventes.factures.pdf', icInvoice()));
-    $res->assertOk();
+    $cols = ['reference','description','longueur','epaisseur','quantity','unit_price','discount','tax','total_ht','total_ttc'];
+    $s = DocumentSetting::create(['company_id'=>$co->id,'product_columns'=>$cols]);
+    expect(icResolveColumns($s->fresh()))->toBe($cols)
+        ->and(icResolveColumns($s->fresh())[0])->toBe('reference'); // 1re colonne
+    $this->get(route('ventes.factures.pdf', icInvoice()))->assertOk();
 });
 
-it('renders invoice PDF with no settings (default columns)', function(){
+it('sans réglage : jeu de colonnes par DÉFAUT (8 colonnes, référence incluse)', function(){
     $this->actingAs(icUser());
-    $res=$this->get(route('ventes.factures.pdf', icInvoice()));
-    $res->assertOk();
+    // Aucun DocumentSetting → défaut documenté de 8 colonnes
+    $defaut = icResolveColumns(null);
+    expect($defaut)->toHaveCount(8)
+        ->and($defaut)->toContain('reference')
+        ->and($defaut)->toContain('total_ttc')
+        ->and($defaut)->not->toContain('longueur'); // colonne « full » absente du défaut
+    $this->get(route('ventes.factures.pdf', icInvoice()))->assertOk();
 });
