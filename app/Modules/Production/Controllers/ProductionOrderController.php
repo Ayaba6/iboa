@@ -365,8 +365,18 @@ class ProductionOrderController extends Controller
     {
         // [CDC §3] Rupture matière = lancement bloqué. Dérogation possible via
         // « Lancer malgré rupture » — réservée aux valideurs (production.validate).
+        // [R2 §2] NON FORGEABLE : le flag `bypass_material` de la requête ne suffit
+        // pas — le droit `production.validate` est vérifié serveur. Sans ce droit,
+        // $force reste false et le lancement retombe sur le blocage rupture.
         $force     = $request->boolean('bypass_material') && $request->user()->can('production.validate');
         $shortages = $this->service->materialShortages($order);
+
+        // [R2 §2] Dérogation FORMELLE : forcer un lancement en rupture exige un
+        // motif et est journalisé (auteur, motif, ruptures). Motif absent → refus.
+        if ($force && $shortages) {
+            $data = $request->validate(['derogation_motif' => ['required', 'string', 'min:5', 'max:500']]);
+            $this->journalizeDerogation($order, 'production.derogation.lancement', $data['derogation_motif'], $shortages);
+        }
 
         $this->service->launch($order, $force);
 
@@ -407,10 +417,40 @@ class ProductionOrderController extends Controller
     {
         // [Cohérence demande/production] Clôture avec écart produit < demandé →
         // réservée aux valideurs après confirmation explicite (confirm_shortfall).
+        // [R2 §2] NON FORGEABLE : le droit `production.validate` est vérifié serveur.
         $force = $request->boolean('confirm_shortfall') && $request->user()->can('production.validate');
+
+        // [R2 §2] Dérogation FORMELLE : clôturer avec écart exige un motif journalisé.
+        if ($force) {
+            $data = $request->validate(['derogation_motif' => ['required', 'string', 'min:5', 'max:500']]);
+            $this->journalizeDerogation($order, 'production.derogation.cloture', $data['derogation_motif']);
+        }
+
         $this->service->finish($order, $force);
 
         return back()->with('success', 'OF terminé.');
+    }
+
+    /**
+     * [R2 §2] Journalise une dérogation de production (lancement en rupture ou
+     * clôture avec écart) : trace d'audit chaînée + journal de sécurité fichier.
+     * L'appel n'a lieu que lorsque le droit `production.validate` a déjà autorisé
+     * la dérogation — la journalisation prouve « autorisée + motivée + tracée ».
+     */
+    private function journalizeDerogation(ProductionOrder $order, string $action, string $motif, array $shortages = []): void
+    {
+        app(\App\Services\AuditService::class)->log($action, $order, [], [
+            'motif'     => $motif,
+            'user_id'   => request()->user()?->id,
+            'shortages' => collect($shortages)->map(fn ($s) => [
+                'produit' => $s['product'] ?? null, 'besoin' => $s['need'] ?? null, 'dispo' => $s['available'] ?? null,
+            ])->values()->all(),
+        ]);
+        \Illuminate\Support\Facades\Log::channel('security')->warning($action, [
+            'order'   => $order->number,
+            'user_id' => request()->user()?->id,
+            'motif'   => $motif,
+        ]);
     }
 
     public function cancel(Request $request, ProductionOrder $order): RedirectResponse
