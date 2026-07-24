@@ -42,3 +42,30 @@
 - `storage/logs/laravel-*.log` : 0 ERROR attendu en fonctionnement normal.
 - Écritures comptables : équilibre débit/crédit (déjà garanti par les services).
 - Commande d'audit périodique : `php artisan stock:audit-coil-lots` (dry-run).
+
+---
+
+## Exploitation (Phase 2.7) — vérifié le 24/07/2026
+
+### Audit de préparation à la production
+Avant toute bascule : `php artisan a3:audit-production` (exit 1 si bloquant).
+Contrôle : APP_DEBUG off, APP_KEY, drivers queue/cache/session non-sync en
+prod, maker-checker actif, HTTPS, tables d'infra, chaîne du journal d'audit.
+
+### Sauvegarde / restauration — TESTÉE
+Procédure `scripts/backup-database.sh` (mysqldump --single-transaction
+--routines --triggers, gzip, empreinte SHA-256, rotation 30 j).
+
+**Test de restauration réalisé** (base jetable `iboa_backup_test`, MySQL
+8.4.3, 24/07/2026) : 3 lignes témoin → dump → suppression de 2 lignes
+(sinistre simulé) → drop + restauration → **3 lignes identiques à
+l'avant-sinistre** (vérification par GROUP_CONCAT). Restauration fidèle
+confirmée.
+
+Cron recommandé : `0 2 * * * /var/www/iboa/scripts/backup-database.sh /var/backups/iboa`
+Restauration : `gunzip -c <fichier>.sql.gz | mysql -u <user> -p <db>`
+
+### Reste à durcir avant GO (Phase 2.7 non close)
+- Superviser queue:work (supervisord) + scheduler (cron `* * * * * artisan schedule:run`).
+- Rotation des logs applicatifs (logrotate ou canal daily déjà en place pour security.log).
+- Test de charge concurrent (non réalisé).
