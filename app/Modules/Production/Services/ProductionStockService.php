@@ -63,7 +63,18 @@ class ProductionStockService
         return DB::transaction(function () use ($order, $data, $length, $quantity) {
             $totalMeters = round($length * $quantity, 2);
             $productId   = $data['product_id'] ?? $order->product_id;
-            $warehouseId = $data['warehouse_id'] ?? $this->defaultWarehouseId($order, $productId);
+            $requestedWarehouseId = $data['warehouse_id'] ?? $this->defaultWarehouseId($order, $productId);
+            $requestedWarehouse = $requestedWarehouseId ? Warehouse::find($requestedWarehouseId) : null;
+            $requiresQualityRelease = (bool) $order->controle_qualite_obligatoire
+                && (bool) ($requestedWarehouse?->quality_warehouse_id || $requestedWarehouse?->requires_quality_control);
+            $warehouseId = $requiresQualityRelease
+                ? $requestedWarehouse?->quality_warehouse_id
+                : $requestedWarehouseId;
+            if ($requiresQualityRelease && ! $warehouseId) {
+                throw ValidationException::withMessages([
+                    'warehouse_id' => 'Aucun dépôt de quarantaine configuré pour isoler le produit fini avant libération qualité.',
+                ]);
+            }
             $unitCost    = (float) ($data['unit_cost'] ?? 0);
 
             // [Sync ERP] L'output est créé d'abord ; l'entrée stock est ensuite
@@ -79,6 +90,7 @@ class ProductionStockService
                 'total_meters'      => $totalMeters,
                 'unit_id'           => $data['unit_id'] ?? null,
                 'warehouse_id'      => $warehouseId,
+                'release_warehouse_id' => $requiresQualityRelease ? $requestedWarehouseId : null,
                 'lot_number'        => $data['lot_number'] ?? null,
                 'notes'             => $data['notes'] ?? null,
                 'stock_movement_id' => null,
@@ -109,6 +121,13 @@ class ProductionStockService
             $this->consumeBomComponents($order, $quantity, $output);
 
             $order->increment('quantity_produced', $quantity);
+
+            $batch = $order->batches()->first();
+            if (! $batch) {
+                app(BatchService::class)->createForOrder($order->fresh());
+            } else {
+                $batch->update(['quantity' => $order->fresh()->quantity_produced]);
+            }
 
             // [Sync ERP] event domaine apres commit — point d'extension decouple
             DB::afterCommit(fn () => event(new \App\Events\ProductionDeclared($output)));
@@ -241,9 +260,16 @@ class ProductionStockService
 
         $order->load('billOfMaterial.lines.product.itemCategory', 'billOfMaterial.lines.product.family', 'consumptions.coil');
         $bom = $order->billOfMaterial;
-        if (! $bom) {
-            return; // OF sans nomenclature : rien à consommer
+        $bomLines = $order->bom_snapshot
+            ? collect($order->bom_snapshot['lines'] ?? [])
+            : ($bom?->lines ?? collect());
+        if ($bomLines->isEmpty()) {
+            return; // OF sans nomenclature ou sans composant : rien à consommer
         }
+        $snapshotProducts = Product::with(['itemCategory', 'family'])
+            ->whereIn('id', $bomLines->map(fn ($line) => data_get($line, 'product_id'))->filter())
+            ->get()
+            ->keyBy('id');
 
         // [Sync coils/lots — backflush au RELIQUAT] Le backflush ne consomme que
         // la part du besoin théorique non couverte par les consommations réelles
@@ -255,9 +281,9 @@ class ProductionStockService
         // (anti double comptage MTO #2) reste un reliquat nul → aucun mouvement.
         $totalProducedAfter = (float) $order->quantity_produced + $quantityProduced;
 
-        foreach ($bom->lines as $line) {
-            $product = $line->product;
-            $per     = (float) $line->quantity_per_meter;
+        foreach ($bomLines as $line) {
+            $product = $snapshotProducts->get((int) data_get($line, 'product_id'));
+            $per     = (float) data_get($line, 'quantity_per_meter');
             if (! $product || $per <= 0) {
                 continue;
             }
@@ -383,10 +409,10 @@ class ProductionStockService
      * product_stocks le mieux approvisionné. Retourne null si le composant n'est
      * suivi dans aucun product_stocks (→ non consommé automatiquement).
      */
-    private function componentWarehouseId(\App\Modules\Production\Models\BomLine $line, int $productId, ProductionOrder $order): ?int
+    private function componentWarehouseId(mixed $line, int $productId, ProductionOrder $order): ?int
     {
-        if ($line->depot_sortie_id) {
-            return (int) $line->depot_sortie_id;
+        if ($warehouseId = data_get($line, 'depot_sortie_id')) {
+            return (int) $warehouseId;
         }
 
         return \App\Models\ProductStock::where('product_id', $productId)

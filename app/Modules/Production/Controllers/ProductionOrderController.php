@@ -253,8 +253,11 @@ class ProductionOrderController extends Controller
             : null;
         if ($yield === null && $componentQty > 0) {
             $order->loadMissing('billOfMaterial.lines');
-            $theoretical = (float) ($order->billOfMaterial?->lines->sum('quantity_per_meter') ?? 0)
-                * (float) $order->quantity_produced;
+            $snapshotLines = collect($order->bom_snapshot['lines'] ?? []);
+            $perUnit = $snapshotLines->isNotEmpty()
+                ? $snapshotLines->sum(fn ($line) => (float) data_get($line, 'quantity_per_meter'))
+                : (float) ($order->billOfMaterial?->lines->sum('quantity_per_meter') ?? 0);
+            $theoretical = $perUnit * (float) $order->quantity_produced;
             $yield = $theoretical > 0 ? round(($theoretical / $componentQty) * 100, 1) : null;
         }
 
@@ -271,7 +274,7 @@ class ProductionOrderController extends Controller
         ];
 
         // Données pour les formulaires d'exécution (OF en cours)
-        $coils      = $order->isInProgress() ? Coil::where('status', '!=', 'epuisee')->orderBy('reference')->get() : collect();
+        $coils      = $order->isInProgress() ? Coil::where('status', '!=', 'epuisee')->where('valuation_status', 'valorisation_definitive')->where('cost_per_kg', '>', 0)->orderBy('reference')->get() : collect();
         $machines   = $order->isInProgress() ? \App\Modules\Production\Models\ProductionMachine::where('is_active', true)->orderBy('name')->get() : collect();
         $employees  = in_array($order->status, ['lance', 'en_cours', 'termine'], true) ? \App\Models\Employee::orderBy('last_name')->get() : collect();
         $warehouses = $order->isInProgress() ? \App\Models\Warehouse::orderByDesc('is_default')->orderBy('name')->get() : collect();

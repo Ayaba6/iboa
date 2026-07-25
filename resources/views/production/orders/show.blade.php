@@ -212,13 +212,18 @@
                 $auditIssues[] = 'Nomenclature absente — article fabriqué sans BOM : consommation matière et coût de revient non calculables.';
             }
             $outputIds = $order->outputs->pluck('id');
-            $matiere = (float) $order->consumptions->sum('cost')
-                + ($outputIds->isNotEmpty()
-                    ? (float) \App\Models\StockMovement::where('type', 'sortie')
-                        ->where('reference_type', \App\Modules\Production\Models\ProductionOutput::class)
-                        ->whereIn('reference_id', $outputIds)->sum('total_cost')
-                    : 0);
-            if ($order->bill_of_material_id && $matiere <= 0 && in_array($order->status, ['en_cours', 'termine_partiellement', 'termine'], true)) {
+            $hasCoilConsumption = $order->consumptions->contains(
+                fn ($consumption) => (float) $consumption->weight_consumed > 0
+                    || (float) $consumption->length_consumed > 0
+            );
+            $hasComponentConsumption = $outputIds->isNotEmpty()
+                && \App\Models\StockMovement::where('type', 'sortie')
+                    ->where('reference_type', \App\Modules\Production\Models\ProductionOutput::class)
+                    ->whereIn('reference_id', $outputIds)
+                    ->where('quantity', '>', 0)
+                    ->exists();
+            if ($order->bill_of_material_id && ! $hasCoilConsumption && ! $hasComponentConsumption
+                && in_array($order->status, ['en_cours', 'termine_partiellement', 'termine'], true)) {
                 $auditIssues[] = 'Matière consommée = 0 malgré une nomenclature — déclarez la consommation bobine/composants.';
             }
             if ($order->controle_qualite_obligatoire && $order->qualityControls->isEmpty() && in_array($order->status, ['en_cours', 'termine_partiellement', 'termine'], true)) {

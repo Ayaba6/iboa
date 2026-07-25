@@ -173,17 +173,18 @@ class ProductionExecutionController extends Controller
         ]);
 
         $bom = $order->billOfMaterial;
+        $bomHeader = $order->bom_snapshot['header'] ?? [];
         if (! $bom) {
             return back()->with('error', 'Aucune nomenclature liée à cet OF.');
         }
 
         $done = [];
-        if (($data['scrap_weight'] ?? 0) > 0 && $bom->scrap_product_id) {
-            $this->stock->enterByproduct($order, (int) $bom->scrap_product_id, (float) $data['scrap_weight'], $data['scrap_warehouse_id'] ?? null);
+        if (($data['scrap_weight'] ?? 0) > 0 && ($scrapProductId = ($bomHeader['scrap_product_id'] ?? $bom->scrap_product_id))) {
+            $this->stock->enterByproduct($order, (int) $scrapProductId, (float) $data['scrap_weight'], $data['scrap_warehouse_id'] ?? null);
             $done[] = 'chute';
         }
-        if (($data['defect_quantity'] ?? 0) > 0 && $bom->defect_product_id) {
-            $this->stock->enterByproduct($order, (int) $bom->defect_product_id, (float) $data['defect_quantity'], $data['defect_warehouse_id'] ?? null);
+        if (($data['defect_quantity'] ?? 0) > 0 && ($defectProductId = ($bomHeader['defect_product_id'] ?? $bom->defect_product_id))) {
+            $this->stock->enterByproduct($order, (int) $defectProductId, (float) $data['defect_quantity'], $data['defect_warehouse_id'] ?? null);
             $done[] = 'avarié';
         }
 

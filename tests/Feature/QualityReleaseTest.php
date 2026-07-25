@@ -11,8 +11,9 @@ use App\Modules\Production\Models\ProductionBatch;
 use App\Modules\Quality\Models\QualityRelease;
 use App\Modules\Quality\Services\QualityReleaseService;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function qrAdmin(): User
 {
@@ -27,9 +28,12 @@ function qrAdmin(): User
 
 function qrBatch(): ProductionBatch
 {
-    return ProductionBatch::factory()->create([
+    $batch = ProductionBatch::factory()->create([
         'company_id' => currentCompany()->id, 'status' => 'en_cours', 'quantity' => 120,
     ]);
+    $batch->productionOrder?->update(['controle_qualite_obligatoire' => false]);
+
+    return $batch->fresh();
 }
 
 it('libère un lot et le passe conforme', function () {
