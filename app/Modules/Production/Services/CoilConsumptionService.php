@@ -32,6 +32,8 @@ class CoilConsumptionService
     /** Enregistre une consommation de matière depuis une bobine. */
     public function consume(ProductionOrder $order, Coil $coil, float $weight, ?float $length = null, ?string $date = null): ProductionConsumption
     {
+        $coil->refresh();
+
         if (! $order->isInProgress()) {
             throw ValidationException::withMessages(['status' => 'La consommation n\'est possible que sur un OF « en cours ».']);
         }
@@ -51,13 +53,24 @@ class CoilConsumptionService
         }
         if ($weight > (float) $coil->remaining_weight + 0.001) {
             throw ValidationException::withMessages([
-                'weight' => 'Poids demandé (' . $weight . ' kg) supérieur au restant de la bobine (' . $coil->remaining_weight . ' kg).',
+                'weight' => 'Poids demandé ('.$weight.' kg) supérieur au restant de la bobine ('.$coil->remaining_weight.' kg).',
+            ]);
+        }
+
+        if ($coil->valuation_status !== 'valorisation_definitive' || (float) $coil->cost_per_kg <= 0) {
+            throw ValidationException::withMessages([
+                'cost' => "Bobine {$coil->reference} non valorisée : consommation interdite. Régularisez son coût d’achat avant production.",
             ]);
         }
 
         return DB::transaction(function () use ($order, $coil, $weight, $length, $date) {
             // Verrous : bobine puis lot (ordre stable → pas d'interblocage).
             $coil = Coil::lockForUpdate()->findOrFail($coil->id);
+            if ($coil->valuation_status !== 'valorisation_definitive' || (float) $coil->cost_per_kg <= 0) {
+                throw ValidationException::withMessages([
+                    'cost' => "Bobine {$coil->reference} non valorisée : consommation concurrente refusée.",
+                ]);
+            }
             if ($weight > (float) $coil->remaining_weight + 0.001) {
                 throw ValidationException::withMessages([
                     'weight' => 'Poids demandé supérieur au restant de la bobine (concurrence).',
@@ -67,14 +80,14 @@ class CoilConsumptionService
             $cost = (int) round($weight * (float) $coil->cost_per_kg);
 
             $consumption = $order->consumptions()->create([
-                'company_id'         => $order->company_id,
-                'coil_id'            => $coil->id,
-                'weight_consumed'    => $weight,
-                'length_consumed'    => $length ?? 0,
-                'cost'               => $cost,
+                'company_id' => $order->company_id,
+                'coil_id' => $coil->id,
+                'weight_consumed' => $weight,
+                'length_consumed' => $length ?? 0,
+                'cost' => $cost,
                 'consumption_source' => 'coil',
-                'consumed_at'        => $date ?? now(),
-                'created_by'         => Auth::id(),
+                'consumed_at' => $date ?? now(),
+                'created_by' => Auth::id(),
             ]);
 
             // 1. Bobine (unité physique)
@@ -85,30 +98,30 @@ class CoilConsumptionService
             //    Un seul mouvement porte lot + bobine + consommation + OF.
             $movement = null;
             if ($coil->product_id && $this->stockWarehouseId($coil, $order)) {
-                $factor   = $this->kgPerLinearMeter($coil);
+                $factor = $this->kgPerLinearMeter($coil);
                 $movement = $this->stock->recordMovement([
-                    'product_id'                => $coil->product_id,
-                    'warehouse_id'              => $this->stockWarehouseId($coil, $order),
-                    'type'                      => 'sortie',
+                    'product_id' => $coil->product_id,
+                    'warehouse_id' => $this->stockWarehouseId($coil, $order),
+                    'type' => 'sortie',
                     // Saisie opérationnelle conservée (ML si fournie, sinon KG)…
-                    'quantity'                  => ($length && $length > 0) ? $length : $weight,
-                    'uom'                       => ($length && $length > 0) ? 'ML' : 'KG',
-                    'conversion_factor'         => ($length && $length > 0) ? $factor : 1,
+                    'quantity' => ($length && $length > 0) ? $length : $weight,
+                    'uom' => ($length && $length > 0) ? 'ML' : 'KG',
+                    'conversion_factor' => ($length && $length > 0) ? $factor : 1,
                     // …mais le stock est TOUJOURS mû en kilogrammes.
-                    'quantity_in_stock_uom'     => $weight,
-                    'stock_uom'                 => 'KG',
-                    'unit_cost'                 => (float) $coil->cost_per_kg,
-                    'stock_lot_id'              => $coil->stock_lot_id,
-                    'coil_id'                   => $coil->id,
-                    'production_order_id'       => $order->id,
+                    'quantity_in_stock_uom' => $weight,
+                    'stock_uom' => 'KG',
+                    'unit_cost' => (float) $coil->cost_per_kg,
+                    'stock_lot_id' => $coil->stock_lot_id,
+                    'coil_id' => $coil->id,
+                    'production_order_id' => $order->id,
                     'production_consumption_id' => $consumption->id,
-                    'reference_type'            => ProductionOrder::class,
-                    'reference_id'              => $order->id,
-                    'notes'                     => "Consommation bobine {$coil->reference} — OF {$order->number}",
-                    'idempotency_key'           => 'coil-consumption:' . $consumption->id,
+                    'reference_type' => ProductionOrder::class,
+                    'reference_id' => $order->id,
+                    'notes' => "Consommation bobine {$coil->reference} — OF {$order->number}",
+                    'idempotency_key' => 'coil-consumption:'.$consumption->id,
                     // La matière physique est déjà sortie : le stock théorique
                     // ne doit jamais bloquer la déclaration de consommation.
-                    'allow_negative'            => true,
+                    'allow_negative' => true,
                 ]);
 
                 $consumption->update(['stock_movement_id' => $movement->id]);
@@ -147,22 +160,22 @@ class CoilConsumptionService
                 if ($consumption->stock_movement_id && $coil->product_id) {
                     $original = $consumption->stockMovement;
                     $this->stock->recordMovement([
-                        'product_id'                => $coil->product_id,
-                        'warehouse_id'              => $original?->warehouse_id ?? $coil->warehouse_id,
-                        'type'                      => 'entree',
-                        'quantity'                  => $original?->quantity ?? $weight,
-                        'uom'                       => $original?->uom ?? 'KG',
-                        'conversion_factor'         => $original?->conversion_factor ?? 1,
-                        'quantity_in_stock_uom'     => $weight,
-                        'stock_uom'                 => 'KG',
-                        'unit_cost'                 => (float) $coil->cost_per_kg,
-                        'stock_lot_id'              => $coil->stock_lot_id,
-                        'coil_id'                   => $coil->id,
-                        'production_order_id'       => $consumption->production_order_id,
+                        'product_id' => $coil->product_id,
+                        'warehouse_id' => $original?->warehouse_id ?? $coil->warehouse_id,
+                        'type' => 'entree',
+                        'quantity' => $original?->quantity ?? $weight,
+                        'uom' => $original?->uom ?? 'KG',
+                        'conversion_factor' => $original?->conversion_factor ?? 1,
+                        'quantity_in_stock_uom' => $weight,
+                        'stock_uom' => 'KG',
+                        'unit_cost' => (float) $coil->cost_per_kg,
+                        'stock_lot_id' => $coil->stock_lot_id,
+                        'coil_id' => $coil->id,
+                        'production_order_id' => $consumption->production_order_id,
                         'production_consumption_id' => $consumption->id,
-                        'reversal_of_movement_id'   => $consumption->stock_movement_id,
-                        'notes'                     => 'Extourne consommation bobine' . ($reason ? " — {$reason}" : ''),
-                        'idempotency_key'           => 'coil-consumption-reversal:' . $consumption->id,
+                        'reversal_of_movement_id' => $consumption->stock_movement_id,
+                        'notes' => 'Extourne consommation bobine'.($reason ? " — {$reason}" : ''),
+                        'idempotency_key' => 'coil-consumption-reversal:'.$consumption->id,
                     ]);
                 }
             }
@@ -195,6 +208,7 @@ class CoilConsumptionService
         if ((float) $coil->estimated_length > 0 && (float) $coil->initial_weight > 0) {
             return round((float) $coil->initial_weight / (float) $coil->estimated_length, 4);
         }
+
         return null;
     }
 
@@ -213,9 +227,9 @@ class CoilConsumptionService
         $remaining = max(0, round((float) $coil->remaining_weight + $delta, 2));
 
         $status = match (true) {
-            $remaining <= 0.001                            => 'epuisee',
-            $remaining < (float) $coil->initial_weight     => 'en_production',
-            default                                        => 'disponible',
+            $remaining <= 0.001 => 'epuisee',
+            $remaining < (float) $coil->initial_weight => 'en_production',
+            default => 'disponible',
         };
 
         $coil->update(['remaining_weight' => $remaining, 'status' => $status]);

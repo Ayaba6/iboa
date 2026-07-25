@@ -28,13 +28,16 @@ class StockLot extends Model
         'source_id',
         'created_by',
         'status',
+        'valuation_status',
+        'valuation_reason',
+        'valuation_responsible_id',
     ];
 
     protected $casts = [
-        'expiry_date'  => 'date',
-        'received_at'  => 'date',
-        'quantity'     => 'decimal:4',
-        'unit_cost'    => 'decimal:0',
+        'expiry_date' => 'date',
+        'received_at' => 'date',
+        'quantity' => 'decimal:4',
+        'unit_cost' => 'decimal:0',
     ];
 
     // -------------------------------------------------------------------------
@@ -57,23 +60,30 @@ class StockLot extends Model
 
     public function scopeDisponible(Builder $query): Builder
     {
-        return $query->where('status', 'disponible');
+        return $query->where('status', 'disponible')
+            ->where('valuation_status', 'valorisation_definitive');
+    }
+
+    public function scopeValued(Builder $query): Builder
+    {
+        return $query->where('valuation_status', 'valorisation_definitive')
+            ->where('unit_cost', '>', 0);
     }
 
     /** Lots expiring within $days days (still available). */
     public function scopeExpiringSoon(Builder $query, int $days = 30): Builder
     {
         return $query->where('status', 'disponible')
-                     ->whereNotNull('expiry_date')
-                     ->where('expiry_date', '>=', now()->toDateString())
-                     ->where('expiry_date', '<=', now()->addDays($days)->toDateString());
+            ->whereNotNull('expiry_date')
+            ->where('expiry_date', '>=', now()->toDateString())
+            ->where('expiry_date', '<=', now()->addDays($days)->toDateString());
     }
 
     public function scopeExpired(Builder $query): Builder
     {
         return $query->whereNotNull('expiry_date')
-                     ->where('expiry_date', '<', now()->toDateString())
-                     ->where('status', 'disponible');
+            ->where('expiry_date', '<', now()->toDateString())
+            ->where('status', 'disponible');
     }
 
     // -------------------------------------------------------------------------
@@ -88,9 +98,10 @@ class StockLot extends Model
     /** Days until expiry. Negative = already expired. Null = no expiry date. */
     public function daysUntilExpiry(): ?int
     {
-        if (!$this->expiry_date) {
+        if (! $this->expiry_date) {
             return null;
         }
+
         return (int) now()->diffInDays($this->expiry_date, false);
     }
 
@@ -98,10 +109,10 @@ class StockLot extends Model
     {
         return match ($this->status) {
             'disponible' => 'Disponible',
-            'reserve'    => 'Réservé',
-            'expire'     => 'Expiré',
-            'consomme'   => 'Consommé',
-            default      => $this->status,
+            'reserve' => 'Réservé',
+            'expire' => 'Expiré',
+            'consomme' => 'Consommé',
+            default => $this->status,
         };
     }
 }

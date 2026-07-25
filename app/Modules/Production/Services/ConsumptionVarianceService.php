@@ -53,22 +53,24 @@ class ConsumptionVarianceService
         $totalEcartQty   = 0.0;
         $totalEcartValue = 0;
 
-        $bomLines = $order->bill_of_material_id
-            ? BomLine::where('bill_of_material_id', $order->bill_of_material_id)->get()
-            : collect();
+        $bomLines = $order->bom_snapshot
+            ? collect($order->bom_snapshot['lines'] ?? [])
+            : ($order->bill_of_material_id
+                ? $order->billOfMaterial?->lines()->get() ?? collect()
+                : collect());
 
         // Produits couverts : lignes de nomenclature + toute matière consommée hors
         // nomenclature (substitution / matière non prévue → surconsommation nette).
-        $productIds = $bomLines->pluck('product_id')->filter()
+        $productIds = $bomLines->map(fn ($line) => data_get($line, 'product_id'))->filter()
             ->merge(array_keys($realByProduct))->unique();
 
         foreach ($productIds as $pid) {
-            $line = $bomLines->firstWhere('product_id', $pid);
+            $line = $bomLines->first(fn ($candidate) => (int) data_get($candidate, 'product_id') === (int) $pid);
 
             $theoretical = 0.0;
             if ($line) {
-                $theoretical = (float) $line->quantity_per_meter * $meters
-                    * (1 + (float) $line->waste_rate / 100);
+                $theoretical = (float) data_get($line, 'quantity_per_meter') * $meters
+                    * (1 + (float) data_get($line, 'waste_rate') / 100);
             }
 
             $real     = (float) ($realByProduct[$pid]['weight'] ?? 0);

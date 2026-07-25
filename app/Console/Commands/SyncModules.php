@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\Client;
-use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Supplier;
 use Illuminate\Console\Command;
@@ -28,7 +27,7 @@ class SyncModules extends Command
     public function handle(): int
     {
         $this->dry = (bool) $this->option('dry-run');
-        $this->info('══ SYNCHRONISATION INTER-MODULES' . ($this->dry ? ' (dry-run)' : '') . ' ══');
+        $this->info('══ SYNCHRONISATION INTER-MODULES'.($this->dry ? ' (dry-run)' : '').' ══');
 
         $this->syncClientBalances();
         $this->syncSupplierBalances();
@@ -52,9 +51,9 @@ class SyncModules extends Command
             $outstanding = $c->invoices()
                 ->whereIn('status', ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])
                 ->sum('remaining_amount');
-            $credit   = $c->creditNotes()->where('status', 'valide')->sum('remaining_credit');
+            $credit = $c->creditNotes()->where('status', 'valide')->sum('remaining_credit');
             $expected = max(0, (int) ($outstanding - $credit));
-            $avant    = (int) $c->balance;
+            $avant = (int) $c->balance;
 
             if ($avant !== $expected) {
                 $this->line("  Client {$c->name} : balance {$avant} → {$expected}");
@@ -138,12 +137,12 @@ class SyncModules extends Command
             ->get();
 
         foreach ($orders as $o) {
-            $qty       = (float) $o->items->sum('quantity');
+            $qty = (float) $o->items->sum('quantity');
             $delivered = (float) $o->items->sum('delivered_quantity');
-            $expected  = match (true) {
-                $qty <= 0 || $delivered <= 0      => null, // pas de livraison → statut inchangé
-                $delivered + 0.001 >= $qty         => 'livre',
-                default                            => 'partiellement_livre',
+            $expected = match (true) {
+                $qty <= 0 || $delivered <= 0 => null, // pas de livraison → statut inchangé
+                $delivered + 0.001 >= $qty => 'livre',
+                default => 'partiellement_livre',
             };
             if ($expected !== null && $o->status !== $expected
                 && ! ($o->status === 'livre' && $expected === 'livre')) {
@@ -163,7 +162,8 @@ class SyncModules extends Command
     {
         $rows = DB::select("
             SELECT a.id, a.code, a.debit_balance db, a.credit_balance cb,
-                   COALESCE(SUM(l.debit),0) sd, COALESCE(SUM(l.credit),0) sc
+                   COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.debit ELSE 0 END),0) sd,
+                   COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.credit ELSE 0 END),0) sc
             FROM accounts a
             LEFT JOIN journal_entry_lines l ON l.account_id = a.id
             LEFT JOIN journal_entries e ON e.id = l.journal_entry_id

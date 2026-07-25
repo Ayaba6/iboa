@@ -11,6 +11,7 @@ use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Modules\Production\Models\BillOfMaterial;
 use App\Modules\Production\Models\Coil;
 use App\Modules\Production\Models\ProductionConsumption;
 use App\Modules\Production\Models\ProductionOrder;
@@ -18,8 +19,9 @@ use App\Modules\Production\Models\ProductionOutput;
 use App\Modules\Production\Models\ProductionQualityControl;
 use App\Modules\Production\Models\ProductionWaste;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 it('affiche le panneau Traçabilité & Rendement consolidé sur la fiche OF', function () {
     $fy = FiscalYear::firstOrCreate(['label' => 'TRC'], ['starts_at' => '2026-01-01', 'ends_at' => '2026-12-31', 'status' => 'ouvert', 'is_current' => true]);
@@ -31,7 +33,7 @@ it('affiche le panneau Traçabilité & Rendement consolidé sur la fiche OF', fu
     $this->actingAs($u);
 
     $supplier = Supplier::create(['code' => 'F-TRC', 'type' => 'entreprise', 'name' => 'Aciers du Sahel', 'is_active' => true, 'balance' => 0]);
-    $product  = Product::factory()->create(['is_stockable' => true]);
+    $product = Product::factory()->create(['is_stockable' => true]);
     $of = ProductionOrder::factory()->create(['company_id' => $co->id, 'product_id' => $product->id, 'status' => 'termine', 'quantity_produced' => 100]);
 
     // Bobine tracée : lot + fournisseur + caractéristiques
@@ -66,4 +68,50 @@ it('affiche le panneau Traçabilité & Rendement consolidé sur la fiche OF', fu
     $resp->assertSee('Aciers du Sahel');
     $resp->assertSee('Chaîne de traçabilité');
     $resp->assertSee('Contrôle qualité');
+});
+
+it('ne signale pas une consommation bobine à coût nul comme absente', function () {
+    $fy = FiscalYear::firstOrCreate(['label' => 'TRC-ZERO'], ['starts_at' => '2026-01-01', 'ends_at' => '2026-12-31', 'status' => 'ouvert', 'is_current' => true]);
+    $company = Company::firstOrCreate(['name' => 'TRC Zero Co'], ['email' => 'trc-zero@iboa.test', 'current_fiscal_year_id' => $fy->id]);
+    app()->instance('current_company', $company);
+    $role = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $user = User::factory()->create(['company_id' => $company->id, 'email_verified_at' => now()]);
+    $user->assignRole($role);
+    $this->actingAs($user);
+
+    $product = Product::factory()->create(['is_stockable' => true]);
+    $bom = BillOfMaterial::create([
+        'company_id' => $company->id,
+        'product_id' => $product->id,
+        'name' => 'BOM coût nul',
+        'is_active' => true,
+    ]);
+    $order = ProductionOrder::factory()->create([
+        'company_id' => $company->id,
+        'product_id' => $product->id,
+        'bill_of_material_id' => $bom->id,
+        'status' => 'en_cours',
+    ]);
+    $coil = Coil::create([
+        'company_id' => $company->id,
+        'reference' => 'BOB-COUT-ZERO',
+        'initial_weight' => 10,
+        'remaining_weight' => 8,
+        'cost_per_kg' => 0,
+        'purchase_price' => 0,
+        'status' => 'disponible',
+    ]);
+    ProductionConsumption::create([
+        'company_id' => $company->id,
+        'production_order_id' => $order->id,
+        'coil_id' => $coil->id,
+        'weight_consumed' => 2,
+        'length_consumed' => 1,
+        'cost' => 0,
+        'consumed_at' => now(),
+    ]);
+
+    $this->get(route('production.orders.show', $order))
+        ->assertOk()
+        ->assertDontSee('Matière consommée = 0 malgré une nomenclature');
 });

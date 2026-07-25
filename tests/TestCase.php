@@ -7,43 +7,73 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     /**
-     * When running via `php artisan test`, the Laravel app boots once with
-     * APP_ENV=local / DB_CONNECTION=mysql (from .env) BEFORE PHPUnit can apply
-     * phpunit.xml <env> overrides.
+     * Mirror the testing env selected by PHPUnit/Pest back into the real
+     * process env before the Laravel app boots for each test case.
      *
-     * We set the critical vars in $_ENV (which phpdotenv v5 immutable checks)
-     * BEFORE calling parent::setUp() so that any fresh createApplication() call
-     * inside the parent sees sqlite / testing / array drivers instead of the
-     * production values.
-     *
-     * After parent::setUp() we also patch the already-bound IoC key 'env' so
-     * that VerifyCsrfToken::runningUnitTests() returns true (CSRF bypassed).
+     * This keeps the historical safeguard against a stray local `.env`, while
+     * finally respecting `phpunit.mysql.xml` when the suite intentionally asks
+     * for a dedicated MySQL test database.
      */
     protected function setUp(): void
     {
-        // ── Override env vars before the app (re-)bootstraps ─────────────────
-        $overrides = [
-            'APP_ENV'          => 'testing',
-            'DB_CONNECTION'    => 'sqlite',
-            'DB_DATABASE'      => ':memory:',
-            'DB_URL'           => '',
-            'SESSION_DRIVER'   => 'array',
-            'CACHE_STORE'      => 'array',
-            'QUEUE_CONNECTION' => 'sync',
-            'MAIL_MAILER'      => 'array',
-            'BCRYPT_ROUNDS'    => '4',
-        ];
+        $overrides = $this->testingOverrides();
 
         foreach ($overrides as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
             putenv("{$key}={$value}");
-            $_ENV[$key]    = $value;
+            $_ENV[$key] = $value;
             $_SERVER[$key] = $value;
         }
 
         parent::setUp();
 
-        // Patch the already-resolved IoC 'env' binding so
-        // VerifyCsrfToken::runningUnitTests() returns true for all HTTP tests.
-        $this->app['env'] = 'testing';
+        $this->app['env'] = $overrides['APP_ENV'] ?? 'testing';
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    private function testingOverrides(): array
+    {
+        $appEnv = $this->testingEnvValue('APP_ENV') ?: 'testing';
+        $dbConnection = $this->testingEnvValue('DB_CONNECTION') ?: 'sqlite';
+        $dbDatabase = $this->testingEnvValue('DB_DATABASE');
+
+        if (! $dbDatabase && $dbConnection === 'sqlite') {
+            $dbDatabase = ':memory:';
+        }
+
+        return [
+            'APP_ENV' => $appEnv,
+            'DB_CONNECTION' => $dbConnection,
+            'DB_DATABASE' => $dbDatabase,
+            'DB_URL' => $this->testingEnvValue('DB_URL') ?? '',
+            'SESSION_DRIVER' => $this->testingEnvValue('SESSION_DRIVER') ?: 'array',
+            'CACHE_STORE' => $this->testingEnvValue('CACHE_STORE') ?: 'array',
+            'QUEUE_CONNECTION' => $this->testingEnvValue('QUEUE_CONNECTION') ?: 'sync',
+            'MAIL_MAILER' => $this->testingEnvValue('MAIL_MAILER') ?: 'array',
+            'BCRYPT_ROUNDS' => $this->testingEnvValue('BCRYPT_ROUNDS') ?: '4',
+            'PULSE_ENABLED' => $this->testingEnvValue('PULSE_ENABLED') ?: 'false',
+            'TELESCOPE_ENABLED' => $this->testingEnvValue('TELESCOPE_ENABLED') ?: 'false',
+            'NIGHTWATCH_ENABLED' => $this->testingEnvValue('NIGHTWATCH_ENABLED') ?: 'false',
+        ];
+    }
+
+    private function testingEnvValue(string $key): ?string
+    {
+        foreach ([
+            $_ENV[$key] ?? null,
+            $_SERVER[$key] ?? null,
+            getenv($key) ?: null,
+        ] as $value) {
+            if ($value !== null && $value !== '') {
+                return (string) $value;
+            }
+        }
+
+        return null;
     }
 }

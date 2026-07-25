@@ -57,7 +57,7 @@ class ProductionTrackingController extends Controller
                 : null;
         }
 
-        $coils      = Coil::where('status', '!=', 'epuisee')->orderBy('reference')->get(['id', 'reference', 'remaining_weight', 'cost_per_kg']);
+        $coils      = Coil::where('status', '!=', 'epuisee')->where('valuation_status', 'valorisation_definitive')->where('cost_per_kg', '>', 0)->orderBy('reference')->get(['id', 'reference', 'remaining_weight', 'cost_per_kg']);
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
         $nextNumber = $this->nextTrackingNumber();
 

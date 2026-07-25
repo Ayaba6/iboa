@@ -38,7 +38,7 @@ return new class extends Migration
             $table->bigInteger('revised_amount')->default(0);
             $table->bigInteger('committed_amount')->default(0);  // engagements (PO en cours…)
             $table->timestamps();
-            $table->unique(['accounting_budget_id', 'account_id', 'cost_center']);
+            $table->unique(['accounting_budget_id', 'account_id', 'cost_center'], 'abl_budget_account_cc_uq');
         });
     }
 

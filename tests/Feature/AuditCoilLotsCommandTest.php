@@ -207,3 +207,71 @@ it('can revert a reconciliation run through explicit reversal movements', functi
         ->and($reversal)->not->toBeNull()
         ->and((int) $reversal->reversal_of_movement_id)->toBe($original->id);
 });
+
+it('refuses fix without declared backup on a non dedicated database', function () {
+    $originalDefault = config('database.default');
+    $originalDriver = config('database.connections.mysql.driver');
+    $originalDatabase = config('database.connections.mysql.database');
+    $originalEnv = app()->environment();
+
+    try {
+        config([
+            'database.default' => 'mysql',
+            'database.connections.mysql.driver' => 'mysql',
+            'database.connections.mysql.database' => 'iboa_erp',
+        ]);
+        app()->instance('env', 'local');
+
+        $this->artisan('stock:audit-coil-lots', [
+            '--fix' => true,
+            '--run-id' => 'RUN-ACL-NO-BACKUP',
+        ])->expectsOutputToContain('sauvegarde obligatoire')
+            ->assertExitCode(1);
+    } finally {
+        config([
+            'database.default' => $originalDefault,
+            'database.connections.mysql.driver' => $originalDriver,
+            'database.connections.mysql.database' => $originalDatabase,
+        ]);
+        app()->instance('env', $originalEnv);
+    }
+});
+
+it('refuses to revert a reconciliation when later legitimate movements already exist', function () {
+    $company = aclCompany();
+    $user = aclAdmin();
+    $warehouse = aclWarehouse($company);
+    $product = aclCoilProduct($company);
+    aclSeedDiscrepancy($product, $warehouse, $user);
+
+    $this->artisan('stock:audit-coil-lots', [
+        '--fix' => true,
+        '--run-id' => 'RUN-ACL-CONFLICT',
+    ])->assertSuccessful();
+
+    $original = StockMovement::where('idempotency_key', 'opening-reconciliation:RUN-ACL-CONFLICT:' . $product->id . ':' . $warehouse->id)
+        ->firstOrFail();
+
+    StockMovement::create([
+        'product_id' => $product->id,
+        'warehouse_id' => $warehouse->id,
+        'type' => 'entree',
+        'quantity' => 1,
+        'quantity_in_stock_uom' => 1,
+        'stock_uom' => 'KG',
+        'unit_cost' => 100,
+        'total_cost' => 100,
+        'occurred_at' => now()->addSecond(),
+        'reference_type' => 'later-legit',
+        'reference_id' => 99,
+        'created_by' => $user->id,
+    ]);
+
+    $this->artisan('stock:audit-coil-lots', [
+        '--revert-run' => 'RUN-ACL-CONFLICT',
+    ])->expectsOutputToContain('Extourne refusee')
+      ->assertExitCode(1);
+
+    expect(StockMovement::where('idempotency_key', 'opening-reconciliation-reversal:RUN-ACL-CONFLICT:' . $original->id)->count())
+        ->toBe(0);
+});

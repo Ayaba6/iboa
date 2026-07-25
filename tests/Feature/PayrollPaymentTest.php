@@ -1,7 +1,7 @@
 <?php
 
 /**
- * [PAI-07] Virements de paie — génération depuis un run, rapprochement, fichier bancaire.
+ * [PAI-07] Virements de paie ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â gÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â©ration depuis un run, rapprochement, fichier bancaire.
  */
 
 use App\Models\Company;
@@ -24,7 +24,7 @@ function payRun(): PayrollRun
         'status' => 'valide', 'total_net' => 0, 'employee_count' => 0,
     ]);
 
-    foreach ([['Kaboré Moussa', 250000, 'virement'], ['Traoré Awa', 180000, 'especes']] as [$name, $net, $mode]) {
+    foreach ([['KaborÃƒÆ’Ã‚Â© Moussa', 250000, 'virement'], ['TraorÃƒÆ’Ã‚Â© Awa', 180000, 'especes']] as [$name, $net, $mode]) {
         $emp = Employee::factory()->create(['company_id' => $co->id, 'payment_mode' => $mode, 'bank_name' => 'Coris', 'bank_account' => 'BF00'.$net]);
         PayrollItem::create([
             'payroll_run_id' => $run->id, 'employee_id' => $emp->id,
@@ -36,17 +36,17 @@ function payRun(): PayrollRun
     return $run->fresh();
 }
 
-it('génère une ligne de virement par salarié du run', function () {
+it('gÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â¨re une ligne de virement par salariÃƒÆ’Ã‚Â© du run', function () {
     $run = payRun();
     $n = app(PayrollPaymentService::class)->generateForRun($run);
 
     expect($n)->toBe(2);
-    expect(PayrollPayment::where('payroll_run_id', $run->id)->sum('net_amount'))->toBe(430000);
+    expect((int) PayrollPayment::where('payroll_run_id', $run->id)->sum('net_amount'))->toBe(430000);
     $virement = PayrollPayment::where('method', 'virement')->first();
     expect($virement->bank_name)->toBe('Coris')->and($virement->status)->toBe('en_attente');
 });
 
-it('marque un run entier payé et le clôture', function () {
+it('marque un run entier payÃƒÆ’Ã‚Â© et le clÃƒÆ’Ã‚Â´ture', function () {
     $run = payRun();
     $svc = app(PayrollPaymentService::class);
     $svc->generateForRun($run);
@@ -68,6 +68,6 @@ it('produit un fichier bancaire des virements', function () {
     expect($csv)->toContain('Matricule;Nom;Banque;Compte;Montant;Devise');
     expect($csv)->toContain('Coris');
     expect($csv)->toContain('250000');
-    // seuls les virements figurent (pas les espèces)
-    expect(substr_count($csv, "\r\n"))->toBe(2); // en-tête + 1 virement
+    // seuls les virements figurent (pas les espÃƒÆ’Ã‚Â¨ces)
+    expect(substr_count($csv, "\r\n"))->toBe(2); // en-tÃƒÆ’Ã‚Âªte + 1 virement
 });

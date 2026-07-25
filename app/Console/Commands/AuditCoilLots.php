@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\StockLot;
 use App\Models\StockMovement;
+use App\Services\StockService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -25,6 +26,10 @@ use Illuminate\Support\Facades\Log;
  */
 class AuditCoilLots extends Command
 {
+    private const ANOMALY_TOLERANCE_QTY = 0.01;
+
+    private const ANOMALY_TOLERANCE_UNIT = 'KG';
+
     protected $signature = 'stock:audit-coil-lots
                             {--product= : Limiter a un product_id}
                             {--warehouse= : Limiter a un warehouse_id}
@@ -32,6 +37,10 @@ class AuditCoilLots extends Command
                             {--run-id= : Identifiant stable du lot de correction/rejeu}
                             {--revert-run= : Extourner un lot de reconciliation deja applique}
                             {--report= : Chemin du rapport JSON avant/apres}
+                            {--backup-id= : Identifiant de sauvegarde prealable obligatoire hors base de test dediee}
+                            {--backup-file= : Fichier de sauvegarde prealable obligatoire hors base de test dediee}
+                            {--confirm-db= : Nom exact de la base a confirmer hors base de test dediee}
+                            {--allow-production : Autoriser exceptionnellement --fix en production}
                             {--force : Ne pas demander de confirmation interactive hors tests}
                             {--dry-run : Forcer la simulation (defaut)}';
 
@@ -40,34 +49,54 @@ class AuditCoilLots extends Command
     /** @var array<int, int|null> */
     private array $warehouseResolutionCache = [];
 
+    private ?string $lastReportSha256 = null;
+
+    private ?string $lastReportSha256File = null;
+
     public function handle(): int
     {
-        $revertRun = $this->option('revert-run');
-        if (is_string($revertRun) && $revertRun !== '') {
-            return $this->revertRun($revertRun);
-        }
+        try {
+            $revertRun = $this->option('revert-run');
+            if (is_string($revertRun) && $revertRun !== '') {
+                return $this->revertRun($revertRun);
+            }
 
-        return $this->auditAndMaybeFix();
+            return $this->auditAndMaybeFix();
+        } catch (\Throwable $e) {
+            Log::error('[AUDIT stock:audit-coil-lots] echec', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
+        }
     }
 
     private function auditAndMaybeFix(): int
     {
-        $productFilter   = $this->option('product');
+        $productFilter = $this->option('product');
         $warehouseFilter = $this->option('warehouse');
-        $fix             = (bool) $this->option('fix') && ! $this->option('dry-run');
-        $runId           = (string) ($this->option('run-id') ?: 'coil-audit-' . now()->format('Ymd-His'));
+        $fix = (bool) $this->option('fix') && ! $this->option('dry-run');
+        $runIdOption = $this->option('run-id');
+        $runId = (string) ($runIdOption ?: 'coil-audit-'.now()->format('Ymd-His'));
+        $safety = $this->buildSafetyContext($runId, $runIdOption !== null && $runIdOption !== '');
+
+        if ($fix) {
+            $this->assertFixSafetyPreconditions($safety);
+        }
 
         $before = $this->collectScope($productFilter, $warehouseFilter);
         if ($before['summary']['group_count'] === 0) {
             $reportPath = $this->writeReport([
-                'meta' => $this->reportMeta('dry-run', $runId, $productFilter, $warehouseFilter),
+                'meta' => $this->reportMeta('dry-run', $runId, $productFilter, $warehouseFilter, $safety),
                 'before' => $before,
                 'after' => null,
                 'applied' => [],
                 'warnings' => $this->reportWarnings(),
             ]);
             $this->info('Aucun article gere en bobines dans le perimetre.');
-            $this->line('Rapport : ' . $reportPath);
+            $this->line($this->reportDisplay($reportPath));
 
             return self::SUCCESS;
         }
@@ -75,7 +104,7 @@ class AuditCoilLots extends Command
         $this->renderAudit('Avant correction', $before);
 
         $report = [
-            'meta' => $this->reportMeta($fix ? 'fix' : 'dry-run', $runId, $productFilter, $warehouseFilter),
+            'meta' => $this->reportMeta($fix ? 'fix' : 'dry-run', $runId, $productFilter, $warehouseFilter, $safety),
             'before' => $before,
             'after' => null,
             'applied' => [],
@@ -88,21 +117,20 @@ class AuditCoilLots extends Command
                 $this->warn('Aucune modification appliquee. Relancer avec --fix pour creer des mouvements opening_reconciliation traces.');
                 $this->warn('Cette commande ne poste AUCUNE ecriture comptable automatique : une regularisation GL doit etre decidee separement si necessaire.');
             }
-            $this->line('Rapport : ' . $reportPath);
+            $this->line($this->reportDisplay($reportPath));
 
             return $before['summary']['anomalies'] > 0 ? self::FAILURE : self::SUCCESS;
         }
 
-        if (! $this->confirmDangerousAction(
-            sprintf(
-                'Appliquer %d correction(s) de stock sous le run-id %s ?',
-                $before['summary']['fix_candidates'],
-                $runId
-            )
-        )) {
+        if (! $this->confirmDangerousAction(sprintf(
+            'Base %s - appliquer %d correction(s) de stock sous le run-id %s ?',
+            $safety['db_database'] ?: '(inconnue)',
+            $before['summary']['fix_candidates'],
+            $runId,
+        ))) {
             $this->warn('Correction annulee.');
             $reportPath = $this->writeReport($report);
-            $this->line('Rapport : ' . $reportPath);
+            $this->line($this->reportDisplay($reportPath));
 
             return self::FAILURE;
         }
@@ -113,49 +141,44 @@ class AuditCoilLots extends Command
                 continue;
             }
 
-            $productId   = (int) $row['product_id'];
-            $warehouseId = $row['warehouse_id'];
+            $productId = (int) $row['product_id'];
+            $warehouseId = (int) $row['warehouse_id'];
             if (! $warehouseId) {
                 continue;
             }
 
             $delta = round((float) $row['delta_a_c'], 4);
-            if (abs($delta) <= 0.01) {
+            if (abs($delta) <= self::ANOMALY_TOLERANCE_QTY) {
                 continue;
             }
 
             $unitCost = (float) ($row['avg_cost'] ?: $row['lot_unit_cost'] ?: $row['coil_unit_cost'] ?: 0);
-            $movement = app(\App\Services\StockService::class)->recordMovement([
-                'product_id'            => $productId,
-                'warehouse_id'          => (int) $warehouseId,
-                'type'                  => 'ajustement',
-                'quantity'              => $delta,
-                'uom'                   => 'KG',
-                'conversion_factor'     => 1,
+            $movement = app(StockService::class)->recordMovement([
+                'product_id' => $productId,
+                'warehouse_id' => $warehouseId,
+                'type' => 'ajustement',
+                'quantity' => $delta,
+                'uom' => self::ANOMALY_TOLERANCE_UNIT,
+                'conversion_factor' => 1,
                 'quantity_in_stock_uom' => $delta,
-                'stock_uom'             => 'KG',
-                'unit_cost'             => $unitCost,
-                'reference_type'        => self::class,
-                'notes'                 => sprintf(
+                'stock_uom' => self::ANOMALY_TOLERANCE_UNIT,
+                'unit_cost' => $unitCost,
+                'reference_type' => self::class,
+                'notes' => sprintf(
                     'opening_reconciliation run=%s product=%d warehouse=%d A=%.4f B=%.4f C=%.4f D=%.4f',
-                    $runId,
-                    $productId,
-                    $warehouseId,
-                    (float) $row['a_qty'],
-                    (float) $row['b_qty'],
-                    (float) $row['c_qty'],
-                    (float) $row['d_qty'],
+                    $runId, $productId, $warehouseId, (float) $row['a_qty'], (float) $row['b_qty'], (float) $row['c_qty'], (float) $row['d_qty'],
                 ),
-                'idempotency_key'       => sprintf('opening-reconciliation:%s:%d:%d', $runId, $productId, $warehouseId),
-                'allow_negative'        => true,
+                'idempotency_key' => sprintf('opening-reconciliation:%s:%d:%d', $runId, $productId, $warehouseId),
+                'allow_negative' => true,
             ]);
 
             $applied[] = [
                 'movement_id' => $movement->id,
                 'product_id' => $productId,
-                'warehouse_id' => (int) $warehouseId,
+                'warehouse_id' => $warehouseId,
                 'delta_applied' => $delta,
                 'unit_cost' => $unitCost,
+                'estimated_value_gap' => round(abs($delta) * $unitCost, 4),
                 'idempotency_key' => $movement->idempotency_key,
                 'created_by' => $movement->created_by,
                 'occurred_at' => optional($movement->occurred_at)->toIso8601String(),
@@ -177,13 +200,9 @@ class AuditCoilLots extends Command
         $report['after'] = $after;
         $reportPath = $this->writeReport($report);
 
-        $this->info(sprintf(
-            'Corrections appliquees : %d. Anomalies restantes : %d.',
-            count($applied),
-            $after['summary']['anomalies']
-        ));
+        $this->info(sprintf('Corrections appliquees : %d. Anomalies restantes : %d.', count($applied), $after['summary']['anomalies']));
         $this->warn('Aucune ecriture comptable automatique n a ete postee par cette commande : verifier la regularisation GL si la quantite corrigee porte une valeur comptable.');
-        $this->line('Rapport : ' . $reportPath);
+        $this->line($this->reportDisplay($reportPath));
 
         return $after['summary']['anomalies'] > 0 ? self::FAILURE : self::SUCCESS;
     }
@@ -192,7 +211,7 @@ class AuditCoilLots extends Command
     {
         $movements = StockMovement::query()
             ->where('type', 'ajustement')
-            ->where('idempotency_key', 'like', 'opening-reconciliation:' . $runId . ':%')
+            ->where('idempotency_key', 'like', 'opening-reconciliation:'.$runId.':%')
             ->orderBy('id')
             ->get();
 
@@ -210,16 +229,24 @@ class AuditCoilLots extends Command
 
         $applied = [];
         foreach ($movements as $movement) {
+            $conflicts = $this->revertConflicts($movement);
+            if ($conflicts !== []) {
+                throw new \RuntimeException(sprintf(
+                    'Extourne refusee pour le run-id %s : des mouvements ulterieurs existent deja sur produit %d depot %d (%s).',
+                    $runId, (int) $movement->product_id, (int) $movement->warehouse_id, implode(', ', $conflicts),
+                ));
+            }
+
             $delta = -round((float) ($movement->quantity_in_stock_uom ?? $movement->quantity), 4);
-            $reverse = app(\App\Services\StockService::class)->recordMovement([
+            $reverse = app(StockService::class)->recordMovement([
                 'product_id' => $movement->product_id,
                 'warehouse_id' => $movement->warehouse_id,
                 'type' => 'ajustement',
                 'quantity' => $delta,
-                'uom' => $movement->stock_uom ?: $movement->uom ?: 'KG',
+                'uom' => $movement->stock_uom ?: $movement->uom ?: self::ANOMALY_TOLERANCE_UNIT,
                 'conversion_factor' => $movement->conversion_factor ?: 1,
                 'quantity_in_stock_uom' => $delta,
-                'stock_uom' => $movement->stock_uom ?: 'KG',
+                'stock_uom' => $movement->stock_uom ?: self::ANOMALY_TOLERANCE_UNIT,
                 'unit_cost' => (float) ($movement->unit_cost ?? 0),
                 'reference_type' => self::class,
                 'reversal_of_movement_id' => $movement->id,
@@ -239,7 +266,7 @@ class AuditCoilLots extends Command
         }
 
         $reportPath = $this->writeReport([
-            'meta' => $this->reportMeta('revert', $runId, $this->option('product'), $this->option('warehouse')),
+            'meta' => $this->reportMeta('revert', $runId, $this->option('product'), $this->option('warehouse'), $this->buildSafetyContext($runId, true)),
             'before' => null,
             'after' => null,
             'applied' => $applied,
@@ -247,7 +274,7 @@ class AuditCoilLots extends Command
         ]);
 
         $this->info(sprintf('Extourne terminee : %d mouvement(s) crees.', count($applied)));
-        $this->line('Rapport : ' . $reportPath);
+        $this->line($this->reportDisplay($reportPath));
 
         return self::SUCCESS;
     }
@@ -277,24 +304,7 @@ class AuditCoilLots extends Command
             ->values();
 
         if ($productIds->isEmpty()) {
-            return [
-                'rows' => [],
-                'summary' => [
-                    'group_count' => 0,
-                    'product_count' => 0,
-                    'warehouse_count' => 0,
-                    'coil_count' => 0,
-                    'lot_count' => 0,
-                    'movement_count' => 0,
-                    'anomalies' => 0,
-                    'fix_candidates' => 0,
-                    'value_a' => 0.0,
-                    'value_b' => 0.0,
-                    'value_c' => 0.0,
-                    'ml_without_stock_uom' => 0,
-                    'null_uom_count' => 0,
-                ],
-            ];
+            return $this->emptyAuditSummary();
         }
 
         $coilMap = $this->resolveGroupedMap(
@@ -362,24 +372,7 @@ class AuditCoilLots extends Command
             ->values();
 
         if ($keys->isEmpty()) {
-            return [
-                'rows' => [],
-                'summary' => [
-                    'group_count' => 0,
-                    'product_count' => 0,
-                    'warehouse_count' => 0,
-                    'coil_count' => 0,
-                    'lot_count' => 0,
-                    'movement_count' => 0,
-                    'anomalies' => 0,
-                    'fix_candidates' => 0,
-                    'value_a' => 0.0,
-                    'value_b' => 0.0,
-                    'value_c' => 0.0,
-                    'ml_without_stock_uom' => 0,
-                    'null_uom_count' => 0,
-                ],
-            ];
+            return $this->emptyAuditSummary();
         }
 
         $productNames = Product::whereIn('id', $keys->map(fn ($key) => (int) explode(':', $key)[0])->unique()->values())
@@ -403,13 +396,17 @@ class AuditCoilLots extends Command
             $deltaAC = round($a - $c, 4);
             $deltaAB = round($a - $b, 4);
             $deltaDC = round($d - $c, 4);
-            $isAnomaly = abs($deltaAC) > 0.01 || abs($deltaAB) > 0.01 || abs($deltaDC) > 0.01;
+            $referenceUnitCost = round((float) ($stock['avg_cost'] ?? $lot['unit_cost'] ?? $coil['unit_cost'] ?? 0), 4);
+            $estimatedValueGapAC = round(abs($deltaAC) * $referenceUnitCost, 4);
+            $isAnomaly = abs($deltaAC) > self::ANOMALY_TOLERANCE_QTY
+                || abs($deltaAB) > self::ANOMALY_TOLERANCE_QTY
+                || abs($deltaDC) > self::ANOMALY_TOLERANCE_QTY;
 
             $rows[] = [
                 'product_id' => $productId,
-                'product_name' => (string) ($productNames[$productId] ?? ('ID#' . $productId)),
+                'product_name' => (string) ($productNames[$productId] ?? ('ID#'.$productId)),
                 'warehouse_id' => $warehouseId,
-                'warehouse_name' => (string) ($warehouseNames[$warehouseId] ?? ('W#' . $warehouseId)),
+                'warehouse_name' => (string) ($warehouseNames[$warehouseId] ?? ('W#'.$warehouseId)),
                 'coil_count' => (int) ($coil['coil_count'] ?? 0),
                 'lot_count' => (int) ($lot['lot_count'] ?? 0),
                 'movement_count' => (int) ($movement['movement_count'] ?? 0),
@@ -423,13 +420,14 @@ class AuditCoilLots extends Command
                 'value_a' => round((float) ($coil['value_total'] ?? 0), 2),
                 'value_b' => round((float) ($lot['value_total'] ?? 0), 2),
                 'value_c' => round((float) ($stock['value_total'] ?? 0), 2),
+                'estimated_value_gap_a_c' => $estimatedValueGapAC,
                 'avg_cost' => round((float) ($stock['avg_cost'] ?? 0), 4),
                 'lot_unit_cost' => round((float) ($lot['unit_cost'] ?? 0), 4),
                 'coil_unit_cost' => round((float) ($coil['unit_cost'] ?? 0), 4),
                 'ml_without_stock_uom' => (int) ($movement['ml_without_stock_uom'] ?? 0),
                 'null_uom_count' => (int) ($movement['null_uom_count'] ?? 0),
                 'is_anomaly' => $isAnomaly,
-                'needs_fix' => $warehouseId > 0 && abs($deltaAC) > 0.01,
+                'needs_fix' => $warehouseId > 0 && abs($deltaAC) > self::ANOMALY_TOLERANCE_QTY,
             ];
         }
 
@@ -457,6 +455,10 @@ class AuditCoilLots extends Command
                 'value_c' => round((float) collect($rows)->sum('value_c'), 2),
                 'ml_without_stock_uom' => collect($rows)->sum('ml_without_stock_uom'),
                 'null_uom_count' => collect($rows)->sum('null_uom_count'),
+                'cumulative_abs_delta_a_c' => round((float) collect($rows)->sum(fn (array $row) => abs((float) $row['delta_a_c'])), 4),
+                'cumulative_abs_delta_a_b' => round((float) collect($rows)->sum(fn (array $row) => abs((float) $row['delta_a_b'])), 4),
+                'cumulative_abs_delta_d_c' => round((float) collect($rows)->sum(fn (array $row) => abs((float) $row['delta_d_c'])), 4),
+                'estimated_value_gap_a_c' => round((float) collect($rows)->sum('estimated_value_gap_a_c'), 4),
             ],
         ];
     }
@@ -480,7 +482,7 @@ class AuditCoilLots extends Command
                 continue;
             }
 
-            $key = $productId . ':' . $warehouseId;
+            $key = $productId.':'.$warehouseId;
             if (! isset($map[$key])) {
                 $map[$key] = [];
                 foreach ($fields as $field) {
@@ -530,22 +532,24 @@ class AuditCoilLots extends Command
     private function renderAudit(string $title, array $audit): void
     {
         $this->newLine();
-        $this->info('=== ' . $title . ' ===');
+        $this->info('=== '.$title.' ===');
         $this->table(
-            ['Produit', 'Depot', 'Bob.', 'Lots', 'Mouv.', 'A', 'B', 'C', 'D', 'A-C', 'D-C', 'Etat'],
+            ['Produit', 'Depot', 'Bob.', 'Lots', 'Mouv.', 'A', 'B', 'C', 'D', 'A-C', 'A-B', 'D-C', 'Val A-C', 'Etat'],
             array_map(function (array $row): array {
                 return [
-                    $row['product_id'] . ' ' . $row['product_name'],
-                    $row['warehouse_id'] . ' ' . $row['warehouse_name'],
+                    $row['product_id'].' '.$row['product_name'],
+                    $row['warehouse_id'].' '.$row['warehouse_name'],
                     $row['coil_count'],
                     $row['lot_count'],
                     $row['movement_count'],
-                    number_format((float) $row['a_qty'], 2, ',', ' '),
-                    number_format((float) $row['b_qty'], 2, ',', ' '),
-                    number_format((float) $row['c_qty'], 2, ',', ' '),
-                    number_format((float) $row['d_qty'], 2, ',', ' '),
-                    number_format((float) $row['delta_a_c'], 2, ',', ' '),
-                    number_format((float) $row['delta_d_c'], 2, ',', ' '),
+                    number_format((float) $row['a_qty'], 4, ',', ' '),
+                    number_format((float) $row['b_qty'], 4, ',', ' '),
+                    number_format((float) $row['c_qty'], 4, ',', ' '),
+                    number_format((float) $row['d_qty'], 4, ',', ' '),
+                    number_format((float) $row['delta_a_c'], 4, ',', ' '),
+                    number_format((float) $row['delta_a_b'], 4, ',', ' '),
+                    number_format((float) $row['delta_d_c'], 4, ',', ' '),
+                    number_format((float) $row['estimated_value_gap_a_c'], 4, ',', ' '),
                     $row['is_anomaly'] ? 'ECART' : 'OK',
                 ];
             }, $audit['rows'])
@@ -569,6 +573,15 @@ class AuditCoilLots extends Command
             $summary['value_b'],
             $summary['value_c'],
         ));
+        $this->line(sprintf(
+            'Tolerance absolue: %.4f %s. Ecarts cumules |A-C| / |A-B| / |D-C|: %.4f / %.4f / %.4f. Valeur theorique cumulee |A-C|: %.4f.',
+            self::ANOMALY_TOLERANCE_QTY,
+            self::ANOMALY_TOLERANCE_UNIT,
+            $summary['cumulative_abs_delta_a_c'],
+            $summary['cumulative_abs_delta_a_b'],
+            $summary['cumulative_abs_delta_d_c'],
+            $summary['estimated_value_gap_a_c'],
+        ));
         if ($summary['ml_without_stock_uom'] > 0 || $summary['null_uom_count'] > 0) {
             $this->warn(sprintf(
                 'Avertissements historiques: %d mouvement(s) ML sans quantity_in_stock_uom, %d mouvement(s) sans uom.',
@@ -581,7 +594,7 @@ class AuditCoilLots extends Command
     /**
      * @return array<string, mixed>
      */
-    private function reportMeta(string $mode, string $runId, $productFilter, $warehouseFilter): array
+    private function reportMeta(string $mode, string $runId, $productFilter, $warehouseFilter, array $safety): array
     {
         return [
             'generated_at' => now()->toIso8601String(),
@@ -594,6 +607,20 @@ class AuditCoilLots extends Command
                 'product' => $productFilter !== null ? (int) $productFilter : null,
                 'warehouse' => $warehouseFilter !== null ? (int) $warehouseFilter : null,
             ],
+            'tolerance' => [
+                'absolute_qty' => self::ANOMALY_TOLERANCE_QTY,
+                'unit' => self::ANOMALY_TOLERANCE_UNIT,
+                'type' => 'absolute',
+                'configurable' => false,
+                'source' => self::class,
+            ],
+            'reference_formulas' => [
+                'A' => 'sum coils.remaining_weight (KG)',
+                'B' => 'sum stock_lots.quantity (KG)',
+                'C' => 'sum product_stocks.quantity (KG)',
+                'D' => 'sum stock_movements in stock unit (KG)',
+            ],
+            'safety' => $safety,
             'user_id' => auth()->id(),
         ];
     }
@@ -607,6 +634,7 @@ class AuditCoilLots extends Command
             'Cette commande n ecrit aucune ecriture comptable automatique ; verifier la regularisation GL separement si la quantite corrigee porte une valeur comptable.',
             'Les mouvements historiques sans quantity_in_stock_uom restent interpretes via quantity pour conserver la verite historique disponible.',
             'Le rejeu d un meme --run-id est idempotent via idempotency_key ; un run interrompu peut etre relance avec le meme run-id.',
+            'La tolerance de 0.01 KG est absolue et s applique a ce perimetre bobines / lots / product_stocks / stock_movements.',
         ];
     }
 
@@ -624,10 +652,108 @@ class AuditCoilLots extends Command
      */
     private function writeReport(array $report): string
     {
-        $path = (string) ($this->option('report') ?: storage_path('logs/audit-coil-lots-' . now()->format('Ymd-His') . '.json'));
+        $path = (string) ($this->option('report') ?: storage_path('logs/audit-coil-lots-'.now()->format('Ymd-His').'.json'));
         File::ensureDirectoryExists(dirname($path));
         File::put($path, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
+        $this->lastReportSha256 = hash_file('sha256', $path) ?: null;
+        $this->lastReportSha256File = $path.'.sha256';
+        if ($this->lastReportSha256) {
+            File::put($this->lastReportSha256File, $this->lastReportSha256.'  '.basename($path).PHP_EOL);
+        }
+
         return $path;
+    }
+
+    private function reportDisplay(string $path): string
+    {
+        if ($this->lastReportSha256) {
+            return sprintf('Rapport : %s (SHA-256: %s)', $path, $this->lastReportSha256);
+        }
+
+        return 'Rapport : '.$path;
+    }
+
+    /**
+     * @return array{rows: array<int, array<string, mixed>>, summary: array<string, mixed>}
+     */
+    private function emptyAuditSummary(): array
+    {
+        return [
+            'rows' => [],
+            'summary' => [
+                'group_count' => 0, 'product_count' => 0, 'warehouse_count' => 0, 'coil_count' => 0, 'lot_count' => 0, 'movement_count' => 0,
+                'anomalies' => 0, 'fix_candidates' => 0, 'value_a' => 0.0, 'value_b' => 0.0, 'value_c' => 0.0,
+                'ml_without_stock_uom' => 0, 'null_uom_count' => 0, 'cumulative_abs_delta_a_c' => 0.0, 'cumulative_abs_delta_a_b' => 0.0,
+                'cumulative_abs_delta_d_c' => 0.0, 'estimated_value_gap_a_c' => 0.0,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildSafetyContext(string $runId, bool $runIdExplicit): array
+    {
+        $connection = (string) DB::getDefaultConnection();
+        $database = (string) (config("database.connections.{$connection}.database") ?? '');
+        $driver = (string) (config("database.connections.{$connection}.driver") ?? '');
+        $backupFile = (string) ($this->option('backup-file') ?: '');
+
+        return [
+            'db_connection' => $connection,
+            'driver' => $driver, 'db_database' => $database, 'run_id' => $runId, 'run_id_explicit' => $runIdExplicit,
+            'backup_id' => (string) ($this->option('backup-id') ?: ''), 'backup_file' => $backupFile,
+            'backup_file_exists' => $backupFile !== '' ? File::exists($backupFile) : null,
+            'confirm_db' => (string) ($this->option('confirm-db') ?: ''), 'allow_production' => (bool) $this->option('allow-production'),
+            'dedicated_test_database' => $this->isDedicatedTestDatabase($driver, $database),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $safety
+     */
+    private function assertFixSafetyPreconditions(array $safety): void
+    {
+        if (app()->environment('production') && ! $safety['allow_production']) {
+            throw new \RuntimeException('Execution de --fix interdite en production sans --allow-production.');
+        }
+        if ($safety['dedicated_test_database']) {
+            return;
+        }
+        if (! $safety['run_id_explicit']) {
+            throw new \RuntimeException('Execution de --fix refusee : un --run-id explicite est obligatoire hors base de test dediee.');
+        }
+        if ($safety['backup_id'] === '' && $safety['backup_file'] === '') {
+            throw new \RuntimeException('Execution de --fix refusee : sauvegarde obligatoire. Fournissez --backup-id ou --backup-file hors base de test dediee.');
+        }
+        if ($safety['backup_file'] !== '' && ! $safety['backup_file_exists']) {
+            throw new \RuntimeException('Execution de --fix refusee : le fichier de sauvegarde declare est introuvable.');
+        }
+        if ($safety['confirm_db'] !== $safety['db_database']) {
+            throw new \RuntimeException(sprintf('Execution de --fix refusee : confirmez explicitement la base cible avec --confirm-db=%s.', $safety['db_database'] !== '' ? $safety['db_database'] : '(base inconnue)'));
+        }
+    }
+
+    private function isDedicatedTestDatabase(string $driver, string $database): bool
+    {
+        if ($driver === 'sqlite' && $database === ':memory:') {
+            return true;
+        }
+        if ($driver === 'mysql' && $database !== '') {
+            return (bool) preg_match('/(^|_)(test|testing)(_|$)/i', $database);
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function revertConflicts(StockMovement $movement): array
+    {
+        return StockMovement::query()->where('product_id', $movement->product_id)->where('warehouse_id', $movement->warehouse_id)->where('id', '>', $movement->id)->where(function ($q) use ($movement) {
+            $q->whereNull('reversal_of_movement_id')->orWhere('reversal_of_movement_id', '!=', $movement->id);
+        })->orderBy('id')->limit(10)->get(['id', 'type', 'idempotency_key'])->map(fn ($row) => '#'.$row->id.':'.$row->type.':'.($row->idempotency_key ?: 'sans-cle'))->all();
     }
 }

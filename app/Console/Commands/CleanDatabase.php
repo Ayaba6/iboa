@@ -3,27 +3,27 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * [QA §6-7] Nettoyage CONTRÔLÉ des anomalies de données auto-corrigeables.
- * Dry-run OBLIGATOIRE par défaut : sans --fix, rien n'est modifié.
+ * [QA §6-7] Controlled cleanup of auto-correctable data anomalies.
+ * Dry-run is mandatory by default: without --fix, nothing is changed.
  *
- * Périmètre volontairement limité aux corrections sûres du cahier (§7) :
- *  - espaces de début/fin sur les libellés et codes ;
- *  - chaînes vides remplacées par NULL sur les colonnes nullables ;
- *  - codes référentiels remis en MAJUSCULES (convention projet).
- * JAMAIS de fusion de doublons, de suppression, ni de correction métier —
- * ces cas sont détectés par a3:audit-database et tranchés par un humain.
+ * Scope is intentionally limited to safe corrections from the QA checklist:
+ *  - trim leading/trailing spaces on labels and codes;
+ *  - replace empty strings with NULL on nullable columns;
+ *  - normalize reference codes to uppercase.
+ * Never merge duplicates, delete rows, or apply business corrections.
  */
 class CleanDatabase extends Command
 {
-    protected $signature = 'a3:clean-database {--fix : Appliquer réellement les corrections (sinon dry-run)}';
+    protected $signature = 'a3:clean-database {--fix : Apply the corrections for real (otherwise dry-run)}';
 
-    protected $description = 'Nettoyage contrôlé des données (espaces, vides→NULL, casse des codes) — dry-run par défaut';
+    protected $description = 'Controlled data cleanup (spaces, empty strings to NULL, code casing) with dry-run by default';
 
-    /** [table, colonne] : libellés à débarrasser des espaces parasites. */
+    /** [table, column] pairs for trimming surrounding spaces. */
     private const TRIM = [
         ['clients', 'name'], ['clients', 'trade_name'], ['clients', 'email'],
         ['suppliers', 'name'], ['suppliers', 'email'],
@@ -33,7 +33,7 @@ class CleanDatabase extends Command
         ['units', 'name'], ['warehouses', 'name'], ['warehouses', 'code'],
     ];
 
-    /** [table, colonne] : chaîne vide → NULL (colonnes nullables). */
+    /** [table, column] pairs for empty string to NULL normalization. */
     private const EMPTY_TO_NULL = [
         ['clients', 'email'], ['clients', 'phone'], ['clients', 'trade_name'],
         ['suppliers', 'email'], ['suppliers', 'phone'],
@@ -41,7 +41,7 @@ class CleanDatabase extends Command
         ['product_families', 'code'], ['product_families', 'description'],
     ];
 
-    /** [table, colonne] : codes référentiels en MAJUSCULES. */
+    /** [table, column] pairs for uppercase code normalization. */
     private const UPPERCASE = [
         ['products', 'code_article'],
         ['item_categories', 'code'],
@@ -55,52 +55,84 @@ class CleanDatabase extends Command
         $this->info($fix ? 'Mode CORRECTION' : 'Mode DRY-RUN (aucune modification)');
         $total = 0;
 
-        $run = function (string $label, string $table, string $col, $whereFn, $fixFn) use ($fix, &$total) {
-            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $col)) {
+        $run = function (string $label, string $table, string $column, $whereFn, $fixFn) use ($fix, &$total) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
                 return;
             }
-            $n = $whereFn(DB::table($table))->count();
-            if ($n === 0) {
+
+            $count = $whereFn(DB::table($table))->count();
+            if ($count === 0) {
                 return;
             }
-            $total += $n;
-            $this->warn("  ⚠ $table.$col : $n ligne(s) — $label");
+
+            $total += $count;
+            $this->warn("  ! {$table}.{$column} : {$count} ligne(s) - {$label}");
+
             if ($fix) {
                 DB::transaction(fn () => $fixFn($whereFn(DB::table($table))));
-                $this->line('    → corrigé');
+                $this->line('    -> corrige');
             }
         };
 
-        $this->line('<comment>── Espaces parasites ──</comment>');
-        foreach (self::TRIM as [$t, $c]) {
-            $run('espaces début/fin', $t, $c,
-                fn ($q) => $q->whereNotNull($c)->where(fn ($w) => $w->where($c, 'LIKE', ' %')->orWhere($c, 'LIKE', '% ')),
-                fn ($q) => $q->update([$c => DB::raw("TRIM($c)")]));
+        $this->line('<comment>-- Espaces parasites --</comment>');
+        foreach (self::TRIM as [$table, $column]) {
+            $run(
+                'espaces debut/fin',
+                $table,
+                $column,
+                fn (Builder $query) => $query->whereNotNull($column)->where(fn (Builder $nested) => $nested
+                    ->where($column, 'LIKE', ' %')
+                    ->orWhere($column, 'LIKE', '% ')),
+                fn (Builder $query) => $query->update([$column => DB::raw('TRIM('.$this->wrapColumn($column).')')])
+            );
         }
 
-        $this->line('<comment>── Chaînes vides → NULL ──</comment>');
-        foreach (self::EMPTY_TO_NULL as [$t, $c]) {
-            $run('vide → NULL', $t, $c,
-                fn ($q) => $q->where($c, ''),
-                fn ($q) => $q->update([$c => null]));
+        $this->line('<comment>-- Chaines vides vers NULL --</comment>');
+        foreach (self::EMPTY_TO_NULL as [$table, $column]) {
+            $run(
+                'vide vers NULL',
+                $table,
+                $column,
+                fn (Builder $query) => $query->where($column, ''),
+                fn (Builder $query) => $query->update([$column => null])
+            );
         }
 
-        $this->line('<comment>── Casse des codes (MAJUSCULES) ──</comment>');
-        foreach (self::UPPERCASE as [$t, $c]) {
-            $run('code en minuscules', $t, $c,
-                fn ($q) => $q->whereNotNull($c)->whereRaw("$c != UPPER($c)"),
-                fn ($q) => $q->update([$c => DB::raw("UPPER($c)")]));
+        $this->line('<comment>-- Casse des codes (MAJUSCULES) --</comment>');
+        foreach (self::UPPERCASE as [$table, $column]) {
+            $run(
+                'code en minuscules',
+                $table,
+                $column,
+                fn (Builder $query) => $this->uppercaseMismatchQuery($query, $column),
+                fn (Builder $query) => $query->update([$column => DB::raw('UPPER('.$this->wrapColumn($column).')')])
+            );
         }
 
         $this->newLine();
         if ($total === 0) {
-            $this->info('Rien à nettoyer.');
+            $this->info('Rien a nettoyer.');
         } elseif (! $fix) {
-            $this->warn("$total ligne(s) corrigeable(s). Relancer avec --fix pour appliquer.");
+            $this->warn("{$total} ligne(s) corrigeable(s). Relancer avec --fix pour appliquer.");
         } else {
-            $this->info("$total ligne(s) corrigée(s). Relancer a3:audit-database pour confirmer.");
+            $this->info("{$total} ligne(s) corrigee(s). Relancer a3:audit-database pour confirmer.");
         }
 
         return self::SUCCESS;
+    }
+
+    private function uppercaseMismatchQuery(Builder $query, string $column): Builder
+    {
+        $wrapped = $this->wrapColumn($column);
+        $expression = DB::getDriverName() === 'mysql'
+            ? "BINARY {$wrapped} <> BINARY UPPER({$wrapped})"
+            : "{$wrapped} != UPPER({$wrapped})";
+
+        return $query->whereNotNull($column)->whereRaw($expression);
+    }
+
+    private function wrapColumn(string $column): string
+    {
+        return DB::getQueryGrammar()->wrap($column);
     }
 }

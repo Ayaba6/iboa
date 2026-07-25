@@ -4,6 +4,7 @@ namespace App\Modules\Production\Services;
 
 use App\Models\Reception;
 use App\Models\StockLot;
+use App\Models\StockMovement;
 use App\Modules\Production\Models\Coil;
 use App\Services\StockService;
 use Illuminate\Support\Facades\Auth;
@@ -31,10 +32,10 @@ class CoilReceptionService
      * @return array<int, Coil> bobines créées
      */
     /**
-     * @param bool $onlyTracked  true = ne générer que pour les articles à suivi
-     *                           bobine/lot (chemin AUTO à la validation achats) ;
-     *                           false = tous les items (bouton manuel du flux
-     *                           réception bobines, comportement historique).
+     * @param  bool  $onlyTracked  true = ne générer que pour les articles à suivi
+     *                             bobine/lot (chemin AUTO à la validation achats) ;
+     *                             false = tous les items (bouton manuel du flux
+     *                             réception bobines, comportement historique).
      */
     public function createFromReception(Reception $reception, bool $onlyTracked = false): array
     {
@@ -69,29 +70,34 @@ class CoilReceptionService
                 }
                 $i++;
 
-                $costPerKg   = (float) $item->unit_cost;
+                $costPerKg = (float) $item->unit_cost;
                 $warehouseId = $reception->warehouse_id ?? $item->warehouse_id ?? null;
+                if ($tracked && $costPerKg <= 0) {
+                    throw ValidationException::withMessages([
+                        'cost' => "Réception {$reception->number} : l’article bobine « {$p->name} » n’a aucun coût unitaire. Valorisez la commande/réception avant de générer la bobine.",
+                    ]);
+                }
 
                 // ── Lot de réception (traçabilité, quantité restante en KG) ──
                 $lot = null;
                 if ($item->product_id && $warehouseId) {
                     $lot = StockLot::firstOrCreate(
                         [
-                            'product_id'   => $item->product_id,
+                            'product_id' => $item->product_id,
                             'warehouse_id' => $warehouseId,
-                            'lot_number'   => $item->lot_number ?: ('LOT-' . $reception->number . '-' . $i),
+                            'lot_number' => $item->lot_number ?: ('LOT-'.$reception->number.'-'.$i),
                         ],
                         [
-                            'quantity'          => 0,
-                            'initial_quantity'  => 0,
+                            'quantity' => 0,
+                            'initial_quantity' => 0,
                             'reserved_quantity' => 0,
-                            'stock_uom'         => 'KG',
-                            'unit_cost'         => round($costPerKg, 2),
-                            'received_at'       => $reception->received_at ?? now(),
-                            'status'            => 'disponible',
-                            'source_type'       => Reception::class,
-                            'source_id'         => $reception->id,
-                            'created_by'        => Auth::id(),
+                            'stock_uom' => 'KG',
+                            'unit_cost' => round($costPerKg, 2),
+                            'received_at' => $reception->received_at ?? now(),
+                            'status' => 'disponible',
+                            'source_type' => Reception::class,
+                            'source_id' => $reception->id,
+                            'created_by' => Auth::id(),
                         ]
                     );
                     // initial_quantity cumule les poids reçus sur ce lot.
@@ -99,23 +105,23 @@ class CoilReceptionService
                 }
 
                 $coil = Coil::create([
-                    'company_id'       => $reception->company_id,
-                    'product_id'       => $item->product_id,
-                    'supplier_id'      => $reception->supplier_id,
-                    'reception_id'     => $reception->id,
-                    'warehouse_id'     => $warehouseId,
-                    'stock_lot_id'     => $lot?->id,
-                    'reference'        => 'BOB-' . $reception->number . '-' . str_pad((string) $i, 2, '0', STR_PAD_LEFT),
-                    'lot_number'       => $item->lot_number,
+                    'company_id' => $reception->company_id,
+                    'product_id' => $item->product_id,
+                    'supplier_id' => $reception->supplier_id,
+                    'reception_id' => $reception->id,
+                    'warehouse_id' => $warehouseId,
+                    'stock_lot_id' => $lot?->id,
+                    'reference' => 'BOB-'.$reception->number.'-'.str_pad((string) $i, 2, '0', STR_PAD_LEFT),
+                    'lot_number' => $item->lot_number,
                     'kg_per_linear_meter' => $item->product?->kg_per_linear_meter,
-                    'initial_weight'   => $weight,
+                    'initial_weight' => $weight,
                     'remaining_weight' => $weight,
                     'estimated_length' => 0,
-                    'purchase_price'   => (int) round($weight * $costPerKg),
-                    'cost_per_kg'      => round($costPerKg, 2),
-                    'received_at'      => $reception->received_at ?? now(),
-                    'status'           => 'disponible',
-                    'created_by'       => Auth::id(),
+                    'purchase_price' => (int) round($weight * $costPerKg),
+                    'cost_per_kg' => round($costPerKg, 2),
+                    'received_at' => $reception->received_at ?? now(),
+                    'status' => 'disponible',
+                    'created_by' => Auth::id(),
                 ]);
 
                 // ── Entrée de stock économique UNIQUE (KG) : mouvement + lot +
@@ -125,7 +131,7 @@ class CoilReceptionService
                 // traçabilité pure — on crédite le lot sans second mouvement
                 // (constaté en recette : stock 20 au lieu de 10).
                 $alreadyStocked = $item->product_id && $warehouseId
-                    && \App\Models\StockMovement::where('product_id', $item->product_id)
+                    && StockMovement::where('product_id', $item->product_id)
                         ->where('warehouse_id', $warehouseId)
                         ->where('type', 'entree')
                         ->where(fn ($q) => $q
@@ -137,21 +143,21 @@ class CoilReceptionService
                     $lot?->increment('quantity', $weight);
                 } elseif ($item->product_id && $warehouseId) {
                     $movement = $this->stock->recordMovement([
-                        'product_id'            => $item->product_id,
-                        'warehouse_id'          => $warehouseId,
-                        'type'                  => 'entree',
-                        'quantity'              => $weight,
-                        'uom'                   => 'KG',
-                        'conversion_factor'     => 1,
+                        'product_id' => $item->product_id,
+                        'warehouse_id' => $warehouseId,
+                        'type' => 'entree',
+                        'quantity' => $weight,
+                        'uom' => 'KG',
+                        'conversion_factor' => 1,
                         'quantity_in_stock_uom' => $weight,
-                        'stock_uom'             => 'KG',
-                        'unit_cost'             => round($costPerKg, 2),
-                        'stock_lot_id'          => $lot?->id,
-                        'coil_id'               => $coil->id,
-                        'reference_type'        => Reception::class,
-                        'reference_id'          => $reception->id,
-                        'notes'                 => "Réception bobine {$coil->reference} — {$reception->number}",
-                        'idempotency_key'       => 'coil-reception:' . $reception->id . ':' . $coil->id,
+                        'stock_uom' => 'KG',
+                        'unit_cost' => round($costPerKg, 2),
+                        'stock_lot_id' => $lot?->id,
+                        'coil_id' => $coil->id,
+                        'reference_type' => Reception::class,
+                        'reference_id' => $reception->id,
+                        'notes' => "Réception bobine {$coil->reference} — {$reception->number}",
+                        'idempotency_key' => 'coil-reception:'.$reception->id.':'.$coil->id,
                     ]);
                 }
 

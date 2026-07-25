@@ -2,10 +2,12 @@
 
 namespace App\Modules\Production\Services;
 
+use App\Models\Order;
 use App\Models\ProductStock;
 use App\Models\StockReservation;
 use App\Models\Warehouse;
 use App\Modules\Production\Models\ProductionOrder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -44,7 +46,7 @@ class ReservationService
         // livrée/facturée/annulée n'a plus rien à réserver, et une commande
         // partiellement livrée n'a besoin que du reliquat.
         if ($order->order_id) {
-            $salesOrder = \App\Models\Order::with('items')->find($order->order_id);
+            $salesOrder = Order::with('items')->find($order->order_id);
             if ($salesOrder) {
                 if (in_array($salesOrder->status, ['livre', 'facture', 'annule'], true)) {
                     throw ValidationException::withMessages(['order' => sprintf(
@@ -59,28 +61,36 @@ class ReservationService
                 if ($lignesProduit->isNotEmpty()) {
                     $resteALivrer = (float) $lignesProduit
                         ->sum(fn ($i) => max(0, (float) $i->quantity - (float) $i->delivered_quantity));
-                    if ($resteALivrer <= 0) {
-                        throw ValidationException::withMessages(['order' => 'Les quantités de la commande sont déjà entièrement livrées — aucune réservation à créer.']);
+                    $dejaReserve = (float) StockReservation::where('order_id', $salesOrder->id)
+                        ->where('product_id', $order->product_id)
+                        ->where('status', 'reserved')
+                        ->sum('quantity');
+                    $resteAReserver = max(0, $resteALivrer - $dejaReserve);
+                    if ($resteAReserver <= 0) {
+                        throw ValidationException::withMessages(['order' => 'Les quantitÃ©s de la commande sont dÃ©jÃ entiÃ¨rement livrÃ©es ou rÃ©servÃ©es â€” aucune rÃ©servation Ã crÃ©er.']);
                     }
-                    $qty = min($qty, $resteALivrer);
+                    $qty = min($qty, $resteAReserver);
                 }
             }
         }
 
-        $warehouseId = $order->outputs()->whereNotNull('warehouse_id')->value('warehouse_id')
+        $output = $order->outputs()->whereNotNull('warehouse_id')->latest('id')->first();
+        $warehouseId = ($output?->quality_released_at && $output->release_warehouse_id
+                ? $output->release_warehouse_id
+                : $output?->warehouse_id)
             ?? Warehouse::where('company_id', $order->company_id)->orderByDesc('is_default')->value('id');
 
         return DB::transaction(function () use ($order, $qty, $warehouseId) {
             $reservation = StockReservation::create([
-                'company_id'          => $order->company_id,
-                'order_id'            => $order->order_id,
+                'company_id' => $order->company_id,
+                'order_id' => $order->order_id,
                 'production_order_id' => $order->id,
-                'product_id'          => $order->product_id,
-                'warehouse_id'        => $warehouseId,
-                'quantity'            => $qty,
-                'status'              => 'reserved',
-                'reserved_at'         => now(),
-                'created_by'          => Auth::id(),
+                'product_id' => $order->product_id,
+                'warehouse_id' => $warehouseId,
+                'quantity' => $qty,
+                'status' => 'reserved',
+                'reserved_at' => now(),
+                'created_by' => Auth::id(),
             ]);
 
             $this->adjustReserved($order->product_id, $warehouseId, $qty);
@@ -94,7 +104,7 @@ class ReservationService
      * (réservation directe stock, sans OF). Répartit sur les entrepôts disposant
      * de stock. Retourne la quantité totale réservée.
      */
-    public function reserveStockForOrder(\App\Models\Order $order): float
+    public function reserveStockForOrder(Order $order): float
     {
         // [GARDE anti-résa fantôme] Un OrderConfirmed ré-émis (re-validation
         // workflow) sur une commande déjà livrée/facturée/annulée re-réservait
@@ -124,20 +134,20 @@ class ReservationService
                         break;
                     }
                     $avail = (float) $stock->quantity - (float) $stock->reserved_quantity;
-                    $take  = min($need, $avail);
+                    $take = min($need, $avail);
                     if ($take <= 0) {
                         continue;
                     }
 
                     StockReservation::create([
-                        'company_id'   => $order->company_id,
-                        'order_id'     => $order->id,
-                        'product_id'   => $line['product_id'],
+                        'company_id' => $order->company_id,
+                        'order_id' => $order->id,
+                        'product_id' => $line['product_id'],
                         'warehouse_id' => $stock->warehouse_id,
-                        'quantity'     => $take,
-                        'status'       => 'reserved',
-                        'reserved_at'  => now(),
-                        'created_by'   => Auth::id(),
+                        'quantity' => $take,
+                        'status' => 'reserved',
+                        'reserved_at' => now(),
+                        'created_by' => Auth::id(),
                     ]);
                     $stock->update(['reserved_quantity' => (float) $stock->reserved_quantity + $take]);
 
@@ -174,7 +184,7 @@ class ReservationService
         DB::transaction(function () use ($order, $bom, $qty, &$totalReserved) {
             foreach ($bom->lines as $line) {
                 $product = $line->product;
-                $per     = (float) $line->quantity_per_meter;
+                $per = (float) $line->quantity_per_meter;
                 if (! $product || $per <= 0 || $qty <= 0) {
                     continue;
                 }
@@ -199,20 +209,20 @@ class ReservationService
                 }
 
                 $avail = (float) $stock->quantity - (float) $stock->reserved_quantity;
-                $take  = min($need, $avail);
+                $take = min($need, $avail);
                 if ($take <= 0) {
                     continue;
                 }
 
                 StockReservation::create([
-                    'company_id'          => $order->company_id,
+                    'company_id' => $order->company_id,
                     'production_order_id' => $order->id,
-                    'product_id'          => $product->id,
-                    'warehouse_id'        => $stock->warehouse_id,
-                    'quantity'            => $take,
-                    'status'              => 'reserved',
-                    'reserved_at'         => now(),
-                    'created_by'          => Auth::id(),
+                    'product_id' => $product->id,
+                    'warehouse_id' => $stock->warehouse_id,
+                    'quantity' => $take,
+                    'status' => 'reserved',
+                    'reserved_at' => now(),
+                    'created_by' => Auth::id(),
                 ]);
                 $stock->update(['reserved_quantity' => (float) $stock->reserved_quantity + $take]);
                 $totalReserved += $take;
@@ -240,7 +250,7 @@ class ReservationService
     }
 
     /** Libère toutes les réservations actives d'une commande (annulation commande). */
-    public function releaseForOrder(\App\Models\Order $order): int
+    public function releaseForOrder(Order $order): int
     {
         return $this->releaseMany(
             StockReservation::where('order_id', $order->id)->where('status', 'reserved')->get()
@@ -255,7 +265,7 @@ class ReservationService
         );
     }
 
-    private function releaseMany(\Illuminate\Support\Collection $reservations): int
+    private function releaseMany(Collection $reservations): int
     {
         $n = 0;
         foreach ($reservations as $r) {

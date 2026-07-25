@@ -22,8 +22,9 @@ use App\Services\CommercialWorkflowService;
 use App\Services\OrderService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Artisan;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function w131Company(): Company
 {
@@ -31,6 +32,7 @@ function w131Company(): Company
         ['label' => 'W131-2026'],
         ['starts_at' => '2026-01-01', 'ends_at' => '2026-12-31', 'status' => 'ouvert', 'is_current' => true]
     );
+
     return Company::firstOrCreate(['name' => 'W131 Co'], ['email' => 'w131@iboa.test', 'current_fiscal_year_id' => $fy->id]);
 }
 
@@ -39,29 +41,37 @@ function w131User(string $role): User
     Artisan::call('db:seed', ['--class' => RolesAndPermissionsSeeder::class, '--force' => true]);
     $u = User::factory()->create(['company_id' => w131Company()->id, 'email_verified_at' => now(), 'is_active' => true]);
     $u->assignRole($role);
+
     return $u;
 }
 
 function w131Order(User $creator, int $unitPrice = 50_000): Order
 {
     $company = w131Company();
-    $client  = Client::factory()->create(['is_active' => true]);
-    $product = Product::factory()->create(['is_stockable' => false]);
-    $unit    = Unit::firstOrCreate(['name' => 'Pièce W131'], ['abbreviation' => 'pc131']);
-    $tax     = TaxRate::firstOrCreate(['name' => 'TVA W131'], ['short_name' => 'TVA131', 'rate' => 18, 'is_active' => true]);
+    $client = Client::factory()->create(['is_active' => true]);
+    $product = Product::factory()->create([
+        'is_stockable' => false,
+        'purchase_price' => 10_000,
+        'last_purchase_price' => 10_000,
+        'weighted_avg_cost' => 0,
+        'cout_standard' => 0,
+        'min_sale_price' => 0,
+    ]);
+    $unit = Unit::firstOrCreate(['name' => 'Pièce W131'], ['abbreviation' => 'pc131']);
+    $tax = TaxRate::firstOrCreate(['name' => 'TVA W131'], ['short_name' => 'TVA131', 'rate' => 18, 'is_active' => true]);
 
     return app(OrderService::class)->create([
-        'company_id'     => $company->id,
+        'company_id' => $company->id,
         'fiscal_year_id' => $company->current_fiscal_year_id,
-        'client_id'      => $client->id,
-        'issued_at'      => now()->toDateString(),
-        'items'          => [[
-            'product_id'      => $product->id,
-            'quantity'        => 2,
-            'unit_price'      => $unitPrice,
-            'unit_id'         => $unit->id,
-            'tax_rate_id'     => $tax->id,
-            'tax_rate_value'  => 18,
+        'client_id' => $client->id,
+        'issued_at' => now()->toDateString(),
+        'items' => [[
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'unit_price' => $unitPrice,
+            'unit_id' => $unit->id,
+            'tax_rate_id' => $tax->id,
+            'tax_rate_value' => 18,
         ]],
     ]);
 }
@@ -79,7 +89,7 @@ it('interdit au commercial de valider financièrement une commande', function ()
 
 it('permet au comptable (Finance) de valider une commande soumise', function () {
     $commercial = w131User('commercial');
-    $comptable  = w131User('comptable');
+    $comptable = w131User('comptable');
 
     $this->actingAs($commercial);
     $order = w131Order($commercial);
@@ -93,7 +103,7 @@ it('permet au comptable (Finance) de valider une commande soumise', function () 
 
 it('interdit au commercial de modifier les prix après validation', function () {
     $commercial = w131User('commercial');
-    $comptable  = w131User('comptable');
+    $comptable = w131User('comptable');
 
     $this->actingAs($commercial);
     $order = w131Order($commercial, 50_000);
@@ -105,15 +115,15 @@ it('interdit au commercial de modifier les prix après validation', function () 
     // Le commercial tente de changer le prix unitaire sur la commande confirmée
     $this->actingAs($commercial);
     $order = $order->fresh();
-    $item  = $order->items->first();
+    $item = $order->items->first();
 
     expect(fn () => app(OrderService::class)->update($order, [
         'items' => [[
-            'product_id'     => $item->product_id,
-            'quantity'       => (float) $item->quantity,
-            'unit_price'     => 99_000, // ← changement de prix interdit
-            'unit_id'        => $item->unit_id,
-            'tax_rate_id'    => $item->tax_rate_id,
+            'product_id' => $item->product_id,
+            'quantity' => (float) $item->quantity,
+            'unit_price' => 99_000, // ← changement de prix interdit
+            'unit_id' => $item->unit_id,
+            'tax_rate_id' => $item->tax_rate_id,
             'tax_rate_value' => (float) $item->tax_rate_value,
         ]],
     ]))->toThrow(RuntimeException::class, 'verrouillés');
@@ -123,9 +133,9 @@ it('interdit au commercial de modifier les prix après validation', function () 
 });
 
 it('permet au responsable commercial de modifier une commande validée', function () {
-    $commercial  = w131User('commercial');
+    $commercial = w131User('commercial');
     $responsable = w131User('responsable_commercial');
-    $comptable   = w131User('comptable');
+    $comptable = w131User('comptable');
 
     $this->actingAs($commercial);
     $order = w131Order($commercial, 50_000);
@@ -160,11 +170,11 @@ it('laisse le commercial libre de modifier une commande en brouillon', function 
     $item = $order->items->first();
     app(OrderService::class)->update($order, [
         'items' => [[
-            'product_id'     => $item->product_id,
-            'quantity'       => 3.0,
-            'unit_price'     => 60_000,
-            'unit_id'        => $item->unit_id,
-            'tax_rate_id'    => $item->tax_rate_id,
+            'product_id' => $item->product_id,
+            'quantity' => 3.0,
+            'unit_price' => 60_000,
+            'unit_id' => $item->unit_id,
+            'tax_rate_id' => $item->tax_rate_id,
             'tax_rate_value' => (float) $item->tax_rate_value,
         ]],
     ]);
