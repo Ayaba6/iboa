@@ -1,11 +1,23 @@
 <?php
 
 namespace App\Modules\Production\Services;
-use App\Services\DocumentSequenceService;
 
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\ProductStock;
+use App\Models\SalesSetting;
+use App\Models\StockMovement;
+use App\Models\StockReservation;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Modules\Production\Models\BillOfMaterial;
+use App\Modules\Production\Models\BomLine;
+use App\Modules\Production\Models\ProductionConsumption;
+use App\Modules\Production\Models\ProductionLine;
 use App\Modules\Production\Models\ProductionOrder;
+use App\Modules\Production\Models\ProductionOutput;
 use App\Notifications\ValidationStepNotification;
+use App\Services\DocumentSequenceService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -36,7 +48,7 @@ class ProductionService
             // fabriquée (marchandise, service, matière première…). Repli sur le
             // flag article si l'article n'a pas encore de catégorie (legacy).
             if (! empty($data['product_id'])) {
-                $p = \App\Models\Product::with('itemCategory')->find($data['product_id']);
+                $p = Product::with('itemCategory')->find($data['product_id']);
                 // Garde STRICTEMENT catégorielle : un article legacy sans catégorie
                 // conserve le comportement historique (pas de blocage rétroactif).
                 if ($p && $p->itemCategory && ! $p->itemCategory->is_manufactured) {
@@ -57,7 +69,7 @@ class ProductionService
             // tout OF complémentaire au reliquat restant. Ne s'applique que si la
             // commande porte bien l'article (comportement conservé sinon).
             if (! empty($data['order_id']) && ! empty($data['product_id'])) {
-                $commanded = (float) \App\Models\OrderItem::where('order_id', $data['order_id'])
+                $commanded = (float) OrderItem::where('order_id', $data['order_id'])
                     ->where('product_id', $data['product_id'])->sum('quantity');
                 if ($commanded > 0) {
                     $alreadyRequested = (float) ProductionOrder::where('order_id', $data['order_id'])
@@ -86,10 +98,10 @@ class ProductionService
                 }
             }
 
-            $data['company_id']     = $company->id;
+            $data['company_id'] = $company->id;
             $data['fiscal_year_id'] = $company->current_fiscal_year_id;
-            $data['number']         = $this->sequences->nextNumber($company, 'ordre_fabrication');
-            $data['status']         = 'brouillon';
+            $data['number'] = $this->sequences->nextNumber($company, 'ordre_fabrication');
+            $data['status'] = 'brouillon';
 
             // [X3] Héritage des dépôts / ligne quand ils ne sont pas fournis
             // (OF manuel sans saisie, ou OF auto MTO depuis commande).
@@ -124,10 +136,10 @@ class ProductionService
 
     private function applyDefaults(array &$data): void
     {
-        $product = ! empty($data['product_id']) ? \App\Models\Product::find($data['product_id']) : null;
+        $product = ! empty($data['product_id']) ? Product::find($data['product_id']) : null;
 
         $filled = fn (string $k) => ! empty($data[$k]);
-        $warehouseByType = fn (string $type) => \App\Models\Warehouse::where('is_active', true)->where('type', $type)->value('id');
+        $warehouseByType = fn (string $type) => Warehouse::where('is_active', true)->where('type', $type)->value('id');
 
         // Dépôt matière : article (dépôt production) → dépôt matière première
         if (! $filled('depot_matiere_id')) {
@@ -149,7 +161,7 @@ class ProductionService
         // Nomenclature : rattache la BOM active de l'article (sinon la fiche affiche « — »
         // et l'allocation matière n'a pas de composants).
         if (! $filled('bill_of_material_id') && $product) {
-            $data['bill_of_material_id'] = \App\Modules\Production\Models\BillOfMaterial::where('is_active', true)
+            $data['bill_of_material_id'] = BillOfMaterial::where('is_active', true)
                 ->where('product_id', $product->id)->orderByDesc('id')->value('id');
         }
         // Responsable : à défaut, l'utilisateur courant
@@ -165,17 +177,17 @@ class ProductionService
      *   3. repli : première ligne active.
      * Les lignes n'ont pas de colonne « type » → détection par nom/code.
      */
-    private function defaultLineId(?\App\Models\Product $product): ?int
+    private function defaultLineId(?Product $product): ?int
     {
-        $Line = \App\Modules\Production\Models\ProductionLine::query()->where('is_active', true);
+        $Line = ProductionLine::query()->where('is_active', true);
 
         if ($product) {
             if ($dedicated = (clone $Line)->where('product_id', $product->id)->value('id')) {
                 return $dedicated;
             }
 
-            $code  = strtoupper((string) $product->code_article);
-            $name  = strtoupper((string) $product->name);
+            $code = strtoupper((string) $product->code_article);
+            $name = strtoupper((string) $product->name);
             $isFer = str_contains($code, 'FAB') || str_contains($name, 'FER');
             $needles = $isFer ? ['%fer%', 'LIGNE-FER%'] : ['%bac%', '%tôle%', '%tole%'];
 
@@ -257,7 +269,7 @@ class ProductionService
             return;
         }
 
-        $client   = $salesOrder->client;
+        $client = $salesOrder->client;
         $totalTtc = (float) $salesOrder->total_ttc;
         if ($totalTtc <= 0) {
             return;
@@ -273,7 +285,7 @@ class ProductionService
                 'financial_authorization' => 'approved',
                 'financial_authorized_at' => now(),
                 'financial_authorized_by' => $salesOrder->production_approved_by,
-                'financial_notes'         => 'Approbation gérant sur la commande : ' . ($salesOrder->production_approval_reason ?? ''),
+                'financial_notes' => 'Approbation gérant sur la commande : '.($salesOrder->production_approval_reason ?? ''),
             ]);
 
             return;
@@ -298,7 +310,7 @@ class ProductionService
         }
 
         // [CDC §9] Seuil d'acompte paramétrable (SalesSetting.deposit_required_rate, défaut 70 %).
-        $depositRate = (float) (\App\Models\SalesSetting::current()->deposit_required_rate ?? 70);
+        $depositRate = (float) (SalesSetting::current()->deposit_required_rate ?? 70);
         if ($paymentMode === 'acompte' && $rate < $depositRate) {
             $seuil = rtrim(rtrim(number_format($depositRate, 2, '.', ''), '0'), '.');
             $this->notifyFinancialGateBlocked($order, "Client acompte : {$rate}% encaissé — seuil {$seuil}% non atteint.");
@@ -316,9 +328,9 @@ class ProductionService
 
         // Condition remplie — on enregistre l'autorisation automatique
         $order->update([
-            'financial_authorization'  => 'approved',
-            'financial_authorized_at'  => now(),
-            'financial_notes'          => "Autorisé automatiquement : {$paymentMode} / {$rate}%",
+            'financial_authorization' => 'approved',
+            'financial_authorized_at' => now(),
+            'financial_notes' => "Autorisé automatiquement : {$paymentMode} / {$rate}%",
         ]);
     }
 
@@ -432,19 +444,17 @@ class ProductionService
             }
         }
 
-        $order->update(['status' => 'lance', 'launched_at' => now()]);
+        DB::transaction(function () use ($order) {
+            $snapshot = app(ProductionSnapshotService::class)->capture($order);
+            $order->update($snapshot + ['status' => 'lance', 'launched_at' => now()]);
 
-        // [§3] Chargement automatique des opérations depuis la gamme opératoire
-        // (si une gamme existe et que les opérations n'ont pas déjà été générées).
-        // Non bloquant : absence de gamme ou opérations déjà présentes = no-op.
-        try {
-            $order->loadMissing('billOfMaterial.routing');
-            if (! $order->operations()->exists() && $order->billOfMaterial?->routing) {
+            // Le snapshot et les opérations constituent une seule décision métier :
+            // toute erreur de génération annule le lancement complet de l'OF.
+            if (! $order->operations()->exists()
+                && ! empty($snapshot['routing_snapshot']['operations'])) {
                 app(RoutingService::class)->generateWorkOrders($order);
             }
-        } catch (\Throwable $e) {
-            // gamme absente / déjà générée — on ne bloque pas le lancement
-        }
+        });
     }
 
     /**
@@ -470,7 +480,7 @@ class ProductionService
             if (! $product || $product->allow_negative_stock) {
                 continue;
             }
-            $rows = \App\Models\ProductStock::where('product_id', $product->id)->get(['quantity', 'reserved_quantity']);
+            $rows = ProductStock::where('product_id', $product->id)->get(['quantity', 'reserved_quantity']);
             if ($rows->isEmpty()) {
                 continue; // composant non suivi en product_stocks (bobines…) — pas d'alerte
             }
@@ -482,7 +492,7 @@ class ProductionService
                 // [PRO-05] Remplacement contrôlé : si un substitut est défini sur la ligne
                 // de nomenclature, on remonte sa disponibilité pour éclairer l'allocation.
                 if ($line->substitute) {
-                    $subRows = \App\Models\ProductStock::where('product_id', $line->substitute_product_id)
+                    $subRows = ProductStock::where('product_id', $line->substitute_product_id)
                         ->get(['quantity', 'reserved_quantity']);
                     $subAvail = (float) $subRows->sum(fn ($s) => (float) $s->quantity - (float) $s->reserved_quantity);
                     $row['substitute'] = $line->substitute->name;
@@ -552,11 +562,11 @@ class ProductionService
         // trace. On bloque : soit « Terminer partiellement » (reste à produire),
         // soit clôture en dérogation explicite ($force) avec écart assumé.
         $requested = (float) $order->quantity_requested;
-        $produced  = (float) $order->quantity_produced;
+        $produced = (float) $order->quantity_produced;
         if (! $force && $requested > 0 && $produced < $requested) {
             throw ValidationException::withMessages([
                 'quantity_produced' => sprintf(
-                    "Quantité produite (%s) inférieure à la quantité demandée (%s) — clôture définitive bloquée. Utilisez « Terminer partiellement » pour laisser le reliquat, ou confirmez la clôture avec écart.",
+                    'Quantité produite (%s) inférieure à la quantité demandée (%s) — clôture définitive bloquée. Utilisez « Terminer partiellement » pour laisser le reliquat, ou confirmez la clôture avec écart.',
                     rtrim(rtrim(number_format($produced, 2, ',', ' '), '0'), ','),
                     rtrim(rtrim(number_format($requested, 2, ',', ' '), '0'), ',')
                 ),
@@ -568,13 +578,17 @@ class ProductionService
         // ni composant BOM sorti du stock (mouvements liés aux déclarations). Sinon le
         // stock matière et le coût de revient sont faux. Dérogation valideur ($force).
         // (une BOM sans ligne n'a rien à consommer — garde inapplicable)
-        if (! $force && $order->bill_of_material_id
-            && \App\Modules\Production\Models\BomLine::where('bill_of_material_id', $order->bill_of_material_id)->exists()
+        $hasBomLines = $order->bom_snapshot !== null
+            ? ! empty($order->bom_snapshot['lines'])
+            : ($order->bill_of_material_id
+                && BomLine::where('bill_of_material_id', $order->bill_of_material_id)->exists());
+
+        if (! $force && $hasBomLines
             && $order->consumptions()->doesntExist()) {
             $outputIds = $order->outputs()->pluck('id');
             $hasComponentMoves = $outputIds->isNotEmpty()
-                && \App\Models\StockMovement::where('type', 'sortie')
-                    ->where('reference_type', \App\Modules\Production\Models\ProductionOutput::class)
+                && StockMovement::where('type', 'sortie')
+                    ->where('reference_type', ProductionOutput::class)
                     ->whereIn('reference_id', $outputIds)
                     ->exists();
             if (! $hasComponentMoves) {
@@ -584,6 +598,18 @@ class ProductionService
             }
         }
 
+        $unvaluedConsumptions = $order->consumptions()
+            ->whereNull('reversed_at')
+            ->where(fn ($query) => $query
+                ->where('weight_consumed', '>', 0)
+                ->orWhere('length_consumed', '>', 0))
+            ->where('cost', '<=', 0)
+            ->count();
+        if (! $force && $unvaluedConsumptions > 0) {
+            throw ValidationException::withMessages([
+                'material_cost' => "{$unvaluedConsumptions} consommation(s) physique(s) sans valorisation — clôture comptable bloquée. Régularisez le coût ou utilisez une dérogation motivée.",
+            ]);
+        }
         // [Audit OF — gamme opératoire] Les opérations générées depuis la gamme
         // doivent être terminées avant la clôture définitive : un OF « terminé »
         // avec des opérations à faire fausse le suivi d'atelier (0/N) et les temps
@@ -603,9 +629,9 @@ class ProductionService
             $order->operations()
                 ->where('status', '!=', 'done')
                 ->update([
-                    'status'       => 'done',
+                    'status' => 'done',
                     'real_minutes' => DB::raw('COALESCE(NULLIF(real_minutes, 0), planned_minutes)'),
-                    'ended_at'     => now(),
+                    'ended_at' => now(),
                 ]);
         }
 
@@ -618,21 +644,21 @@ class ProductionService
                 'quality' => 'Contrôle qualité obligatoire non réalisé — clôture impossible. Enregistrez au moins un contrôle (section Contrôle qualité) avant de terminer l\'OF.',
             ]);
         }
+        if (! $force && $order->controle_qualite_obligatoire
+            && $order->outputs()->whereNotNull('release_warehouse_id')->exists()
+            && $order->batches()->whereHas('qualityRelease', fn ($query) => $query
+                ->whereIn('status', ['libere', 'derogation']))->doesntExist()) {
+            throw ValidationException::withMessages([
+                'quality_release' => 'Libération qualité du lot obligatoire avant clôture définitive de l’OF.',
+            ]);
+        }
 
-        $order->update(['status' => 'termine', 'finished_at' => now()]);
-
-        // [FIX A4] Libère le résidu de réservation matière (composants non ou
-        // partiellement backflushés) — la matière non consommée redevient disponible.
-        app(ReservationService::class)->releaseMaterialReservations($order);
-
-        // ── Automatismes post-clôture (best-effort : n'annulent jamais la clôture) ──
-        $this->afterFinish($order);
-
-        // Pont comptable SYSCOHADA (no-op si désactivé) — APRÈS afterFinish :
-        // le coût de revient (ProductionCost) y est calculé et valorise
-        // l'écriture « production stockée » 361/736 ; avant, la valeur PF était
-        // nulle et l'écriture PROD n'était jamais émise.
-        $this->accounting->postForOrder($order->fresh());
+        DB::transaction(function () use ($order) {
+            $order->update(['status' => 'termine', 'finished_at' => now()]);
+            app(ReservationService::class)->releaseMaterialReservations($order);
+            $this->afterFinish($order);
+            $this->accounting->postForOrder($order->fresh());
+        });
     }
 
     /**
@@ -648,7 +674,7 @@ class ProductionService
     {
         // Verdict du dernier contrôle qualité (conditionne lot + réservation).
         $lastQc = $order->qualityControls()->latest('id')->first();
-        $qcOk   = ! $order->controle_qualite_obligatoire || $lastQc?->status === 'conforme';
+        $qcOk = ! $order->controle_qualite_obligatoire || $lastQc?->status === 'conforme';
 
         // 1. Lot de fabrication automatique
         try {
@@ -663,12 +689,9 @@ class ProductionService
         // logique partagée avec le contrôle qualité posé APRÈS clôture.
         $this->applyQualityOutcomes($order, $lastQc?->status, $qcOk);
 
-        // 3. Coût de revient automatique
-        try {
-            app(ProductionCostService::class)->compute($order->fresh());
-        } catch (\Throwable $e) {
-            // recalculable depuis la fiche (« Calculer »)
-        }
+        // 3. Coût de revient et régularisation : une erreur annule la clôture.
+        app(ProductionCostService::class)->compute($order->fresh());
+        app(FinishedGoodsValuationService::class)->revalue($order->fresh());
     }
 
     /**
@@ -692,7 +715,7 @@ class ProductionService
 
         try {
             if ($qualityAcquired && $order->order_id && $order->product_id && (float) $order->quantity_produced > 0
-                && ! \App\Models\StockReservation::where('production_order_id', $order->id)->where('status', 'reserved')->exists()) {
+                && ! StockReservation::where('production_order_id', $order->id)->where('status', 'reserved')->exists()) {
                 app(ReservationService::class)->reserveForOrder($order->fresh());
             }
         } catch (\Throwable $e) {
@@ -713,14 +736,14 @@ class ProductionService
         //   1. clôturer avec écart assumé (« Terminer ») — le reliquat est abandonné ;
         //   2. extourner d'abord les déclarations et consommations (reverse),
         //      puis annuler l'OF redevenu vierge.
-        $consosVivantes = \App\Modules\Production\Models\ProductionConsumption::where('production_order_id', $order->id)
+        $consosVivantes = ProductionConsumption::where('production_order_id', $order->id)
             ->whereNull('reversed_at')->count();
-        $outputsVivants = \App\Modules\Production\Models\ProductionOutput::where('production_order_id', $order->id)
+        $outputsVivants = ProductionOutput::where('production_order_id', $order->id)
             ->where('status', '!=', 'annulee')->count();
         if ($consosVivantes > 0 || $outputsVivants > 0) {
             throw ValidationException::withMessages(['status' => sprintf(
-                'Cet OF a %d consommation(s) matière et %d déclaration(s) de production vivantes — ' .
-                'la matière est physiquement engagée. Clôturez l\'OF avec écart assumé (« Terminer »), ' .
+                'Cet OF a %d consommation(s) matière et %d déclaration(s) de production vivantes — '.
+                'la matière est physiquement engagée. Clôturez l\'OF avec écart assumé (« Terminer »), '.
                 'ou extournez d\'abord les déclarations et consommations avant d\'annuler.',
                 $consosVivantes,
                 $outputsVivants
@@ -729,7 +752,7 @@ class ProductionService
 
         $note = $order->notes;
         if ($reason) {
-            $note = trim(($note ? $note . "\n" : '') . 'Annulé : ' . $reason);
+            $note = trim(($note ? $note."\n" : '').'Annulé : '.$reason);
         }
         $order->update(['status' => 'annule', 'notes' => $note]);
 
@@ -753,15 +776,15 @@ class ProductionService
         }
 
         $order->update([
-            'modification_status'             => 'en_attente',
-            'modification_reason'             => $reason,
-            'modification_requested_at'       => now(),
-            'modification_requested_by'       => $user?->id ?? Auth::id(),
+            'modification_status' => 'en_attente',
+            'modification_reason' => $reason,
+            'modification_requested_at' => now(),
+            'modification_requested_by' => $user?->id ?? Auth::id(),
             // Reset des avis précédents — nouvelle demande, nouveau circuit.
-            'modification_chef_avis_at'       => null, 'modification_chef_avis_by'       => null, 'modification_chef_comment'       => null,
+            'modification_chef_avis_at' => null, 'modification_chef_avis_by' => null, 'modification_chef_comment' => null,
             'modification_commercial_avis_at' => null, 'modification_commercial_avis_by' => null, 'modification_commercial_comment' => null,
-            'modification_finance_avis_at'    => null, 'modification_finance_avis_by'    => null, 'modification_finance_comment'    => null,
-            'modification_dg_approved_at'     => null, 'modification_dg_approved_by'     => null, 'modification_dg_comment'         => null,
+            'modification_finance_avis_at' => null, 'modification_finance_avis_by' => null, 'modification_finance_comment' => null,
+            'modification_dg_approved_at' => null, 'modification_dg_approved_by' => null, 'modification_dg_comment' => null,
         ]);
 
         // [CDC §13.10] Demande déposée → Chef Production donne le 1er avis.
@@ -841,10 +864,10 @@ class ProductionService
             throw ValidationException::withMessages(['status' => 'L\'avis Finance doit précéder la validation DG.']);
         }
         $order->update([
-            'modification_status'         => 'approuvee',
+            'modification_status' => 'approuvee',
             'modification_dg_approved_at' => now(),
             'modification_dg_approved_by' => $user?->id ?? Auth::id(),
-            'modification_dg_comment'     => $comment,
+            'modification_dg_comment' => $comment,
         ]);
 
         // [CDC §13.10] Modification approuvée → notifie le demandeur, OF éditable.
@@ -857,7 +880,7 @@ class ProductionService
     {
         $this->assertModificationPending($order);
         $order->update([
-            'modification_status'     => 'refusee',
+            'modification_status' => 'refusee',
             'modification_dg_comment' => $reason,
         ]);
 
@@ -904,7 +927,7 @@ class ProductionService
         $allowed = (array) $expected;
         if (! in_array($order->status, $allowed, true)) {
             throw ValidationException::withMessages([
-                'status' => "Transition invalide : l'OF doit être au statut « " . implode(' / ', $allowed) . " ».",
+                'status' => "Transition invalide : l'OF doit être au statut « ".implode(' / ', $allowed).' ».',
             ]);
         }
     }
@@ -913,18 +936,18 @@ class ProductionService
     private function syncLines(ProductionOrder $order, array $lines): void
     {
         foreach ($lines as $i => $row) {
-            $length   = (float) ($row['length'] ?? 0);
+            $length = (float) ($row['length'] ?? 0);
             $quantity = (float) ($row['quantity'] ?? 0);
             if ($length <= 0 && $quantity <= 0) {
                 continue;
             }
             $order->lines()->create([
-                'length'       => $length,
-                'quantity'     => $quantity,
+                'length' => $length,
+                'quantity' => $quantity,
                 'total_meters' => round($length * $quantity, 2),
-                'unit_id'      => $row['unit_id'] ?? null,
-                'label'        => $row['label'] ?? null,
-                'sort_order'   => $i,
+                'unit_id' => $row['unit_id'] ?? null,
+                'label' => $row['label'] ?? null,
+                'sort_order' => $i,
             ]);
         }
     }

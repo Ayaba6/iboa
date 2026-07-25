@@ -22,28 +22,33 @@ class RoutingService
             throw ValidationException::withMessages(['operations' => 'Les opérations de cet OF ont déjà été générées.']);
         }
 
-        $order->loadMissing('billOfMaterial.routing.operations.workCenter');
-        $routing = $order->billOfMaterial?->routing;
-        if (! $routing || $routing->operations->isEmpty()) {
-            throw ValidationException::withMessages(['routing' => 'Aucune gamme opératoire active sur la nomenclature de cet OF.']);
+        $snapshotOperations = collect($order->routing_snapshot['operations'] ?? []);
+        if ($snapshotOperations->isEmpty()) {
+            $order->loadMissing('billOfMaterial.routing.operations.workCenter');
+            $routing = $order->billOfMaterial?->routing;
+            if (! $routing || $routing->operations->isEmpty()) {
+                throw ValidationException::withMessages(['routing' => 'Aucune gamme opératoire active sur la nomenclature de cet OF.']);
+            }
+            $snapshotOperations = $routing->operations->map(fn ($operation) => $operation->toArray());
         }
 
         $qty = (float) ($order->quantity_requested ?: 1);
 
-        return DB::transaction(function () use ($order, $routing, $qty) {
+        return DB::transaction(function () use ($order, $snapshotOperations, $qty) {
             $n = 0;
-            foreach ($routing->operations as $op) {
-                $planned = (float) $op->setup_minutes + (float) $op->run_minutes_per_unit * $qty;
+            foreach ($snapshotOperations as $operation) {
+                $planned = (float) ($operation['setup_minutes'] ?? 0)
+                    + (float) ($operation['run_minutes_per_unit'] ?? 0) * $qty;
                 $order->operations()->create([
-                    'company_id'           => $order->company_id,
-                    'routing_operation_id' => $op->id,
-                    'work_center_id'       => $op->work_center_id,
-                    'sequence'             => $op->sequence,
-                    'name'                 => $op->name,
-                    'planned_minutes'      => round($planned, 2),
-                    'real_minutes'         => 0,
-                    'status'               => 'pending',
-                    'created_by'           => Auth::id(),
+                    'company_id' => $order->company_id,
+                    'routing_operation_id' => $operation['id'] ?? null,
+                    'work_center_id' => $operation['work_center_id'] ?? null,
+                    'sequence' => $operation['sequence'] ?? 10,
+                    'name' => $operation['name'],
+                    'planned_minutes' => round($planned, 2),
+                    'real_minutes' => 0,
+                    'status' => 'pending',
+                    'created_by' => Auth::id(),
                 ]);
                 $n++;
             }
@@ -51,7 +56,6 @@ class RoutingService
             return $n;
         });
     }
-
     public function start(ProductionOrderOperation $op): void
     {
         if ($op->status === 'done') {

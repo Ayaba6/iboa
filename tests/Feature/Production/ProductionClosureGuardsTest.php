@@ -17,18 +17,25 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\StockReservation;
+use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Modules\Production\Models\BillOfMaterial;
+use App\Modules\Production\Models\BomLine;
+use App\Modules\Production\Models\Coil;
+use App\Modules\Production\Models\ProductionConsumption;
 use App\Modules\Production\Models\ProductionCost;
 use App\Modules\Production\Models\ProductionOrder;
 use App\Modules\Production\Models\ProductionQualityControl;
+use App\Modules\Production\Models\WorkCenter;
+use App\Modules\Production\Services\ProductionCostService;
 use App\Modules\Production\Services\ProductionService;
 use App\Modules\Production\Services\ProductionStockService;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function guardAdmin(): User
 {
@@ -47,13 +54,13 @@ function guardOf(array $attrs = []): ProductionOrder
     $co = Company::first();
 
     return ProductionOrder::create(array_merge([
-        'company_id'         => $co->id,
-        'fiscal_year_id'     => $co->current_fiscal_year_id,
-        'number'             => 'OF-GUARD-' . uniqid(),
-        'status'             => 'en_cours',
+        'company_id' => $co->id,
+        'fiscal_year_id' => $co->current_fiscal_year_id,
+        'number' => 'OF-GUARD-'.uniqid(),
+        'status' => 'en_cours',
         'quantity_requested' => 10,
-        'quantity_produced'  => 10,
-        'launched_at'        => now(),
+        'quantity_produced' => 10,
+        'launched_at' => now(),
     ], $attrs));
 }
 
@@ -94,11 +101,11 @@ it('bloque la clôture si contrôle qualité obligatoire non réalisé, passe un
 
 it('bloque la clôture avec nomenclature sans aucune consommation — dérogation possible', function () {
     $this->actingAs(guardAdmin());
-    $pf   = Product::factory()->create();
+    $pf = Product::factory()->create();
     $comp = Product::factory()->create();
-    $bom  = BillOfMaterial::create(['company_id' => Company::first()->id, 'product_id' => $pf->id, 'name' => 'BOM C', 'is_active' => true]);
+    $bom = BillOfMaterial::create(['company_id' => Company::first()->id, 'product_id' => $pf->id, 'name' => 'BOM C', 'is_active' => true]);
     // La garde ne s'applique qu'aux nomenclatures AVEC composants.
-    \App\Modules\Production\Models\BomLine::create(['bill_of_material_id' => $bom->id, 'product_id' => $comp->id, 'quantity_per_meter' => 1, 'sort_order' => 1]);
+    BomLine::create(['bill_of_material_id' => $bom->id, 'product_id' => $comp->id, 'quantity_per_meter' => 1, 'sort_order' => 1]);
 
     $of = guardOf([
         'product_id' => $pf->id, 'bill_of_material_id' => $bom->id,
@@ -123,9 +130,9 @@ it('à la clôture : lot auto, réservation PF pour le client et coût de revien
 
     $order = Order::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
-        'client_id'  => Client::factory()->create(['is_active' => true])->id,
-        'number'     => 'CMD-GUARD-' . uniqid(), 'status' => 'confirme',
-        'issued_at'  => now(), 'total_ttc' => 100000,
+        'client_id' => Client::factory()->create(['is_active' => true])->id,
+        'number' => 'CMD-GUARD-'.uniqid(), 'status' => 'confirme',
+        'issued_at' => now(), 'total_ttc' => 100000,
     ]);
 
     $of = guardOf([
@@ -195,9 +202,9 @@ it('après clôture avec QC conforme : lot PF « conforme » + réservation clie
 
     $order = Order::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
-        'client_id'  => Client::factory()->create(['is_active' => true])->id,
-        'number'     => 'CMD-QCLOT-' . uniqid(), 'status' => 'confirme',
-        'issued_at'  => now(), 'total_ttc' => 50000,
+        'client_id' => Client::factory()->create(['is_active' => true])->id,
+        'number' => 'CMD-QCLOT-'.uniqid(), 'status' => 'confirme',
+        'issued_at' => now(), 'total_ttc' => 50000,
     ]);
 
     // QC obligatoire (défaut) — relu depuis la DB pour charger le défaut.
@@ -232,12 +239,12 @@ it('affiche la consommation composants et le rendement matière sur la fiche OF'
     $this->actingAs(guardAdmin());
     $co = Company::first();
     $wh = Warehouse::where('company_id', $co->id)->first();
-    $pf   = Product::factory()->create(['is_stockable' => true]);
+    $pf = Product::factory()->create(['is_stockable' => true]);
     $comp = Product::factory()->create(['name' => 'Composant Visserie Test', 'is_stockable' => true]);
     ProductStock::create(['product_id' => $comp->id, 'warehouse_id' => $wh->id, 'quantity' => 100, 'reserved_quantity' => 0, 'avg_cost' => 250]);
 
     $bom = BillOfMaterial::create(['company_id' => $co->id, 'product_id' => $pf->id, 'name' => 'BOM affichage', 'is_active' => true]);
-    \App\Modules\Production\Models\BomLine::create(['bill_of_material_id' => $bom->id, 'product_id' => $comp->id, 'quantity_per_meter' => 2, 'sort_order' => 1]);
+    BomLine::create(['bill_of_material_id' => $bom->id, 'product_id' => $comp->id, 'quantity_per_meter' => 2, 'sort_order' => 1]);
 
     $of = guardOf([
         'product_id' => $pf->id, 'bill_of_material_id' => $bom->id,
@@ -278,13 +285,13 @@ it('affiche l\'unité réelle de l\'article dans la consommation composants', fu
     $this->actingAs(guardAdmin());
     $co = Company::first();
     $wh = Warehouse::where('company_id', $co->id)->first();
-    $kg = \App\Models\Unit::firstOrCreate(['code' => 'KG'], ['name' => 'Kilogramme', 'abbreviation' => 'kg']);
-    $pf   = Product::factory()->create(['is_stockable' => true]);
+    $kg = Unit::firstOrCreate(['code' => 'KG'], ['name' => 'Kilogramme', 'abbreviation' => 'kg']);
+    $pf = Product::factory()->create(['is_stockable' => true]);
     $comp = Product::factory()->create(['name' => 'Peinture Époxy Test', 'is_stockable' => true, 'unit_id' => $kg->id]);
     ProductStock::create(['product_id' => $comp->id, 'warehouse_id' => $wh->id, 'quantity' => 50, 'reserved_quantity' => 0, 'avg_cost' => 800]);
 
     $bom = BillOfMaterial::create(['company_id' => $co->id, 'product_id' => $pf->id, 'name' => 'BOM unité', 'is_active' => true]);
-    \App\Modules\Production\Models\BomLine::create(['bill_of_material_id' => $bom->id, 'product_id' => $comp->id, 'quantity_per_meter' => 1.5, 'sort_order' => 1]);
+    BomLine::create(['bill_of_material_id' => $bom->id, 'product_id' => $comp->id, 'quantity_per_meter' => 1.5, 'sort_order' => 1]);
 
     $of = guardOf(['product_id' => $pf->id, 'bill_of_material_id' => $bom->id, 'quantity_produced' => 0, 'controle_qualite_obligatoire' => false]);
     app(ProductionStockService::class)->recordOutput($of, ['warehouse_id' => $wh->id, 'quantity' => 4, 'length' => 6]);
@@ -299,7 +306,7 @@ it('affiche l\'unité réelle de l\'article dans la consommation composants', fu
 it('intègre le temps standard de gamme dans le coût MO quand aucun pointage réel n\'existe', function () {
     $this->actingAs(guardAdmin());
     $co = Company::first();
-    $wc = \App\Modules\Production\Models\WorkCenter::create([
+    $wc = WorkCenter::create([
         'company_id' => $co->id, 'code' => 'WC-STD', 'name' => 'Poste Standard',
         'cost_per_hour' => 3000, 'is_active' => true,
     ]);
@@ -311,7 +318,7 @@ it('intègre le temps standard de gamme dans le coût MO quand aucun pointage r�
     ]);
 
     // Aucun pointage, aucun override, BOM absente → MO = 60 min × 3 000 F/h = 3 000 F.
-    $cost = app(\App\Modules\Production\Services\ProductionCostService::class)->compute($of->fresh());
+    $cost = app(ProductionCostService::class)->compute($of->fresh());
     expect((int) $cost->labor_cost)->toBe(3000);
 });
 
@@ -386,4 +393,31 @@ it('la déclaration sans longueur reprend la longueur de l\'en-tête OF (métrag
 
     expect((float) $output->length)->toEqual(3.5)
         ->and((float) $output->total_meters)->toEqual(14.0);
+});
+
+it('bloque la clôture avec consommation physique non valorisée sauf dérogation', function () {
+    $this->actingAs(guardAdmin());
+    $order = guardOf(['controle_qualite_obligatoire' => false, 'quantity_requested' => 1, 'quantity_produced' => 1]);
+    $coil = Coil::factory()->create([
+        'company_id' => $order->company_id,
+        'initial_weight' => 10,
+        'remaining_weight' => 8,
+        'cost_per_kg' => 0,
+    ]);
+    ProductionConsumption::create([
+        'company_id' => $order->company_id,
+        'production_order_id' => $order->id,
+        'coil_id' => $coil->id,
+        'weight_consumed' => 2,
+        'length_consumed' => 1,
+        'cost' => 0,
+        'consumed_at' => now(),
+    ]);
+
+    expect(fn () => app(ProductionService::class)->finish($order->fresh()))
+        ->toThrow(ValidationException::class, 'sans valorisation');
+    expect($order->fresh()->status)->toBe('en_cours');
+
+    app(ProductionService::class)->finish($order->fresh(), force: true);
+    expect($order->fresh()->status)->toBe('termine');
 });

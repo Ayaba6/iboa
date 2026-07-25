@@ -32,6 +32,7 @@ class ProductionOrder extends Model
         'rendement_standard','taux_perte','depot_produit_fini_id','depot_rebut_id','controle_qualite_obligatoire',
         // [Audit création OF] entête étendue + caractéristiques tôle bac
         'of_type','origin','atelier','bom_version','routing_version',
+        'bom_snapshot','bom_snapshot_sha256','routing_snapshot','routing_snapshot_sha256','snapshotted_at',
         'depot_matiere_id','depot_qualite_id','responsable_atelier_id','operateur_prevu_id',
         'date_debut_prevue','date_fin_prevue','heure_debut_prevue','heure_fin_prevue',
         'temps_reglage','equipe_prevue','nb_operateurs','autoriser_cloture_partielle','autoriser_depassement_qte',
@@ -65,6 +66,7 @@ class ProductionOrder extends Model
         'poids_par_metre'=>'decimal:3','poids_theorique'=>'decimal:2',
         'tolerance_longueur'=>'decimal:2','tolerance_epaisseur'=>'decimal:3','temps_reglage'=>'decimal:2',
         'suspended_at'=>'datetime',
+        'bom_snapshot'=>'array','routing_snapshot'=>'array','snapshotted_at'=>'datetime',
     ];
 
     public function depotProduitFini(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_produit_fini_id'); }
