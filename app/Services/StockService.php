@@ -10,8 +10,10 @@ use App\Models\StockLot;
 use App\Models\StockMovement;
 use App\Repositories\StockMovementRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class StockService
 {
@@ -25,20 +27,19 @@ class StockService
     public function getStockSummary(array $filters = []): LengthAwarePaginator
     {
         $query = ProductStock::with(['product', 'warehouse'])
-            ->whereHas('product', fn($q) => $q->where('is_active', true));
+            ->whereHas('product', fn ($q) => $q->where('is_active', true));
 
-        if (!empty($filters['warehouse_id'])) {
+        if (! empty($filters['warehouse_id'])) {
             $query->where('warehouse_id', $filters['warehouse_id']);
         }
 
-        if (!empty($filters['search'])) {
-            $s = '%' . $filters['search'] . '%';
-            $query->whereHas('product', fn($q) =>
-                $q->where('name', 'like', $s)->orWhere('reference', 'like', $s)
+        if (! empty($filters['search'])) {
+            $s = '%'.$filters['search'].'%';
+            $query->whereHas('product', fn ($q) => $q->where('name', 'like', $s)->orWhere('reference', 'like', $s)
             );
         }
 
-        if (!empty($filters['low_stock'])) {
+        if (! empty($filters['low_stock'])) {
             $query->whereHas('product', function ($q) {
                 $q->whereRaw('(product_stocks.quantity - product_stocks.reserved_quantity) <= products.stock_min');
             });
@@ -57,7 +58,7 @@ class StockService
      *  - Transfert: decrement source warehouse, increment destination
      *  - Kit BOM: auto-consume components when kit is moved out
      *
-     * @throws \Illuminate\Validation\ValidationException when available stock is insufficient
+     * @throws ValidationException when available stock is insufficient
      */
     public function recordMovement(array $data): StockMovement
     {
@@ -76,10 +77,10 @@ class StockService
             // Normalise field names (form sends movement_type / movement_date)
             // [FIX-BUG-02] Default to null when neither key is set, instead of triggering
             // "Undefined array key" warnings on movement_type-only or type-only payloads.
-            $data['type']        = $data['movement_type'] ?? $data['type']        ?? null;
-            $data['occurred_at'] = $data['movement_date']  ?? $data['occurred_at'] ?? now();
-            $data['unit_cost']   = (float) ($data['unit_cost'] ?? 0);
-            $data['quantity']    = (float) ($data['quantity']  ?? 0);
+            $data['type'] = $data['movement_type'] ?? $data['type'] ?? null;
+            $data['occurred_at'] = $data['movement_date'] ?? $data['occurred_at'] ?? now();
+            $data['unit_cost'] = (float) ($data['unit_cost'] ?? 0);
+            $data['quantity'] = (float) ($data['quantity'] ?? 0);
 
             // [Sync coils/lots — unité de tenue de stock] La saisie opérationnelle
             // (quantity/uom, ex. mètres linéaires) est conservée telle quelle ;
@@ -89,7 +90,7 @@ class StockService
             $stockQty = isset($data['quantity_in_stock_uom'])
                 ? (float) $data['quantity_in_stock_uom']
                 : $data['quantity'];
-            $data['total_cost']  = $stockQty * $data['unit_cost'];
+            $data['total_cost'] = $stockQty * $data['unit_cost'];
             unset($data['movement_type'], $data['movement_date']);
 
             // Guard: product_id and warehouse_id are mandatory
@@ -109,21 +110,21 @@ class StockService
                 ->exists();
             if ($hasOpenInventory) {
                 throw new \RuntimeException(
-                    "Mouvement bloqué : un inventaire est en cours sur ce dépôt. Validez ou annulez la session avant tout mouvement de stock."
+                    'Mouvement bloqué : un inventaire est en cours sur ce dépôt. Validez ou annulez la session avant tout mouvement de stock.'
                 );
             }
 
-            $type     = $data['type'];
+            $type = $data['type'];
             // Delta appliqué au stock agrégé et aux lots : l'unité de tenue
             // de stock (quantity_in_stock_uom si fournie, sinon quantity).
-            $qty      = $stockQty;
+            $qty = $stockQty;
             $unitCost = $data['unit_cost'];
 
             // ---------------------------------------------------------------
             // 1. Resolve the product's valuation method (cmp / fifo / lifo)
             // ---------------------------------------------------------------
-            $product          = Product::find($data['product_id']);
-            $valuationMethod  = $product?->valuation_method ?? 'cmp';
+            $product = Product::find($data['product_id']);
+            $valuationMethod = $product?->valuation_method ?? 'cmp';
 
             // ---------------------------------------------------------------
             // 2. Get / create source ProductStock
@@ -131,13 +132,13 @@ class StockService
             // ---------------------------------------------------------------
             $stock = ProductStock::firstOrCreate(
                 [
-                    'product_id'   => $data['product_id'],
+                    'product_id' => $data['product_id'],
                     'warehouse_id' => $data['warehouse_id'],
                 ],
                 [
-                    'quantity'          => 0,
+                    'quantity' => 0,
                     'reserved_quantity' => 0,
-                    'avg_cost'          => 0,
+                    'avg_cost' => 0,
                 ]
             );
             // Re-fetch with lock to prevent TOCTOU race condition
@@ -146,7 +147,7 @@ class StockService
             // ---------------------------------------------------------------
             // 3. Apply stock delta + valuation
             // ---------------------------------------------------------------
-            $inboundTypes  = ['entree', 'retour_client'];
+            $inboundTypes = ['entree', 'retour_client'];
             $outboundTypes = ['sortie', 'retour_fournisseur'];
 
             if ($type === 'transfert') {
@@ -154,7 +155,7 @@ class StockService
                 $this->assertSufficientStock($stock, $qty);
 
                 // Decrement source using FIFO/LIFO lot selection when applicable
-                if (in_array($valuationMethod, ['fifo', 'lifo'])) {
+                if (in_array($valuationMethod, ['fifo', 'lifo']) && empty($data['stock_lot_id'])) {
                     $lotCost = $this->consumeLotsFifoLifo(
                         (int) $data['product_id'],
                         (int) $data['warehouse_id'],
@@ -167,13 +168,13 @@ class StockService
 
                 $stock->decrement('quantity', $qty);
                 $data['from_warehouse_id'] = $data['warehouse_id'];
-                $data['to_warehouse_id']   = $data['dest_warehouse_id'] ?? null;
+                $data['to_warehouse_id'] = $data['dest_warehouse_id'] ?? null;
 
                 // Increment destination using CMP (destination accumulates at whatever cost arrives)
-                if (!empty($data['dest_warehouse_id'])) {
+                if (! empty($data['dest_warehouse_id'])) {
                     $destStock = ProductStock::firstOrCreate(
                         [
-                            'product_id'   => $data['product_id'],
+                            'product_id' => $data['product_id'],
                             'warehouse_id' => $data['dest_warehouse_id'],
                         ],
                         ['quantity' => 0, 'reserved_quantity' => 0, 'avg_cost' => 0]
@@ -205,7 +206,7 @@ class StockService
                 }
 
                 // -- FIFO / LIFO: consume lots and derive weighted unit cost
-                if (in_array($valuationMethod, ['fifo', 'lifo'])) {
+                if (in_array($valuationMethod, ['fifo', 'lifo']) && empty($data['stock_lot_id'])) {
                     $lotCost = $this->consumeLotsFifoLifo(
                         (int) $data['product_id'],
                         (int) $data['warehouse_id'],
@@ -213,7 +214,7 @@ class StockService
                         $valuationMethod
                     );
                     if ($lotCost > 0) {
-                        $data['unit_cost']  = $lotCost;
+                        $data['unit_cost'] = $lotCost;
                         $data['total_cost'] = $qty * $lotCost;
                     }
                 }
@@ -226,7 +227,7 @@ class StockService
                 $stock->decrement('quantity', $qty);
             }
 
-            $data['avg_cost_after']   = (float) $stock->fresh()->avg_cost;
+            $data['avg_cost_after'] = (float) $stock->fresh()->avg_cost;
             $data['valuation_method'] = $valuationMethod;
 
             $stock->touch('last_movement_at');
@@ -234,8 +235,8 @@ class StockService
 
             // Fire stock alert if available qty dropped below stock_min
             $freshStock = $stock->fresh();
-            $stockMin   = (float) ($product?->stock_min ?? 0);
-            $available  = (float) $freshStock->quantity - (float) $freshStock->reserved_quantity;
+            $stockMin = (float) ($product?->stock_min ?? 0);
+            $available = (float) $freshStock->quantity - (float) $freshStock->reserved_quantity;
             if ($stockMin > 0 && $available <= $stockMin && in_array($type, ['sortie', 'retour_fournisseur', 'transfert', 'ajustement'])) {
                 event(new StockAlertTriggered($freshStock, $available, $stockMin));
             }
@@ -249,20 +250,20 @@ class StockService
             // 4b. [Sync coils/lots] Delta sur le lot explicitement ciblé.
             // quantity (stock_lots) = quantité RESTANTE, tenue en stock_uom.
             // ---------------------------------------------------------------
-            if (!empty($data['stock_lot_id'])) {
+            if (! empty($data['stock_lot_id'])) {
                 $lot = StockLot::lockForUpdate()->find($data['stock_lot_id']);
                 if ($lot) {
                     $delta = match (true) {
-                        in_array($type, $inboundTypes)  => $qty,
+                        in_array($type, $inboundTypes) => $qty,
                         in_array($type, $outboundTypes) => -$qty,
-                        $type === 'ajustement'          => $qty, // signé
-                        default                         => 0,
+                        $type === 'ajustement' => $qty, // signé
+                        default => 0,
                     };
                     $newQty = round((float) $lot->quantity + $delta, 4);
                     if ($newQty < -0.001) {
                         throw new \RuntimeException(
                             "Lot {$lot->lot_number} : quantité restante insuffisante ("
-                            . $lot->quantity . ' disponible, ' . abs($delta) . ' demandée).'
+                            .$lot->quantity.' disponible, '.abs($delta).' demandée).'
                         );
                     }
                     $newQty = max(0, $newQty);
@@ -272,7 +273,7 @@ class StockService
                     // Sémantique alignée : lot vidé = consomme ; reliquat = disponible.
                     $lot->update([
                         'quantity' => $newQty,
-                        'status'   => $newQty <= 0.001 ? 'consomme' : 'disponible',
+                        'status' => $newQty <= 0.001 ? 'consomme' : 'disponible',
                     ]);
                 }
             }
@@ -287,7 +288,7 @@ class StockService
             // [Sync coils/lots] Ignoré si un stock_lot_id explicite a déjà été
             // mouvementé ci-dessus (sinon double delta sur le même lot).
             // ---------------------------------------------------------------
-            if (!empty($data['lot_number']) && empty($data['stock_lot_id'])) {
+            if (! empty($data['lot_number']) && empty($data['stock_lot_id'])) {
                 $this->upsertLot($data, $type, $qty, $unitCost);
             }
 
@@ -311,8 +312,8 @@ class StockService
      */
     private function applyInboundCmp(ProductStock $stock, float $qty, float $unitCost): void
     {
-        $oldQty  = (float) $stock->quantity;
-        $oldAvg  = (float) $stock->avg_cost;
+        $oldQty = (float) $stock->quantity;
+        $oldAvg = (float) $stock->avg_cost;
 
         $newQty = $oldQty + $qty;
         if ($newQty > 0 && $unitCost > 0) {
@@ -351,24 +352,24 @@ class StockService
     private function upsertLot(array $data, string $type, float $qty, float $unitCost): void
     {
         $lotData = [
-            'product_id'   => $data['product_id'],
+            'product_id' => $data['product_id'],
             'warehouse_id' => $data['warehouse_id'],
-            'lot_number'   => $data['lot_number'],
+            'lot_number' => $data['lot_number'],
         ];
 
         $lot = StockLot::firstOrNew($lotData);
         $lot->serial_number = $data['serial_number'] ?? $lot->serial_number;
-        $lot->unit_cost     = $unitCost ?: $lot->unit_cost;
-        $lot->received_at   = $lot->received_at ?? now()->toDateString();
+        $lot->unit_cost = $unitCost ?: $lot->unit_cost;
+        $lot->received_at = $lot->received_at ?? now()->toDateString();
 
-        if (!empty($data['expiry_date'])) {
+        if (! empty($data['expiry_date'])) {
             $lot->expiry_date = $data['expiry_date'];
         }
 
         $inboundTypes = ['entree', 'retour_client'];
         if (in_array($type, $inboundTypes) || ($type === 'ajustement' && $qty > 0)) {
             $lot->quantity = (float) $lot->quantity + $qty;
-            $lot->status   = 'disponible';
+            $lot->status = 'disponible';
         } else {
             $newQty = max(0, (float) $lot->quantity - abs($qty));
             $lot->quantity = $newQty;
@@ -383,18 +384,18 @@ class StockService
     /**
      * Assert that the available stock (quantity − reserved) covers the requested qty.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     private function assertSufficientStock(ProductStock $stock, float $qty): void
     {
         $available = (float) $stock->quantity - (float) $stock->reserved_quantity;
 
         if ($qty > $available) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'quantity' => sprintf(
                     'Stock insuffisant : %s unité(s) disponible(s), %s demandée(s).',
                     number_format($available, 2, ',', ' '),
-                    number_format($qty,       2, ',', ' ')
+                    number_format($qty, 2, ',', ' ')
                 ),
             ]);
         }
@@ -409,27 +410,25 @@ class StockService
      * considered. Lots without a lot_number are skipped (CMP products typically
      * won't have lot records — no harm done).
      *
-     * @param  int    $productId
-     * @param  int    $warehouseId
-     * @param  float  $qty          Total quantity to consume
-     * @param  string $method       'fifo' or 'lifo'
-     * @return float                Weighted average unit cost (0 if no lots found)
+     * @param  float  $qty  Total quantity to consume
+     * @param  string  $method  'fifo' or 'lifo'
+     * @return float Weighted average unit cost (0 if no lots found)
      */
     private function consumeLotsFifoLifo(
-        int    $productId,
-        int    $warehouseId,
-        float  $qty,
+        int $productId,
+        int $warehouseId,
+        float $qty,
         string $method
     ): float {
         $order = $method === 'fifo' ? 'asc' : 'desc';
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, StockLot> $lots */
-        $lots = StockLot::where('product_id',   $productId)
+        /** @var Collection<int, StockLot> $lots */
+        $lots = StockLot::where('product_id', $productId)
             ->where('warehouse_id', $warehouseId)
-            ->where('status',       'disponible')
-            ->where('quantity',     '>', 0)
+            ->where('status', 'disponible')
+            ->where('quantity', '>', 0)
             ->orderBy('received_at', $order)
-            ->orderBy('id',          $order)   // tiebreaker: stable insertion order
+            ->orderBy('id', $order)   // tiebreaker: stable insertion order
             ->lockForUpdate()
             ->get();
 
@@ -437,8 +436,8 @@ class StockService
             return 0.0;
         }
 
-        $remaining     = $qty;
-        $totalCost     = 0.0;
+        $remaining = $qty;
+        $totalCost = 0.0;
         $totalConsumed = 0.0;
 
         foreach ($lots as $lot) {
@@ -446,16 +445,16 @@ class StockService
                 break;
             }
 
-            $consume       = min((float) $lot->quantity, $remaining);
-            $lotUnitCost   = (float) $lot->unit_cost;
+            $consume = min((float) $lot->quantity, $remaining);
+            $lotUnitCost = (float) $lot->unit_cost;
 
-            $totalCost    += $consume * $lotUnitCost;
+            $totalCost += $consume * $lotUnitCost;
             $totalConsumed += $consume;
-            $remaining    -= $consume;
+            $remaining -= $consume;
 
-            $newLotQty   = (float) $lot->quantity - $consume;
+            $newLotQty = (float) $lot->quantity - $consume;
             $lot->quantity = $newLotQty;
-            $lot->status   = $newLotQty <= 0 ? 'consomme' : $lot->status;
+            $lot->status = $newLotQty <= 0 ? 'consomme' : $lot->status;
             $lot->save();
         }
 
@@ -471,7 +470,7 @@ class StockService
         /** @var Product $product */
         $product = Product::with('components.component')->find($data['product_id']);
 
-        if (!$product || $product->type !== 'compose' || $product->components->isEmpty()) {
+        if (! $product || $product->type !== 'compose' || $product->components->isEmpty()) {
             return;
         }
 
@@ -481,12 +480,12 @@ class StockService
                 continue;
             }
 
-            $componentQty     = (float) $bom->quantity * $kitQty;
-            $compValuation    = $bom->component?->valuation_method ?? 'cmp';
+            $componentQty = (float) $bom->quantity * $kitQty;
+            $compValuation = $bom->component?->valuation_method ?? 'cmp';
 
             $compStock = ProductStock::firstOrCreate(
                 [
-                    'product_id'   => $bom->component_product_id,
+                    'product_id' => $bom->component_product_id,
                     'warehouse_id' => $data['warehouse_id'],
                 ],
                 ['quantity' => 0, 'reserved_quantity' => 0, 'avg_cost' => 0]
@@ -513,19 +512,19 @@ class StockService
             $compStock->touch('last_movement_at');
 
             StockMovement::create([
-                'product_id'       => $bom->component_product_id,
-                'warehouse_id'     => $data['warehouse_id'],
-                'type'             => 'sortie',
-                'quantity'         => $componentQty,
-                'unit_cost'        => $compUnitCost,
-                'total_cost'       => $componentQty * $compUnitCost,
+                'product_id' => $bom->component_product_id,
+                'warehouse_id' => $data['warehouse_id'],
+                'type' => 'sortie',
+                'quantity' => $componentQty,
+                'unit_cost' => $compUnitCost,
+                'total_cost' => $componentQty * $compUnitCost,
                 'valuation_method' => $compValuation,
-                'avg_cost_after'   => (float) $compStock->fresh()->avg_cost,
-                'occurred_at'      => $data['occurred_at'],
-                'reference_type'   => 'kit',
-                'reference_id'     => $data['product_id'],
-                'notes'            => 'Consommation automatique — kit ' . $product->name,
-                'created_by'       => $data['created_by'] ?? null,
+                'avg_cost_after' => (float) $compStock->fresh()->avg_cost,
+                'occurred_at' => $data['occurred_at'],
+                'reference_type' => 'kit',
+                'reference_id' => $data['product_id'],
+                'notes' => 'Consommation automatique — kit '.$product->name,
+                'created_by' => $data['created_by'] ?? null,
             ]);
         }
     }

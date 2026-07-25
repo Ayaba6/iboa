@@ -3,14 +3,22 @@
 namespace App\Services;
 
 use App\Events\InvoiceValidated;
+use App\Http\Traits\HasOptimisticLocking;
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\CreditNote;
 use App\Models\DeliveryNote;
+use App\Models\FiscalTransmission;
 use App\Models\Invoice;
+use App\Models\JournalEntry;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\PaymentTerm;
+use App\Models\ProductStock;
 use App\Repositories\InvoiceRepository;
-use App\Http\Traits\HasOptimisticLocking;
+use App\Services\Sync\Handlers\ReplayInvoiceAccountingSync;
+use App\Services\Sync\SyncOrchestrator;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -37,8 +45,8 @@ class InvoiceService
     public function create(array $data): Invoice
     {
         // [Parametrage Vente] client bloque = aucun document commercial
-        \App\Services\ClientService::assertSellable(
-            !empty($data['client_id']) ? \App\Models\Client::find($data['client_id']) : null
+        ClientService::assertSellable(
+            ! empty($data['client_id']) ? Client::find($data['client_id']) : null
         );
 
         return DB::transaction(function () use ($data) {
@@ -47,11 +55,11 @@ class InvoiceService
 
             $company = currentCompany();
 
-            $data['company_id']    = $company->id;
+            $data['company_id'] = $company->id;
             $data['fiscal_year_id'] = $company->current_fiscal_year_id;
-            $data['number']        = $this->sequenceService->nextNumber($company, 'facture');
-            $data['created_by']    = Auth::id();
-            $data['status']        = $data['status'] ?? 'brouillon';
+            $data['number'] = $this->sequenceService->nextNumber($company, 'facture');
+            $data['created_by'] = Auth::id();
+            $data['status'] = $data['status'] ?? 'brouillon';
 
             // Auto-calculate due_at from PaymentTerm when not explicitly provided
             $this->resolveDueAt($data);
@@ -59,7 +67,7 @@ class InvoiceService
             // [TVA-EXEMPT] Défense serveur : si le client est exonéré de TVA,
             // forcer tous les taux à 0 indépendamment de ce que le formulaire envoie.
             $client = isset($data['client_id'])
-                ? \App\Models\Client::with('taxRates')->find($data['client_id'])
+                ? Client::with('taxRates')->find($data['client_id'])
                 : null;
             if ($client?->isTaxExempt()) {
                 $items = $this->zeroOutTax($items);
@@ -67,20 +75,20 @@ class InvoiceService
 
             [$subtotal, $taxTotal] = $this->calculateTotals($items);
             $discount = (int) ($data['global_discount_amount'] ?? 0);
-            $total    = $subtotal + $taxTotal - $discount;
+            $total = $subtotal + $taxTotal - $discount;
 
             // Retenues à la source depuis les taxes du client
             [$withholdingDetails, $withholdingAmount] = $this->computeWithholding($client, $subtotal);
             $netToPay = max(0, $total - $withholdingAmount);
 
-            $data['subtotal_ht']            = $subtotal;
-            $data['total_discount']         = $discount;
-            $data['total_tax']              = $taxTotal;
-            $data['total_ttc']              = $total;
-            $data['withholding_details']    = $withholdingDetails ?: null;
-            $data['withholding_amount']     = $withholdingAmount;
-            $data['net_to_pay']             = $netToPay;
-            $data['remaining_amount']       = $netToPay;
+            $data['subtotal_ht'] = $subtotal;
+            $data['total_discount'] = $discount;
+            $data['total_tax'] = $taxTotal;
+            $data['total_ttc'] = $total;
+            $data['withholding_details'] = $withholdingDetails ?: null;
+            $data['withholding_amount'] = $withholdingAmount;
+            $data['net_to_pay'] = $netToPay;
+            $data['remaining_amount'] = $netToPay;
             $data['global_discount_amount'] = $discount;
 
             $invoice = Invoice::create($data);
@@ -112,45 +120,45 @@ class InvoiceService
 
             // [SEC-PHASE1] Échéance auto : payment_term du client si défini, sinon +30 jours.
             $issuedAt = now();
-            $dueAt    = $this->defaultDueAt($issuedAt, $order->client?->payment_term_id);
+            $dueAt = $this->defaultDueAt($issuedAt, $order->client?->payment_term_id);
 
             $invoice = Invoice::create([
-                'company_id'             => $company->id,
-                'client_id'              => $order->client_id,
-                'fiscal_year_id'         => $order->fiscal_year_id,
-                'order_id'               => $order->id,
-                'number'                 => $this->sequenceService->nextNumber($company, 'facture'),
-                'type'                   => 'standard',
-                'status'                 => 'brouillon',
-                'issued_at'              => $issuedAt->toDateString(),
-                'due_at'                 => $dueAt,
-                'subtotal_ht'            => $order->subtotal_ht,
-                'total_discount'         => $order->total_discount,
-                'total_tax'              => $order->total_tax,
-                'total_ttc'              => $order->total_ttc,
-                'remaining_amount'       => $order->total_ttc,
+                'company_id' => $company->id,
+                'client_id' => $order->client_id,
+                'fiscal_year_id' => $order->fiscal_year_id,
+                'order_id' => $order->id,
+                'number' => $this->sequenceService->nextNumber($company, 'facture'),
+                'type' => 'standard',
+                'status' => 'brouillon',
+                'issued_at' => $issuedAt->toDateString(),
+                'due_at' => $dueAt,
+                'subtotal_ht' => $order->subtotal_ht,
+                'total_discount' => $order->total_discount,
+                'total_tax' => $order->total_tax,
+                'total_ttc' => $order->total_ttc,
+                'remaining_amount' => $order->total_ttc,
                 'global_discount_amount' => $order->global_discount_amount,
-                'global_discount_percent'=> $order->global_discount_percent,
-                'notes'                  => $order->notes,
-                'created_by'             => Auth::id(),
+                'global_discount_percent' => $order->global_discount_percent,
+                'notes' => $order->notes,
+                'created_by' => Auth::id(),
             ]);
 
             foreach ($order->items as $item) {
                 $invoice->items()->create([
-                    'product_id'       => $item->product_id,
-                    'description'      => $item->description,
-                    'unit_id'          => $item->unit_id,
-                    'quantity'         => $item->quantity,
-                    'nb_toles'         => $item->nb_toles,
+                    'product_id' => $item->product_id,
+                    'description' => $item->description,
+                    'unit_id' => $item->unit_id,
+                    'quantity' => $item->quantity,
+                    'nb_toles' => $item->nb_toles,
                     'metrage_par_tole' => $item->metrage_par_tole,
-                    'unit_price'       => $item->unit_price,
+                    'unit_price' => $item->unit_price,
                     'discount_percent' => $item->discount_percent,
-                    'tax_rate_id'      => $item->tax_rate_id,
-                    'tax_rate_value'   => $item->tax_rate_value,
-                    'line_total_ht'    => $item->line_total_ht,
-                    'line_tax'         => $item->line_tax,
-                    'line_total_ttc'   => $item->line_total_ttc,
-                    'sort_order'       => $item->sort_order,
+                    'tax_rate_id' => $item->tax_rate_id,
+                    'tax_rate_value' => $item->tax_rate_value,
+                    'line_total_ht' => $item->line_total_ht,
+                    'line_tax' => $item->line_tax,
+                    'line_total_ttc' => $item->line_total_ttc,
+                    'sort_order' => $item->sort_order,
                 ]);
                 // Track invoiced quantity for partial invoicing
                 $item->increment('invoiced_quantity', (float) $item->quantity);
@@ -186,7 +194,7 @@ class InvoiceService
             if ($existingInvoice) {
                 throw new \RuntimeException(sprintf(
                     'Le bon de livraison %s a déjà été facturé (facture %s, statut %s). '
-                    . 'Annulez la facture existante avant d\'en créer une nouvelle.',
+                    .'Annulez la facture existante avant d\'en créer une nouvelle.',
                     $dn->number, $existingInvoice->number, $existingInvoice->status
                 ));
             }
@@ -202,7 +210,7 @@ class InvoiceService
                 if ($orderInvoice) {
                     throw new \RuntimeException(sprintf(
                         'La commande %s a déjà été facturée intégralement (facture %s). '
-                        . 'Impossible de générer une seconde facture via le BL %s.',
+                        .'Impossible de générer une seconde facture via le BL %s.',
                         $dn->order?->number, $orderInvoice->number, $dn->number
                     ));
                 }
@@ -221,75 +229,76 @@ class InvoiceService
                 // warning on items without order_item_id, plus prevents leakage between
                 // iterations of this loop).
                 $orderItem = null;
-                $qty   = (float) $item->quantity;
+                $qty = (float) $item->quantity;
                 $price = (float) $item->unit_price;
-                $disc  = 0.0;
-                $tax   = 0.0;
+                $disc = 0.0;
+                $tax = 0.0;
 
                 // Fetch tax rate from linked order item
                 if ($item->order_item_id) {
-                    $orderItem = \App\Models\OrderItem::find($item->order_item_id);
+                    $orderItem = OrderItem::find($item->order_item_id);
                     if ($orderItem) {
                         $disc = (float) $orderItem->discount_percent;
-                        $tax  = (float) $orderItem->tax_rate_value;
+                        $tax = (float) $orderItem->tax_rate_value;
                     }
                 }
 
-                $ht      = (int) round($qty * $price * (1 - $disc / 100));
+                $ht = (int) round($qty * $price * (1 - $disc / 100));
                 $lineTax = (int) round($ht * $tax / 100);
-                $ttc     = $ht + $lineTax;
+                $ttc = $ht + $lineTax;
 
                 $subtotal += $ht;
                 $taxTotal += $lineTax;
 
                 $itemsData[] = [
-                    'product_id'       => $item->product_id,
-                    'description'      => $item->description,
-                    'unit_id'          => $item->unit_id,
-                    'quantity'         => $qty,
+                    'delivery_note_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'description' => $item->description,
+                    'unit_id' => $item->unit_id,
+                    'quantity' => $qty,
                     // [§5 TÔLE BAC] hérite nb tôles / longueur de la ligne commande source
-                    'nb_toles'         => $orderItem?->nb_toles ?? $item->nb_toles,
+                    'nb_toles' => $orderItem?->nb_toles ?? $item->nb_toles,
                     'metrage_par_tole' => $orderItem?->metrage_par_tole ?? $item->metrage_par_tole,
-                    'unit_price'       => (int) $price,
+                    'unit_price' => (int) $price,
                     'discount_percent' => $disc,
-                    'tax_rate_id'      => $orderItem?->tax_rate_id ?? null,
-                    'tax_rate_value'   => $tax,
-                    'line_total_ht'    => $ht,
-                    'line_tax'         => $lineTax,
-                    'line_total_ttc'   => $ttc,
-                    'sort_order'       => $i,
+                    'tax_rate_id' => $orderItem?->tax_rate_id ?? null,
+                    'tax_rate_value' => $tax,
+                    'line_total_ht' => $ht,
+                    'line_tax' => $lineTax,
+                    'line_total_ttc' => $ttc,
+                    'sort_order' => $i,
                 ];
             }
 
             // [FIX-MAJEUR] Propagate global discount from the parent order
-            $globalDiscount        = (int) ($dn->order?->global_discount_amount   ?? 0);
+            $globalDiscount = (int) ($dn->order?->global_discount_amount ?? 0);
             $globalDiscountPercent = (float) ($dn->order?->global_discount_percent ?? 0);
-            $total                 = max(0, ($subtotal + $taxTotal) - $globalDiscount);
+            $total = max(0, ($subtotal + $taxTotal) - $globalDiscount);
 
             // [SEC-PHASE1] Échéance auto : payment_term du client si défini, sinon +30 jours.
             $issuedAt = now();
-            $client   = \App\Models\Client::find($dn->client_id);
-            $dueAt    = $this->defaultDueAt($issuedAt, $client?->payment_term_id);
+            $client = Client::find($dn->client_id);
+            $dueAt = $this->defaultDueAt($issuedAt, $client?->payment_term_id);
 
             $invoice = Invoice::create([
-                'company_id'             => $company->id,
-                'client_id'              => $dn->client_id,
-                'fiscal_year_id'         => $company->current_fiscal_year_id,
-                'order_id'               => $dn->order_id,
-                'delivery_note_id'       => $dn->id,
-                'number'                 => $this->sequenceService->nextNumber($company, 'facture'),
-                'type'                   => 'standard',
-                'status'                 => 'brouillon',
-                'issued_at'              => $issuedAt->toDateString(),
-                'due_at'                 => $dueAt,
-                'subtotal_ht'            => $subtotal,
-                'total_discount'         => $globalDiscount,
+                'company_id' => $company->id,
+                'client_id' => $dn->client_id,
+                'fiscal_year_id' => $company->current_fiscal_year_id,
+                'order_id' => $dn->order_id,
+                'delivery_note_id' => $dn->id,
+                'number' => $this->sequenceService->nextNumber($company, 'facture'),
+                'type' => 'standard',
+                'status' => 'brouillon',
+                'issued_at' => $issuedAt->toDateString(),
+                'due_at' => $dueAt,
+                'subtotal_ht' => $subtotal,
+                'total_discount' => $globalDiscount,
                 'global_discount_amount' => $globalDiscount,
-                'global_discount_percent'=> $globalDiscountPercent,
-                'total_tax'              => $taxTotal,
-                'total_ttc'              => $total,
-                'remaining_amount'       => $total,
-                'created_by'             => Auth::id(),
+                'global_discount_percent' => $globalDiscountPercent,
+                'total_tax' => $taxTotal,
+                'total_ttc' => $total,
+                'remaining_amount' => $total,
+                'created_by' => Auth::id(),
             ]);
 
             foreach ($itemsData as $itemData) {
@@ -299,7 +308,7 @@ class InvoiceService
             // [FIX-CRITIQUE] Increment invoiced_quantity on linked order items
             foreach ($dn->items as $dnItem) {
                 if ($dnItem->order_item_id) {
-                    \App\Models\OrderItem::where('id', $dnItem->order_item_id)
+                    OrderItem::where('id', $dnItem->order_item_id)
                         ->increment('invoiced_quantity', (float) $dnItem->quantity);
                 }
             }
@@ -320,7 +329,7 @@ class InvoiceService
     {
         return DB::transaction(function () use ($invoice, $data) {
             // [FISCAL] Un document fiscalement transmis (accepté) est IMMUABLE.
-            if (\App\Models\FiscalTransmission::isDocumentLocked($invoice)) {
+            if (FiscalTransmission::isDocumentLocked($invoice)) {
                 throw new \RuntimeException("La facture {$invoice->number} a été transmise à l'administration fiscale — toute modification est interdite. Émettez un avoir.");
             }
 
@@ -336,8 +345,8 @@ class InvoiceService
 
             if ($invoice->status !== 'brouillon') {
                 throw new \RuntimeException(sprintf(
-                    "La facture %s est « %s » — la modification est interdite par la réglementation comptable. "
-                    . "Pour corriger une erreur sur une facture déjà émise, créez un avoir client et émettez une nouvelle facture.",
+                    'La facture %s est « %s » — la modification est interdite par la réglementation comptable. '
+                    .'Pour corriger une erreur sur une facture déjà émise, créez un avoir client et émettez une nouvelle facture.',
                     $invoice->number,
                     $invoice->status
                 ));
@@ -349,7 +358,7 @@ class InvoiceService
             // [TVA-EXEMPT] Défense serveur sur update : vérifier le client courant
             // (peut changer si l'utilisateur modifie le champ client en édition).
             $clientId = $data['client_id'] ?? $invoice->client_id;
-            $client   = \App\Models\Client::find($clientId);
+            $client = Client::find($clientId);
             if ($client?->isTaxExempt() && $items !== null) {
                 $items = $this->zeroOutTax($items);
             }
@@ -362,6 +371,7 @@ class InvoiceService
             }
 
             $this->recalculate($invoice);
+
             return $invoice->fresh();
         });
     }
@@ -383,14 +393,14 @@ class InvoiceService
             // [BUG-FIX] Garantie : une facture validée a TOUJOURS une échéance.
             // Sinon le cron invoices:mark-overdue et le module Relances l'ignorent.
             $updates = [
-                'status'       => 'emise',
+                'status' => 'emise',
                 'validated_by' => Auth::id(),
                 'validated_at' => now(),
             ];
-            if (!$invoice->due_at) {
+            if (! $invoice->due_at) {
                 $issuedAt = $invoice->issued_at ?? now();
                 $updates['due_at'] = $this->defaultDueAt(
-                    $issuedAt instanceof \Carbon\Carbon ? $issuedAt : \Carbon\Carbon::parse($issuedAt),
+                    $issuedAt instanceof Carbon ? $issuedAt : Carbon::parse($issuedAt),
                     $invoice->payment_term_id
                 );
             }
@@ -433,21 +443,21 @@ class InvoiceService
         // Post to GL synchronously — must be in the same transaction.
         // [Sync ERP] journalisée + idempotente (jamais deux écritures pour la même
         // facture) + relançable via sync_logs.
-        app(\App\Services\Sync\SyncOrchestrator::class)->run(
+        app(SyncOrchestrator::class)->run(
             sourceModule: 'ventes',
             targetModule: 'comptabilite',
             eventName: 'invoice.validated',
             action: 'post_gl_entry',
             source: $invoice,
             callback: fn () => $this->accountingService->postClientInvoice($invoice),
-            handlerClass: \App\Services\Sync\Handlers\ReplayInvoiceAccountingSync::class,
+            handlerClass: ReplayInvoiceAccountingSync::class,
         );
         // [COMPTA-STOCK] Sortie de stock automatique
         $this->accountingService->postSaleStockMovement($invoice);
 
         // [SYNC] Maintenir le montant facturé de la commande source en temps
         // réel (sinon il n'était rattrapé que par sync:modules quotidien).
-        \App\Models\Order::resyncInvoicedAmount($invoice->order_id);
+        Order::resyncInvoicedAmount($invoice->order_id);
 
         // Fire event — queued listener sends email after commit
         event(new InvoiceValidated($invoice));
@@ -460,7 +470,7 @@ class InvoiceService
      */
     private function snapshotItemCosts(Invoice $invoice): void
     {
-        $invoice->loadMissing('items.product');
+        $invoice->loadMissing('items.product', 'items.deliveryNoteItem.lotAllocations');
 
         foreach ($invoice->items as $item) {
             // Ne pas réécraser un snapshot déjà figé (idempotence).
@@ -471,6 +481,16 @@ class InvoiceService
             if (! $product) {
                 continue;
             }
+            $allocations = $item->deliveryNoteItem?->lotAllocations?->whereNull('reversed_at');
+            if ($allocations && $allocations->isNotEmpty()) {
+                $quantity = (float) $allocations->sum('quantity');
+                $cost = $quantity > 0 ? (float) $allocations->sum('total_cost') / $quantity : 0;
+                if ($cost > 0) {
+                    $item->updateQuietly(['unit_cost' => round($cost, 2)]);
+
+                    continue;
+                }
+            }
             // [FIX VALORISATION] Le coût des ventes se fige au CMP RÉEL du stock
             // (product_stocks.avg_cost, moyenne pondérée par les quantités) — la
             // colonne products.weighted_avg_cost n'est maintenue nulle part (0)
@@ -478,7 +498,7 @@ class InvoiceService
             // comptable dès que le catalogue divergeait du CMP (constaté :
             // sortie valorisée 593 136 au lieu de 48 000 au CMP).
             // Même cascade que StockInsightsService (valorisation des stocks).
-            $cost = (float) (\App\Models\ProductStock::where('product_id', $product->id)
+            $cost = (float) (ProductStock::where('product_id', $product->id)
                 ->where('quantity', '>', 0)
                 ->selectRaw('SUM(quantity * COALESCE(avg_cost, 0)) / NULLIF(SUM(quantity), 0) AS cmp')
                 ->value('cmp') ?? 0);
@@ -506,7 +526,7 @@ class InvoiceService
         return DB::transaction(function () use ($invoice) {
             $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
 
-            if (!in_array($invoice->status, ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])) {
+            if (! in_array($invoice->status, ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])) {
                 throw new \RuntimeException('Seules les factures en cours de paiement peuvent être marquées comme payées.');
             }
 
@@ -519,8 +539,8 @@ class InvoiceService
             }
 
             $invoice->update([
-                'status'           => 'payee',
-                'paid_amount'      => $invoice->total_ttc,
+                'status' => 'payee',
+                'paid_amount' => $invoice->total_ttc,
                 'remaining_amount' => 0,
             ]);
 
@@ -543,41 +563,41 @@ class InvoiceService
             $total = $subtotal + $taxTotal;
 
             $creditNote = CreditNote::create([
-                'company_id'      => $company->id,
-                'client_id'       => $invoice->client_id,
-                'invoice_id'      => $invoice->id,
-                'number'          => $this->sequenceService->nextNumber($company, 'avoir'),
-                'status'          => 'brouillon',
-                'issued_at'       => $data['issued_at'] ?? now()->toDateString(),
-                'reason'          => $data['reason'] ?? null,
-                'currency_code'   => $invoice->currency_code,
-                'subtotal_ht'     => $subtotal,
-                'total_tax'       => $taxTotal,
-                'total_ttc'       => $total,
-                'remaining_credit'=> $total,
-                'notes'           => $data['notes'] ?? null,
-                'created_by'      => Auth::id(),
+                'company_id' => $company->id,
+                'client_id' => $invoice->client_id,
+                'invoice_id' => $invoice->id,
+                'number' => $this->sequenceService->nextNumber($company, 'avoir'),
+                'status' => 'brouillon',
+                'issued_at' => $data['issued_at'] ?? now()->toDateString(),
+                'reason' => $data['reason'] ?? null,
+                'currency_code' => $invoice->currency_code,
+                'subtotal_ht' => $subtotal,
+                'total_tax' => $taxTotal,
+                'total_ttc' => $total,
+                'remaining_credit' => $total,
+                'notes' => $data['notes'] ?? null,
+                'created_by' => Auth::id(),
             ]);
 
             foreach ($items as $i => $item) {
-                $qty      = (float) ($item['quantity'] ?? 1);
-                $price    = (float) ($item['unit_price'] ?? 0);
-                $tax      = (float) ($item['tax_rate_value'] ?? 0);
-                $ht       = (int) round($qty * $price);
-                $lineTax  = (int) round($ht * ($tax / 100));
+                $qty = (float) ($item['quantity'] ?? 1);
+                $price = (float) ($item['unit_price'] ?? 0);
+                $tax = (float) ($item['tax_rate_value'] ?? 0);
+                $ht = (int) round($qty * $price);
+                $lineTax = (int) round($ht * ($tax / 100));
 
                 $creditNote->items()->create([
-                    'product_id'     => $item['product_id'] ?? null,
-                    'description'    => $item['description'] ?? '',
-                    'unit_id'        => $item['unit_id'] ?? null,
-                    'quantity'       => $qty,
-                    'unit_price'     => (int) $price,
-                    'tax_rate_id'    => $item['tax_rate_id'] ?? null,
+                    'product_id' => $item['product_id'] ?? null,
+                    'description' => $item['description'] ?? '',
+                    'unit_id' => $item['unit_id'] ?? null,
+                    'quantity' => $qty,
+                    'unit_price' => (int) $price,
+                    'tax_rate_id' => $item['tax_rate_id'] ?? null,
                     'tax_rate_value' => $tax,
-                    'line_total_ht'  => $ht,
-                    'line_tax'       => $lineTax,
+                    'line_total_ht' => $ht,
+                    'line_tax' => $lineTax,
                     'line_total_ttc' => $ht + $lineTax,
-                    'sort_order'     => $i,
+                    'sort_order' => $i,
                 ]);
             }
 
@@ -603,7 +623,7 @@ class InvoiceService
      */
     public function cancel(Invoice $invoice, ?string $reason = null): Invoice
     {
-        if (!in_array($invoice->status, ['emise', 'envoyee', 'en_retard'])) {
+        if (! in_array($invoice->status, ['emise', 'envoyee', 'en_retard'])) {
             throw new \RuntimeException('Seules les factures émises sans paiement peuvent être annulées.');
         }
         if ($invoice->paid_amount > 0) {
@@ -617,7 +637,7 @@ class InvoiceService
 
         return DB::transaction(function () use ($invoice, $reason) {
             // Find and reverse the GL entry linked to this invoice
-            $glEntry = \App\Models\JournalEntry::where('reference', $invoice->number)
+            $glEntry = JournalEntry::where('reference', $invoice->number)
                 ->where('company_id', $invoice->company_id)
                 ->where('status', 'valide')
                 ->first();
@@ -625,25 +645,25 @@ class InvoiceService
             if ($glEntry) {
                 $this->accountingService->reverseEntry(
                     $glEntry,
-                    'Annulation facture ' . $invoice->number . ' — ' . $reason
+                    'Annulation facture '.$invoice->number.' — '.$reason
                 );
             }
 
             // Le motif est concaténé à `notes` (préserve l'existant), avec timestamp + user
             $cancelTrace = sprintf(
-                "[ANNULATION %s par %s] %s",
+                '[ANNULATION %s par %s] %s',
                 now()->format('d/m/Y H:i'),
                 Auth::user()?->name ?? 'système',
                 $reason
             );
             $newNotes = $invoice->notes
-                ? rtrim((string) $invoice->notes) . "\n\n" . $cancelTrace
+                ? rtrim((string) $invoice->notes)."\n\n".$cancelTrace
                 : $cancelTrace;
 
             $invoice->update([
-                'status'           => 'annulee',
+                'status' => 'annulee',
                 'remaining_amount' => 0,
-                'notes'            => $newNotes,
+                'notes' => $newNotes,
             ]);
 
             // [SEC-PHASE2] Journal d'audit : annulation de facture tracée
@@ -655,7 +675,7 @@ class InvoiceService
                 $invoice->load('items');
                 foreach ($invoice->items as $invItem) {
                     if ($invItem->product_id) {
-                        \App\Models\OrderItem::where('order_id', $invoice->order_id)
+                        OrderItem::where('order_id', $invoice->order_id)
                             ->where('product_id', $invItem->product_id)
                             ->decrement('invoiced_quantity', (float) $invItem->quantity);
                     }
@@ -668,7 +688,7 @@ class InvoiceService
                 $order = $invoice->order()->with('items', 'deliveryNotes')->first();
                 if ($order && $order->status === 'facture') {
                     $allDelivered = $order->items->every(
-                        fn($item) => (float) $item->delivered_quantity >= (float) $item->quantity
+                        fn ($item) => (float) $item->delivered_quantity >= (float) $item->quantity
                     );
                     $hasValidatedBl = $order->deliveryNotes->where('status', 'valide')->isNotEmpty();
                     if ($hasValidatedBl) {
@@ -708,7 +728,7 @@ class InvoiceService
                     $invoice->load('items');
                     foreach ($invoice->items as $invItem) {
                         if ($invItem->product_id) {
-                            \App\Models\OrderItem::where('order_id', $order->id)
+                            OrderItem::where('order_id', $order->id)
                                 ->where('product_id', $invItem->product_id)
                                 ->decrement('invoiced_quantity', (float) $invItem->quantity);
                         }
@@ -716,7 +736,7 @@ class InvoiceService
 
                     // Restore order to its pre-invoicing status
                     $allDelivered = $order->items->every(
-                        fn($i) => (float) $i->delivered_quantity >= (float) $i->quantity
+                        fn ($i) => (float) $i->delivered_quantity >= (float) $i->quantity
                     );
                     $hasValidatedBl = $order->deliveryNotes->where('status', 'valide')->isNotEmpty();
 
@@ -747,12 +767,12 @@ class InvoiceService
      */
     private function resolveDueAt(array &$data): void
     {
-        if (!empty($data['due_at'])) {
+        if (! empty($data['due_at'])) {
             return; // explicit due date wins
         }
 
         $issuedAt = isset($data['issued_at'])
-            ? \Carbon\Carbon::parse($data['issued_at'])
+            ? Carbon::parse($data['issued_at'])
             : now();
 
         $data['due_at'] = $this->defaultDueAt($issuedAt, $data['payment_term_id'] ?? null);
@@ -763,11 +783,12 @@ class InvoiceService
      * Utilisé par create(), createFromOrder() et createFromDeliveryNote() pour garantir
      * qu'aucune facture ne soit jamais émise sans échéance.
      */
-    private function defaultDueAt(\Carbon\Carbon $issuedAt, ?int $paymentTermId = null): string
+    private function defaultDueAt(Carbon $issuedAt, ?int $paymentTermId = null): string
     {
         if ($paymentTermId && ($term = PaymentTerm::find($paymentTermId))) {
             return $term->calculateDueDate($issuedAt)->toDateString();
         }
+
         return $issuedAt->copy()->addDays(30)->toDateString();
     }
 
@@ -778,27 +799,27 @@ class InvoiceService
                 continue;
             }
 
-            $qty      = (float) ($item['quantity'] ?? 1);
-            $price    = (float) ($item['unit_price'] ?? 0);
-            $disc     = (float) ($item['discount_percent'] ?? 0);
-            $tax      = (float) ($item['tax_rate_value'] ?? 0);
-            $ht       = (int) round($qty * $price * (1 - $disc / 100));
-            $lineTax  = (int) round($ht * ($tax / 100));
-            $ttc      = $ht + $lineTax;
+            $qty = (float) ($item['quantity'] ?? 1);
+            $price = (float) ($item['unit_price'] ?? 0);
+            $disc = (float) ($item['discount_percent'] ?? 0);
+            $tax = (float) ($item['tax_rate_value'] ?? 0);
+            $ht = (int) round($qty * $price * (1 - $disc / 100));
+            $lineTax = (int) round($ht * ($tax / 100));
+            $ttc = $ht + $lineTax;
 
             $invoice->items()->create([
-                'product_id'       => $item['product_id'] ?? null,
-                'description'      => $item['description'] ?? '',
-                'unit_id'          => $item['unit_id'] ?? null,
-                'quantity'         => $qty,
-                'unit_price'       => (int) $price,
+                'product_id' => $item['product_id'] ?? null,
+                'description' => $item['description'] ?? '',
+                'unit_id' => $item['unit_id'] ?? null,
+                'quantity' => $qty,
+                'unit_price' => (int) $price,
                 'discount_percent' => $disc,
-                'tax_rate_id'      => $item['tax_rate_id'] ?? null,
-                'tax_rate_value'   => $tax,
-                'line_total_ht'    => $ht,
-                'line_tax'         => $lineTax,
-                'line_total_ttc'   => $ttc,
-                'sort_order'       => $i,
+                'tax_rate_id' => $item['tax_rate_id'] ?? null,
+                'tax_rate_value' => $tax,
+                'line_total_ht' => $ht,
+                'line_tax' => $lineTax,
+                'line_total_ttc' => $ttc,
+                'sort_order' => $i,
             ]);
         }
     }
@@ -812,8 +833,9 @@ class InvoiceService
     {
         return array_map(function (array $item) {
             $item['tax_rate_value'] = 0;
-            $item['tax_rate_id']    = null;
-            $item['line_tax']       = 0;
+            $item['tax_rate_id'] = null;
+            $item['line_tax'] = 0;
+
             return $item;
         }, $items);
     }
@@ -824,11 +846,11 @@ class InvoiceService
         $taxTotal = 0;
 
         foreach ($items as $item) {
-            $qty   = (float) ($item['quantity'] ?? 1);
+            $qty = (float) ($item['quantity'] ?? 1);
             $price = (float) ($item['unit_price'] ?? 0);
-            $disc  = (float) ($item['discount_percent'] ?? 0);
-            $tax   = (float) ($item['tax_rate_value'] ?? 0);
-            $ht    = $qty * $price * (1 - $disc / 100);
+            $disc = (float) ($item['discount_percent'] ?? 0);
+            $tax = (float) ($item['tax_rate_value'] ?? 0);
+            $ht = $qty * $price * (1 - $disc / 100);
             $subtotal += $ht;
             $taxTotal += $ht * ($tax / 100);
         }
@@ -843,7 +865,7 @@ class InvoiceService
         $subtotal = (int) $invoice->items->sum('line_total_ht');
         $taxTotal = (int) $invoice->items->sum('line_tax');
         $discount = (int) ($invoice->global_discount_amount ?? 0);
-        $total    = $subtotal + $taxTotal - $discount;
+        $total = $subtotal + $taxTotal - $discount;
 
         // Calcul des retenues à la source (type = 'retenue') du client
         [$withholdingDetails, $withholdingAmount] = $this->computeWithholding(
@@ -854,13 +876,13 @@ class InvoiceService
         $netToPay = max(0, $total - $withholdingAmount);
 
         $invoice->update([
-            'subtotal_ht'         => $subtotal,
-            'total_tax'           => $taxTotal,
-            'total_ttc'           => $total,
+            'subtotal_ht' => $subtotal,
+            'total_tax' => $taxTotal,
+            'total_ttc' => $total,
             'withholding_details' => $withholdingDetails ?: null,
-            'withholding_amount'  => $withholdingAmount,
-            'net_to_pay'          => $netToPay,
-            'remaining_amount'    => max(0, $netToPay - (int) ($invoice->paid_amount ?? 0)),
+            'withholding_amount' => $withholdingAmount,
+            'net_to_pay' => $netToPay,
+            'remaining_amount' => max(0, $netToPay - (int) ($invoice->paid_amount ?? 0)),
         ]);
     }
 
@@ -868,9 +890,9 @@ class InvoiceService
      * Calcule les retenues à la source applicables à un client.
      * Retourne [details[], totalAmount].
      */
-    private function computeWithholding(?\App\Models\Client $client, int $subtotalHt): array
+    private function computeWithholding(?Client $client, int $subtotalHt): array
     {
-        if (!$client) {
+        if (! $client) {
             return [[], 0];
         }
 
@@ -880,15 +902,15 @@ class InvoiceService
         }
 
         $details = [];
-        $total   = 0;
+        $total = 0;
 
         foreach ($retenues as $tax) {
-            $amount    = (int) round($subtotalHt * (float) $tax->rate / 100);
+            $amount = (int) round($subtotalHt * (float) $tax->rate / 100);
             $details[] = [
-                'name'       => $tax->name,
+                'name' => $tax->name,
                 'short_name' => $tax->short_name,
-                'rate'       => (float) $tax->rate,
-                'amount'     => $amount,
+                'rate' => (float) $tax->rate,
+                'amount' => $amount,
             ];
             $total += $amount;
         }
@@ -918,7 +940,7 @@ class InvoiceService
             throw new \RuntimeException('Seules les factures de type « proforma » peuvent être converties.');
         }
 
-        if (!in_array($proforma->status, ['brouillon', 'emise', 'envoyee'])) {
+        if (! in_array($proforma->status, ['brouillon', 'emise', 'envoyee'])) {
             throw new \RuntimeException(sprintf(
                 'La proforma %s (statut : %s) ne peut plus être convertie.',
                 $proforma->number,
@@ -930,56 +952,56 @@ class InvoiceService
             // Lock the proforma row to prevent concurrent conversion.
             $proforma = Invoice::lockForUpdate()->findOrFail($proforma->id);
 
-            if ($proforma->type !== 'proforma' || !in_array($proforma->status, ['brouillon', 'emise', 'envoyee'])) {
+            if ($proforma->type !== 'proforma' || ! in_array($proforma->status, ['brouillon', 'emise', 'envoyee'])) {
                 throw new \RuntimeException('La proforma ne peut plus être convertie (état modifié simultanément).');
             }
 
             $proforma->load('items', 'client.taxRates');
-            $company = \App\Models\Company::findOrFail($proforma->company_id);
+            $company = Company::findOrFail($proforma->company_id);
 
             // ── 1. Créer la nouvelle facture standard ─────────────────────────
             $newInvoice = Invoice::create([
-                'company_id'              => $proforma->company_id,
-                'client_id'               => $proforma->client_id,
-                'fiscal_year_id'          => $proforma->fiscal_year_id ?? $company->current_fiscal_year_id,
-                'order_id'                => $proforma->order_id,
-                'delivery_note_id'        => $proforma->delivery_note_id,
-                'number'                  => $this->sequenceService->nextNumber($company, 'facture'),
-                'type'                    => 'standard',
-                'status'                  => 'brouillon',
-                'issued_at'               => now()->toDateString(),
-                'due_at'                  => $this->defaultDueAt(now(), $proforma->client?->payment_term_id),
-                'subtotal_ht'             => $proforma->subtotal_ht,
-                'total_discount'          => $proforma->total_discount,
-                'global_discount_amount'  => $proforma->global_discount_amount,
+                'company_id' => $proforma->company_id,
+                'client_id' => $proforma->client_id,
+                'fiscal_year_id' => $proforma->fiscal_year_id ?? $company->current_fiscal_year_id,
+                'order_id' => $proforma->order_id,
+                'delivery_note_id' => $proforma->delivery_note_id,
+                'number' => $this->sequenceService->nextNumber($company, 'facture'),
+                'type' => 'standard',
+                'status' => 'brouillon',
+                'issued_at' => now()->toDateString(),
+                'due_at' => $this->defaultDueAt(now(), $proforma->client?->payment_term_id),
+                'subtotal_ht' => $proforma->subtotal_ht,
+                'total_discount' => $proforma->total_discount,
+                'global_discount_amount' => $proforma->global_discount_amount,
                 'global_discount_percent' => $proforma->global_discount_percent,
-                'total_tax'               => $proforma->total_tax,
-                'total_ttc'               => $proforma->total_ttc,
-                'withholding_details'     => $proforma->withholding_details,
-                'withholding_amount'      => $proforma->withholding_amount,
-                'net_to_pay'              => $proforma->net_to_pay,
-                'remaining_amount'        => $proforma->net_to_pay ?? $proforma->total_ttc,
-                'notes'                   => $proforma->notes,
-                'payment_method'          => $proforma->payment_method,
-                'parent_invoice_id'       => null,
-                'created_by'              => Auth::id(),
+                'total_tax' => $proforma->total_tax,
+                'total_ttc' => $proforma->total_ttc,
+                'withholding_details' => $proforma->withholding_details,
+                'withholding_amount' => $proforma->withholding_amount,
+                'net_to_pay' => $proforma->net_to_pay,
+                'remaining_amount' => $proforma->net_to_pay ?? $proforma->total_ttc,
+                'notes' => $proforma->notes,
+                'payment_method' => $proforma->payment_method,
+                'parent_invoice_id' => null,
+                'created_by' => Auth::id(),
             ]);
 
             // Copier les lignes de la proforma
             foreach ($proforma->items as $i => $item) {
                 $newInvoice->items()->create([
-                    'product_id'       => $item->product_id,
-                    'description'      => $item->description,
-                    'unit_id'          => $item->unit_id,
-                    'quantity'         => $item->quantity,
-                    'unit_price'       => $item->unit_price,
+                    'product_id' => $item->product_id,
+                    'description' => $item->description,
+                    'unit_id' => $item->unit_id,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
                     'discount_percent' => $item->discount_percent,
-                    'tax_rate_id'      => $item->tax_rate_id,
-                    'tax_rate_value'   => $item->tax_rate_value,
-                    'line_total_ht'    => $item->line_total_ht,
-                    'line_tax'         => $item->line_tax,
-                    'line_total_ttc'   => $item->line_total_ttc,
-                    'sort_order'       => $i,
+                    'tax_rate_id' => $item->tax_rate_id,
+                    'tax_rate_value' => $item->tax_rate_value,
+                    'line_total_ht' => $item->line_total_ht,
+                    'line_tax' => $item->line_tax,
+                    'line_total_ttc' => $item->line_total_ttc,
+                    'sort_order' => $i,
                 ]);
             }
 
@@ -991,10 +1013,10 @@ class InvoiceService
 
             // ── 3. Annuler la proforma originelle ─────────────────────────────
             $proforma->update([
-                'status'            => 'annulee',
+                'status' => 'annulee',
                 'parent_invoice_id' => $newInvoice->id,
-                'notes'             => rtrim((string) $proforma->notes) . "\n\n"
-                    . sprintf(
+                'notes' => rtrim((string) $proforma->notes)."\n\n"
+                    .sprintf(
                         '[CONVERTI le %s par %s → Facture %s]',
                         now()->format('d/m/Y H:i'),
                         Auth::user()?->name ?? 'système',

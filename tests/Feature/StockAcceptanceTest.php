@@ -17,21 +17,28 @@
  *   - DOCUMENTS : export PDF de l'état des stocks
  */
 
+use App\Models\Account;
+use App\Models\AuditLog;
+use App\Models\Client;
 use App\Models\Company;
+use App\Models\DeliveryNote;
 use App\Models\FiscalYear;
 use App\Models\JournalEntry;
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Models\StockLot;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\DeliveryNoteService;
 use App\Services\InventoryService;
 use App\Services\StockService;
 use App\Services\StockTransferService;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function stkSetup(): array
 {
@@ -56,8 +63,8 @@ function stkSeedStock(Company $co, Warehouse $wh, Product $product, float $qty, 
 
 it('valide un inventaire : écart appliqué au stock + mouvement + écriture comptable', function () {
     $ctx = stkSetup();
-    $co  = $ctx['co'];
-    $wh  = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-STK'], ['name' => 'Dépôt STK', 'is_default' => true, 'is_active' => true]);
+    $co = $ctx['co'];
+    $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-STK'], ['name' => 'Dépôt STK', 'is_default' => true, 'is_active' => true]);
     $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
     stkSeedStock($co, $wh, $product, 100);
 
@@ -85,7 +92,7 @@ it('valide un inventaire : écart appliqué au stock + mouvement + écriture com
 
 it('exécute un transfert inter-dépôts : expédition puis réception (impacts stock)', function () {
     $ctx = stkSetup();
-    $co  = $ctx['co'];
+    $co = $ctx['co'];
     $whA = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-A'], ['name' => 'Dépôt A', 'is_active' => true]);
     $whB = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-B'], ['name' => 'Dépôt B', 'is_active' => true]);
     $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
@@ -112,7 +119,7 @@ it('refuse un transfert avec dépôt source identique à la destination (contrô
     expect(fn () => app(StockTransferService::class)->create([
         'from_warehouse_id' => $wh->id, 'to_warehouse_id' => $wh->id, 'transfer_date' => now()->toDateString(),
         'items' => [['product_id' => $product->id, 'quantity' => 5]],
-    ]))->toThrow(\RuntimeException::class);
+    ]))->toThrow(RuntimeException::class);
 });
 
 it('refuse l’accès au module Stock sans la permission (droits)', function () {
@@ -137,7 +144,7 @@ it('génère l’export PDF de l’état des stocks (documents)', function () {
 // après réception ou double annulation : refus.
 it('annulation de transfert : réintégration en transit, refus après réception et double annulation', function () {
     $ctx = stkSetup();
-    $co  = $ctx['co'];
+    $co = $ctx['co'];
     $whA = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-TC1'], ['name' => 'Dépôt TC1', 'is_active' => true]);
     $whB = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-TC2'], ['name' => 'Dépôt TC2', 'is_active' => true]);
     $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
@@ -158,7 +165,7 @@ it('annulation de transfert : réintégration en transit, refus après réceptio
         ->and((float) (ProductStock::where('product_id', $product->id)->where('warehouse_id', $whB->id)->value('quantity') ?? 0))->toBe(0.0);
 
     // 2. Double annulation → refusée (aucune double réintégration)
-    expect(fn () => $svc->cancel($t1->fresh(), 'encore'))->toThrow(\RuntimeException::class);
+    expect(fn () => $svc->cancel($t1->fresh(), 'encore'))->toThrow(RuntimeException::class);
     expect((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $whA->id)->value('quantity'))->toBe(50.0);
 
     // 3. Transfert REÇU → annulation refusée (flux terminé)
@@ -168,14 +175,14 @@ it('annulation de transfert : réintégration en transit, refus après réceptio
     ]);
     $svc->ship($t2);
     $svc->receive($t2->fresh());
-    expect(fn () => $svc->cancel($t2->fresh(), 'trop tard'))->toThrow(\RuntimeException::class);
+    expect(fn () => $svc->cancel($t2->fresh(), 'trop tard'))->toThrow(RuntimeException::class);
 });
 
 // [DÉCISION 23/07] Transfert partiellement reçu : l'écart est une PERTE EN
 // TRANSIT comptabilisée (D 6097 / C 3111) — plus d'évaporation silencieuse.
 it('comptabilise la perte en transit d\'un transfert partiellement reçu', function () {
     $ctx = stkSetup();
-    $co  = $ctx['co'];
+    $co = $ctx['co'];
     $whA = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-PL1'], ['name' => 'Dépôt PL1', 'is_active' => true]);
     $whB = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-PL2'], ['name' => 'Dépôt PL2', 'is_active' => true]);
     $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
@@ -196,15 +203,15 @@ it('comptabilise la perte en transit d\'un transfert partiellement reçu', funct
         ->and((float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $whA->id)->value('quantity'))->toBe(30.0);
 
     // Écriture de perte : D 6097 / C 3111 = 30 000, équilibrée, idempotente
-    $entry = \App\Models\JournalEntry::where('reference', 'PERTE-TRANSIT-' . $t->number)->first();
+    $entry = JournalEntry::where('reference', 'PERTE-TRANSIT-'.$t->number)->first();
     expect($entry)->not->toBeNull()
         ->and((int) $entry->total_debit)->toBe(30000)
         ->and((int) $entry->total_debit)->toBe((int) $entry->total_credit);
-    $c6097 = \App\Models\Account::where('code', '6097')->first();
+    $c6097 = Account::where('code', '6097')->first();
     expect((int) $c6097->debit_balance)->toBe(30000);
 
     // Journal d'audit alimenté
-    expect(\App\Models\AuditLog::where('action', 'transfert.perte_transit')->where('model_id', $t->id)->exists())->toBeTrue();
+    expect(AuditLog::where('action', 'transfert.perte_transit')->where('model_id', $t->id)->exists())->toBeTrue();
 
     // Réception complète d'un autre transfert → AUCUNE écriture de perte
     stkSeedStock($co, $whA, $product, 10, 6000);
@@ -214,25 +221,25 @@ it('comptabilise la perte en transit d\'un transfert partiellement reçu', funct
     ]);
     $svc->ship($t2);
     $svc->receive($t2->fresh());
-    expect(\App\Models\JournalEntry::where('reference', 'PERTE-TRANSIT-' . $t2->number)->exists())->toBeFalse();
+    expect(JournalEntry::where('reference', 'PERTE-TRANSIT-'.$t2->number)->exists())->toBeFalse();
 });
 
 // [DÉCISION 23/07 — BL par lot] Lien formel : la validation du BL décrémente le
 // lot rattaché, l'annulation le réintègre ; gardes quantité et cohérence produit.
 it('BL lié à un lot : décrément à la validation, gardes, réintégration à l\'annulation', function () {
     $ctx = stkSetup();
-    $co  = $ctx['co'];
-    $wh  = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-LOT'], ['name' => 'Dépôt LOT', 'is_default' => true, 'is_active' => true]);
+    $co = $ctx['co'];
+    $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-LOT'], ['name' => 'Dépôt LOT', 'is_default' => true, 'is_active' => true]);
     $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
     stkSeedStock($co, $wh, $product, 30, 5000);
-    $lot = \App\Models\StockLot::create([
+    $lot = StockLot::create([
         'company_id' => $co->id, 'product_id' => $product->id, 'warehouse_id' => $wh->id,
-        'lot_number' => 'LOT-TB-001', 'quantity' => 12, 'status' => 'disponible',
+        'lot_number' => 'LOT-TB-001', 'quantity' => 12, 'unit_cost' => 5000, 'status' => 'disponible',
     ]);
 
-    $dn = \App\Models\DeliveryNote::create([
-        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
-        'number' => 'BL-LOT-' . uniqid(), 'status' => 'brouillon',
+    $dn = DeliveryNote::create([
+        'company_id' => $co->id, 'client_id' => Client::factory()->create()->id,
+        'number' => 'BL-LOT-'.uniqid(), 'status' => 'brouillon',
         'warehouse_id' => $wh->id, 'issued_at' => now(), 'delivery_date' => now(),
     ]);
     $dn->items()->create([
@@ -240,7 +247,7 @@ it('BL lié à un lot : décrément à la validation, gardes, réintégration à
         'stock_lot_id' => $lot->id,
     ]);
 
-    $svc = app(\App\Services\DeliveryNoteService::class);
+    $svc = app(DeliveryNoteService::class);
     $svc->validate($dn);
 
     expect((float) $lot->fresh()->quantity)->toBe(4.0)                       // 12 − 8
@@ -253,9 +260,9 @@ it('BL lié à un lot : décrément à la validation, gardes, réintégration à
         ->and((float) ProductStock::where('product_id', $product->id)->value('quantity'))->toBe(30.0);
 
     // Garde : quantité de lot insuffisante → refus AVANT toute sortie
-    $dn2 = \App\Models\DeliveryNote::create([
-        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
-        'number' => 'BL-LOT2-' . uniqid(), 'status' => 'brouillon',
+    $dn2 = DeliveryNote::create([
+        'company_id' => $co->id, 'client_id' => Client::factory()->create()->id,
+        'number' => 'BL-LOT2-'.uniqid(), 'status' => 'brouillon',
         'warehouse_id' => $wh->id, 'issued_at' => now(), 'delivery_date' => now(),
     ]);
     $dn2->items()->create([
@@ -265,7 +272,7 @@ it('BL lié à un lot : décrément à la validation, gardes, réintégration à
     try {
         $svc->validate($dn2);
         $this->fail('La validation aurait dû être refusée (lot insuffisant).');
-    } catch (\RuntimeException $e) {
+    } catch (RuntimeException $e) {
         expect($e->getMessage())->toContain('insuffisante');
     }
     expect((float) $lot->fresh()->quantity)->toBe(12.0);
@@ -273,9 +280,9 @@ it('BL lié à un lot : décrément à la validation, gardes, réintégration à
     // Garde : lot d'un AUTRE produit → refus
     $autre = Product::factory()->create(['is_stockable' => true]);
     stkSeedStock($co, $wh, $autre, 5, 1000);
-    $dn3 = \App\Models\DeliveryNote::create([
-        'company_id' => $co->id, 'client_id' => \App\Models\Client::factory()->create()->id,
-        'number' => 'BL-LOT3-' . uniqid(), 'status' => 'brouillon',
+    $dn3 = DeliveryNote::create([
+        'company_id' => $co->id, 'client_id' => Client::factory()->create()->id,
+        'number' => 'BL-LOT3-'.uniqid(), 'status' => 'brouillon',
         'warehouse_id' => $wh->id, 'issued_at' => now(), 'delivery_date' => now(),
     ]);
     $dn3->items()->create([
@@ -285,7 +292,7 @@ it('BL lié à un lot : décrément à la validation, gardes, réintégration à
     try {
         $svc->validate($dn3);
         $this->fail('La validation aurait dû être refusée (lot étranger).');
-    } catch (\RuntimeException $e) {
+    } catch (RuntimeException $e) {
         expect($e->getMessage())->toContain('ne correspond pas');
     }
 });

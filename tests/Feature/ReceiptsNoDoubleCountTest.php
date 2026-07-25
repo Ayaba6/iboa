@@ -1,11 +1,11 @@
 <?php
 
 /**
- * [Contrôles pré-push d8b0220] confirmedReceipts() ne double-compte jamais :
- * - BP caisse puis facture réglée du même argent → plafonné au TTC (identique) ;
- * - acompte libre puis affecté à une facture → transfert, total inchangé ;
- * - paiements non confirmés exclus.
- * + mesure du nombre de requêtes du tableau des commandes à produire.
+ * [ContrÃƒÂ´les prÃƒÂ©-push d8b0220] confirmedReceipts() ne double-compte jamais :
+ * - BP caisse puis facture rÃƒÂ©glÃƒÂ©e du mÃƒÂªme argent Ã¢â€ â€™ plafonnÃƒÂ© au TTC (identique) ;
+ * - acompte libre puis affectÃƒÂ© ÃƒÂ  une facture Ã¢â€ â€™ transfert, total inchangÃƒÂ© ;
+ * - paiements non confirmÃƒÂ©s exclus.
+ * + mesure du nombre de requÃƒÂªtes du tableau des commandes ÃƒÂ  produire.
  */
 
 use App\Models\BonPreparation;
@@ -59,18 +59,18 @@ function rcInvoice(Order $order): Invoice
     ]);
 }
 
-it('BP caisse puis facture réglée du même argent : le montant confirmé reste identique (plafond TTC)', function () {
+it('BP caisse puis facture rÃƒÂ©glÃƒÂ©e du mÃƒÂªme argent : le montant confirmÃƒÂ© reste identique (plafond TTC)', function () {
     $co = rcCompany();
     $order = rcOrder($co, 1000000);
 
-    // 1. Paiement caisse intégral → BP
+    // 1. Paiement caisse intÃƒÂ©gral Ã¢â€ â€™ BP
     BonPreparation::create([
         'company_id' => $co->id, 'order_id' => $order->id,
         'number' => 'BP-RC-' . uniqid(), 'status' => 'en_attente', 'payment_amount' => 1000000,
     ]);
     expect($order->fresh()->confirmedReceipts())->toBe(1000000);
 
-    // 2. Facture créée, puis le MÊME argent ressaisi en trésorerie et alloué.
+    // 2. Facture crÃƒÂ©ÃƒÂ©e, puis le MÃƒÅ ME argent ressaisi en trÃƒÂ©sorerie et allouÃƒÂ©.
     $invoice = rcInvoice($order);
     $pay = ClientPayment::create([
         'company_id' => $co->id, 'client_id' => $order->client_id, 'status' => 'confirme',
@@ -81,11 +81,11 @@ it('BP caisse puis facture réglée du même argent : le montant confirmé reste
         'client_payment_id' => $pay->id, 'invoice_id' => $invoice->id, 'amount' => 1000000, 'allocated_at' => now(),
     ]);
 
-    // Sans plafond : 2 000 000. Avec plafond TTC : identique à avant.
+    // Sans plafond : 2 000 000. Avec plafond TTC : identique ÃƒÂ  avant.
     expect($order->fresh()->confirmedReceipts())->toBe(1000000);
 });
 
-it('acompte libre puis affecté à une facture : transfert sans double comptage', function () {
+it('acompte libre puis affectÃƒÂ© ÃƒÂ  une facture : transfert sans double comptage', function () {
     $co = rcCompany();
     $order = rcOrder($co, 1000000);
 
@@ -96,7 +96,7 @@ it('acompte libre puis affecté à une facture : transfert sans double comptage'
     ]);
     expect($order->fresh()->confirmedReceipts())->toBe(500000);
 
-    // Affectation de l'acompte à la facture : unallocated ↓, allocation ↑ — total stable.
+    // Affectation de l'acompte ÃƒÂ  la facture : unallocated Ã¢â€ â€œ, allocation Ã¢â€ â€˜ Ã¢â‚¬â€ total stable.
     $invoice = rcInvoice($order);
     ClientPaymentAllocation::create([
         'client_payment_id' => $acompte->id, 'invoice_id' => $invoice->id, 'amount' => 500000, 'allocated_at' => now(),
@@ -106,12 +106,12 @@ it('acompte libre puis affecté à une facture : transfert sans double comptage'
     expect($order->fresh()->confirmedReceipts())->toBe(500000);
 });
 
-it('exclut les paiements non confirmés (brouillon/annulé) et les BP annulés', function () {
+it('exclut les paiements non confirmes (en_attente/annule) et les BP annules', function () {
     $co = rcCompany();
     $order = rcOrder($co, 1000000);
 
     ClientPayment::create([
-        'company_id' => $co->id, 'client_id' => $order->client_id, 'status' => 'brouillon',
+        'company_id' => $co->id, 'client_id' => $order->client_id, 'status' => 'en_attente',
         'is_acompte' => true, 'amount' => 300000, 'unallocated_amount' => 300000,
         'payment_date' => now(), 'number' => 'ENC-RC-' . uniqid(),
     ]);
@@ -128,25 +128,25 @@ it('exclut les paiements non confirmés (brouillon/annulé) et les BP annulés',
     expect($order->fresh()->confirmedReceipts())->toBe(0);
 });
 
-it('reflète immédiatement un paiement ajouté ou annulé sur la MÊME instance (pas de valeur périmée)', function () {
+it('reflÃƒÂ¨te immÃƒÂ©diatement un paiement ajoutÃƒÂ© ou annulÃƒÂ© sur la MÃƒÅ ME instance (pas de valeur pÃƒÂ©rimÃƒÂ©e)', function () {
     $co = rcCompany();
     $order = rcOrder($co, 1000000);
 
-    // 1-2. Même instance, avant paiement.
+    // 1-2. MÃƒÂªme instance, avant paiement.
     expect($order->confirmedReceipts())->toBe(0);
 
-    // 3-5. BP confirmé créé → le second appel sur la MÊME instance voit le paiement.
+    // 3-5. BP confirmÃƒÂ© crÃƒÂ©ÃƒÂ© Ã¢â€ â€™ le second appel sur la MÃƒÅ ME instance voit le paiement.
     $bp = BonPreparation::create([
         'company_id' => $co->id, 'order_id' => $order->id,
         'number' => 'BP-RC-' . uniqid(), 'status' => 'en_attente', 'payment_amount' => 1000000,
     ]);
     expect($order->confirmedReceipts())->toBe(1000000);
 
-    // Contrôle inverse : annulation du BP → retombe à 0 sur la même instance.
+    // ContrÃƒÂ´le inverse : annulation du BP Ã¢â€ â€™ retombe ÃƒÂ  0 sur la mÃƒÂªme instance.
     $bp->update(['status' => 'annule']);
     expect($order->confirmedReceipts())->toBe(0);
 
-    // Nouvelle allocation facture → visible immédiatement.
+    // Nouvelle allocation facture Ã¢â€ â€™ visible immÃƒÂ©diatement.
     $invoice = rcInvoice($order);
     $pay = ClientPayment::create([
         'company_id' => $co->id, 'client_id' => $order->client_id, 'status' => 'confirme',
@@ -158,12 +158,12 @@ it('reflète immédiatement un paiement ajouté ou annulé sur la MÊME instance
     ]);
     expect($order->confirmedReceipts())->toBe(400000);
 
-    // Révocation du paiement (annulé) → retombe à 0 sur la même instance.
+    // RÃƒÂ©vocation du paiement (annulÃƒÂ©) Ã¢â€ â€™ retombe ÃƒÂ  0 sur la mÃƒÂªme instance.
     $pay->update(['status' => 'annule']);
     expect($order->confirmedReceipts())->toBe(0);
 });
 
-it('mesure les requêtes du tableau des commandes à produire (documentation N+1)', function () {
+it('mesure les requÃƒÂªtes du tableau des commandes ÃƒÂ  produire (documentation N+1)', function () {
     $co = rcCompany();
     $u = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]);
     $u->assignRole(Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']));
@@ -182,8 +182,8 @@ it('mesure les requêtes du tableau des commandes à produire (documentation N+1
     $count = count(DB::getQueryLog());
     DB::disableQueryLog();
 
-    // ~4 requêtes par commande (invoices, allocations, BP sum, acomptes) : N+1 assumé
-    // et documenté — acceptable au volume actuel (< 30 commandes éligibles).
-    // Garde-fou : alerte si dérive majeure.
+    // ~4 requÃƒÂªtes par commande (invoices, allocations, BP sum, acomptes) : N+1 assumÃƒÂ©
+    // et documentÃƒÂ© Ã¢â‚¬â€ acceptable au volume actuel (< 30 commandes ÃƒÂ©ligibles).
+    // Garde-fou : alerte si dÃƒÂ©rive majeure.
     expect($count)->toBeLessThan(80);
 })->group('perf');

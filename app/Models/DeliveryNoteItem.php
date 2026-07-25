@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DeliveryNoteItem extends Model
 {
@@ -27,10 +28,10 @@ class DeliveryNoteItem extends Model
     ];
 
     protected $casts = [
-        'quantity'    => 'decimal:4',
-        'unit_price'  => 'integer',
+        'quantity' => 'decimal:4',
+        'unit_price' => 'integer',
         'expiry_date' => 'date',
-        'sort_order'  => 'integer',
+        'sort_order' => 'integer',
     ];
 
     // -------------------------------------------------------------------------
@@ -55,6 +56,12 @@ class DeliveryNoteItem extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /** Allocations de coût et de traçabilité réellement sorties pour cette ligne. */
+    public function lotAllocations(): HasMany
+    {
+        return $this->hasMany(DeliveryNoteItemLotAllocation::class);
     }
 
     /** [Décision 23/07] Lot de stock formellement livré par cette ligne. */

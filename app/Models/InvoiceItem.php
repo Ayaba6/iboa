@@ -11,6 +11,7 @@ class InvoiceItem extends Model
 
     protected $fillable = [
         'invoice_id',
+        'delivery_note_item_id',
         'product_id',
         'description',
         'unit_id',
@@ -29,15 +30,15 @@ class InvoiceItem extends Model
     ];
 
     protected $casts = [
-        'quantity'         => 'decimal:4',
-        'unit_price'       => 'integer',
-        'unit_cost'        => 'decimal:2',
+        'quantity' => 'decimal:4',
+        'unit_price' => 'integer',
+        'unit_cost' => 'decimal:2',
         'discount_percent' => 'decimal:2',
-        'tax_rate_value'   => 'decimal:2',
-        'line_total_ht'    => 'integer',
-        'line_tax'         => 'integer',
-        'line_total_ttc'   => 'integer',
-        'sort_order'       => 'integer',
+        'tax_rate_value' => 'decimal:2',
+        'line_total_ht' => 'integer',
+        'line_tax' => 'integer',
+        'line_total_ttc' => 'integer',
+        'sort_order' => 'integer',
     ];
 
     // -------------------------------------------------------------------------
@@ -47,6 +48,11 @@ class InvoiceItem extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function deliveryNoteItem(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryNoteItem::class);
     }
 
     public function product(): BelongsTo

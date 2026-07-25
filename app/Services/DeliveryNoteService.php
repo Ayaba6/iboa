@@ -2,16 +2,21 @@
 
 namespace App\Services;
 
-use App\Models\Company;
+use App\Events\DeliveryNoteValidated;
 use App\Models\DeliveryNote;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductStock;
+use App\Models\StockLot;
+use App\Models\StockMovement;
 use App\Models\StockReservation;
 use App\Models\Warehouse;
+use App\Modules\Production\Services\ProductionDeliveryGuard;
 use App\Modules\Production\Services\ReservationService;
 use App\Repositories\DeliveryNoteRepository;
+use App\Services\Sync\Handlers\ReplayDeliveryStockSync;
+use App\Services\Sync\SyncOrchestrator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,19 +47,19 @@ class DeliveryNoteService
             $company = currentCompany();
 
             $dn = DeliveryNote::create([
-                'company_id'       => $company->id,
-                'client_id'        => $order->client_id,
-                'order_id'         => $order->id,
-                'number'           => $this->sequenceService->nextNumber($company, 'bon_livraison'),
-                'issued_at'        => now()->toDateString(),
-                'status'           => 'brouillon',
+                'company_id' => $company->id,
+                'client_id' => $order->client_id,
+                'order_id' => $order->id,
+                'number' => $this->sequenceService->nextNumber($company, 'bon_livraison'),
+                'issued_at' => now()->toDateString(),
+                'status' => 'brouillon',
                 // Dépôt de livraison explicite si défini, sinon le dépôt qui détient
                 // réellement le stock du premier produit livrable (produit fini de l'OF).
-                'warehouse_id'     => $order->delivery_warehouse_id
+                'warehouse_id' => $order->delivery_warehouse_id
                                        ?? $this->resolveOrderStockWarehouse($order),
                 'delivery_address' => $order->delivery_address,
-                'currency_code'    => $order->currency_code,
-                'created_by'       => Auth::id(),
+                'currency_code' => $order->currency_code,
+                'created_by' => Auth::id(),
             ]);
 
             $totalQty = 0;
@@ -65,7 +70,7 @@ class DeliveryNoteService
                 // Évite de proposer 50 quand 40 seulement sont en stock (survente
                 // si l'utilisateur valide sans corriger). La ligne reste éditable.
                 $remaining = max(0, (float) $item->quantity - (float) $item->delivered_quantity);
-                $qty       = $remaining;
+                $qty = $remaining;
 
                 if ($item->product_id && $dn->warehouse_id) {
                     $stock = ProductStock::where('product_id', $item->product_id)
@@ -84,15 +89,15 @@ class DeliveryNoteService
 
                 $dn->items()->create([
                     'order_item_id' => $item->id,
-                    'product_id'    => $item->product_id,
-                    'description'   => $item->description,
-                    'unit_id'       => $item->unit_id,
-                    'quantity'      => $qty,
+                    'product_id' => $item->product_id,
+                    'description' => $item->description,
+                    'unit_id' => $item->unit_id,
+                    'quantity' => $qty,
                     // [§5 TÔLE BAC] nb tôles / longueur unitaire hérités de la commande
-                    'nb_toles'         => $item->nb_toles,
+                    'nb_toles' => $item->nb_toles,
                     'metrage_par_tole' => $item->metrage_par_tole,
-                    'unit_price'    => $item->unit_price,
-                    'sort_order'    => $i,
+                    'unit_price' => $item->unit_price,
+                    'sort_order' => $i,
                 ]);
                 $totalQty += $qty;
             }
@@ -114,11 +119,11 @@ class DeliveryNoteService
         }
 
         // [VENTE↔PRODUCTION] Blocages livraison pour commandes fabriquées (QC + qté produite).
-        app(\App\Modules\Production\Services\ProductionDeliveryGuard::class)->assertDeliverable($dn);
+        app(ProductionDeliveryGuard::class)->assertDeliverable($dn);
 
         return DB::transaction(function () use ($dn) {
             $dn->update([
-                'status'       => 'valide',
+                'status' => 'valide',
                 'validated_by' => Auth::id(),
                 'validated_at' => now(),
             ]);
@@ -126,7 +131,7 @@ class DeliveryNoteService
             $this->applyStockOut($dn);
 
             // [Sync ERP] event domaine apres commit — point d'extension decouple
-            DB::afterCommit(fn () => event(new \App\Events\DeliveryNoteValidated($dn)));
+            DB::afterCommit(fn () => event(new DeliveryNoteValidated($dn)));
 
             return $dn->fresh();
         });
@@ -141,14 +146,14 @@ class DeliveryNoteService
      */
     public function applyStockOut(DeliveryNote $dn): void
     {
-        app(\App\Services\Sync\SyncOrchestrator::class)->run(
+        app(SyncOrchestrator::class)->run(
             sourceModule: 'ventes',
             targetModule: 'stock',
             eventName: 'delivery_note.validated',
             action: 'create_stock_exits',
             source: $dn,
             callback: fn () => $this->applyStockOutInner($dn),
-            handlerClass: \App\Services\Sync\Handlers\ReplayDeliveryStockSync::class,
+            handlerClass: ReplayDeliveryStockSync::class,
         );
     }
 
@@ -164,7 +169,7 @@ class DeliveryNoteService
         // [Sync ERP] Idempotence par comptage : nb de sorties déjà créées pour ce BL
         // et ce produit vs nb de lignes — gère les relances ET les doubles appels
         // internes (validate + workflow) sans jamais doubler une sortie.
-        $existingByProduct = \App\Models\StockMovement::where('reference_type', 'delivery_note')
+        $existingByProduct = StockMovement::where('reference_type', 'delivery_note')
             ->where('reference_id', $dn->id)
             ->selectRaw('product_id, COUNT(*) as nb')
             ->groupBy('product_id')
@@ -172,7 +177,7 @@ class DeliveryNoteService
         $seenByProduct = [];
 
         foreach ($dn->items as $item) {
-            if (!$item->product_id || !($item->product?->is_stockable ?? true)) {
+            if (! $item->product_id || ! ($item->product?->is_stockable ?? true)) {
                 continue;
             }
 
@@ -199,48 +204,46 @@ class DeliveryNoteService
             // rester synchrones, sinon un recompute rederive une réservation fantôme.
             $this->consumeReservations($dn, (int) $item->product_id, (int) $warehouseId, $deliveredQty);
 
-            // Use the current average cost for valuation, not the sale price
-            $avgCost = ProductStock::where('product_id', $item->product_id)
-                ->where('warehouse_id', $warehouseId)
-                ->value('avg_cost') ?? 0;
+            $hasFormalLots = $item->stock_lot_id || StockLot::where('product_id', $item->product_id)
+                ->where('warehouse_id', $warehouseId)->where('quantity', '>', 0)->exists();
 
-            // [DÉCISION 23/07 — BL par lot] Ligne rattachée à un lot formel :
-            // le lot est décrémenté avec la sortie (traçabilité lot → client).
-            if ($item->stock_lot_id) {
-                $lot = \App\Models\StockLot::lockForUpdate()->find($item->stock_lot_id);
-                if (! $lot || (int) $lot->product_id !== (int) $item->product_id) {
-                    throw new \RuntimeException(sprintf(
-                        'Ligne %s : le lot sélectionné n\'existe pas ou ne correspond pas à l\'article.',
-                        $item->product?->name ?? '#' . $item->product_id
-                    ));
+            if ($hasFormalLots) {
+                // Une sortie distincte par lot fige le coût historique réellement livré.
+                $allocations = app(DeliveryLotAllocationService::class)->allocate($item, (int) $warehouseId);
+                foreach ($allocations as $allocation) {
+                    $lot = $allocation->stockLot()->firstOrFail();
+                    $movement = $this->stockService->recordMovement([
+                        'product_id' => $item->product_id,
+                        'warehouse_id' => $warehouseId,
+                        'type' => 'sortie',
+                        'quantity' => (float) $allocation->quantity,
+                        'unit_cost' => (float) $allocation->unit_cost_snapshot,
+                        'occurred_at' => now(),
+                        'reference_type' => 'delivery_note',
+                        'reference_id' => $dn->id,
+                        'stock_lot_id' => $lot->id,
+                        'lot_number' => $lot->lot_number,
+                        'idempotency_key' => 'delivery-note:'.$dn->id.':'.$item->id.':lot:'.$lot->id,
+                        'notes' => 'BL '.$dn->number.' — lot '.$lot->lot_number,
+                    ]);
+                    $allocation->update(['stock_movement_id' => $movement->id]);
                 }
-                if ((float) $lot->quantity < $deliveredQty) {
-                    throw new \RuntimeException(sprintf(
-                        'Lot %s : quantité insuffisante (%s disponible, %s à livrer).',
-                        $lot->lot_number, $lot->quantity, $deliveredQty
-                    ));
-                }
-                $lot->decrement('quantity', $deliveredQty);
-                // lot_number affiché sur le BL/PDF aligné sur le lot formel
-                if ($item->lot_number !== $lot->lot_number) {
-                    $item->updateQuietly(['lot_number' => $lot->lot_number]);
-                }
+            } else {
+                $avgCost = ProductStock::where('product_id', $item->product_id)
+                    ->where('warehouse_id', $warehouseId)->value('avg_cost') ?? 0;
+                $this->stockService->recordMovement([
+                    'product_id' => $item->product_id,
+                    'warehouse_id' => $warehouseId,
+                    'type' => 'sortie',
+                    'quantity' => $deliveredQty,
+                    'unit_cost' => (float) $avgCost,
+                    'occurred_at' => now(),
+                    'reference_type' => 'delivery_note',
+                    'reference_id' => $dn->id,
+                    'idempotency_key' => 'delivery-note:'.$dn->id.':'.$item->id,
+                    'notes' => 'BL '.$dn->number,
+                ]);
             }
-
-            $this->stockService->recordMovement([
-                'product_id'      => $item->product_id,
-                'warehouse_id'    => $warehouseId,
-                'type'            => 'sortie',
-                'quantity'        => $deliveredQty,
-                'unit_cost'       => (float) $avgCost,
-                'occurred_at'     => now(),
-                'reference_type'  => 'delivery_note',
-                'reference_id'    => $dn->id,
-                // [CDC sync stock] Rejouer la validation du BL ne double pas la sortie
-                'idempotency_key' => 'delivery-note:' . $dn->id . ':' . $item->id,
-                'notes'           => 'BL ' . $dn->number . ($item->stock_lot_id ? ' — lot ' . $item->lot_number : ''),
-            ]);
-
             // Update delivered_quantity on the linked order item
             if ($item->order_item_id) {
                 $orderItem = OrderItem::find($item->order_item_id);
@@ -339,7 +342,7 @@ class DeliveryNoteService
     private function resolveOrderStockWarehouse(Order $order): ?int
     {
         foreach ($order->items as $item) {
-            if (!$item->product_id) {
+            if (! $item->product_id) {
                 continue;
             }
             if ($wid = $this->resolveStockWarehouse($item->product_id)) {
@@ -362,7 +365,7 @@ class DeliveryNoteService
 
         // Prevent double-invoicing
         if (Invoice::where('delivery_note_id', $dn->id)->exists()) {
-            throw new \RuntimeException('Une facture a déjà été générée pour ce bon de livraison (' . $dn->number . ').');
+            throw new \RuntimeException('Une facture a déjà été générée pour ce bon de livraison ('.$dn->number.').');
         }
 
         return app(InvoiceService::class)->createFromDeliveryNote($dn);
@@ -375,6 +378,7 @@ class DeliveryNoteService
             throw new \RuntimeException('Seuls les bons de livraison en brouillon peuvent être annulés.');
         }
         $dn->update(['status' => 'annule']);
+
         return $dn->fresh();
     }
 
@@ -401,37 +405,44 @@ class DeliveryNoteService
                 ?? Warehouse::value('id');
 
             foreach ($dn->items as $item) {
-                if (!$item->product_id || !($item->product?->is_stockable ?? true)) {
+                if (! $item->product_id || ! ($item->product?->is_stockable ?? true)) {
                     continue;
                 }
 
-                // Reverse: create a stock-in movement to restore quantity
-                $avgCost = \App\Models\ProductStock::where('product_id', $item->product_id)
-                    ->where('warehouse_id', $warehouseId)
-                    ->value('avg_cost') ?? 0;
-
                 $reversedQty = abs((float) $item->quantity);
-
-                // [DÉCISION 23/07 — BL par lot] Le lot formellement livré est réintégré
-                if ($item->stock_lot_id) {
-                    \App\Models\StockLot::lockForUpdate()->find($item->stock_lot_id)
-                        ?->increment('quantity', $reversedQty);
+                $allocations = $item->lotAllocations()->whereNull('reversed_at')->with('stockLot')->get();
+                foreach ($allocations as $allocation) {
+                    $this->stockService->recordMovement([
+                        'product_id' => $item->product_id,
+                        'warehouse_id' => (int) $allocation->warehouse_id,
+                        'type' => 'entree',
+                        'quantity' => (float) $allocation->quantity,
+                        'unit_cost' => (float) $allocation->unit_cost_snapshot,
+                        'occurred_at' => now(),
+                        'reference_type' => 'delivery_note',
+                        'reference_id' => $dn->id,
+                        'stock_lot_id' => $allocation->stock_lot_id,
+                        'lot_number' => $allocation->stockLot->lot_number,
+                        'idempotency_key' => 'delivery-note-reversal:'.$dn->id.':'.$item->id.':lot:'.$allocation->stock_lot_id,
+                        'notes' => 'Annulation BL '.$dn->number.' — lot '.$allocation->stockLot->lot_number,
+                    ]);
                 }
-
-                $this->stockService->recordMovement([
-                    'product_id'      => $item->product_id,
-                    'warehouse_id'    => $warehouseId,
-                    'type'            => 'entree',
-                    'quantity'        => $reversedQty,
-                    'unit_cost'       => (float) $avgCost,
-                    'occurred_at'     => now(),
-                    'reference_type'  => 'delivery_note',
-                    'reference_id'    => $dn->id,
-                    // [CDC sync stock] Une seule contre-passation par ligne annulée
-                    'idempotency_key' => 'delivery-note-reversal:' . $dn->id . ':' . $item->id,
-                    'notes'           => 'Annulation BL ' . $dn->number,
-                ]);
-
+                app(DeliveryLotAllocationService::class)->reverse($item);
+                if ($allocations->isEmpty()) {
+                    $outbound = StockMovement::where('idempotency_key', 'delivery-note:'.$dn->id.':'.$item->id)->first();
+                    $this->stockService->recordMovement([
+                        'product_id' => $item->product_id,
+                        'warehouse_id' => $warehouseId,
+                        'type' => 'entree',
+                        'quantity' => $reversedQty,
+                        'unit_cost' => (float) ($outbound?->unit_cost ?? 0),
+                        'occurred_at' => now(),
+                        'reference_type' => 'delivery_note',
+                        'reference_id' => $dn->id,
+                        'idempotency_key' => 'delivery-note-reversal:'.$dn->id.':'.$item->id,
+                        'notes' => 'Annulation BL '.$dn->number,
+                    ]);
+                }
                 // [FIX-VENTES-07] Re-establish the reservation only when the parent order
                 // is still active (confirmed / in-preparation / partially delivered).
                 // If the order is cancelled or already fully invoiced there is no one
@@ -445,7 +456,7 @@ class DeliveryNoteService
 
                 // Decrement delivered_quantity (and invoiced_quantity if applicable) on the linked order item
                 if ($item->order_item_id) {
-                    $orderItem = \App\Models\OrderItem::find($item->order_item_id);
+                    $orderItem = OrderItem::find($item->order_item_id);
                     if ($orderItem) {
                         $orderItem->decrement('delivered_quantity', (float) $item->quantity);
 
@@ -472,13 +483,17 @@ class DeliveryNoteService
      */
     private function syncOrderDeliveryStatus(?Order $order): void
     {
-        if (!$order) return;
+        if (! $order) {
+            return;
+        }
 
         $order->load('items', 'deliveryNotes');
 
         // Count validated delivery notes
         $validatedBls = $order->deliveryNotes->where('status', 'valide')->count();
-        if ($validatedBls === 0) return;
+        if ($validatedBls === 0) {
+            return;
+        }
 
         // Check if all order items are fully delivered
         $allDelivered = $order->items->every(function ($item) {
@@ -487,7 +502,7 @@ class DeliveryNoteService
 
         $newStatus = $allDelivered ? 'livre' : 'partiellement_livre';
 
-        if (!in_array($order->status, ['facture', 'annule'])) {
+        if (! in_array($order->status, ['facture', 'annule'])) {
             $order->update(['status' => $newStatus]);
         }
     }
