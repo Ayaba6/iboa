@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Sale\Concerns;
 
 use App\Models\Product;
+use App\Services\SalesPriceGuardService;
 use Illuminate\Validation\Validator;
 
 /**
@@ -15,16 +16,20 @@ trait ChecksFloorPrice
     public function checkFloorPrice(Validator $validator): void
     {
         $validator->after(function (Validator $v) {
+            if (! $this->filled('status') || $this->input('status') === 'brouillon') {
+                return;
+            }
             $items = (array) $this->input('items', []);
             $ids = collect($items)->pluck('product_id')->filter()->unique()->values();
             if ($ids->isEmpty()) {
                 return;
             }
 
-            $floors = Product::whereIn('id', $ids)
-                ->whereNotNull('min_sale_price')
-                ->where('min_sale_price', '>', 0)
-                ->pluck('min_sale_price', 'id');
+            $floors = Product::whereIn('id', $ids)->get()
+                ->mapWithKeys(fn (Product $product) => [
+                    $product->id => app(SalesPriceGuardService::class)->effectiveFloor($product),
+                ])
+                ->filter(fn ($floor) => $floor > 0);
 
             foreach ($items as $i => $item) {
                 $pid = $item['product_id'] ?? null;

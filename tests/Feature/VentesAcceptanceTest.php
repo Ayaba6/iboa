@@ -72,7 +72,7 @@ function vaccStockedProduct(Company $co, int $qty = 100): array
 {
     $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'VACC-WH'],
         ['name' => 'Dépôt VACC', 'is_default' => true, 'is_active' => true]);
-    $product = Product::factory()->create(['is_stockable' => true, 'is_sellable' => true, 'valuation_method' => 'cmp']);
+    $product = Product::factory()->create(['is_stockable' => true, 'is_sellable' => true, 'valuation_method' => 'cmp', 'purchase_price' => 6000, 'weighted_avg_cost' => 6000]);
 
     app(StockService::class)->recordMovement([
         'product_id'   => $product->id,

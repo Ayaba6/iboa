@@ -3,14 +3,15 @@
 namespace App\Services;
 
 use App\Events\OrderConfirmed;
-use App\Models\BonPreparation;
+use App\Models\Client;
 use App\Models\CommercialValidation;
-use App\Models\Company;
 use App\Models\CreditNote;
 use App\Models\DeliveryNote;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Quote;
+use App\Modules\Production\Services\ProductionDeliveryGuard;
+use App\Modules\Production\Services\ReservationService;
 use App\Notifications\ValidationStepNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -35,23 +36,28 @@ class CommercialWorkflowService
     /**
      * Soumet un document à validation.
      *
-     * @param  Quote|Order|DeliveryNote|Invoice|CreditNote $document
+     * @param  Quote|Order|DeliveryNote|Invoice|CreditNote  $document
+     *
      * @throws \RuntimeException
      */
     public function submit(mixed $document, ?string $motif = null): void
     {
         $this->assertPermission('sales.submit');
 
+        if ($document instanceof Order || $document instanceof Quote) {
+            app(SalesFloorWaiverService::class)->assertDocumentMayProceed($document);
+        }
+
         // [CDC §dépassement-crédit] Commande dépassant la limite de crédit → bloquée,
         // redirigée vers responsable hiérarchique pour autorisation.
         if ($document instanceof Order) {
-            $client = $document->client ?? \App\Models\Client::find($document->client_id);
+            $client = $document->client ?? Client::find($document->client_id);
             if ($client && $client->isOverCreditLimit()) {
                 // Notifie le responsable commercial pour déblocage manuel
                 ValidationStepNotification::sendToRoles(
                     ['responsable_commercial', 'directeur'],
                     title: 'Dépassement de crédit client',
-                    message: "Commande {$document->number} bloquée — client {$client->name} dépasse sa limite de crédit (" . number_format($client->credit_limit, 0, ',', ' ') . ' XOF).',
+                    message: "Commande {$document->number} bloquée — client {$client->name} dépasse sa limite de crédit (".number_format($client->credit_limit, 0, ',', ' ').' XOF).',
                     url: route('ventes.commandes.show', $document),
                     modelType: 'Order', modelId: $document->id,
                     type: 'credit_limit_exceeded', icon: 'exclamation-triangle', color: 'red',
@@ -68,13 +74,13 @@ class CommercialWorkflowService
         // ce type de document, jamais un envoi large. Message enrichi :
         // demandeur + client + montant pour décider sans ouvrir le document.
         $demandeur = Auth::user()?->name ?? 'Utilisateur';
-        $client    = $document->client?->name ?? \App\Models\Client::find($document->client_id ?? 0)?->name;
-        $montant   = isset($document->total_ttc)
-            ? number_format((int) $document->total_ttc, 0, ',', ' ') . ' FCFA'
+        $client = $document->client?->name ?? Client::find($document->client_id ?? 0)?->name;
+        $montant = isset($document->total_ttc)
+            ? number_format((int) $document->total_ttc, 0, ',', ' ').' FCFA'
             : null;
-        $contexte  = implode(' · ', array_filter([
+        $contexte = implode(' · ', array_filter([
             $demandeur ? "par {$demandeur}" : null,
-            $client    ? "client {$client}" : null,
+            $client ? "client {$client}" : null,
             $montant,
         ]));
 
@@ -128,6 +134,7 @@ class CommercialWorkflowService
     public function validateQuote(Quote $quote, ?string $motif = null): void
     {
         $this->assertPermission('sales.validate');
+        app(SalesFloorWaiverService::class)->assertDocumentMayProceed($quote);
         $quote->assertCanValidate();
         $quote->validateDocument('valide', $motif);
 
@@ -145,6 +152,7 @@ class CommercialWorkflowService
     public function validateOrder(Order $order, ?string $motif = null): void
     {
         $this->assertPermission('sales.validate');
+        app(SalesFloorWaiverService::class)->assertDocumentMayProceed($order);
         $order->assertCanValidate();
 
         DB::transaction(function () use ($order, $motif) {
@@ -174,8 +182,8 @@ class CommercialWorkflowService
 
         // [CDC §commande-crédit] Commande crédit validée par responsable → bon de préparation auto-créé.
         // Le bon de préparation autorise le magasinier à procéder au chargement.
-        $client = $fresh->client ?? \App\Models\Client::find($fresh->client_id);
-        if ($client && $client->isCredit() && !$fresh->hasBonPreparation()) {
+        $client = $fresh->client ?? Client::find($fresh->client_id);
+        if ($client && $client->isCredit() && ! $fresh->hasBonPreparation()) {
             $this->bonPrepService->createForCreditOrder($fresh);
         }
     }
@@ -193,7 +201,7 @@ class CommercialWorkflowService
         $dn->assertCanValidate();
 
         // [VENTE↔PRODUCTION] Blocages livraison pour commandes fabriquées (QC + qté produite).
-        app(\App\Modules\Production\Services\ProductionDeliveryGuard::class)->assertDeliverable($dn);
+        app(ProductionDeliveryGuard::class)->assertDeliverable($dn);
 
         DB::transaction(function () use ($dn, $motif) {
             // [CONCURRENCE] Verrou + re-check statut frais : empêche la double
@@ -212,7 +220,7 @@ class CommercialWorkflowService
         // [CDC §bon-livraison] BL validé → génère automatiquement la facture
         // (si la commande n'a pas déjà une facture active).
         $order = $fresh->order;
-        if ($order && !$order->invoices()->whereIn('status', ['en_attente_validation', 'emise', 'envoyee', 'partiellement_payee', 'payee'])->exists()) {
+        if ($order && ! $order->invoices()->whereIn('status', ['en_attente_validation', 'emise', 'envoyee', 'partiellement_payee', 'payee'])->exists()) {
             try {
                 $this->invoiceService->createFromDeliveryNote($fresh);
             } catch (\Throwable) {
@@ -255,7 +263,7 @@ class CommercialWorkflowService
             }
 
             // Définir due_at si manquant avant de valider
-            if (!$invoice->due_at) {
+            if (! $invoice->due_at) {
                 $invoice->update([
                     'due_at' => now()->addDays(30)->toDateString(),
                 ]);
@@ -327,8 +335,8 @@ class CommercialWorkflowService
         // application facture) : son annulation passe par le service dédié qui
         // inverse tout — un simple changement de statut laissait le stock
         // gonflé, la facture faussée et l'écriture en place.
-        if ($document instanceof \App\Models\CreditNote) {
-            app(\App\Services\CreditNoteService::class)->cancel($document, $motif);
+        if ($document instanceof CreditNote) {
+            app(CreditNoteService::class)->cancel($document, $motif);
 
             return;
         }
@@ -336,14 +344,14 @@ class CommercialWorkflowService
         // Statut d'annulation selon le type
         $cancelledStatus = match (true) {
             $document instanceof Invoice => 'annulee',
-            default                      => 'annule',
+            default => 'annule',
         };
 
         $document->cancelDocument($cancelledStatus, $motif);
 
         // [V4] Annulation d'une commande → libère les réservations de produit fini.
-        if ($document instanceof \App\Models\Order) {
-            app(\App\Modules\Production\Services\ReservationService::class)->releaseForOrder($document);
+        if ($document instanceof Order) {
+            app(ReservationService::class)->releaseForOrder($document);
         }
 
         // [SYNC] Annulation d'une facture → recalcule le montant facturé de la commande.
@@ -363,33 +371,33 @@ class CommercialWorkflowService
 
         return [
             // Devis
-            'quotes_brouillon'         => Quote::where('company_id', $companyId)->where('status', 'brouillon')->count(),
-            'quotes_en_attente'        => Quote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'quotes_envoyes'           => Quote::where('company_id', $companyId)->where('status', 'envoye')->count(),
+            'quotes_brouillon' => Quote::where('company_id', $companyId)->where('status', 'brouillon')->count(),
+            'quotes_en_attente' => Quote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
+            'quotes_envoyes' => Quote::where('company_id', $companyId)->where('status', 'envoye')->count(),
 
             // Commandes
-            'orders_en_attente'        => Order::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'orders_confirmes'         => Order::where('company_id', $companyId)->where('status', 'confirme')->count(),
+            'orders_en_attente' => Order::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
+            'orders_confirmes' => Order::where('company_id', $companyId)->where('status', 'confirme')->count(),
 
             // Bons de livraison
-            'deliveries_en_attente'    => DeliveryNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'deliveries_a_facturer'    => DeliveryNote::where('company_id', $companyId)->where('status', 'valide')->count(),
+            'deliveries_en_attente' => DeliveryNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
+            'deliveries_a_facturer' => DeliveryNote::where('company_id', $companyId)->where('status', 'valide')->count(),
 
             // Factures
-            'invoices_en_attente'      => Invoice::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'invoices_emises'          => Invoice::where('company_id', $companyId)->whereIn('status', ['emise', 'envoyee'])->count(),
-            'invoices_impayees'        => Invoice::where('company_id', $companyId)->whereIn('status', ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])->count(),
+            'invoices_en_attente' => Invoice::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
+            'invoices_emises' => Invoice::where('company_id', $companyId)->whereIn('status', ['emise', 'envoyee'])->count(),
+            'invoices_impayees' => Invoice::where('company_id', $companyId)->whereIn('status', ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])->count(),
 
             // Avoirs
-            'credit_notes_en_attente'  => CreditNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
+            'credit_notes_en_attente' => CreditNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
 
             // Documents refusés récents (7j)
-            'recently_rejected'        => CommercialValidation::where('action', 'refus')
-                                            ->where('created_at', '>=', now()->subDays(7))
-                                            ->count(),
+            'recently_rejected' => CommercialValidation::where('action', 'refus')
+                ->where('created_at', '>=', now()->subDays(7))
+                ->count(),
 
             // Total en attente toutes catégories
-            'total_pending'            => Quote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
+            'total_pending' => Quote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
                                         + Order::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
                                         + DeliveryNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
                                         + Invoice::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()

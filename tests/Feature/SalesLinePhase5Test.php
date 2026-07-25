@@ -7,9 +7,11 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\OrderService;
+use App\Services\SalesFloorWaiverService;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function p5Company(): Company
 {
@@ -53,14 +55,35 @@ it('blocks a sale below the floor price for an unprivileged user', function () {
 
     $product = Product::factory()->create(['sale_price' => 5000, 'min_sale_price' => 5000]);
 
-    expect(fn () => app(OrderService::class)->create([
+    $order = app(OrderService::class)->create([
         'client_id' => Client::factory()->create()->id, 'issued_at' => now(),
         'items' => [p5ItemPayload($product, ['unit_price' => 3000])],
-    ]))->toThrow(\RuntimeException::class);
-
-    expect(Order::count())->toBe(0);
+    ]);
+    expect(fn () => app(SalesFloorWaiverService::class)->assertDocumentMayProceed($order))
+        ->toThrow(RuntimeException::class, 'dérogation');
 });
 
+it('blocks a sale below the known cost when the configured floor is zero', function () {
+    $co = p5Company();
+    $u = User::factory()->create(['company_id' => $co->id]);
+    $this->actingAs($u);
+
+    $product = Product::factory()->create([
+        'type' => 'simple',
+        'sale_price' => 4000,
+        'min_sale_price' => 0,
+        'weighted_avg_cost' => 15688,
+        'uv_to_us_coef' => 1,
+    ]);
+
+    $order = app(OrderService::class)->create([
+        'client_id' => Client::factory()->create()->id,
+        'issued_at' => now(),
+        'items' => [p5ItemPayload($product)],
+    ]);
+    expect(fn () => app(SalesFloorWaiverService::class)->assertDocumentMayProceed($order))
+        ->toThrow(RuntimeException::class, 'dérogation');
+});
 it('allows a below-floor sale for a privileged role (special authorization)', function () {
     $co = p5Company();
     $u = User::factory()->create(['company_id' => $co->id]);

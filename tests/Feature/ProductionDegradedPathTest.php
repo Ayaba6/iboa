@@ -68,7 +68,7 @@ function degStockedOrder(Company $co, Client $client, int $qty, int $stock = 100
     $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'WH-DEG'], ['name' => 'Dépôt DEG', 'is_default' => true, 'is_active' => true]);
     $unit = Unit::firstOrCreate(['name' => 'ML DEG'], ['abbreviation' => 'mldeg']);
     $tva  = TaxRate::firstOrCreate(['name' => 'TVA18 DEG'], ['short_name' => 'TV18D', 'rate' => 18, 'is_active' => true]);
-    $product = Product::factory()->create(['is_stockable' => true, 'is_sellable' => true, 'valuation_method' => 'cmp']);
+    $product = Product::factory()->create(['is_stockable' => true, 'is_sellable' => true, 'valuation_method' => 'cmp', 'purchase_price' => 6000, 'weighted_avg_cost' => 6000]);
     if ($stock > 0) {
         app(StockService::class)->recordMovement(['product_id' => $product->id, 'warehouse_id' => $wh->id, 'type' => 'entree', 'quantity' => $stock, 'unit_cost' => 6000, 'occurred_at' => now()]);
     }

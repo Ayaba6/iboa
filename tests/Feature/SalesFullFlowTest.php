@@ -65,6 +65,8 @@ function saleProduct(int $stockQty = 100): Product
     $product = Product::factory()->create([
         'is_stockable'         => true,
         'valuation_method'     => 'cmp',
+        'purchase_price'       => 5_000,
+        'weighted_avg_cost'    => 5_000,
         'allow_negative_stock' => false,
     ]);
 

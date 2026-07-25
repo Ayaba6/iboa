@@ -3,13 +3,16 @@
 namespace App\Services;
 
 use App\Events\OrderConfirmed;
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\DeliveryNote;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\ProductStock;
 use App\Modules\Production\Services\ReservationService;
 use App\Repositories\OrderRepository;
+use App\Support\SheetConversion;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +41,8 @@ class OrderService
     public function create(array $data): Order
     {
         // [Parametrage Vente] client bloque = aucun document commercial
-        \App\Services\ClientService::assertSellable(
-            !empty($data['client_id']) ? \App\Models\Client::find($data['client_id']) : null
+        ClientService::assertSellable(
+            ! empty($data['client_id']) ? Client::find($data['client_id']) : null
         );
 
         return DB::transaction(function () use ($data) {
@@ -48,15 +51,15 @@ class OrderService
 
             $company = currentCompany();
 
-            $data['company_id']    = $company->id;
+            $data['company_id'] = $company->id;
             $data['fiscal_year_id'] = $company->current_fiscal_year_id;
-            $data['number']        = $this->sequenceService->nextNumber($company, 'commande');
-            $data['created_by']    = Auth::id();
-            $data['status']        = $data['status'] ?? 'brouillon';
+            $data['number'] = $this->sequenceService->nextNumber($company, 'commande');
+            $data['created_by'] = Auth::id();
+            $data['status'] = $data['status'] ?? 'brouillon';
 
             // [TVA-EXEMPT] Défense serveur : forcer TVA=0 si client exonéré
             $client = isset($data['client_id'])
-                ? \App\Models\Client::find($data['client_id'])
+                ? Client::find($data['client_id'])
                 : null;
             if ($client?->isTaxExempt()) {
                 $items = $this->zeroOutTax($items);
@@ -65,10 +68,10 @@ class OrderService
             [$subtotal, $taxTotal] = $this->calculateTotals($items);
             $discount = (int) ($data['global_discount_amount'] ?? 0);
 
-            $data['subtotal_ht']            = $subtotal;
-            $data['total_discount']         = $discount;
-            $data['total_tax']              = $taxTotal;
-            $data['total_ttc']              = $subtotal + $taxTotal - $discount;
+            $data['subtotal_ht'] = $subtotal;
+            $data['total_discount'] = $discount;
+            $data['total_tax'] = $taxTotal;
+            $data['total_ttc'] = $subtotal + $taxTotal - $discount;
             $data['global_discount_amount'] = $discount;
 
             $order = Order::create($data);
@@ -120,15 +123,17 @@ class OrderService
             }
 
             $this->recalculate($order);
+
             return $order->fresh();
         });
     }
 
     public function delete(Order $order): bool
     {
-        if (!in_array($order->status, ['brouillon', 'annule'])) {
+        if (! in_array($order->status, ['brouillon', 'annule'])) {
             throw new \RuntimeException('Seules les commandes en brouillon ou annulées peuvent être supprimées.');
         }
+
         return $order->delete();
     }
 
@@ -192,7 +197,7 @@ class OrderService
             }
 
             $order->update([
-                'status'       => 'confirme',
+                'status' => 'confirme',
                 'validated_by' => Auth::id(),
                 'validated_at' => now(),
             ]);
@@ -217,7 +222,7 @@ class OrderService
             $order = Order::lockForUpdate()->findOrFail($order->id);
 
             if (in_array($order->status, ['annule', 'facture', 'livre'])) {
-                throw new \RuntimeException('Cette commande ne peut pas être annulée (statut : ' . $order->status . ').');
+                throw new \RuntimeException('Cette commande ne peut pas être annulée (statut : '.$order->status.').');
             }
 
             // [Unification réservations] Une seule libération : ferme toutes les lignes
@@ -225,6 +230,7 @@ class OrderService
             // stock disponible. Idempotent — sans effet si rien n'est réservé.
             app(ReservationService::class)->releaseForOrder($order);
             $order->update(['status' => 'annule']);
+
             return $order->fresh();
         });
     }
@@ -240,7 +246,7 @@ class OrderService
         $allOk = true;
 
         foreach ($order->items as $item) {
-            if (!$item->product_id || !($item->product?->is_stockable ?? false)) {
+            if (! $item->product_id || ! ($item->product?->is_stockable ?? false)) {
                 continue;
             }
 
@@ -249,21 +255,21 @@ class OrderService
             if ($warehouseId) {
                 $query->where('warehouse_id', $warehouseId);
             }
-            $stocks    = $query->get(['quantity', 'reserved_quantity']);
+            $stocks = $query->get(['quantity', 'reserved_quantity']);
             $available = (float) $stocks->sum('quantity') - (float) $stocks->sum('reserved_quantity');
 
-            $required  = (float) $item->quantity - (float) $item->delivered_quantity;
-            $lineOk    = $available >= $required;
+            $required = (float) $item->quantity - (float) $item->delivered_quantity;
+            $lineOk = $available >= $required;
 
-            if (!$lineOk) {
+            if (! $lineOk) {
                 $allOk = false;
             }
 
             $lines[] = [
                 'description' => $item->description,
-                'required'    => $required,
-                'available'   => $available,
-                'ok'          => $lineOk,
+                'required' => $required,
+                'available' => $available,
+                'ok' => $lineOk,
             ];
         }
 
@@ -277,9 +283,10 @@ class OrderService
     {
         // Facturation interdite avant livraison : un bon de livraison doit exister
         // (statut ≥ en_preparation). Une commande seulement « confirmé » n'est pas facturable.
-        if (!in_array($order->status, ['en_preparation', 'partiellement_livre', 'livre'])) {
+        if (! in_array($order->status, ['en_preparation', 'partiellement_livre', 'livre'])) {
             throw new \RuntimeException('La commande doit être livrée (bon de livraison créé) avant de générer une facture.');
         }
+
         return app(InvoiceService::class)->createFromOrder($order);
     }
 
@@ -288,9 +295,10 @@ class OrderService
      */
     public function createDeliveryNote(Order $order): DeliveryNote
     {
-        if (!in_array($order->status, ['confirme', 'en_preparation', 'partiellement_livre'])) {
+        if (! in_array($order->status, ['confirme', 'en_preparation', 'partiellement_livre'])) {
             throw new \RuntimeException('La commande doit être confirmée avant de créer un bon de livraison.');
         }
+
         return app(DeliveryNoteService::class)->createFromOrder($order);
     }
 
@@ -309,14 +317,14 @@ class OrderService
             // (règle et arrondi centralisés dans SheetConversion).
             $nbToles = isset($item['nb_toles']) ? (float) $item['nb_toles'] : null;
             $metrage = isset($item['metrage_par_tole']) ? (float) $item['metrage_par_tole'] : null;
-            $qty     = \App\Support\SheetConversion::resolveQuantity($nbToles, $metrage, $item['quantity'] ?? 1);
+            $qty = SheetConversion::resolveQuantity($nbToles, $metrage, $item['quantity'] ?? 1);
 
             $price = (float) ($item['unit_price'] ?? 0);
-            $disc  = (float) ($item['discount_percent'] ?? 0);
+            $disc = (float) ($item['discount_percent'] ?? 0);
 
             // [X3 §14] Vente d'un article non vendable interdite (catégorie prioritaire, repli article).
             if (! empty($item['product_id'])) {
-                $prod = \App\Models\Product::with('itemCategory')->find($item['product_id']);
+                $prod = Product::with('itemCategory')->find($item['product_id']);
                 $sellable = $prod?->itemCategory ? (bool) $prod->itemCategory->is_sellable : (bool) ($prod?->is_sellable ?? true);
                 if ($prod && ! $sellable) {
                     throw new \RuntimeException(sprintf(
@@ -327,31 +335,30 @@ class OrderService
             }
 
             // [§5 PRIX PLANCHER] Vente sous le prix plancher interdite, sauf rôle autorisé.
-            $this->assertFloorPrice($item['product_id'] ?? null, $price, $disc);
 
             // [§6 DIMENSIONS] Longueur unitaire hors bornes fabricables interdite.
             $this->assertSheetLength($item['product_id'] ?? null, $metrage);
 
-            $tax   = (float) ($item['tax_rate_value'] ?? 0);
-            $ht    = (int) round($qty * $price * (1 - $disc / 100));
+            $tax = (float) ($item['tax_rate_value'] ?? 0);
+            $ht = (int) round($qty * $price * (1 - $disc / 100));
             $lineTax = (int) round($ht * ($tax / 100));
-            $ttc   = $ht + $lineTax;
+            $ttc = $ht + $lineTax;
 
             $order->items()->create([
-                'product_id'       => $item['product_id'] ?? null,
-                'description'      => $item['description'] ?? '',
-                'unit_id'          => $item['unit_id'] ?? null,
-                'quantity'         => $qty,
-                'nb_toles'         => $nbToles,
+                'product_id' => $item['product_id'] ?? null,
+                'description' => $item['description'] ?? '',
+                'unit_id' => $item['unit_id'] ?? null,
+                'quantity' => $qty,
+                'nb_toles' => $nbToles,
                 'metrage_par_tole' => $metrage,
-                'unit_price'       => (int) $price,
+                'unit_price' => (int) $price,
                 'discount_percent' => $disc,
-                'tax_rate_id'      => $item['tax_rate_id'] ?? null,
-                'tax_rate_value'   => $tax,
-                'line_total_ht'    => $ht,
-                'line_tax'         => $lineTax,
-                'line_total_ttc'   => $ttc,
-                'sort_order'       => $i,
+                'tax_rate_id' => $item['tax_rate_id'] ?? null,
+                'tax_rate_value' => $tax,
+                'line_total_ht' => $ht,
+                'line_tax' => $lineTax,
+                'line_total_ttc' => $ttc,
+                'sort_order' => $i,
             ]);
         }
     }
@@ -365,8 +372,8 @@ class OrderService
         if (! $productId) {
             return;
         }
-        $product = \App\Models\Product::find($productId);
-        $floor = (int) ($product?->min_sale_price ?? 0);
+        $product = Product::find($productId);
+        $floor = $product ? app(SalesPriceGuardService::class)->effectiveFloor($product) : 0;
         if ($floor <= 0) {
             return;
         }
@@ -394,7 +401,7 @@ class OrderService
         if (! $productId || $length === null || $length <= 0) {
             return;
         }
-        $product = \App\Models\Product::find($productId);
+        $product = Product::find($productId);
         if (! $product) {
             return;
         }
@@ -422,8 +429,9 @@ class OrderService
     {
         return array_map(function (array $item) {
             $item['tax_rate_value'] = 0;
-            $item['tax_rate_id']    = null;
-            $item['line_tax']       = 0;
+            $item['tax_rate_id'] = null;
+            $item['line_tax'] = 0;
+
             return $item;
         }, $items);
     }
@@ -434,11 +442,11 @@ class OrderService
         $taxTotal = 0;
 
         foreach ($items as $item) {
-            $qty   = (float) ($item['quantity'] ?? 1);
+            $qty = (float) ($item['quantity'] ?? 1);
             $price = (float) ($item['unit_price'] ?? 0);
-            $disc  = (float) ($item['discount_percent'] ?? 0);
-            $tax   = (float) ($item['tax_rate_value'] ?? 0);
-            $ht    = $qty * $price * (1 - $disc / 100);
+            $disc = (float) ($item['discount_percent'] ?? 0);
+            $tax = (float) ($item['tax_rate_value'] ?? 0);
+            $ht = $qty * $price * (1 - $disc / 100);
             $subtotal += $ht;
             $taxTotal += $ht * ($tax / 100);
         }
@@ -482,14 +490,14 @@ class OrderService
         $subtotal = (int) $order->items->sum('line_total_ht');
         $taxTotal = (int) $order->items->sum('line_tax');
         $discount = (int) ($order->global_discount_amount ?? 0);
-        $total    = $subtotal + $taxTotal - $discount;
+        $total = $subtotal + $taxTotal - $discount;
 
         // [FIX-MAJEUR] Include total_discount in recalculate update
         $order->update([
-            'subtotal_ht'    => $subtotal,
-            'total_tax'      => $taxTotal,
+            'subtotal_ht' => $subtotal,
+            'total_tax' => $taxTotal,
             'total_discount' => $discount,
-            'total_ttc'      => $total,
+            'total_ttc' => $total,
         ]);
     }
 }

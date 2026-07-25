@@ -45,6 +45,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales.transform',              // transformer (Devis→Commande→BL→Facture→Écriture)
             'sales.view_all',               // voir tous les documents (pas seulement les siens)
             'sales.bypass_self_validation', // valider son propre document (bypass double validation)
+            'sales_below_floor.request', 'sales_below_floor.approve',
+            'sales_below_floor.reject', 'sales_below_floor.cancel',
             // Achats
             'purchase_requests.view', 'purchase_requests.create', 'purchase_requests.submit', 'purchase_requests.approve',
             'purchase_requests.validate_l1', // validation chef service (<500k FCFA)
@@ -140,7 +142,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'stocks.view',    // lecture stock pour info dispo sur devis/commandes
             // [CDC §13.1] Workflow : le commercial crée, soumet et transforme —
             // la validation financière des commandes appartient à Finance (comptable/daf).
-            'sales.create', 'sales.submit', 'sales.transform',
+            'sales.create', 'sales.submit', 'sales.transform', 'sales_below_floor.request',
             // [FIX-BUG] production.view manquait — sans elle le groupe de routes
             // production/* (gate de groupe) était inaccessible, rendant
             // production.modify_launched et avis_commercial inopérants.
@@ -166,6 +168,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'integrations.view', 'integrations.declare',
             // Workflow : le comptable valide les factures et avoirs, peut annuler
             'sales.validate', 'sales.reject', 'sales.cancel', 'sales.view_all',
+            'sales_below_floor.approve', 'sales_below_floor.reject', 'sales_below_floor.cancel',
             'production.modification.avis_finance', // §13.10 — étape 3/4
         ]);
 
@@ -228,6 +231,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'receptions.view', 'supplier_returns.view',
             // Workflow ventes
             'sales.validate', 'sales.reject', 'sales.cancel', 'sales.view_all',
+            'sales_below_floor.approve', 'sales_below_floor.reject', 'sales_below_floor.cancel',
             // Validation financière OF (§13.2 CDC) — DAF débloque fabrication
             'production.view', 'production.approve_financial',
             'production.modification.avis_finance', // §13.10 — étape 3/4
@@ -358,7 +362,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'credit_notes.view', 'credit_notes.create',
             'payments.view', 'reports.view',
             'stocks.view',
-            'sales.create', 'sales.submit', 'sales.transform', 'sales.validate', 'sales.view_all',
+            'sales.create', 'sales.submit', 'sales.transform', 'sales_below_floor.request', 'sales.validate', 'sales.view_all',
         ]);
 
         // Responsable stock — gestion stock + inventaire + réceptions
