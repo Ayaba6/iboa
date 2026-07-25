@@ -22,13 +22,13 @@ it('exige une dérogation maker-checker et l’invalide après modification tari
         'email' => 'waiver@iboa.test', 'current_fiscal_year_id' => $year->id,
     ]);
     app()->instance('current_company', $company);
-    foreach (['sales.submit', 'sales_below_floor.request', 'sales_below_floor.approve'] as $permission) {
+    foreach (['sales.submit', 'sales_below_floor.request', 'sales_below_floor.approve', 'sales_below_floor.reject', 'sales_below_floor.cancel'] as $permission) {
         Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
     }
     $requester = User::factory()->create(['company_id' => $company->id]);
-    $requester->givePermissionTo(['sales.submit', 'sales_below_floor.request', 'sales_below_floor.approve']);
+    $requester->givePermissionTo(['sales.submit', 'sales_below_floor.request', 'sales_below_floor.approve', 'sales_below_floor.reject', 'sales_below_floor.cancel']);
     $approver = User::factory()->create(['company_id' => $company->id]);
-    $approver->givePermissionTo('sales_below_floor.approve');
+    $approver->givePermissionTo(['sales_below_floor.approve', 'sales_below_floor.reject', 'sales_below_floor.cancel']);
     $product = Product::factory()->create([
         'type' => 'simple', 'is_manufacturable' => true, 'cout_standard' => 100,
         'weighted_avg_cost' => 90, 'margin_rate_target' => 20, 'sale_price' => 80,
@@ -59,4 +59,34 @@ it('exige une dérogation maker-checker et l’invalide après modification tari
     $order->update(['status' => 'brouillon']);
     $order->items()->first()->update(['quantity' => 3]);
     expect(fn () => app(CommercialWorkflowService::class)->submit($order->fresh()))->toThrow(RuntimeException::class, 'dérogation');
+
+    $this->actingAs($requester);
+    $draft = app(SalesFloorWaiverService::class)->createDraft($order, $order->items()->first(), 'Nouvelle justification suffisamment détaillée.');
+    expect($draft->status)->toBe('brouillon');
+    $submitted = app(SalesFloorWaiverService::class)->submit($draft);
+    expect($submitted->status)->toBe('soumise');
+
+    $unauthorized = User::factory()->create(['company_id' => $company->id]);
+    $this->actingAs($unauthorized);
+    expect(fn () => app(SalesFloorWaiverService::class)->approve($submitted))->toThrow(RuntimeException::class, 'Permission');
+
+    $this->actingAs($approver);
+    $rejected = app(SalesFloorWaiverService::class)->reject($submitted, 'Marge insuffisante documentée');
+    expect($rejected->status)->toBe('refusee');
+
+    $this->actingAs($requester);
+    $expiring = app(SalesFloorWaiverService::class)->request($order, $order->items()->first(), 'Dérogation temporaire avec expiration contrôlée.');
+    $this->actingAs($approver);
+    $approved = app(SalesFloorWaiverService::class)->approve($expiring, 'Accord temporaire');
+    expect(fn () => app(SalesFloorWaiverService::class)->approve($approved))->toThrow(RuntimeException::class, 'soumise');
+    $approved->update(['expires_at' => now()->subSecond()]);
+    app(SalesFloorWaiverService::class)->expireApproved();
+    expect($approved->fresh()->status)->toBe('expiree');
+
+    $this->actingAs($requester);
+    $revocable = app(SalesFloorWaiverService::class)->request($order, $order->items()->first(), 'Demande destinée au contrôle de révocation.');
+    $this->actingAs($approver);
+    app(SalesFloorWaiverService::class)->approve($revocable, 'Accord révocable');
+    $revoked = app(SalesFloorWaiverService::class)->revoke($revocable->fresh(), 'Contexte commercial modifié');
+    expect($revoked->status)->toBe('revoquee');
 });
