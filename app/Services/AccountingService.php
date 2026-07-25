@@ -5,8 +5,11 @@ namespace App\Services;
 use App\Models\Account;
 use App\Models\AccountClass;
 use App\Models\AccountingPeriodLock;
+use App\Models\AccountingSetting;
 use App\Models\BankDeposit;
 use App\Models\CashAccount;
+use App\Models\CashClosure;
+use App\Models\CashOperation;
 use App\Models\CashTransfer;
 use App\Models\ClientPayment;
 use App\Models\Company;
@@ -15,13 +18,17 @@ use App\Models\InventorySession;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\JournalType;
-use App\Modules\Production\Models\ProductionOrder;
+use App\Models\LitigationCase;
+use App\Models\StockTransfer;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Models\SupplierReturn;
+use App\Modules\Production\Models\ProductionOrder;
+use App\Modules\Production\Models\ProductionWaste;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Services\DocumentSequenceService;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * AccountingService — auto-posts all business documents to the general ledger.
@@ -46,44 +53,44 @@ class AccountingService
 {
     // [code, name, type, class_number]
     private const CHART = [
-        'clients'             => ['411',  'Clients',                         'actif',   4],
-        'fournisseurs'        => ['401',  'Fournisseurs',                    'passif',  4],
-        'ventes'              => ['7011', 'Ventes de marchandises',          'produit', 7],
+        'clients' => ['411',  'Clients',                         'actif',   4],
+        'fournisseurs' => ['401',  'Fournisseurs',                    'passif',  4],
+        'ventes' => ['7011', 'Ventes de marchandises',          'produit', 7],
         // [SYSCOHADA] Produit fabriqué (famille adossée au stock 361) vendu → 702, pas 7011
         'ventes_produits_finis' => ['702', 'Ventes de produits finis',       'produit', 7],
-        'achats'              => ['6011', 'Achats de marchandises',          'charge',  6],
-        'tva_collectee'       => ['4431', 'TVA facturée sur ventes',         'passif',  4],
+        'achats' => ['6011', 'Achats de marchandises',          'charge',  6],
+        'tva_collectee' => ['4431', 'TVA facturée sur ventes',         'passif',  4],
         // [SYSCOHADA] 445 = État, TVA récupérable (4432 était une subdivision
         // de 443 « TVA facturée » — écart au plan corrigé avant production)
-        'tva_deductible'      => ['4452', 'État — TVA récupérable sur achats', 'actif',  4],
-        'retours_ventes'      => ['7085', 'Remises accordées et retours',    'produit', 7],
-        'banque'              => ['521',  'Banques, chèques postaux',        'actif',   5],
-        'caisse'              => ['571',  'Caisse',                          'actif',   5],
-        'mobile_money'        => ['523',  'Établissements financiers — Mobile Money', 'actif', 5],
-        'stocks'              => ['3111', 'Stocks de marchandises',          'actif',   3],
-        'variation_stocks'    => ['6031', 'Variations de stocks de marchandises', 'charge', 6],
+        'tva_deductible' => ['4452', 'État — TVA récupérable sur achats', 'actif',  4],
+        'retours_ventes' => ['7085', 'Remises accordées et retours',    'produit', 7],
+        'banque' => ['521',  'Banques, chèques postaux',        'actif',   5],
+        'caisse' => ['571',  'Caisse',                          'actif',   5],
+        'mobile_money' => ['523',  'Établissements financiers — Mobile Money', 'actif', 5],
+        'stocks' => ['3111', 'Stocks de marchandises',          'actif',   3],
+        'variation_stocks' => ['6031', 'Variations de stocks de marchandises', 'charge', 6],
         'produits_inventaire' => ['7097', 'Produits sur inventaire',         'produit', 7],
-        'pertes_inventaire'   => ['6097', 'Pertes sur inventaire',           'charge',  6],
-        'virements_internes'  => ['585',  'Virements de fonds',              'actif',   5],
+        'pertes_inventaire' => ['6097', 'Pertes sur inventaire',           'charge',  6],
+        'virements_internes' => ['585',  'Virements de fonds',              'actif',   5],
         // [BUG-2] Retenue à la source : créance sur l'État (impôt prélevé par le client)
-        'retenues_etat'       => ['4473', 'État — retenues à la source',      'actif',   4],
+        'retenues_etat' => ['4473', 'État — retenues à la source',      'actif',   4],
         // [TRESO] Écarts de caisse (clôture journalière)
-        'ecart_caisse_manque'   => ['6588', 'Manquants de caisse',           'charge',  6],
+        'ecart_caisse_manque' => ['6588', 'Manquants de caisse',           'charge',  6],
         'ecart_caisse_excedent' => ['7588', 'Excédents de caisse',           'produit', 7],
         // [TRESO] Frais bancaires (rapprochement)
-        'frais_bancaires'       => ['6312', 'Frais bancaires',               'charge',  6],
+        'frais_bancaires' => ['6312', 'Frais bancaires',               'charge',  6],
         // [TRESO] Opérations diverses de caisse (entrées/sorties manuelles)
-        'autre_charge_caisse'   => ['6588', 'Charges diverses',              'charge',  6],
-        'autre_produit_caisse'  => ['7588', 'Produits divers',              'produit', 7],
+        'autre_charge_caisse' => ['6588', 'Charges diverses',              'charge',  6],
+        'autre_produit_caisse' => ['7588', 'Produits divers',              'produit', 7],
         // [TRESO] Contentieux : perte sur créance irrécouvrable
-        'pertes_creances'       => ['6514', 'Pertes sur créances clients',   'charge',  6],
+        'pertes_creances' => ['6514', 'Pertes sur créances clients',   'charge',  6],
         // [PRODUCTION] Fabrication tôles bac — stocks matières / produits finis (SYSCOHADA)
-        'stocks_matieres'           => ['321',  'Stocks de matières premières',               'actif',   3],
+        'stocks_matieres' => ['321',  'Stocks de matières premières',               'actif',   3],
         'variation_stocks_matieres' => ['6032', 'Variation des stocks de matières premières', 'charge',  6],
-        'stocks_produits_finis'     => ['361',  'Stocks de produits finis',                   'actif',   3],
-        'production_stockee'        => ['736',  'Variation des stocks de produits finis',     'produit', 7],
+        'stocks_produits_finis' => ['361',  'Stocks de produits finis',                   'actif',   3],
+        'production_stockee' => ['736',  'Variation des stocks de produits finis',     'produit', 7],
         // [§13.9 CDC] Rebuts de fabrication (valorisation comptable)
-        'pertes_rebuts'             => ['6582', 'Pertes sur rebuts et déchets',               'charge',  6],
+        'pertes_rebuts' => ['6582', 'Pertes sur rebuts et déchets',               'charge',  6],
     ];
 
     // =========================================================================
@@ -114,18 +121,22 @@ class AccountingService
     public function postClientInvoice(Invoice $invoice): ?JournalEntry
     {
         $company = $this->company($invoice->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
-        $ttc         = (int) $invoice->total_ttc;
-        $ht          = (int) $invoice->subtotal_ht;
-        $tax         = (int) $invoice->total_tax;
-        $discount    = (int) ($invoice->total_discount ?? 0);
+        $ttc = (int) $invoice->total_ttc;
+        $ht = (int) $invoice->subtotal_ht;
+        $tax = (int) $invoice->total_tax;
+        $discount = (int) ($invoice->total_discount ?? 0);
         $withholding = (int) ($invoice->withholding_amount ?? 0);
-        $netToPay    = ($withholding > 0)
+        $netToPay = ($withholding > 0)
             ? (int) ($invoice->net_to_pay ?? max(0, $ttc - $withholding))
             : $ttc;
 
-        if ($ttc <= 0) return null;
+        if ($ttc <= 0) {
+            return null;
+        }
 
         // [COMPTA-FAMILLE] Charger les comptes de vente associés aux familles + taxes par taux
         $invoice->loadMissing('items.product.family.saleAccount', 'items.product.family.stockAccount', 'items.taxRate.collectedAccount');
@@ -179,8 +190,8 @@ class AccountingService
         }
 
         $entry = $this->post($company, 'vente', [
-            'entry_date'  => $invoice->issued_at ?? today(),
-            'reference'   => $invoice->number,
+            'entry_date' => $invoice->issued_at ?? today(),
+            'reference' => $invoice->number,
             'description' => 'Facture client '.$invoice->number.' — '.($invoice->client?->name ?? ''),
         ], $lines);
 
@@ -200,21 +211,25 @@ class AccountingService
     public function postClientPayment(ClientPayment $payment): ?JournalEntry
     {
         $company = $this->company($payment->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $amount = (int) $payment->amount;
-        if ($amount <= 0) return null;
+        if ($amount <= 0) {
+            return null;
+        }
 
-        $tresorerie  = $this->tresorerieAccount($company, $payment->cash_account_id);
+        $tresorerie = $this->tresorerieAccount($company, $payment->cash_account_id);
         $journalCode = ($tresorerie->code === '571') ? 'caisse' : 'banque';
 
         $entry = $this->post($company, $journalCode, [
-            'entry_date'  => $payment->payment_date ?? today(),
-            'reference'   => $payment->number,
+            'entry_date' => $payment->payment_date ?? today(),
+            'reference' => $payment->number,
             'description' => 'Encaissement '.$payment->number.' — '.($payment->client?->name ?? ''),
         ], [
-            $this->line($tresorerie,                           'Encaissement '.$payment->number, $amount, 0),
-            $this->line($this->account($company, 'clients'),   'Encaissement '.$payment->number, 0, $amount),
+            $this->line($tresorerie, 'Encaissement '.$payment->number, $amount, 0),
+            $this->line($this->account($company, 'clients'), 'Encaissement '.$payment->number, 0, $amount),
         ]);
 
         // [AUDIT-ERP-E] Lier l'écriture au paiement source
@@ -234,22 +249,26 @@ class AccountingService
     public function postCashTransfer(CashTransfer $transfer): ?JournalEntry
     {
         $company = $this->company($transfer->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $amount = (int) $transfer->amount;
-        if ($amount <= 0) return null;
+        if ($amount <= 0) {
+            return null;
+        }
 
         $fromAccount = $this->tresorerieAccount($company, $transfer->from_cash_account_id);
-        $toAccount   = $this->tresorerieAccount($company, $transfer->to_cash_account_id);
+        $toAccount = $this->tresorerieAccount($company, $transfer->to_cash_account_id);
 
         $label = 'Virement '.$transfer->number;
         $entry = $this->post($company, 'operations_diverses', [
-            'entry_date'  => $transfer->transfer_date ?? today(),
-            'reference'   => $transfer->number,
+            'entry_date' => $transfer->transfer_date ?? today(),
+            'reference' => $transfer->number,
             'description' => 'Virement interne '.$transfer->number
-                . ' — ' . ($transfer->fromAccount?->name ?? '?') . ' → ' . ($transfer->toAccount?->name ?? '?'),
+                .' — '.($transfer->fromAccount?->name ?? '?').' → '.($transfer->toAccount?->name ?? '?'),
         ], [
-            $this->line($toAccount,   $label, $amount, 0),   // DR destination
+            $this->line($toAccount, $label, $amount, 0),   // DR destination
             $this->line($fromAccount, $label, 0, $amount),   // CR source
         ]);
 
@@ -264,17 +283,19 @@ class AccountingService
      * [TRESO] Frais bancaires constatés au rapprochement (ligne relevé non comptabilisée).
      *   DR 6312 Frais bancaires / CR 521 Banque
      */
-    public function postBankFee(\App\Models\CashAccount $cashAccount, int $amount, string $label, ?string $date = null): ?JournalEntry
+    public function postBankFee(CashAccount $cashAccount, int $amount, string $label, ?string $date = null): ?JournalEntry
     {
         $company = $this->company($cashAccount->company_id);
-        if (!$company || $amount <= 0) return null;
+        if (! $company || $amount <= 0) {
+            return null;
+        }
 
         $banque = $this->tresorerieAccount($company, $cashAccount->id);
-        $entryDate = $date ? \Illuminate\Support\Carbon::parse($date) : today();
+        $entryDate = $date ? Carbon::parse($date) : today();
 
         return $this->post($company, 'banque', [
-            'entry_date'  => $entryDate,
-            'reference'   => 'FRAIS-' . now()->format('YmdHis'),
+            'entry_date' => $entryDate,
+            'reference' => 'FRAIS-'.now()->format('YmdHis'),
             'description' => $label ?: 'Frais bancaires',
         ], [
             $this->line($this->account($company, 'frais_bancaires'), $label ?: 'Frais bancaires', $amount, 0),
@@ -287,16 +308,20 @@ class AccountingService
      *   Entrée (apport, recette diverse) : DR 571 Caisse / CR 758 Produits divers
      *   Sortie (dépense diverse, petty cash) : DR 658 Charges diverses / CR 571 Caisse
      */
-    public function postCashOperation(\App\Models\CashOperation $operation): ?JournalEntry
+    public function postCashOperation(CashOperation $operation): ?JournalEntry
     {
         $company = $this->company($operation->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $amount = (int) $operation->amount;
-        if ($amount <= 0) return null;
+        if ($amount <= 0) {
+            return null;
+        }
 
         $tresorerie = $this->tresorerieAccount($company, $operation->cash_account_id);
-        $label      = $operation->label ?: ($operation->category ?: 'Opération de caisse');
+        $label = $operation->label ?: ($operation->category ?: 'Opération de caisse');
         $journalCode = ($tresorerie->code === '571') ? 'caisse' : 'banque';
 
         if ($operation->direction === 'entree') {
@@ -312,8 +337,8 @@ class AccountingService
         }
 
         return $this->post($company, $journalCode, [
-            'entry_date'  => $operation->operation_date ?? today(),
-            'reference'   => $operation->number,
+            'entry_date' => $operation->operation_date ?? today(),
+            'reference' => $operation->number,
             'description' => $label,
         ], $lines);
     }
@@ -322,19 +347,23 @@ class AccountingService
      * [TRESO] Contentieux : passage d'une créance en perte (irrécouvrable).
      *   DR 6514 Pertes sur créances clients / CR 411 Clients
      */
-    public function postBadDebt(\App\Models\LitigationCase $case): ?JournalEntry
+    public function postBadDebt(LitigationCase $case): ?JournalEntry
     {
         $company = $this->company($case->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $amount = (int) $case->amount;
-        if ($amount <= 0) return null;
+        if ($amount <= 0) {
+            return null;
+        }
 
-        $label = 'Créance irrécouvrable — dossier ' . $case->number;
+        $label = 'Créance irrécouvrable — dossier '.$case->number;
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $case->closed_at ?? today(),
-            'reference'   => $case->number,
+            'entry_date' => $case->closed_at ?? today(),
+            'reference' => $case->number,
             'description' => $label,
         ], [
             $this->line($this->account($company, 'pertes_creances'), $label, $amount, 0),
@@ -347,16 +376,20 @@ class AccountingService
      *   Excédent (compté > théorique) : DR 571 Caisse / CR 7588 Excédents
      *   Manque   (compté < théorique) : DR 6588 Manquants / CR 571 Caisse
      */
-    public function postCashClosureDifference(\App\Models\CashClosure $closure): ?JournalEntry
+    public function postCashClosureDifference(CashClosure $closure): ?JournalEntry
     {
         $company = $this->company($closure->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $diff = (int) $closure->difference; // compté - théorique
-        if ($diff === 0) return null;
+        if ($diff === 0) {
+            return null;
+        }
 
         $caisse = $this->tresorerieAccount($company, $closure->cash_account_id);
-        $label  = 'Écart clôture ' . $closure->number;
+        $label = 'Écart clôture '.$closure->number;
 
         if ($diff > 0) {
             $lines = [
@@ -372,10 +405,10 @@ class AccountingService
         }
 
         $entry = $this->post($company, 'operations_diverses', [
-            'entry_date'  => $closure->closure_date ?? today(),
-            'reference'   => $closure->number,
-            'description' => 'Écart de clôture de caisse ' . $closure->number
-                . ' — ' . ($closure->cashAccount?->name ?? ''),
+            'entry_date' => $closure->closure_date ?? today(),
+            'reference' => $closure->number,
+            'description' => 'Écart de clôture de caisse '.$closure->number
+                .' — '.($closure->cashAccount?->name ?? ''),
         ], $lines);
 
         if ($entry) {
@@ -394,12 +427,16 @@ class AccountingService
     public function postSupplierInvoice(SupplierInvoice $invoice): ?JournalEntry
     {
         $company = $this->company($invoice->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $ttc = (int) $invoice->total_ttc;
-        $ht  = (int) $invoice->subtotal_ht;
+        $ht = (int) $invoice->subtotal_ht;
         $tax = (int) $invoice->total_tax;
-        if ($ttc <= 0) return null;
+        if ($ttc <= 0) {
+            return null;
+        }
 
         // [COMPTA-FAMILLE] Charger les comptes d'achat associés aux familles + taxes par taux
         $invoice->loadMissing('items.product.family.purchaseAccount', 'items.taxRate.deductibleAccount');
@@ -426,8 +463,8 @@ class AccountingService
         }
 
         $entry = $this->post($company, 'achat', [
-            'entry_date'  => $invoice->received_at ?? today(),
-            'reference'   => $invoice->number,
+            'entry_date' => $invoice->received_at ?? today(),
+            'reference' => $invoice->number,
             'description' => 'Facture fournisseur '.$invoice->number.' — '.($invoice->supplier?->name ?? ''),
         ], $lines);
 
@@ -447,21 +484,25 @@ class AccountingService
     public function postSupplierPayment(SupplierPayment $payment): ?JournalEntry
     {
         $company = $this->company($payment->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $amount = (int) $payment->amount;
-        if ($amount <= 0) return null;
+        if ($amount <= 0) {
+            return null;
+        }
 
-        $tresorerie  = $this->tresorerieAccount($company, $payment->cash_account_id);
+        $tresorerie = $this->tresorerieAccount($company, $payment->cash_account_id);
         $journalCode = ($tresorerie->code === '571') ? 'caisse' : 'banque';
 
         $entry = $this->post($company, $journalCode, [
-            'entry_date'  => $payment->payment_date ?? today(),
-            'reference'   => $payment->number,
+            'entry_date' => $payment->payment_date ?? today(),
+            'reference' => $payment->number,
             'description' => 'Décaissement '.$payment->number.' — '.($payment->supplier?->name ?? ''),
         ], [
             $this->line($this->account($company, 'fournisseurs'), 'Décaissement '.$payment->number, $amount, 0),
-            $this->line($tresorerie,                              'Décaissement '.$payment->number, 0, $amount),
+            $this->line($tresorerie, 'Décaissement '.$payment->number, 0, $amount),
         ]);
 
         // [AUDIT-ERP-E] Lier l'écriture au paiement fournisseur source
@@ -481,12 +522,16 @@ class AccountingService
     public function postCreditNote(CreditNote $creditNote): ?JournalEntry
     {
         $company = $this->company($creditNote->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $ttc = (int) $creditNote->total_ttc;
-        $ht  = (int) $creditNote->subtotal_ht;
+        $ht = (int) $creditNote->subtotal_ht;
         $tax = (int) $creditNote->total_tax;
-        if ($ttc <= 0) return null;
+        if ($ttc <= 0) {
+            return null;
+        }
 
         // [COMPTA-FAMILLE] Ventilation HT par compte de vente famille (contrepasse la vente)
         $creditNote->loadMissing('items.product.family.saleAccount', 'items.taxRate.collectedAccount');
@@ -511,8 +556,8 @@ class AccountingService
         }
 
         return $this->post($company, 'vente', [
-            'entry_date'  => $creditNote->issued_at ?? today(),
-            'reference'   => $creditNote->number,
+            'entry_date' => $creditNote->issued_at ?? today(),
+            'reference' => $creditNote->number,
             'description' => 'Avoir '.$creditNote->number.' — '.($creditNote->client?->name ?? ''),
         ], $lines);
     }
@@ -526,12 +571,16 @@ class AccountingService
     public function postSupplierReturn(SupplierReturn $return): ?JournalEntry
     {
         $company = $this->company($return->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $ttc = (int) $return->total_ttc;
-        $ht  = (int) $return->subtotal_ht;
+        $ht = (int) $return->subtotal_ht;
         $tax = (int) $return->total_tax;
-        if ($ttc <= 0) return null;
+        if ($ttc <= 0) {
+            return null;
+        }
 
         // [COMPTA-FAMILLE] Ventilation HT par compte d'achat famille (contrepasse l'achat)
         $return->loadMissing('items.product.family.purchaseAccount', 'items.taxRate.deductibleAccount');
@@ -556,8 +605,8 @@ class AccountingService
         }
 
         return $this->post($company, 'achat', [
-            'entry_date'  => $return->returned_at ?? today(),
-            'reference'   => $return->number,
+            'entry_date' => $return->returned_at ?? today(),
+            'reference' => $return->number,
             'description' => 'Retour fournisseur '.$return->number.' — '.($return->supplier?->name ?? ''),
         ], $lines);
     }
@@ -575,7 +624,9 @@ class AccountingService
     public function postSaleStockMovement(Invoice $invoice): ?JournalEntry
     {
         $company = $this->company($invoice->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $invoice->loadMissing('items.product.family.stockAccount');
 
@@ -586,7 +637,9 @@ class AccountingService
         $totalCost = 0;
         foreach ($invoice->items as $item) {
             $product = $item->product;
-            if (!$product || !$product->is_stockable) continue;
+            if (! $product || ! $product->is_stockable) {
+                continue;
+            }
 
             // [MARGES-CMP] Valoriser la sortie de stock au CMP figé sur la ligne
             // (snapshotItemCosts s'exécute avant cette méthode), repli CMP produit
@@ -600,14 +653,18 @@ class AccountingService
             }
 
             $cost = (int) round((float) $item->quantity * $unitCost);
-            if ($cost <= 0) continue;
+            if ($cost <= 0) {
+                continue;
+            }
 
             $accountId = $product->family?->stock_account_id ?? $defaultStockAccount->id;
             $buckets[$accountId] = ($buckets[$accountId] ?? 0) + $cost;
             $totalCost += $cost;
         }
 
-        if ($totalCost <= 0) return null; // rien à comptabiliser (services seulement, ou coûts manquants)
+        if ($totalCost <= 0) {
+            return null;
+        } // rien à comptabiliser (services seulement, ou coûts manquants)
 
         // [SYSCOHADA] Compte de variation adossé au compte de stock du bucket :
         //   361 PF → 736 Production stockée, 321 MP → 6032, 3111 marchandises → 6031.
@@ -618,8 +675,8 @@ class AccountingService
         }
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $invoice->issued_at ?? today(),
-            'reference'   => $invoice->number.'-STK',
+            'entry_date' => $invoice->issued_at ?? today(),
+            'reference' => $invoice->number.'-STK',
             'description' => 'Sortie de stock sur facture '.$invoice->number,
         ], $lines);
     }
@@ -635,7 +692,9 @@ class AccountingService
     public function postPurchaseStockMovement(SupplierInvoice $invoice): ?JournalEntry
     {
         $company = $this->company($invoice->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $invoice->loadMissing('items.product.family.stockAccount');
 
@@ -645,18 +704,24 @@ class AccountingService
         $totalCost = 0;
         foreach ($invoice->items as $item) {
             $product = $item->product;
-            if (!$product || !$product->is_stockable) continue;
+            if (! $product || ! $product->is_stockable) {
+                continue;
+            }
 
             // Prix d'achat réel = line_total_ht (intègre déjà la remise éventuelle)
             $cost = (int) ($item->line_total_ht ?? 0);
-            if ($cost <= 0) continue;
+            if ($cost <= 0) {
+                continue;
+            }
 
             $accountId = $product->family?->stock_account_id ?? $defaultStockAccount->id;
             $buckets[$accountId] = ($buckets[$accountId] ?? 0) + $cost;
             $totalCost += $cost;
         }
 
-        if ($totalCost <= 0) return null;
+        if ($totalCost <= 0) {
+            return null;
+        }
 
         // [SYSCOHADA] Compte de variation adossé au compte de stock (par bucket) :
         //   321 MP → 6032, 361 PF → 736, 3111 marchandises → 6031.
@@ -667,8 +732,8 @@ class AccountingService
         }
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $invoice->received_at ?? today(),
-            'reference'   => $invoice->number.'-STK',
+            'entry_date' => $invoice->received_at ?? today(),
+            'reference' => $invoice->number.'-STK',
             'description' => 'Entrée de stock sur fact. fournisseur '.$invoice->number,
         ], $lines);
     }
@@ -679,12 +744,12 @@ class AccountingService
      *   361  Produits finis            → 736  Production stockée
      *   3111 Marchandises (défaut)     → 6031 Variation marchandises
      */
-    private function variationForStock(Company $company, int $stockAccountId): \App\Models\Account
+    private function variationForStock(Company $company, int $stockAccountId): Account
     {
-        $code = \App\Models\Account::find($stockAccountId)?->code;
+        $code = Account::find($stockAccountId)?->code;
         $key = match ($code) {
-            '321'   => 'variation_stocks_matieres',
-            '361'   => 'production_stockee',
+            '321' => 'variation_stocks_matieres',
+            '361' => 'production_stockee',
             default => 'variation_stocks',
         };
 
@@ -700,9 +765,11 @@ class AccountingService
     public function postCreditNoteStockMovement(CreditNote $creditNote): ?JournalEntry
     {
         $company = $this->company($creditNote->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
-        $creditNote->loadMissing('items.product.family.stockAccount');
+        $creditNote->loadMissing('items.product.family.stockAccount', 'items.lotReturns');
 
         $defaultStockAccount = $this->account($company, 'stocks');
 
@@ -710,21 +777,29 @@ class AccountingService
         $totalCost = 0;
         foreach ($creditNote->items as $item) {
             $product = $item->product;
-            if (!$product || !$product->is_stockable) continue;
+            if (! $product || ! $product->is_stockable) {
+                continue;
+            }
 
             // [VEN Retour] Les lignes mises au rebut ne réintègrent pas le stock :
             // pas d'entrée d'actif au grand livre (biens détruits, déjà sortis à la vente).
-            if (($item->disposition ?? 'restock') === 'rebut') continue;
+            if (($item->disposition ?? 'restock') === 'rebut') {
+                continue;
+            }
 
-            $cost = (int) round((float) $item->quantity * (float) ($product->purchase_price ?? 0));
-            if ($cost <= 0) continue;
+            $cost = (int) round((float) $item->lotReturns->sum('total_cost'));
+            if ($cost <= 0) {
+                continue;
+            }
 
             $accountId = $product->family?->stock_account_id ?? $defaultStockAccount->id;
             $buckets[$accountId] = ($buckets[$accountId] ?? 0) + $cost;
             $totalCost += $cost;
         }
 
-        if ($totalCost <= 0) return null;
+        if ($totalCost <= 0) {
+            return null;
+        }
 
         // [SYSCOHADA] Variation adossée au compte de stock (361 PF → 736, 321 → 6032, défaut 6031)
         $lines = [];
@@ -734,8 +809,8 @@ class AccountingService
         }
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $creditNote->issued_at ?? today(),
-            'reference'   => $creditNote->number.'-STK',
+            'entry_date' => $creditNote->issued_at ?? today(),
+            'reference' => $creditNote->number.'-STK',
             'description' => 'Retour en stock sur avoir '.$creditNote->number,
         ], $lines);
     }
@@ -749,28 +824,36 @@ class AccountingService
     public function postSupplierReturnStockMovement(SupplierReturn $return): ?JournalEntry
     {
         $company = $this->company($return->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $return->loadMissing('items.product.family.stockAccount');
 
         $defaultStockAccount = $this->account($company, 'stocks');
-        $variationAccount    = $this->account($company, 'variation_stocks');
+        $variationAccount = $this->account($company, 'variation_stocks');
 
         $buckets = [];
         $totalCost = 0;
         foreach ($return->items as $item) {
             $product = $item->product;
-            if (!$product || !$product->is_stockable) continue;
+            if (! $product || ! $product->is_stockable) {
+                continue;
+            }
 
             $cost = (int) ($item->line_total_ht ?? 0);
-            if ($cost <= 0) continue;
+            if ($cost <= 0) {
+                continue;
+            }
 
             $accountId = $product->family?->stock_account_id ?? $defaultStockAccount->id;
             $buckets[$accountId] = ($buckets[$accountId] ?? 0) + $cost;
             $totalCost += $cost;
         }
 
-        if ($totalCost <= 0) return null;
+        if ($totalCost <= 0) {
+            return null;
+        }
 
         $lines = [
             $this->line($variationAccount, 'Sortie stock retour fourn. '.$return->number, $totalCost, 0),
@@ -780,8 +863,8 @@ class AccountingService
         }
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $return->returned_at ?? today(),
-            'reference'   => $return->number.'-STK',
+            'entry_date' => $return->returned_at ?? today(),
+            'reference' => $return->number.'-STK',
             'description' => 'Sortie de stock sur retour fournisseur '.$return->number,
         ], $lines);
     }
@@ -799,23 +882,31 @@ class AccountingService
     public function postInventoryVariances(InventorySession $session): void
     {
         $company = $this->company($session->company_id);
-        if (!$company) return;
+        if (! $company) {
+            return;
+        }
 
         $session->loadMissing('items');
 
         // Guard: skip if there are no non-zero variances at all
-        $hasVariance = $session->items->contains(fn($i) => abs((float) $i->variance_quantity) > 0.0001);
-        if (!$hasVariance) return;
+        $hasVariance = $session->items->contains(fn ($i) => abs((float) $i->variance_quantity) > 0.0001);
+        if (! $hasVariance) {
+            return;
+        }
 
         $totalGainValue = 0;   // sum of positive variance values → DR Stocks / CR Produits
         $totalLossValue = 0;   // sum of negative variance values → DR Pertes / CR Stocks
 
         foreach ($session->items as $item) {
             $variance = (float) $item->variance_quantity;
-            if (abs($variance) < 0.0001) continue;
+            if (abs($variance) < 0.0001) {
+                continue;
+            }
 
             $value = (int) round(abs($variance) * (float) $item->unit_cost);
-            if ($value <= 0) continue;
+            if ($value <= 0) {
+                continue;
+            }
 
             if ($variance > 0) {
                 $totalGainValue += $value;
@@ -824,38 +915,42 @@ class AccountingService
             }
         }
 
-        if ($totalGainValue === 0 && $totalLossValue === 0) return;
+        if ($totalGainValue === 0 && $totalLossValue === 0) {
+            return;
+        }
 
-        $label       = 'Écarts inventaire '.$session->number;
-        $stockAcct   = $this->account($company, 'stocks');
-        $prodAcct    = $this->account($company, 'produits_inventaire');
-        $pertesAcct  = $this->account($company, 'pertes_inventaire');
+        $label = 'Écarts inventaire '.$session->number;
+        $stockAcct = $this->account($company, 'stocks');
+        $prodAcct = $this->account($company, 'produits_inventaire');
+        $pertesAcct = $this->account($company, 'pertes_inventaire');
 
         // Build consolidated lines:
         //   Net stock impact = gains − losses
-        $netStockDebit  = max(0, $totalGainValue - $totalLossValue);
+        $netStockDebit = max(0, $totalGainValue - $totalLossValue);
         $netStockCredit = max(0, $totalLossValue - $totalGainValue);
 
         $lines = [];
 
         if ($netStockDebit > 0) {
-            $lines[] = $this->line($stockAcct,  $label, $netStockDebit, 0);
+            $lines[] = $this->line($stockAcct, $label, $netStockDebit, 0);
         }
         if ($netStockCredit > 0) {
-            $lines[] = $this->line($stockAcct,  $label, 0, $netStockCredit);
+            $lines[] = $this->line($stockAcct, $label, 0, $netStockCredit);
         }
         if ($totalGainValue > 0) {
-            $lines[] = $this->line($prodAcct,   $label, 0, $totalGainValue);
+            $lines[] = $this->line($prodAcct, $label, 0, $totalGainValue);
         }
         if ($totalLossValue > 0) {
             $lines[] = $this->line($pertesAcct, $label, $totalLossValue, 0);
         }
 
-        if (empty($lines)) return;
+        if (empty($lines)) {
+            return;
+        }
 
         $this->post($company, 'operations_diverses', [
-            'entry_date'  => $session->validated_at ?? today(),
-            'reference'   => $session->number,
+            'entry_date' => $session->validated_at ?? today(),
+            'reference' => $session->number,
             'description' => $label,
         ], $lines);
     }
@@ -866,7 +961,7 @@ class AccountingService
      * L'avoir avait crédité 411 (dette envers le client) ; le remboursement
      * éteint cette dette par une sortie de fonds.
      */
-    public function postCreditNoteRefund(CreditNote $creditNote, \App\Models\CashAccount $cashAccount, int $amount, int $alreadyRefunded = 0): ?JournalEntry
+    public function postCreditNoteRefund(CreditNote $creditNote, CashAccount $cashAccount, int $amount, int $alreadyRefunded = 0): ?JournalEntry
     {
         $company = $this->company($creditNote->company_id);
         if (! $company || $amount <= 0) {
@@ -876,18 +971,18 @@ class AccountingService
             : ($cashAccount->type === 'mobile_money' ? 'mobile_money' : 'banque');
         // [R2 §2] Référence unique PAR remboursement (partiels successifs) :
         // suffixe = cumul déjà remboursé, pour ne pas retomber sur l'idempotence.
-        $reference = 'REMB-' . $creditNote->number . ($alreadyRefunded > 0 ? '-' . $alreadyRefunded : '');
+        $reference = 'REMB-'.$creditNote->number.($alreadyRefunded > 0 ? '-'.$alreadyRefunded : '');
         if ($this->entryExists($company, $reference)) {
             return null; // idempotent (rejeu exact du même remboursement partiel)
         }
-        $label = 'Remboursement avoir ' . $creditNote->number;
+        $label = 'Remboursement avoir '.$creditNote->number;
         // Journal selon le support de paiement (enum journal_types :
         // caisse | banque — « tresorerie » n'existe pas dans l'enum)
         $journal = $cashAccount->type === 'caisse' ? 'caisse' : 'banque';
 
         return $this->post($company, $journal, [
-            'entry_date'  => today(),
-            'reference'   => $reference,
+            'entry_date' => today(),
+            'reference' => $reference,
             'description' => $label,
         ], [
             $this->line($this->account($company, 'clients'), $label, $amount, 0),
@@ -901,22 +996,22 @@ class AccountingService
      * Le stock physique reflète déjà la perte (sortie source sans entrée
      * destination) — cette écriture aligne la valorisation comptable.
      */
-    public function postTransferLoss(\App\Models\StockTransfer $transfer, int $amount): ?JournalEntry
+    public function postTransferLoss(StockTransfer $transfer, int $amount): ?JournalEntry
     {
         $company = $this->company($transfer->company_id);
         if (! $company || $amount <= 0) {
             return null;
         }
 
-        $reference = 'PERTE-TRANSIT-' . $transfer->number;
+        $reference = 'PERTE-TRANSIT-'.$transfer->number;
         if ($this->entryExists($company, $reference)) {
             return null; // idempotent : une seule écriture de perte par transfert
         }
-        $label = 'Perte en transit — transfert ' . $transfer->number;
+        $label = 'Perte en transit — transfert '.$transfer->number;
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => today(),
-            'reference'   => $reference,
+            'entry_date' => today(),
+            'reference' => $reference,
             'description' => $label,
         ], [
             $this->line($this->account($company, 'pertes_inventaire'), $label, $amount, 0),
@@ -942,30 +1037,34 @@ class AccountingService
     public function postBankDeposit(BankDeposit $deposit): ?JournalEntry
     {
         $company = $this->company($deposit->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         $amount = (int) $deposit->total_amount;
-        if ($amount <= 0) return null;
+        if ($amount <= 0) {
+            return null;
+        }
 
         $deposit->loadMissing(['cashAccount', 'sourceCashAccount']);
 
         // Compte de débit : cash account de destination
-        $destAccount   = $this->tresorerieAccount($company, $deposit->cash_account_id);
+        $destAccount = $this->tresorerieAccount($company, $deposit->cash_account_id);
 
         // Compte de crédit : cash account source (si renseigné) ou virement interne
         $sourceAccount = $deposit->source_cash_account_id
             ? $this->tresorerieAccount($company, $deposit->source_cash_account_id)
             : $this->account($company, 'virements_internes');
 
-        $label       = 'Remise en banque ' . $deposit->number;
+        $label = 'Remise en banque '.$deposit->number;
         $journalCode = ($destAccount->code === '571') ? 'caisse' : 'banque';
 
         return $this->post($company, $journalCode, [
-            'entry_date'  => $deposit->deposit_date->toDateString(),
-            'reference'   => $deposit->number,
+            'entry_date' => $deposit->deposit_date->toDateString(),
+            'reference' => $deposit->number,
             'description' => $label,
         ], [
-            $this->line($destAccount,   $label, $amount, 0),
+            $this->line($destAccount, $label, $amount, 0),
             $this->line($sourceAccount, $label, 0, $amount),
         ]);
     }
@@ -978,7 +1077,9 @@ class AccountingService
     public function reverseEntry(JournalEntry $entry, string $reason = 'Contrepassation'): ?JournalEntry
     {
         $company = $this->company($entry->company_id);
-        if (!$company) return null;
+        if (! $company) {
+            return null;
+        }
 
         // [COMPTA-FIX-03] Idempotence : refuse to reverse twice.
         if ($entry->reversed_by_entry_id) {
@@ -999,19 +1100,21 @@ class AccountingService
         }
 
         $entry->load('lines');
-        if ($entry->lines->isEmpty()) return null;
+        if ($entry->lines->isEmpty()) {
+            return null;
+        }
 
-        $reversedLines = $entry->lines->map(fn($l) => $this->line(
+        $reversedLines = $entry->lines->map(fn ($l) => $this->line(
             Account::findOrFail($l->account_id),
-            $reason . ' — ' . $l->label,
+            $reason.' — '.$l->label,
             (int) $l->credit,  // swap: credit becomes debit
             (int) $l->debit    // swap: debit becomes credit
         ))->all();
 
         $reversal = $this->post($company, $entry->journalType?->type ?? 'vente', [
-            'entry_date'  => today(),
-            'reference'   => 'ANNUL-' . $entry->reference,
-            'description' => $reason . ' : ' . $entry->description,
+            'entry_date' => today(),
+            'reference' => 'ANNUL-'.$entry->reference,
+            'description' => $reason.' : '.$entry->description,
         ], $reversedLines);
 
         // [COMPTA-FIX-03] Link both entries bidirectionally — original tracks its reversal,
@@ -1040,18 +1143,18 @@ class AccountingService
             return null;
         }
 
-        $reference = $order->number . '-CONS';
+        $reference = $order->number.'-CONS';
         if ($this->entryExists($company, $reference)) {
             return null;
         }
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $order->finished_at ?? today(),
-            'reference'   => $reference,
-            'description' => 'Consommation matière production ' . $order->number,
+            'entry_date' => $order->finished_at ?? today(),
+            'reference' => $reference,
+            'description' => 'Consommation matière production '.$order->number,
         ], [
-            $this->line($this->account($company, 'variation_stocks_matieres'), 'Conso matière ' . $order->number, $amount, 0),
-            $this->line($this->account($company, 'stocks_matieres'), 'Conso matière ' . $order->number, 0, $amount),
+            $this->line($this->account($company, 'variation_stocks_matieres'), 'Conso matière '.$order->number, $amount, 0),
+            $this->line($this->account($company, 'stocks_matieres'), 'Conso matière '.$order->number, 0, $amount),
         ]);
     }
 
@@ -1067,18 +1170,18 @@ class AccountingService
             return null;
         }
 
-        $reference = $order->number . '-PROD';
+        $reference = $order->number.'-PROD';
         if ($this->entryExists($company, $reference)) {
             return null;
         }
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $order->finished_at ?? today(),
-            'reference'   => $reference,
-            'description' => 'Production stockée ' . $order->number,
+            'entry_date' => $order->finished_at ?? today(),
+            'reference' => $reference,
+            'description' => 'Production stockée '.$order->number,
         ], [
-            $this->line($this->account($company, 'stocks_produits_finis'), 'Entrée PF ' . $order->number, $amount, 0),
-            $this->line($this->account($company, 'production_stockee'), 'Entrée PF ' . $order->number, 0, $amount),
+            $this->line($this->account($company, 'stocks_produits_finis'), 'Entrée PF '.$order->number, $amount, 0),
+            $this->line($this->account($company, 'production_stockee'), 'Entrée PF '.$order->number, 0, $amount),
         ]);
     }
 
@@ -1090,25 +1193,25 @@ class AccountingService
      * La valeur est fournie par ProductionWaste::value (en FCFA entier).
      * Idempotent sur la référence WASTE-{id}.
      */
-    public function postWaste(\App\Modules\Production\Models\ProductionWaste $waste): ?JournalEntry
+    public function postWaste(ProductionWaste $waste): ?JournalEntry
     {
         $company = $this->company($waste->company_id);
         if (! $company || $waste->value <= 0) {
             return null;
         }
 
-        $reference = 'WASTE-' . $waste->id;
+        $reference = 'WASTE-'.$waste->id;
         if ($this->entryExists($company, $reference)) {
             return null;
         }
 
         $order = $waste->productionOrder;
-        $label = 'Rebut OF ' . ($order?->number ?? '#' . $waste->production_order_id)
-               . ' — ' . $waste->causeLabel();
+        $label = 'Rebut OF '.($order?->number ?? '#'.$waste->production_order_id)
+               .' — '.$waste->causeLabel();
 
         return $this->post($company, 'operations_diverses', [
-            'entry_date'  => $waste->updated_at ?? today(),
-            'reference'   => $reference,
+            'entry_date' => $waste->updated_at ?? today(),
+            'reference' => $reference,
             'description' => $label,
         ], [
             $this->line($this->account($company, 'pertes_rebuts'), $label, $waste->value, 0),
@@ -1136,60 +1239,60 @@ class AccountingService
         $lock = AccountingPeriodLock::findForDate($company->id, $entryDate);
         if ($lock) {
             throw new \RuntimeException(sprintf(
-                "Impossible de comptabiliser : la période « %s » est verrouillée (par %s le %s). "
-                . "Déverrouillez la période dans Comptabilité → Périodes, ou corrigez la date du document.",
+                'Impossible de comptabiliser : la période « %s » est verrouillée (par %s le %s). '
+                .'Déverrouillez la période dans Comptabilité → Périodes, ou corrigez la date du document.',
                 $lock->label(),
                 $lock->lockedBy?->name ?? 'système',
                 $lock->locked_at?->format('d/m/Y') ?? '?'
             ));
         }
 
-        $totalDebit  = (int) collect($lines)->sum('debit');
+        $totalDebit = (int) collect($lines)->sum('debit');
         $totalCredit = (int) collect($lines)->sum('credit');
 
         if ($totalDebit !== $totalCredit) {
             Log::error('AccountingService: écriture déséquilibrée', [
-                'reference'    => $header['reference'] ?? null,
-                'total_debit'  => $totalDebit,
+                'reference' => $header['reference'] ?? null,
+                'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
             ]);
             throw new \RuntimeException('Écriture comptable déséquilibrée (débit '.$totalDebit.' ≠ crédit '.$totalCredit.').');
         }
 
         $journalType = $this->journalType($company, $journalTypeCode);
-        $number      = $this->nextEntryNumber($company);
-        $userId      = Auth::id();
+        $number = $this->nextEntryNumber($company);
+        $userId = Auth::id();
 
         $entry = JournalEntry::create([
-            'company_id'      => $company->id,
+            'company_id' => $company->id,
             'journal_type_id' => $journalType?->id,
-            'fiscal_year_id'  => $company->current_fiscal_year_id,
-            'number'          => $number,
-            'entry_date'      => $header['entry_date'] ?? today(),
-            'value_date'      => $header['value_date']  ?? $header['entry_date'] ?? today(),
-            'reference'       => $header['reference']   ?? null,
-            'description'     => $header['description'] ?? null,
-            'status'          => 'valide',
-            'total_debit'     => $totalDebit,
-            'total_credit'    => $totalCredit,
-            'created_by'      => $userId,
-            'validated_by'    => $userId,
-            'validated_at'    => now(),
+            'fiscal_year_id' => $company->current_fiscal_year_id,
+            'number' => $number,
+            'entry_date' => $header['entry_date'] ?? today(),
+            'value_date' => $header['value_date'] ?? $header['entry_date'] ?? today(),
+            'reference' => $header['reference'] ?? null,
+            'description' => $header['description'] ?? null,
+            'status' => 'valide',
+            'total_debit' => $totalDebit,
+            'total_credit' => $totalCredit,
+            'created_by' => $userId,
+            'validated_by' => $userId,
+            'validated_at' => now(),
         ]);
 
         foreach ($lines as $i => $line) {
             $entry->lines()->create([
                 'journal_entry_id' => $entry->id,
-                'account_id'       => $line['account_id'],
-                'label'            => $line['label'] ?? ($header['description'] ?? ''),
-                'debit'            => (int) ($line['debit']  ?? 0),
-                'credit'           => (int) ($line['credit'] ?? 0),
-                'sort_order'       => $i,
+                'account_id' => $line['account_id'],
+                'label' => $line['label'] ?? ($header['description'] ?? ''),
+                'debit' => (int) ($line['debit'] ?? 0),
+                'credit' => (int) ($line['credit'] ?? 0),
+                'sort_order' => $i,
             ]);
 
             // Update account running balances atomically
             Account::where('id', $line['account_id'])
-                ->increment('debit_balance',  (int) ($line['debit']  ?? 0));
+                ->increment('debit_balance', (int) ($line['debit'] ?? 0));
             Account::where('id', $line['account_id'])
                 ->increment('credit_balance', (int) ($line['credit'] ?? 0));
         }
@@ -1215,17 +1318,19 @@ class AccountingService
      * sur le TaxRate de chaque ligne. Si le taux n'a pas de compte GL dédié,
      * fallback sur le compte 4431 (collectée) ou 4455 (déductible) global.
      *
-     * @param  iterable  $items              Items avec relation taxRate chargée
-     * @param  int       $fallbackAccountId  Compte par défaut
-     * @param  string    $accountField       'collected_account_id' ou 'deductible_account_id'
-     * @return array<int,int>                [accountId => totalTva, ...]
+     * @param  iterable  $items  Items avec relation taxRate chargée
+     * @param  int  $fallbackAccountId  Compte par défaut
+     * @param  string  $accountField  'collected_account_id' ou 'deductible_account_id'
+     * @return array<int,int> [accountId => totalTva, ...]
      */
     private function ventilateTaxByRate($items, int $fallbackAccountId, string $accountField, int $fallbackAmount = 0): array
     {
         $buckets = [];
         foreach ($items as $item) {
             $tva = (int) ($item->line_tax ?? 0);
-            if ($tva <= 0) continue;
+            if ($tva <= 0) {
+                continue;
+            }
 
             $accountId = $item->taxRate?->{$accountField} ?? $fallbackAccountId;
             $buckets[$accountId] = ($buckets[$accountId] ?? 0) + $tva;
@@ -1234,6 +1339,7 @@ class AccountingService
         if ((empty($buckets) || array_sum($buckets) === 0) && $fallbackAmount > 0) {
             $buckets[$fallbackAccountId] = $fallbackAmount;
         }
+
         return $buckets;
     }
 
@@ -1242,17 +1348,19 @@ class AccountingService
      * la famille de l'article de chaque ligne. Les items sans famille (ou dont
      * la famille n'a pas de compte configuré) sont rattachés au $fallbackAccountId.
      *
-     * @param  iterable  $items              Items de facture (Invoice ou SupplierInvoice)
-     * @param  int       $fallbackAccountId  Compte par défaut (7011 ou 6011)
-     * @param  string    $accountField       'sale_account_id' ou 'purchase_account_id'
-     * @return array<int,int>                [accountId => totalHt, ...]
+     * @param  iterable  $items  Items de facture (Invoice ou SupplierInvoice)
+     * @param  int  $fallbackAccountId  Compte par défaut (7011 ou 6011)
+     * @param  string  $accountField  'sale_account_id' ou 'purchase_account_id'
+     * @return array<int,int> [accountId => totalHt, ...]
      */
     private function ventilateByFamilyAccount($items, int $fallbackAccountId, string $accountField, int $fallbackAmount = 0, ?\Closure $fallbackForItem = null): array
     {
         $buckets = [];
         foreach ($items as $item) {
             $ht = (int) ($item->line_total_ht ?? 0);
-            if ($ht <= 0) continue;
+            if ($ht <= 0) {
+                continue;
+            }
 
             $accountId = $item->product?->family?->{$accountField}
                 ?? ($fallbackForItem ? $fallbackForItem($item) : null)
@@ -1289,12 +1397,12 @@ class AccountingService
             ['company_id' => $company->id, 'code' => $code],
             [
                 'account_class_id' => $this->accountClassId($company, $classNumber),
-                'name'             => $name,
-                'type'             => $type,
-                'is_detail'        => true,
-                'is_active'        => true,
-                'debit_balance'    => 0,
-                'credit_balance'   => 0,
+                'name' => $name,
+                'type' => $type,
+                'is_detail' => true,
+                'is_active' => true,
+                'debit_balance' => 0,
+                'credit_balance' => 0,
             ]
         );
     }
@@ -1308,12 +1416,12 @@ class AccountingService
 
     private function overriddenAccountId(Company $company, string $key): ?int
     {
-        if (!\Illuminate\Support\Facades\Schema::hasTable('accounting_settings')) {
+        if (! Schema::hasTable('accounting_settings')) {
             return null;
         }
 
-        if (!array_key_exists($company->id, $this->accountingSettingsCache)) {
-            $this->accountingSettingsCache[$company->id] = \App\Models\AccountingSetting::query()
+        if (! array_key_exists($company->id, $this->accountingSettingsCache)) {
+            $this->accountingSettingsCache[$company->id] = AccountingSetting::query()
                 ->withoutGlobalScopes()
                 ->where('company_id', $company->id)
                 ->first();
@@ -1336,13 +1444,15 @@ class AccountingService
                 // [RELATION MÉTIER] Chaque type de compte de trésorerie a son
                 // compte SYSCOHADA : caisse → 571, mobile money → 523, banque → 521.
                 $key = match ($cashAccount->type) {
-                    'caisse'       => 'caisse',
+                    'caisse' => 'caisse',
                     'mobile_money' => 'mobile_money',
-                    default        => 'banque',
+                    default => 'banque',
                 };
+
                 return $this->account($company, $key);
             }
         }
+
         // Default to banque when no cash account linked
         return $this->account($company, 'banque');
     }
@@ -1366,15 +1476,16 @@ class AccountingService
         if ($existing->isNotEmpty()) {
             $journal = $existing->first();
             $journal->update(['is_active' => true]);
+
             return $journal;
         }
 
         // Auto-create a default journal type when none exists (e.g. in test or fresh company)
         $defaults = [
-            'vente'   => ['code' => 'VT', 'name' => 'Journal des ventes'],
-            'achat'   => ['code' => 'AC', 'name' => 'Journal des achats'],
-            'banque'  => ['code' => 'BQ', 'name' => 'Journal de banque'],
-            'caisse'  => ['code' => 'CA', 'name' => 'Journal de caisse'],
+            'vente' => ['code' => 'VT', 'name' => 'Journal des ventes'],
+            'achat' => ['code' => 'AC', 'name' => 'Journal des achats'],
+            'banque' => ['code' => 'BQ', 'name' => 'Journal de banque'],
+            'caisse' => ['code' => 'CA', 'name' => 'Journal de caisse'],
             'operations_diverses' => ['code' => 'OD', 'name' => 'Opérations diverses'],
         ];
 
@@ -1382,10 +1493,10 @@ class AccountingService
 
         return JournalType::create([
             'company_id' => $company->id,
-            'type'       => $type,
-            'code'       => $default['code'],
-            'name'       => $default['name'],
-            'is_active'  => true,
+            'type' => $type,
+            'code' => $default['code'],
+            'name' => $default['name'],
+            'is_active' => true,
         ]);
     }
 

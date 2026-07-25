@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CreditNoteItem extends Model
 {
@@ -11,8 +12,8 @@ class CreditNoteItem extends Model
 
     /** [VEN Retour] Sort des biens retournés. */
     public const DISPOSITIONS = [
-        'restock'     => 'Remis en stock',
-        'rebut'       => 'Rebut (non remis en stock)',
+        'restock' => 'Remis en stock',
+        'rebut' => 'Rebut (non remis en stock)',
         'quarantaine' => 'Quarantaine (décision qualité requise)',
     ];
 
@@ -33,13 +34,13 @@ class CreditNoteItem extends Model
     ];
 
     protected $casts = [
-        'quantity'       => 'decimal:4',
-        'unit_price'     => 'integer',
+        'quantity' => 'decimal:4',
+        'unit_price' => 'integer',
         'tax_rate_value' => 'decimal:2',
-        'line_total_ht'  => 'integer',
-        'line_tax'       => 'integer',
+        'line_total_ht' => 'integer',
+        'line_tax' => 'integer',
         'line_total_ttc' => 'integer',
-        'sort_order'     => 'integer',
+        'sort_order' => 'integer',
     ];
 
     // -------------------------------------------------------------------------
@@ -64,5 +65,10 @@ class CreditNoteItem extends Model
     public function taxRate(): BelongsTo
     {
         return $this->belongsTo(TaxRate::class);
+    }
+
+    public function lotReturns(): HasMany
+    {
+        return $this->hasMany(CreditNoteItemLotReturn::class);
     }
 }

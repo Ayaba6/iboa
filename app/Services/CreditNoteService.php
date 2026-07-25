@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Events\CreditNoteValidated;
-use App\Models\Company;
+use App\Models\CashAccount;
+use App\Models\CashTransaction;
 use App\Models\CreditNote;
+use App\Models\DeliveryNote;
 use App\Models\Invoice;
+use App\Models\JournalEntry;
 use App\Models\Warehouse;
 use App\Repositories\CreditNoteRepository;
 use Illuminate\Support\Facades\Auth;
@@ -27,28 +30,28 @@ class CreditNoteService
     {
         return DB::transaction(function () use ($invoice, $data) {
             $company = currentCompany();
-            $items   = $data['items'] ?? [];
+            $items = $data['items'] ?? [];
             unset($data['items']);
 
             [$subtotal, $taxTotal] = $this->calculateTotals($items);
             $total = $subtotal + $taxTotal;
 
             $creditNote = CreditNote::create([
-                'company_id'       => $company->id,
-                'client_id'        => $invoice->client_id,
-                'invoice_id'       => $invoice->id,
-                'number'           => $this->sequenceService->nextNumber($company, 'avoir'),
-                'status'           => 'brouillon',
-                'issued_at'        => $data['issued_at'] ?? now()->toDateString(),
-                'reason'           => $data['reason'] ?? null,
-                'is_replacement'   => (bool) ($data['is_replacement'] ?? false),
-                'currency_code'    => $invoice->currency_code,
-                'subtotal_ht'      => $subtotal,
-                'total_tax'        => $taxTotal,
-                'total_ttc'        => $total,
+                'company_id' => $company->id,
+                'client_id' => $invoice->client_id,
+                'invoice_id' => $invoice->id,
+                'number' => $this->sequenceService->nextNumber($company, 'avoir'),
+                'status' => 'brouillon',
+                'issued_at' => $data['issued_at'] ?? now()->toDateString(),
+                'reason' => $data['reason'] ?? null,
+                'is_replacement' => (bool) ($data['is_replacement'] ?? false),
+                'currency_code' => $invoice->currency_code,
+                'subtotal_ht' => $subtotal,
+                'total_tax' => $taxTotal,
+                'total_ttc' => $total,
                 'remaining_credit' => $total,
-                'notes'            => $data['notes'] ?? null,
-                'created_by'       => Auth::id(),
+                'notes' => $data['notes'] ?? null,
+                'created_by' => Auth::id(),
             ]);
 
             $this->syncItems($creditNote, $items);
@@ -82,7 +85,7 @@ class CreditNoteService
 
             if ($warehouseId) {
                 foreach ($creditNote->items as $item) {
-                    if (!$item->product_id || !($item->product?->is_stockable ?? true) || $item->quantity <= 0) {
+                    if (! $item->product_id || ! ($item->product?->is_stockable ?? true) || $item->quantity <= 0) {
                         continue;
                     }
 
@@ -92,34 +95,12 @@ class CreditNoteService
                     if (($item->disposition ?? 'restock') === 'rebut') {
                         continue;
                     }
-
-                    // [ULTIMATUM parcours D] Quarantaine : le retour entre au DÉPÔT
-                    // QUARANTAINE (jamais en stock vendable) — la remise en vente
-                    // exige un transfert décidé par la qualité.
-                    $targetWarehouseId = $warehouseId;
-                    if (($item->disposition ?? 'restock') === 'quarantaine') {
-                        $targetWarehouseId = \App\Models\Warehouse::where('company_id', $creditNote->company_id)
-                            ->where(fn ($q) => $q->where('code', 'like', '%QUAR%')->orWhere('name', 'like', '%uarantaine%'))
-                            ->value('id')
-                            ?? throw new \RuntimeException('Aucun dépôt de quarantaine configuré — créez un dépôt QUAR avant de valider un retour en quarantaine.');
-                    }
-
-                    $this->stockService->recordMovement([
-                        'product_id'     => $item->product_id,
-                        'warehouse_id'   => $targetWarehouseId,
-                        'type'           => 'retour_client',
-                        'quantity'       => (float) $item->quantity,
-                        'unit_cost'      => (float) $item->unit_price,
-                        'occurred_at'    => now(),
-                        'reference_type' => 'credit_note',
-                        'reference_id'   => $creditNote->id,
-                        'notes'          => 'Avoir ' . $creditNote->number,
-                    ]);
+                    app(HistoricalCustomerReturnService::class)->returnItem($creditNote, $item, (int) $warehouseId);
                 }
             }
 
             $creditNote->update([
-                'status'       => 'valide',
+                'status' => 'valide',
                 'validated_by' => Auth::id(),
                 'validated_at' => now(),
             ]);
@@ -155,14 +136,14 @@ class CreditNoteService
     {
         // Try to get warehouse from the invoice's most recent delivery note
         if ($creditNote->invoice_id) {
-            $warehouseId = \App\Models\DeliveryNote::where('order_id', function ($q) use ($creditNote) {
+            $warehouseId = DeliveryNote::where('order_id', function ($q) use ($creditNote) {
                 $q->select('order_id')
-                  ->from('invoices')
-                  ->where('id', $creditNote->invoice_id)
-                  ->whereNotNull('order_id');
+                    ->from('invoices')
+                    ->where('id', $creditNote->invoice_id)
+                    ->whereNotNull('order_id');
             })->where('status', 'valide')
-              ->orderByDesc('validated_at')
-              ->value('warehouse_id');
+                ->orderByDesc('validated_at')
+                ->value('warehouse_id');
 
             if ($warehouseId) {
                 return $warehouseId;
@@ -181,7 +162,7 @@ class CreditNoteService
         if ($creditNote->status !== 'valide') {
             throw new \RuntimeException("L'avoir doit être validé avant d'être appliqué.");
         }
-        if (!$creditNote->invoice_id) {
+        if (! $creditNote->invoice_id) {
             throw new \RuntimeException("Cet avoir n'est pas lié à une facture.");
         }
         if ($creditNote->remaining_credit <= 0) {
@@ -191,11 +172,11 @@ class CreditNoteService
         return DB::transaction(function () use ($creditNote) {
             // [ARCH-C2] Lock both rows to prevent concurrent modifications.
             $creditNote = CreditNote::lockForUpdate()->findOrFail($creditNote->id);
-            $invoice    = Invoice::lockForUpdate()->findOrFail($creditNote->invoice_id);
-            $apply      = min($creditNote->remaining_credit, $invoice->remaining_amount);
+            $invoice = Invoice::lockForUpdate()->findOrFail($creditNote->invoice_id);
+            $apply = min($creditNote->remaining_credit, $invoice->remaining_amount);
 
             // Reduce invoice remaining
-            $invoice->paid_amount      += $apply;
+            $invoice->paid_amount += $apply;
             $invoice->remaining_amount -= $apply;
             if ($invoice->remaining_amount <= 0) {
                 $invoice->status = 'payee';
@@ -205,9 +186,9 @@ class CreditNoteService
             $invoice->save();
 
             // Reduce credit note remaining
-            $creditNote->applied_amount   += $apply;
+            $creditNote->applied_amount += $apply;
             $creditNote->remaining_credit -= $apply;
-            $creditNote->status            = $creditNote->remaining_credit <= 0 ? 'applique' : 'valide';
+            $creditNote->status = $creditNote->remaining_credit <= 0 ? 'applique' : 'valide';
             $creditNote->save();
 
             // Recalculate client balance now that a receivable has been reduced
@@ -228,7 +209,7 @@ class CreditNoteService
      * Le BL de remplacement expédie de NOUVELLES unités saines : il concerne donc
      * toutes les lignes stockables, quelle que soit leur disposition (restock/rebut).
      */
-    public function createReplacementDelivery(CreditNote $creditNote): \App\Models\DeliveryNote
+    public function createReplacementDelivery(CreditNote $creditNote): DeliveryNote
     {
         if ($creditNote->status === 'brouillon') {
             throw new \RuntimeException("L'avoir doit être validé avant de générer un remplacement.");
@@ -239,36 +220,36 @@ class CreditNoteService
 
         return DB::transaction(function () use ($creditNote) {
             $creditNote->loadMissing('items.product');
-            $company     = currentCompany();
+            $company = currentCompany();
             $warehouseId = $this->resolveReturnWarehouse($creditNote);
 
-            $dn = \App\Models\DeliveryNote::create([
-                'company_id'    => $company->id,
-                'client_id'     => $creditNote->client_id,
-                'order_id'      => null,
-                'number'        => $this->sequenceService->nextNumber($company, 'bon_livraison'),
-                'issued_at'     => now()->toDateString(),
-                'status'        => 'brouillon',
-                'warehouse_id'  => $warehouseId,
+            $dn = DeliveryNote::create([
+                'company_id' => $company->id,
+                'client_id' => $creditNote->client_id,
+                'order_id' => null,
+                'number' => $this->sequenceService->nextNumber($company, 'bon_livraison'),
+                'issued_at' => now()->toDateString(),
+                'status' => 'brouillon',
+                'warehouse_id' => $warehouseId,
                 'currency_code' => $creditNote->currency_code,
-                'notes'         => 'Remplacement — avoir '.$creditNote->number,
-                'created_by'    => Auth::id(),
+                'notes' => 'Remplacement — avoir '.$creditNote->number,
+                'created_by' => Auth::id(),
             ]);
 
             $totalQty = 0;
-            $sort     = 0;
+            $sort = 0;
             foreach ($creditNote->items as $item) {
-                if (!$item->product_id || !($item->product?->is_stockable ?? true) || $item->quantity <= 0) {
+                if (! $item->product_id || ! ($item->product?->is_stockable ?? true) || $item->quantity <= 0) {
                     continue;
                 }
                 $dn->items()->create([
                     'order_item_id' => null,
-                    'product_id'    => $item->product_id,
-                    'description'   => $item->description,
-                    'unit_id'       => $item->unit_id,
-                    'quantity'      => $item->quantity,
-                    'unit_price'    => $item->unit_price,
-                    'sort_order'    => $sort++,
+                    'product_id' => $item->product_id,
+                    'description' => $item->description,
+                    'unit_id' => $item->unit_id,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'sort_order' => $sort++,
                 ]);
                 $totalQty += (float) $item->quantity;
             }
@@ -276,7 +257,7 @@ class CreditNoteService
             $dn->update(['total_quantity' => $totalQty]);
 
             $creditNote->update([
-                'is_replacement'          => true,
+                'is_replacement' => true,
                 'replacement_delivery_id' => $dn->id,
             ]);
 
@@ -292,6 +273,7 @@ class CreditNoteService
         if ($creditNote->status !== 'brouillon') {
             throw new \RuntimeException('Seuls les avoirs en brouillon peuvent être supprimés.');
         }
+
         return (bool) $creditNote->delete();
     }
 
@@ -302,26 +284,26 @@ class CreditNoteService
     {
         $creditNote->items()->delete();
         foreach ($items as $i => $item) {
-            $qty     = (float) ($item['quantity']   ?? 1);
-            $price   = (float) ($item['unit_price'] ?? 0);
-            $tax     = (float) ($item['tax_rate_value'] ?? 0);
-            $ht      = (int) round($qty * $price);
+            $qty = (float) ($item['quantity'] ?? 1);
+            $price = (float) ($item['unit_price'] ?? 0);
+            $tax = (float) ($item['tax_rate_value'] ?? 0);
+            $ht = (int) round($qty * $price);
             $lineTax = (int) round($ht * ($tax / 100));
 
             $creditNote->items()->create([
-                'product_id'     => $item['product_id']     ?? null,
-                'disposition'    => in_array($item['disposition'] ?? 'restock', ['restock', 'rebut', 'quarantaine'], true)
+                'product_id' => $item['product_id'] ?? null,
+                'disposition' => in_array($item['disposition'] ?? 'restock', ['restock', 'rebut', 'quarantaine', 'no_return'], true)
                     ? ($item['disposition'] ?? 'restock') : 'restock',
-                'description'    => $item['description']    ?? '',
-                'unit_id'        => $item['unit_id']        ?? null,
-                'quantity'       => $qty,
-                'unit_price'     => (int) $price,
-                'tax_rate_id'    => $item['tax_rate_id']    ?? null,
+                'description' => $item['description'] ?? '',
+                'unit_id' => $item['unit_id'] ?? null,
+                'quantity' => $qty,
+                'unit_price' => (int) $price,
+                'tax_rate_id' => $item['tax_rate_id'] ?? null,
                 'tax_rate_value' => $tax,
-                'line_total_ht'  => $ht,
-                'line_tax'       => $lineTax,
+                'line_total_ht' => $ht,
+                'line_tax' => $lineTax,
                 'line_total_ttc' => $ht + $lineTax,
-                'sort_order'     => $i,
+                'sort_order' => $i,
             ]);
         }
     }
@@ -331,13 +313,14 @@ class CreditNoteService
         $subtotal = 0;
         $taxTotal = 0;
         foreach ($items as $item) {
-            $qty     = (float) ($item['quantity']       ?? 1);
-            $price   = (float) ($item['unit_price']     ?? 0);
-            $tax     = (float) ($item['tax_rate_value'] ?? 0);
-            $ht      = (int) round($qty * $price);
+            $qty = (float) ($item['quantity'] ?? 1);
+            $price = (float) ($item['unit_price'] ?? 0);
+            $tax = (float) ($item['tax_rate_value'] ?? 0);
+            $ht = (int) round($qty * $price);
             $subtotal += $ht;
             $taxTotal += (int) round($ht * ($tax / 100));
         }
+
         return [$subtotal, $taxTotal];
     }
 
@@ -394,29 +377,29 @@ class CreditNoteService
                     number_format($amount, 0, ',', ' '), number_format($available, 0, ',', ' ')
                 ));
             }
-            $cashAccount = \App\Models\CashAccount::lockForUpdate()->findOrFail($cashAccountId);
+            $cashAccount = CashAccount::lockForUpdate()->findOrFail($cashAccountId);
 
             // Sortie de trésorerie (la garde de solde du service caisse s'applique)
-            app(\App\Services\CashAccountService::class)->recordTransaction($cashAccount, [
-                'type'           => 'debit',
+            app(CashAccountService::class)->recordTransaction($cashAccount, [
+                'type' => 'debit',
                 'reference_type' => 'CreditNoteRefund',
-                'reference_id'   => $creditNote->id,
-                'amount'         => $amount,
-                'label'          => 'Remboursement avoir ' . $creditNote->number . ' — ' . ($creditNote->client?->name ?? ''),
-                'occurred_at'    => now(),
+                'reference_id' => $creditNote->id,
+                'amount' => $amount,
+                'label' => 'Remboursement avoir '.$creditNote->number.' — '.($creditNote->client?->name ?? ''),
+                'occurred_at' => now(),
             ]);
 
             // Écriture D 411 / C 5xx — référence unique par remboursement (partiels
             // successifs = plusieurs écritures) pour lever la garde d'idempotence.
             app(AccountingService::class)->postCreditNoteRefund($creditNote, $cashAccount, $amount, (int) $creditNote->refunded_amount);
 
-            $newRefunded  = (int) $creditNote->refunded_amount + $amount;
+            $newRefunded = (int) $creditNote->refunded_amount + $amount;
             $newRemaining = $available - $amount;
             $creditNote->update([
-                'refunded_amount'  => $newRefunded,
+                'refunded_amount' => $newRefunded,
                 'remaining_credit' => $newRemaining,
                 // « rembourse » seulement quand le solde est épuisé ; sinon reste « valide »
-                'status'           => $newRemaining <= 0 ? 'rembourse' : 'valide',
+                'status' => $newRemaining <= 0 ? 'rembourse' : 'valide',
             ]);
 
             // [R2 §2] INVARIANT dur : total = imputé + remboursé + disponible
@@ -470,7 +453,7 @@ class CreditNoteService
             // 1. Recréditer chaque caisse : NET par compte = Σ débits remboursement
             //    − Σ crédits d'annulation déjà passés (gère les caisses multiples et
             //    les cycles successifs sans double recrédit).
-            $movements = \App\Models\CashTransaction::whereIn('reference_type', ['CreditNoteRefund', 'CreditNoteRefundCancel'])
+            $movements = CashTransaction::whereIn('reference_type', ['CreditNoteRefund', 'CreditNoteRefundCancel'])
                 ->where('reference_id', $creditNote->id)
                 ->get()
                 ->groupBy('cash_account_id');
@@ -481,39 +464,39 @@ class CreditNoteService
                 if ($net <= 0) {
                     continue;
                 }
-                $account = \App\Models\CashAccount::lockForUpdate()->findOrFail($accountId);
-                app(\App\Services\CashAccountService::class)->recordTransaction($account, [
-                    'type'           => 'credit',
+                $account = CashAccount::lockForUpdate()->findOrFail($accountId);
+                app(CashAccountService::class)->recordTransaction($account, [
+                    'type' => 'credit',
                     'reference_type' => 'CreditNoteRefundCancel',
-                    'reference_id'   => $creditNote->id,
-                    'amount'         => $net,
-                    'label'          => 'Annulation remboursement avoir ' . $creditNote->number . ' — ' . $motif,
-                    'occurred_at'    => now(),
+                    'reference_id' => $creditNote->id,
+                    'amount' => $net,
+                    'label' => 'Annulation remboursement avoir '.$creditNote->number.' — '.$motif,
+                    'occurred_at' => now(),
                 ]);
                 $restored += $net;
             }
 
             // 2. Extourne des écritures de remboursement (REMB-<numéro>[-cumul]).
-            \App\Models\JournalEntry::where('company_id', $creditNote->company_id)
-                ->where('reference', 'like', 'REMB-' . $creditNote->number . '%')
+            JournalEntry::where('company_id', $creditNote->company_id)
+                ->where('reference', 'like', 'REMB-'.$creditNote->number.'%')
                 ->where('status', 'valide')
                 ->whereNull('reversed_by_entry_id')
                 ->get()
                 ->each(fn ($entry) => $this->accountingService->reverseEntry(
                     $entry,
-                    'Annulation remboursement avoir ' . $creditNote->number . ' — ' . $motif
+                    'Annulation remboursement avoir '.$creditNote->number.' — '.$motif
                 ));
 
             // 3. Restaurer le crédit disponible.
             $newRemaining = (int) $creditNote->remaining_credit + $refunded;
             $creditNote->update([
-                'refunded_amount'  => 0,
+                'refunded_amount' => 0,
                 'remaining_credit' => $newRemaining,
-                'status'           => (int) $creditNote->applied_amount >= (int) $creditNote->total_ttc ? 'applique' : 'valide',
+                'status' => (int) $creditNote->applied_amount >= (int) $creditNote->total_ttc ? 'applique' : 'valide',
             ]);
 
             // 4. INVARIANT dur : total = imputé + remboursé(0) + disponible.
-            $cn  = $creditNote->fresh();
+            $cn = $creditNote->fresh();
             $sum = (int) $cn->applied_amount + (int) $cn->refunded_amount + (int) $cn->remaining_credit;
             if ($sum !== (int) $cn->total_ttc) {
                 throw new \RuntimeException(sprintf(
@@ -561,7 +544,7 @@ class CreditNoteService
                 $applied = (int) ($creditNote->applied_amount ?? 0);
                 if ($applied > 0 && $creditNote->invoice_id) {
                     $invoice = Invoice::lockForUpdate()->findOrFail($creditNote->invoice_id);
-                    $invoice->paid_amount      = max(0, (int) $invoice->paid_amount - $applied);
+                    $invoice->paid_amount = max(0, (int) $invoice->paid_amount - $applied);
                     $invoice->remaining_amount = min((int) $invoice->total_ttc, (int) $invoice->remaining_amount + $applied);
                     $invoice->status = $invoice->remaining_amount >= (int) $invoice->total_ttc
                         ? 'emise'
@@ -579,29 +562,29 @@ class CreditNoteService
                             continue;
                         }
                         $this->stockService->recordMovement([
-                            'product_id'      => $item->product_id,
-                            'warehouse_id'    => $warehouseId,
-                            'type'            => 'sortie',
-                            'quantity'        => (float) $item->quantity,
-                            'unit_cost'       => (float) $item->unit_price,
-                            'occurred_at'     => now(),
-                            'reference_type'  => 'credit_note',
-                            'reference_id'    => $creditNote->id,
-                            'notes'           => 'Annulation avoir ' . $creditNote->number . ' — ' . $motif,
-                            'idempotency_key' => 'credit-note-cancel:' . $creditNote->id . ':' . $item->id,
+                            'product_id' => $item->product_id,
+                            'warehouse_id' => $warehouseId,
+                            'type' => 'sortie',
+                            'quantity' => (float) $item->quantity,
+                            'unit_cost' => (float) $item->unit_price,
+                            'occurred_at' => now(),
+                            'reference_type' => 'credit_note',
+                            'reference_id' => $creditNote->id,
+                            'notes' => 'Annulation avoir '.$creditNote->number.' — '.$motif,
+                            'idempotency_key' => 'credit-note-cancel:'.$creditNote->id.':'.$item->id,
                         ]);
                     }
                 }
 
                 // 3. Extourne des écritures comptables de l'avoir.
-                \App\Models\JournalEntry::where('company_id', $creditNote->company_id)
+                JournalEntry::where('company_id', $creditNote->company_id)
                     ->where('reference', $creditNote->number)
                     ->where('status', 'valide')
                     ->whereNull('reversed_by_entry_id')
                     ->get()
                     ->each(fn ($entry) => $this->accountingService->reverseEntry(
                         $entry,
-                        'Annulation avoir ' . $creditNote->number . ' — ' . $motif
+                        'Annulation avoir '.$creditNote->number.' — '.$motif
                     ));
             }
 
@@ -609,10 +592,10 @@ class CreditNoteService
             app(AuditService::class)->log('avoir.annulation', $creditNote, [], ['motif' => $motif, 'montant' => $creditNote->total_ttc]);
 
             $creditNote->update([
-                'status'           => 'annule',
+                'status' => 'annule',
                 'remaining_credit' => 0,
-                'applied_amount'   => 0,
-                'notes'            => trim(($creditNote->notes ?? '') . "\n\n" . sprintf(
+                'applied_amount' => 0,
+                'notes' => trim(($creditNote->notes ?? '')."\n\n".sprintf(
                     '[ANNULATION %s par %s] %s',
                     now()->format('d/m/Y H:i'),
                     Auth::user()?->name ?? 'système',
