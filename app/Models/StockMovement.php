@@ -111,6 +111,7 @@ class StockMovement extends Model
             $this->type === 'retour_fournisseur'                    => 'Retour fournisseur',
             $this->type === 'inventaire'                            => 'Ajustement inventaire',
             $this->type === 'ajustement'                            => 'Ajustement',
+            $this->type === 'valuation_adjustment'                  => 'Ajustement de valorisation',
             default                                                 => ucfirst((string) $this->type),
         };
     }

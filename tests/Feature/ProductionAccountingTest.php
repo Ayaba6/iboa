@@ -1,19 +1,20 @@
 <?php
 
-use App\Modules\Production\Models\Coil;
 use App\Models\Company;
 use App\Models\FiscalYear;
 use App\Models\JournalEntry;
 use App\Models\Product;
-use App\Modules\Production\Models\ProductionOrder;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Modules\Production\Models\Coil;
+use App\Modules\Production\Models\ProductionOrder;
 use App\Modules\Production\Services\CoilConsumptionService;
 use App\Modules\Production\Services\ProductionAccountingService;
 use App\Modules\Production\Services\ProductionStockService;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function paCompany(): Company
 {
@@ -36,9 +37,9 @@ function paAdmin(): User
 
 function paOrderInProgress(): ProductionOrder
 {
-    $co      = paCompany();
+    $co = paCompany();
     $product = Product::factory()->create(['is_stockable' => true, 'valuation_method' => 'cmp']);
-    $wh      = Warehouse::firstOrCreate(['code' => 'WH-PA'], ['name' => 'PA WH', 'company_id' => $co->id, 'is_active' => true, 'is_default' => true]);
+    $wh = Warehouse::firstOrCreate(['code' => 'WH-PA'], ['name' => 'PA WH', 'company_id' => $co->id, 'is_active' => true, 'is_default' => true]);
 
     $order = ProductionOrder::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id, 'number' => 'OF-2026-8000',
@@ -70,7 +71,7 @@ it('is disabled by default — finishing posts no production entries', function 
 
     $this->post(route('production.orders.finish', $order))->assertRedirect();
 
-    expect(JournalEntry::where('reference', 'like', $order->number . '%')->count())->toBe(0);
+    expect(JournalEntry::where('reference', 'like', $order->number.'%')->count())->toBe(0);
 });
 
 it('posts SYSCOHADA entries when enabled', function () {
@@ -80,8 +81,8 @@ it('posts SYSCOHADA entries when enabled', function () {
 
     $this->post(route('production.orders.finish', $order))->assertRedirect();
 
-    $cons = JournalEntry::where('reference', $order->number . '-CONS')->with('lines.account')->first();
-    $prod = JournalEntry::where('reference', $order->number . '-PROD')->with('lines.account')->first();
+    $cons = JournalEntry::where('reference', $order->number.'-CONS')->with('lines.account')->first();
+    $prod = JournalEntry::where('reference', $order->number.'-PROD')->with('lines.account')->first();
 
     expect($cons)->not->toBeNull();
     expect($prod)->not->toBeNull();
@@ -91,10 +92,10 @@ it('posts SYSCOHADA entries when enabled', function () {
     expect($cons->lines->firstWhere('account.code', '6032')->debit)->toBe(50000);
     expect($cons->lines->firstWhere('account.code', '321')->credit)->toBe(50000);
 
-    // Production stockée : DR 361 = 30000, CR 736 = 30000
-    expect($prod->total_debit)->toBe(30000);
-    expect($prod->lines->firstWhere('account.code', '361')->debit)->toBe(30000);
-    expect($prod->lines->firstWhere('account.code', '736')->credit)->toBe(30000);
+    // Production stockée au coût complet : DR 361 = 50000, CR 736 = 50000
+    expect($prod->total_debit)->toBe(50000);
+    expect($prod->lines->firstWhere('account.code', '361')->debit)->toBe(50000);
+    expect($prod->lines->firstWhere('account.code', '736')->credit)->toBe(50000);
 });
 
 it('is idempotent — re-posting does not duplicate entries', function () {
@@ -107,5 +108,5 @@ it('is idempotent — re-posting does not duplicate entries', function () {
     $svc->postForOrder($order);
     $svc->postForOrder($order);
 
-    expect(JournalEntry::where('reference', 'like', $order->number . '%')->count())->toBe(2);
+    expect(JournalEntry::where('reference', 'like', $order->number.'%')->count())->toBe(2);
 });

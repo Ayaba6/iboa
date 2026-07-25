@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Modules\Production\Services;
-use App\Services\AccountingService;
 
 use App\Modules\Production\Models\ProductionOrder;
+use App\Services\AccountingService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -50,9 +50,9 @@ class ProductionAccountingService
                 $this->accounting->postProductionStockEntry($order, $finishedAmount);
             }
         } catch (\Throwable $e) {
-            Log::error('ProductionAccounting: échec comptabilisation OF ' . $order->number, [
+            Log::error('ProductionAccounting: échec comptabilisation OF '.$order->number, [
                 'order_id' => $order->id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -64,14 +64,7 @@ class ProductionAccountingService
      */
     private function finishedGoodsValue(ProductionOrder $order): int
     {
-        $fromMovements = (int) $order->outputs
-            ->map(fn ($o) => (int) ($o->stockMovement?->total_cost ?? 0))
-            ->sum();
-
-        if ($fromMovements > 0) {
-            return $fromMovements;
-        }
-
-        return (int) ($order->cost?->total_cost ?? 0);
+        return (int) ($order->cost?->total_cost ?? $order->outputs
+            ->sum(fn ($output) => (int) ($output->stockMovement?->total_cost ?? 0)));
     }
 }

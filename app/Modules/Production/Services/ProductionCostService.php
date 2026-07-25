@@ -45,6 +45,10 @@ class ProductionCostService
         // AVANT le ?: sinon un OF non encore produit prend 0 au lieu de la demande.
         $quantity = (float) $order->quantity_produced ?: (float) $order->quantity_requested;
         $bom      = $order->billOfMaterial;
+        $bomHeader = $order->bom_snapshot['header'] ?? [];
+        $readBom = fn (string $key) => array_key_exists($key, $bomHeader)
+            ? $bomHeader[$key]
+            : $bom?->{$key};
 
         // 1. Matière — coût réel consommé = bobines (ProductionConsumption) +
         //    composants BOM sortis du stock (product_stocks) valorisés au CMP.
@@ -76,7 +80,7 @@ class ProductionCostService
         } elseif (array_key_exists('labor_cost', $opts) && $opts['labor_cost'] !== null) {
             $labor = (int) $opts['labor_cost'];
         } else {
-            $labor = (int) round((float) ($bom->labor_per_unit ?? 0) * $quantity);
+            $labor = (int) round((float) ($readBom('labor_per_unit') ?? 0) * $quantity);
         }
 
         // [Audit OF] Aucun pointage, ni override, ni MO nomenclature → repli sur
@@ -114,7 +118,7 @@ class ProductionCostService
         // 6. Emballage — coût unitaire nomenclature × quantité produite
         $packaging = array_key_exists('packaging_cost', $opts) && $opts['packaging_cost'] !== null
             ? (int) $opts['packaging_cost']
-            : (int) round((float) ($bom->packaging_per_unit ?? 0) * $quantity);
+            : (int) round((float) ($readBom('packaging_per_unit') ?? 0) * $quantity);
 
         // 6bis. Sous-traitance — opérations externalisées (saisie manuelle)
         $subcontract = array_key_exists('subcontract_cost', $opts) && $opts['subcontract_cost'] !== null
@@ -134,13 +138,13 @@ class ProductionCostService
 
         // Coût standard (nomenclature × quantité) + écart réel/standard
         $standardTotal = (int) round((
-            (float) ($bom->std_material_cost ?? 0)
-            + (float) ($bom->std_labor_cost ?? 0)
-            + (float) ($bom->std_machine_cost ?? 0)
-            + (float) ($bom->std_energy_cost ?? 0)
-            + (float) ($bom->std_maintenance_cost ?? 0)
-            + (float) ($bom->std_packaging_cost ?? 0)
-            + (float) ($bom->std_overhead_cost ?? 0)
+            (float) ($readBom('std_material_cost') ?? 0)
+            + (float) ($readBom('std_labor_cost') ?? 0)
+            + (float) ($readBom('std_machine_cost') ?? 0)
+            + (float) ($readBom('std_energy_cost') ?? 0)
+            + (float) ($readBom('std_maintenance_cost') ?? 0)
+            + (float) ($readBom('std_packaging_cost') ?? 0)
+            + (float) ($readBom('std_overhead_cost') ?? 0)
         ) * $quantity);
         $variance = $standardTotal > 0 ? $total - $standardTotal : null; // >0 = défavorable
 
@@ -230,7 +234,9 @@ class ProductionCostService
 
     private function machineMinutes(ProductionOrder $order, float $quantity): float
     {
-        return (float) ($order->billOfMaterial->machine_time_per_unit ?? 0) * $quantity;
+        $snapshotValue = data_get($order->bom_snapshot, 'header.machine_time_per_unit');
+
+        return (float) ($snapshotValue ?? $order->billOfMaterial?->machine_time_per_unit ?? 0) * $quantity;
     }
 
     private function hourlyCost(ProductionOrder $order): float

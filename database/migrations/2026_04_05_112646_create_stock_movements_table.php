@@ -31,6 +31,7 @@ return new class extends Migration
                 'inventaire',
                 'retour_client',
                 'retour_fournisseur',
+                'valuation_adjustment',
             ]);
 
             // Polymorphic reference (ex: "invoice", "reception", "delivery_note")
