@@ -1,8 +1,8 @@
 # Audit du module Production — A3 ERP
 
-Date : 25 juillet 2026  
-Projet : **A3 ERP — OA METAL INDUSTRIE**  
-Référence Git de départ : `6976609cd6320cce9a99bb16703c1d3e107524cf` (`fix/erp-cdc-prod-compta-rh`)  
+Date : 25 juillet 2026
+Projet : **A3 ERP — OA METAL INDUSTRIE**
+Référence Git de départ : `6976609cd6320cce9a99bb16703c1d3e107524cf` (`fix/erp-cdc-prod-compta-rh`)
 Positionnement : profondeur fonctionnelle comparable aux besoins industriels couverts par Sage X3, adaptée aux processus réels d’OA METAL INDUSTRIE.
 
 ## 1. Confirmation du projet

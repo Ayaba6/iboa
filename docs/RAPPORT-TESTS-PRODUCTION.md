@@ -1,6 +1,6 @@
 # Rapport de tests Production
 
-Date : 25 juillet 2026  
+Date : 25 juillet 2026
 SHA de base : `6976609cd6320cce9a99bb16703c1d3e107524cf` ; correctifs courants non commités.
 
 | Vérification | Résultat |
