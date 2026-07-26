@@ -52,7 +52,7 @@ class PurchaseReceptionService
                 throw new \RuntimeException('Seules les réceptions en brouillon peuvent être validées.');
             }
 
-            // Passe 1 — persister les quantités reçues + synchroniser les agrégats BC.
+            // Passe 1 — persister les quantités VENTILÉES + agrégats BC.
             foreach ($items as $itemId => $itemData) {
                 $item = $reception->items()->find($itemId);
                 if (! $item) {
@@ -61,17 +61,50 @@ class PurchaseReceptionService
 
                 $receivedQty = (float) ($itemData['received_quantity'] ?? 0);
 
+                // [#1/#7] Ventilation accepté / quarantaine / refusé. Rétro-compatible :
+                // sans ventilation explicite, tout le reçu est accepté (comportement
+                // historique). L'invariant reçu = accepté + quarantaine + refusé est
+                // imposé sinon.
+                $hasBreakdown = array_key_exists('accepted_quantity', $itemData)
+                    || array_key_exists('quarantine_quantity', $itemData)
+                    || array_key_exists('refused_quantity', $itemData);
+
+                if ($hasBreakdown) {
+                    $accepted   = (float) ($itemData['accepted_quantity'] ?? 0);
+                    $quarantine = (float) ($itemData['quarantine_quantity'] ?? 0);
+                    $refused    = (float) ($itemData['refused_quantity'] ?? 0);
+                    if (abs(($accepted + $quarantine + $refused) - $receivedQty) > 0.0001) {
+                        throw new \RuntimeException(sprintf(
+                            'Ventilation incohérente ligne %s : accepté %s + quarantaine %s + refusé %s ≠ reçu %s.',
+                            $item->id, $accepted, $quarantine, $refused, $receivedQty
+                        ));
+                    }
+                } else {
+                    $accepted = $receivedQty;
+                    $quarantine = 0.0;
+                    $refused = 0.0;
+                }
+
                 $item->update([
-                    'received_quantity' => $receivedQty,
-                    'lot_number'        => $itemData['lot_number']  ?? null,
-                    'expiry_date'       => $itemData['expiry_date'] ?? null,
+                    'received_quantity'   => $receivedQty,
+                    'accepted_quantity'   => $accepted,
+                    'quarantine_quantity' => $quarantine,
+                    'rejected_quantity'   => $refused,
+                    'disposition_origin'  => 'saisie',
+                    'quality_status'      => $quarantine > 0 ? 'en_attente' : ($refused > 0 && $accepted <= 0 ? 'rejete' : 'accepte'),
+                    'lot_number'          => $itemData['lot_number']  ?? $item->lot_number,
+                    'expiry_date'         => $itemData['expiry_date'] ?? $item->expiry_date,
                 ]);
 
                 if ($item->purchase_order_item_id) {
                     $poItem = $item->purchaseOrderItem;
                     if ($poItem) {
                         $totalReceived = $poItem->received_quantity + $receivedQty;
-                        $poItem->update(['received_quantity' => min($totalReceived, $poItem->quantity)]);
+                        $totalAccepted = (float) $poItem->accepted_quantity + $accepted;
+                        $poItem->update([
+                            'received_quantity' => min($totalReceived, $poItem->quantity),
+                            'accepted_quantity' => min($totalAccepted, $poItem->quantity),
+                        ]);
                     }
                 }
             }

@@ -38,55 +38,88 @@ class ReplayReceptionStockSync
         $created = 0;
         $skipped = 0;
 
+        $quarantineWarehouseId = null; // résolu à la demande
+
         foreach ($reception->items as $item) {
-            $qty = (float) $item->received_quantity;
-            if ($qty <= 0) {
-                continue;
-            }
             if (empty($item->product_id)) {
                 $skipped++; // ligne libre (description seule) — pas de stock
 
                 continue;
             }
 
-            // Idempotence : mouvement déjà créé pour cette ligne ?
-            $exists = StockMovement::where('reference_type', 'reception')
-                ->where('reference_id', $reception->id)
-                ->where('product_id', $item->product_id)
-                ->when($item->lot_number, fn ($q) => $q->where('lot_number', $item->lot_number))
-                ->exists();
-            if ($exists) {
-                continue;
+            // [Réceptions #8] Routage par disposition : l'ACCEPTÉ entre au dépôt
+            // utilisable ; la QUARANTAINE entre au DÉPÔT QUAR (jamais disponible) ;
+            // le REFUSÉ n'entre PAS en stock. (Rétro-compat : accepted = received
+            // quand aucune ventilation n'a été saisie.)
+            $accepted   = (float) $item->accepted_quantity;
+            $quarantine = (float) $item->quarantine_quantity;
+            $refused    = (float) $item->rejected_quantity;
+            $received   = (float) $item->received_quantity;
+            // Rétro-compat : ligne NON ventilée (tous les buckets à 0 mais un reçu
+            // positif — création directe hors service) → tout le reçu est accepté.
+            if ($accepted <= 0 && $quarantine <= 0 && $refused <= 0 && $received > 0) {
+                $accepted = $received;
             }
 
-            // [MULTI-UNITÉS] Qté reçue (unité d'achat) → unité de stock, coût ajusté.
             $product = Product::find($item->product_id);
-            if ($product?->isCoilManaged() && (float) $item->unit_cost <= 0) {
+            if ($product?->isCoilManaged() && (float) $item->unit_cost <= 0 && ($accepted + $quarantine) > 0) {
                 throw ValidationException::withMessages([
                     'cost' => "Réception {$reception->number} : la matière bobine « {$product->name} » doit être valorisée avant entrée en stock.",
                 ]);
             }
-            $stockQty = $product ? $this->units->toStockQuantity($product, $qty, 'achat') : $qty;
-            $stockCost = $product
-                ? $this->units->toStockUnitCost($product, (float) $item->unit_cost, 'achat')
-                : (float) $item->unit_cost;
 
-            $this->stockService->recordMovement([
-                'product_id' => $item->product_id,
-                'warehouse_id' => $warehouseId,
-                'type' => 'entree',
-                'quantity' => $stockQty,
-                'unit_cost' => $stockCost,
-                'occurred_at' => $reception->received_at?->toDateString() ?? now()->toDateString(),
-                'reference_type' => 'reception',
-                'reference_id' => $reception->id,
-                'lot_number' => $item->lot_number,
-                'expiry_date' => $item->expiry_date,
-                'notes' => 'Réception '.$reception->number,
-            ]);
-            $created++;
+            // Entrée de l'accepté au dépôt utilisable.
+            $created += $this->enter($reception, $item, $product, $accepted, $warehouseId, 'Réception '.$reception->number);
+
+            // Entrée de la quarantaine au dépôt de quarantaine.
+            if ($quarantine > 0) {
+                $quarantineWarehouseId ??= app(\App\Services\QuarantineService::class)
+                    ->quarantineWarehouse((int) $reception->company_id)->id;
+                $created += $this->enter($reception, $item, $product, $quarantine, $quarantineWarehouseId, 'Réception '.$reception->number.' — quarantaine');
+            }
         }
 
         return [$created, $skipped];
+    }
+
+    /**
+     * Entre une quantité (unité d'achat → stock) dans un entrepôt donné, de façon
+     * idempotente par (réception, produit, lot, entrepôt).
+     */
+    private function enter(Reception $reception, $item, ?Product $product, float $qty, int $warehouseId, string $notes): int
+    {
+        if ($qty <= 0) {
+            return 0;
+        }
+        $exists = StockMovement::where('reference_type', 'reception')
+            ->where('reference_id', $reception->id)
+            ->where('product_id', $item->product_id)
+            ->where('warehouse_id', $warehouseId)
+            ->when($item->lot_number, fn ($q) => $q->where('lot_number', $item->lot_number))
+            ->exists();
+        if ($exists) {
+            return 0;
+        }
+
+        $stockQty  = $product ? $this->units->toStockQuantity($product, $qty, 'achat') : $qty;
+        $stockCost = $product
+            ? $this->units->toStockUnitCost($product, (float) $item->unit_cost, 'achat')
+            : (float) $item->unit_cost;
+
+        $this->stockService->recordMovement([
+            'product_id' => $item->product_id,
+            'warehouse_id' => $warehouseId,
+            'type' => 'entree',
+            'quantity' => $stockQty,
+            'unit_cost' => $stockCost,
+            'occurred_at' => $reception->received_at?->toDateString() ?? now()->toDateString(),
+            'reference_type' => 'reception',
+            'reference_id' => $reception->id,
+            'lot_number' => $item->lot_number,
+            'expiry_date' => $item->expiry_date,
+            'notes' => $notes,
+        ]);
+
+        return 1;
     }
 }

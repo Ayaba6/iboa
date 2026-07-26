@@ -23,6 +23,7 @@ class PurchaseOrderItem extends Model
         'line_tax',
         'line_total_ttc',
         'received_quantity',
+        'accepted_quantity',
         'invoiced_quantity',
         'sort_order',
     ];

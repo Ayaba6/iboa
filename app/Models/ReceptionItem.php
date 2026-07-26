@@ -18,6 +18,9 @@ class ReceptionItem extends Model
         'expected_quantity',
         'received_quantity',
         'rejected_quantity',
+        'accepted_quantity',
+        'quarantine_quantity',
+        'disposition_origin',
         'unit_cost',
         'lot_number',
         'expiry_date',
@@ -25,11 +28,13 @@ class ReceptionItem extends Model
     ];
 
     protected $casts = [
-        'expected_quantity' => 'decimal:4',
-        'received_quantity' => 'decimal:4',
-        'rejected_quantity' => 'decimal:4',
-        'unit_cost'         => 'integer',
-        'expiry_date'       => 'date',
+        'expected_quantity'   => 'decimal:4',
+        'received_quantity'   => 'decimal:4',
+        'rejected_quantity'   => 'decimal:4',
+        'accepted_quantity'   => 'decimal:4',
+        'quarantine_quantity' => 'decimal:4',
+        'unit_cost'           => 'integer',
+        'expiry_date'         => 'date',
     ];
 
     // -------------------------------------------------------------------------
