@@ -16,11 +16,12 @@ use Illuminate\Support\Facades\DB;
  */
 class CheckStock extends Command
 {
-    protected $signature   = 'erp:check-stock
+    protected $signature = 'erp:check-stock
                                 {--product= : Vérifier uniquement l\'article ID}
                                 {--warehouse= : Filtrer par entrepôt ID}
                                 {--recalc : Recalculer les niveaux depuis les mouvements (READ-ONLY sans --apply)}
                                 {--apply : Appliquer les corrections de recalcul (nécessite --recalc)}';
+
     protected $description = 'Contrôle d\'intégrité des stocks';
 
     public function handle(): int
@@ -40,9 +41,13 @@ class CheckStock extends Command
             ->join('warehouses as w', 'w.id', '=', 'ps.warehouse_id')
             ->where('ps.quantity', '<', 0)
             ->select('ps.id', 'p.reference', 'p.name', 'w.name as warehouse',
-                     'ps.quantity', 'ps.reserved_quantity');
-        if ($this->option('product'))   $q->where('ps.product_id',   $this->option('product'));
-        if ($this->option('warehouse')) $q->where('ps.warehouse_id', $this->option('warehouse'));
+                'ps.quantity', 'ps.reserved_quantity');
+        if ($this->option('product')) {
+            $q->where('ps.product_id', $this->option('product'));
+        }
+        if ($this->option('warehouse')) {
+            $q->where('ps.warehouse_id', $this->option('warehouse'));
+        }
 
         $negative = $q->get();
         if ($negative->isEmpty()) {
@@ -51,7 +56,7 @@ class CheckStock extends Command
             $issues += $negative->count();
             $this->warn("  ✗ {$negative->count()} article(s) en stock négatif :");
             $this->table(['Réf.', 'Article', 'Entrepôt', 'Quantité', 'Réservé'],
-                $negative->map(fn($r) => [$r->reference, $r->name, $r->warehouse,
+                $negative->map(fn ($r) => [$r->reference, $r->name, $r->warehouse,
                     $r->quantity, $r->reserved_quantity])->toArray());
         }
 
@@ -64,14 +69,14 @@ class CheckStock extends Command
             ->whereColumn('ps.reserved_quantity', '>', 'ps.quantity')
             ->where('ps.reserved_quantity', '>', 0);
         $overReserved = $q2->select('p.reference', 'p.name', 'w.name as warehouse',
-                                    'ps.quantity', 'ps.reserved_quantity')->get();
+            'ps.quantity', 'ps.reserved_quantity')->get();
         if ($overReserved->isEmpty()) {
             $this->line('  <fg=green>✓</> Aucune sur-réservation détectée');
         } else {
             $issues += $overReserved->count();
             $this->warn("  ✗ {$overReserved->count()} sur-réservation(s) :");
             $this->table(['Réf.', 'Article', 'Entrepôt', 'Stock', 'Réservé'],
-                $overReserved->map(fn($r) => [$r->reference, $r->name, $r->warehouse,
+                $overReserved->map(fn ($r) => [$r->reference, $r->name, $r->warehouse,
                     $r->quantity, $r->reserved_quantity])->toArray());
         }
 
@@ -98,18 +103,31 @@ class CheckStock extends Command
         // Types entrants: entree, retour_client (qty +)
         // Types sortants: sortie, retour_fournisseur (qty -)
         // Ajustements: selon le signe de qty
-        $theoretical = DB::table('stock_movements')
+        $sourceDeltas = DB::table('stock_movements')->select(
+            'product_id',
+            'warehouse_id',
+            DB::raw('CASE
+                WHEN type IN (\'entree\',\'retour_client\') THEN COALESCE(quantity_in_stock_uom, quantity)
+                WHEN type IN (\'sortie\',\'retour_fournisseur\',\'transfert\') THEN -COALESCE(quantity_in_stock_uom, quantity)
+                WHEN type = \'ajustement\' THEN COALESCE(quantity_in_stock_uom, quantity)
+                ELSE 0
+            END as quantity_delta')
+        );
+        $destinationTransferDeltas = DB::table('stock_movements')
+            ->where('type', 'transfert')
+            ->whereNotNull('to_warehouse_id')
+            ->select(
+                'product_id',
+                DB::raw('to_warehouse_id as warehouse_id'),
+                DB::raw('COALESCE(quantity_in_stock_uom, quantity) as quantity_delta')
+            );
+
+        $theoretical = DB::query()
+            ->fromSub($sourceDeltas->unionAll($destinationTransferDeltas), 'movement_deltas')
             ->groupBy('product_id', 'warehouse_id')
-            ->select('product_id', 'warehouse_id', DB::raw(
-                'SUM(CASE
-                    WHEN type IN (\'entree\',\'retour_client\') THEN COALESCE(quantity_in_stock_uom, quantity)
-                    WHEN type IN (\'sortie\',\'retour_fournisseur\') THEN -COALESCE(quantity_in_stock_uom, quantity)
-                    WHEN type = \'ajustement\' THEN COALESCE(quantity_in_stock_uom, quantity)
-                    ELSE 0
-                END) as theoretical_qty'
-            ))
+            ->select('product_id', 'warehouse_id', DB::raw('SUM(quantity_delta) as theoretical_qty'))
             ->get()
-            ->keyBy(fn($r) => $r->product_id . '_' . $r->warehouse_id);
+            ->keyBy(fn ($r) => $r->product_id.'_'.$r->warehouse_id);
 
         $actual = DB::table('product_stocks')
             ->select('product_id', 'warehouse_id', 'quantity')
@@ -117,18 +135,18 @@ class CheckStock extends Command
 
         $discrepancies = [];
         foreach ($actual as $row) {
-            $key = $row->product_id . '_' . $row->warehouse_id;
+            $key = $row->product_id.'_'.$row->warehouse_id;
             $theo = (float) ($theoretical->get($key)?->theoretical_qty ?? 0);
             $real = (float) $row->quantity;
             $diff = round(abs($theo - $real), 4);
 
             if ($diff > 0.01) {
                 $discrepancies[] = [
-                    'product_id'   => $row->product_id,
+                    'product_id' => $row->product_id,
                     'warehouse_id' => $row->warehouse_id,
-                    'stock_reel'   => $real,
-                    'stock_theo'   => $theo,
-                    'ecart'        => $theo - $real,
+                    'stock_reel' => $real,
+                    'stock_theo' => $theo,
+                    'ecart' => $theo - $real,
                 ];
             }
         }
@@ -137,16 +155,16 @@ class CheckStock extends Command
             $this->line('  <fg=green>✓</> Niveaux de stock cohérents avec les mouvements');
         } else {
             $issues += count($discrepancies);
-            $this->warn('  ✗ ' . count($discrepancies) . ' incohérence(s) détectée(s) :');
+            $this->warn('  ✗ '.count($discrepancies).' incohérence(s) détectée(s) :');
             $rows = array_slice($discrepancies, 0, 20);
             $productNames = DB::table('products')->whereIn('id', array_column($rows, 'product_id'))
                 ->pluck('name', 'id');
             $this->table(['Produit', 'Entrepôt', 'Niveau réel', 'Théorique', 'Écart'],
-                collect($rows)->map(fn($r) => [
+                collect($rows)->map(fn ($r) => [
                     ($productNames[$r['product_id']] ?? "ID#{$r['product_id']}"),
                     "W#{$r['warehouse_id']}",
                     $r['stock_reel'], $r['stock_theo'],
-                    ($r['ecart'] > 0 ? '+' : '') . $r['ecart'],
+                    ($r['ecart'] > 0 ? '+' : '').$r['ecart'],
                 ])->toArray());
 
             if ($this->option('recalc') && $this->option('apply')) {
@@ -154,7 +172,7 @@ class CheckStock extends Command
                     $fixed = 0;
                     foreach ($discrepancies as $disc) {
                         DB::table('product_stocks')
-                            ->where('product_id',   $disc['product_id'])
+                            ->where('product_id', $disc['product_id'])
                             ->where('warehouse_id', $disc['warehouse_id'])
                             ->update(['quantity' => $disc['stock_theo']]);
                         $fixed++;
