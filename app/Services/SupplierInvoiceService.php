@@ -19,6 +19,7 @@ class SupplierInvoiceService
         public readonly SupplierInvoiceRepository $repository,
         private DocumentSequenceService $sequenceService,
         private AccountingService $accountingService,
+        private IdempotencyService $idempotency,
     ) {}
 
     // -------------------------------------------------------------------------
@@ -30,7 +31,50 @@ class SupplierInvoiceService
         return $this->repository->search($filters, $perPage);
     }
 
+    /**
+     * Crée une facture fournisseur. Idempotent si `_idempotency_key` est fourni
+     * (UI double-clic, API, import, job relancé, retry réseau) : un rejeu avec la
+     * même clé + le même contenu économique renvoie la facture déjà créée ; une
+     * même clé avec un contenu différent est refusée. [ACHATS #9]
+     */
     public function create(array $data): SupplierInvoice
+    {
+        $key         = $data['_idempotency_key'] ?? null;
+        $source      = $data['_source'] ?? null;
+        $externalRef = $data['_external_reference'] ?? null;
+        unset($data['_idempotency_key'], $data['_source'], $data['_external_reference']);
+
+        /** @var SupplierInvoice */
+        return $this->idempotency->remember(
+            'supplier_invoice.create',
+            $key,
+            $this->economicPayload($data),
+            fn () => $this->doCreate($data),
+            $source,
+            $externalRef,
+        );
+    }
+
+    /** Empreinte du contenu économique (déterministe) pour l'idempotence. */
+    private function economicPayload(array $data): array
+    {
+        $items = collect($data['items'] ?? [])->map(fn ($i) => [
+            'product_id'     => $i['product_id'] ?? null,
+            'description'    => $i['description'] ?? null,
+            'quantity'       => (float) ($i['quantity'] ?? 0),
+            'unit_price'     => (float) ($i['unit_price'] ?? 0),
+            'tax_rate_value' => (float) ($i['tax_rate_value'] ?? 0),
+        ])->sortBy(fn ($i) => json_encode($i))->values()->all();
+
+        return [
+            'supplier_id' => $data['supplier_id'] ?? null,
+            'number_norm' => \App\Support\SupplierInvoiceNumber::normalize($data['supplier_invoice_number'] ?? null),
+            'currency'    => $data['currency_code'] ?? null,
+            'items'       => $items,
+        ];
+    }
+
+    private function doCreate(array $data): SupplierInvoice
     {
         return DB::transaction(function () use ($data) {
             $items = $data['items'] ?? [];
@@ -186,6 +230,17 @@ class SupplierInvoiceService
         return DB::transaction(function () use ($inv) {
             // [ARCH-C4] Lock invoice row before status update to prevent concurrent validation.
             $inv = SupplierInvoice::lockForUpdate()->find($inv->id);
+
+            // [ACHATS #8] Numéro fournisseur OBLIGATOIRE dès la validation/comptabilisation.
+            // Une facture « reçue » (saisie) peut rester sans numéro, mais une
+            // facture validée (donc comptabilisée puis payable) doit porter un
+            // numéro fournisseur réel — null / vide / espaces / invisibles refusés.
+            if (\App\Support\SupplierInvoiceNumber::normalize($inv->supplier_invoice_number) === null) {
+                throw new \RuntimeException(
+                    'Numéro de facture fournisseur obligatoire avant validation : '
+                    . 'renseignez le numéro figurant sur la facture du fournisseur.'
+                );
+            }
 
             $inv->update([
                 'status'       => 'validee',

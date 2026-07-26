@@ -115,7 +115,8 @@ it('exécute la chaîne Achats bout-en-bout avec statuts, stock et écritures co
 
     // ── Facture fournisseur : statut + écriture comptable équilibrée ──────────
     $invoice = $poSvc->createSupplierInvoice($po);
-    app(SupplierInvoiceService::class)->validate($invoice);
+    $invoice->update(['supplier_invoice_number' => 'FF-' . uniqid()]); // [ACHATS #8] numéro fournisseur avant validation
+    app(SupplierInvoiceService::class)->validate($invoice->fresh());
     $invoice->refresh();
     expect($invoice->status)->toBe('validee');
 
@@ -219,7 +220,8 @@ it('journalise l’historique du cycle de vie de la facture fournisseur (histori
         'items' => [$reception->items->first()->id => ['received_quantity' => 20]],
     ]);
     $invoice = $poSvc->createSupplierInvoice($po->fresh());
-    app(SupplierInvoiceService::class)->validate($invoice);
+    $invoice->update(['supplier_invoice_number' => 'FF-' . uniqid()]); // [ACHATS #8] numéro fournisseur avant validation
+    app(SupplierInvoiceService::class)->validate($invoice->fresh());
 
     $logs = AuditLog::where('model_type', SupplierInvoice::class)->where('model_id', $invoice->id)->count();
     expect($logs)->toBeGreaterThan(0);

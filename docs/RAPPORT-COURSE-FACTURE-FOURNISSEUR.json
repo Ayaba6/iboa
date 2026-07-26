@@ -1,0 +1,37 @@
+{
+    "test": "course concurrente creation facture fournisseur",
+    "git_sha": "2bd08402d257f24356fdc8d44c074fcf8d9cbfe5",
+    "database": "iboa_erp_test",
+    "generated_at": "2026-07-26T14:11:37Z",
+    "scenario_1_meme_cle": {
+        "number": "RC-1",
+        "worker1": {
+            "worker": 1,
+            "outcome": "created",
+            "invoice_id": 32
+        },
+        "worker2": {
+            "worker": 2,
+            "outcome": "created",
+            "invoice_id": 32
+        },
+        "invoices_persisted": 1,
+        "verdict": "UNE SEULE FACTURE"
+    },
+    "scenario_2_cles_differentes": {
+        "number": "RC-2",
+        "worker1": {
+            "worker": 1,
+            "outcome": "rejected",
+            "error": "Doublon : la facture fournisseur n° « RC-2 » existe déjà pour ce fournisseur (rejet concurrent par la barrière d'unicité",
+            "class": "RuntimeException"
+        },
+        "worker2": {
+            "worker": 2,
+            "outcome": "created",
+            "invoice_id": 33
+        },
+        "invoices_persisted": 1,
+        "verdict": "UNE SEULE FACTURE"
+    }
+}

@@ -186,7 +186,8 @@ describe('Chemin A — Besoin → DA → Validation → Commande → Réception 
             ->and($invoice->status)->toBe('recue')
             ->and($invoice->items)->toHaveCount(1);
 
-        app(SupplierInvoiceService::class)->validate($invoice);
+        $invoice->update(['supplier_invoice_number' => 'FF-' . uniqid()]); // [ACHATS #8] numéro fournisseur avant validation
+        app(SupplierInvoiceService::class)->validate($invoice->fresh());
         $invoice->refresh();
 
         expect($invoice->status)->toBe('validee')
