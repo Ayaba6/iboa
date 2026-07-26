@@ -27,6 +27,7 @@ class SupplierInvoice extends Model
         'reception_id',
         'number',
         'supplier_invoice_number',
+        'supplier_invoice_number_normalized',
         'status',
         'received_at',
         'due_at',

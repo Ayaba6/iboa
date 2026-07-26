@@ -48,6 +48,8 @@ class SupplierInvoiceService
             $data['number']     = $this->sequenceService->nextNumber($company, 'facture_fournisseur');
             $data['created_by'] = Auth::id();
             $data['status']     = $data['status'] ?? 'recue';
+            // [ACHATS A1] Clé normalisée persistée (sert l'index unique DB).
+            $data['supplier_invoice_number_normalized'] = \App\Support\SupplierInvoiceNumber::normalize($data['supplier_invoice_number'] ?? null);
 
             [$subtotal, $taxTotal] = $this->calculateTotals($items);
 
@@ -57,7 +59,18 @@ class SupplierInvoiceService
             $data['paid_amount']     = $data['paid_amount'] ?? 0;
             $data['remaining_amount']= $data['total_ttc'] - ($data['paid_amount'] ?? 0);
 
-            $invoice = SupplierInvoice::create($data);
+            // [ACHATS A1] Backstop concurrence : si deux transactions passent le
+            // pré-contrôle simultanément, l'index unique DB rejette la perdante.
+            // On convertit la violation en message métier clair.
+            try {
+                $invoice = SupplierInvoice::create($data);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                throw new \RuntimeException(sprintf(
+                    'Doublon : la facture fournisseur n° « %s » existe déjà pour ce fournisseur '
+                    . '(rejet concurrent par la barrière d\'unicité).',
+                    trim((string) ($data['supplier_invoice_number'] ?? ''))
+                ), 0, $e);
+            }
             $this->syncItems($invoice, $items);
             $this->recalculate($invoice);
 
@@ -67,33 +80,39 @@ class SupplierInvoiceService
 
     /**
      * [ACHATS A1] Refuse un doublon de facture fournisseur : même numéro
-     * fournisseur pour le même fournisseur (hors factures annulées et hors la
-     * facture en cours de modification). Le numéro fournisseur reste facultatif ;
-     * sans lui, aucun contrôle d'unicité n'est appliqué. Le verrou pessimiste
-     * sérialise deux saisies concurrentes (la seconde voit la première).
+     * NORMALISÉ pour le même fournisseur. Politique de RÉSERVATION : le contrôle
+     * couvre toutes les factures physiques — y compris annulées et soft-deleted
+     * (`withTrashed`) — car une référence saisie reste réservée dans l'historique.
+     * Une correction passe par avoir / extourne / nouvelle version, jamais par
+     * réutilisation du numéro après suppression logique.
+     *
+     * Le numéro fournisseur reste facultatif ; sans lui, aucun contrôle. La
+     * barrière DB (index unique sur la clé normalisée) est la protection FORTE
+     * contre la concurrence ; ce pré-contrôle sert le message clair côté métier.
      *
      * @throws \RuntimeException
      */
     private function assertNoDuplicateSupplierNumber(?int $companyId, ?int $supplierId, ?string $supplierNumber, ?int $exceptId): void
     {
-        $supplierNumber = trim((string) $supplierNumber);
-        if ($supplierNumber === '' || ! $supplierId) {
+        $normalized = \App\Support\SupplierInvoiceNumber::normalize($supplierNumber);
+        if ($normalized === null || ! $supplierId) {
             return;
         }
 
-        $exists = SupplierInvoice::where('company_id', $companyId)
+        $exists = SupplierInvoice::withTrashed()
+            ->where('company_id', $companyId)
             ->where('supplier_id', $supplierId)
-            ->where('supplier_invoice_number', $supplierNumber)
-            ->where('status', '!=', 'annulee')
+            ->where('supplier_invoice_number_normalized', $normalized)
             ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
-            ->lockForUpdate()
             ->exists();
 
         if ($exists) {
             throw new \RuntimeException(sprintf(
-                'Doublon : la facture fournisseur n° « %s » existe déjà pour ce fournisseur. '
-                . 'Une même facture ne peut être saisie deux fois (risque de double paiement).',
-                $supplierNumber
+                'Doublon : la facture fournisseur n° « %s » existe déjà pour ce fournisseur '
+                . '(numéro réservé dans l\'historique, même si annulée). Une même facture ne '
+                . 'peut être saisie deux fois (risque de double paiement) — utilisez un avoir '
+                . 'ou une extourne pour corriger.',
+                trim((string) $supplierNumber)
             ));
         }
     }
@@ -125,6 +144,10 @@ class SupplierInvoiceService
                 array_key_exists('supplier_invoice_number', $data) ? $data['supplier_invoice_number'] : $inv->supplier_invoice_number,
                 $inv->id
             );
+            // [ACHATS A1] Recalcule la clé normalisée si le numéro change.
+            if (array_key_exists('supplier_invoice_number', $data)) {
+                $data['supplier_invoice_number_normalized'] = \App\Support\SupplierInvoiceNumber::normalize($data['supplier_invoice_number']);
+            }
 
             $inv->update($data);
 
