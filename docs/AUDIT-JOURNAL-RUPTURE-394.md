@@ -15,7 +15,7 @@
 | Identifiant minimum | **275** |
 | Identifiant maximum | **394** |
 | Plage d'identifiants présents | 275 → 394 (120 ids possibles) |
-| Lignes absentes dans la plage | ~9 (120 − 111) |
+| Identifiants non présents dans la plage | 9 (120 − 111) — **absence ≠ suppression prouvée** |
 | Première rupture de chaîne | **entrée 394** |
 | Nature de la rupture | **`row_hash_mismatch`** (hash de la ligne recalculé ≠ hash stocké) |
 | Rupture de chaînage prev→prev | **NON** — le chaînage `prev_hash` est intact jusqu'à 394 |
@@ -34,10 +34,12 @@
 
 - **Faux :** « 283 entrées ont été supprimées. » Les identifiants **commencent à
   275**, pas à 1 ; l'écart `COUNT=111` / `MAX=394` s'explique d'abord par le point
-  de départ des identifiants, pas par des suppressions massives. Au plus **~9**
-  identifiants manquent dans la plage présente, et même ces absences peuvent
-  provenir d'auto-increment réservé, de transactions annulées ou d'insertions
-  échouées, pas nécessairement de suppressions.
+  de départ des identifiants, pas par des suppressions massives.
+- **À ne pas conclure non plus :** la plage 275–394 contient **9 identifiants non
+  présents** dans l'état actuel de la table, mais **cela ne prouve pas que 9 lignes
+  ont été supprimées**. Leur absence peut provenir de transactions annulées,
+  d'auto-incréments consommés, d'imports, de restaurations ou de suppressions.
+  **Aucune conclusion définitive n'est possible sans preuves complémentaires.**
 - **Établi :** la chaîne cryptographique est **rompue à l'entrée 394**, par un
   **`row_hash_mismatch`** : le hash recalculé de la ligne 394 diffère du hash
   stocké. Le chaînage `prev_hash` (lien vers la ligne précédente) est **intact**
@@ -46,22 +48,22 @@
 
 ## 3. Orientation de cause (à confirmer par tests reproducteurs)
 
-Le fait que la rupture soit un **`row_hash_mismatch`** (et non un
-`prev_hash_mismatch`) sur un événement `auth.login` dont le `user_id` est **NULL**
-oriente vers :
+La rupture est un **`row_hash_mismatch`** (et non un `prev_hash_mismatch`) : le
+`prev_hash` de 394 peut rester cohérent avec la chaîne précédente, mais les
+données actuelles de la ligne 394 ne reproduisent pas son `row_hash`. C'est
+**compatible avec plusieurs scénarios, sans certitude** :
 
-- **Cas B — défaut de génération du hash (le plus probable ici).** Le hash a été
-  calculé à l'écriture sur un payload différent de celui vérifié aujourd'hui —
-  typiquement un `user_id` présent au moment du hash mais stocké/relu comme NULL
-  (login : l'utilisateur peut ne pas encore être « résolu » au moment de l'insert),
-  ou une divergence de sérialisation des valeurs nulles. **Aucune preuve de
-  suppression.**
-- **Cas A — altération réelle** (ligne modifiée après insertion) : possible mais
-  non démontré ; un `row_hash_mismatch` isolé sur une ligne technique de login est
-  davantage cohérent avec B qu'avec une falsification métier ciblée.
-- **Cas C — base reconstruite / reseedée** : moins probable ici car la rupture
-  n'est pas un `prev_hash_mismatch` (un reseed partiel casserait typiquement le
-  chaînage prev→prev, pas seulement un `row_hash`).
+- **Cas B — défaut de payload / génération.** `user_id` présent au moment du hash
+  mais stocké/relu NULL, divergence de sérialisation des valeurs nulles, ancienne
+  version du calcul du hash, ou payload modifié par un observer.
+- **Cas A — altération réelle** de la ligne après insertion.
+- **Cas C — base reconstruite / reseedée** : moins typique ici (casserait plutôt
+  le chaînage `prev_hash`), mais non exclu.
+
+**La présence de `user_id = NULL` ne prouve pas à elle seule le cas B.**
+Classification retenue : *cause compatible avec un défaut de payload OU une
+altération de la ligne, non déterminée avec certitude*. Statut `iboa_erp` :
+ROUGE ; aucun re-scellement autorisé.
 
 ## 4. Procédure interdite / autorisée
 
