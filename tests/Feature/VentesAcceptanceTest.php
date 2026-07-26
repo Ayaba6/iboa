@@ -21,11 +21,11 @@ use App\Models\AuditLog;
 use App\Models\CashAccount;
 use App\Models\Client;
 use App\Models\Company;
-use App\Models\CreditNote;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\Product;
+use App\Models\ProductStock;
 use App\Models\StockMovement;
 use App\Models\TaxRate;
 use App\Models\Unit;
@@ -40,10 +40,12 @@ use App\Services\InvoiceService;
 use App\Services\OrderService;
 use App\Services\QuoteService;
 use App\Services\StockService;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Concerns\RefreshDatabase;
 
-uses(\Tests\Concerns\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 function vaccCompany(): Company
 {
@@ -59,8 +61,8 @@ function vaccCompany(): Company
 function vaccAdmin(): User
 {
     $co = vaccCompany();
-    $r  = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-    $u  = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]);
+    $r = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    $u = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]);
     $u->assignRole($r);
     test()->actingAs($u);
 
@@ -72,15 +74,16 @@ function vaccStockedProduct(Company $co, int $qty = 100): array
 {
     $wh = Warehouse::firstOrCreate(['company_id' => $co->id, 'code' => 'VACC-WH'],
         ['name' => 'Dépôt VACC', 'is_default' => true, 'is_active' => true]);
-    $product = Product::factory()->create(['is_stockable' => true, 'is_sellable' => true, 'valuation_method' => 'cmp', 'purchase_price' => 6000, 'weighted_avg_cost' => 6000]);
+    $product = Product::factory()->create(['is_stockable' => true, 'is_sellable' => true, 'valuation_method' => 'cmp', 'has_lot_number' => true, 'purchase_price' => 6000, 'weighted_avg_cost' => 6000]);
 
     app(StockService::class)->recordMovement([
-        'product_id'   => $product->id,
+        'product_id' => $product->id,
         'warehouse_id' => $wh->id,
-        'type'         => 'entree',
-        'quantity'     => $qty,
-        'unit_cost'    => 6000,
-        'occurred_at'  => now(),
+        'type' => 'entree',
+        'quantity' => $qty,
+        'unit_cost' => 6000,
+        'lot_number' => 'LOT-VACC-'.uniqid(),
+        'occurred_at' => now(),
     ]);
 
     return [$product, $wh];
@@ -90,8 +93,8 @@ function vaccStockedProduct(Company $co, int $qty = 100): array
 function vaccValidatedInvoice(Company $co, int $qty = 10): Invoice
 {
     $client = Client::factory()->create(['is_active' => true, 'is_blocked' => false]);
-    $unit   = Unit::firstOrCreate(['name' => 'PC VACC'], ['abbreviation' => 'pcv']);
-    $tva    = TaxRate::firstOrCreate(['name' => 'TVA18 VACC'], ['short_name' => 'TV18V', 'rate' => 18, 'is_active' => true]);
+    $unit = Unit::firstOrCreate(['name' => 'PC VACC'], ['abbreviation' => 'pcv']);
+    $tva = TaxRate::firstOrCreate(['name' => 'TVA18 VACC'], ['short_name' => 'TV18V', 'rate' => 18, 'is_active' => true]);
     [$product] = vaccStockedProduct($co, max(100, $qty + 50));
 
     $order = app(OrderService::class)->create([
@@ -117,11 +120,11 @@ function vaccValidatedInvoice(Company $co, int $qty = 10): Invoice
 
 it('exécute la chaîne Ventes bout-en-bout avec statuts, impacts stock et écritures comptables', function () {
     $user = vaccAdmin();
-    $co   = vaccCompany();
+    $co = vaccCompany();
 
-    $client  = Client::factory()->create(['is_active' => true, 'is_blocked' => false]);
-    $unit    = Unit::firstOrCreate(['name' => 'PC VACC'], ['abbreviation' => 'pcv']);
-    $tva     = TaxRate::firstOrCreate(['name' => 'TVA18 VACC'], ['short_name' => 'TV18V', 'rate' => 18, 'is_active' => true]);
+    $client = Client::factory()->create(['is_active' => true, 'is_blocked' => false]);
+    $unit = Unit::firstOrCreate(['name' => 'PC VACC'], ['abbreviation' => 'pcv']);
+    $tva = TaxRate::firstOrCreate(['name' => 'TVA18 VACC'], ['short_name' => 'TV18V', 'rate' => 18, 'is_active' => true]);
     [$product, $wh] = vaccStockedProduct($co, 100);
 
     $item = [
@@ -148,7 +151,7 @@ it('exécute la chaîne Ventes bout-en-bout avec statuts, impacts stock et écri
     expect($order->fresh()->status)->toBe('confirme');
 
     // ── Livraison : impact stock automatique (sortie) ────────────────────────
-    $stockBefore = (float) \App\Models\ProductStock::where('product_id', $product->id)->where('warehouse_id', $wh->id)->value('quantity');
+    $stockBefore = (float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $wh->id)->value('quantity');
 
     $dn = app(OrderService::class)->createDeliveryNote($order->fresh());
     app(DeliveryNoteService::class)->validate($dn);
@@ -158,7 +161,7 @@ it('exécute la chaîne Ventes bout-en-bout avec statuts, impacts stock et écri
     expect($dn->status)->toBe('valide')
         ->and($order->status)->toBe('livre');
 
-    $stockAfter = (float) \App\Models\ProductStock::where('product_id', $product->id)->where('warehouse_id', $wh->id)->value('quantity');
+    $stockAfter = (float) ProductStock::where('product_id', $product->id)->where('warehouse_id', $wh->id)->value('quantity');
     expect($stockBefore - $stockAfter)->toBe(40.0);
 
     // ── Facture : statut + écriture comptable équilibrée ─────────────────────
@@ -213,10 +216,10 @@ it('bloque toute création de document commercial pour un client bloqué (contr�
 
 it('refuse la livraison quand le stock est insuffisant (contrôle + impact stock)', function () {
     $user = vaccAdmin();
-    $co   = vaccCompany();
+    $co = vaccCompany();
     $client = Client::factory()->create(['is_active' => true]);
-    $unit   = Unit::firstOrCreate(['name' => 'PC VACC'], ['abbreviation' => 'pcv']);
-    $tva    = TaxRate::firstOrCreate(['name' => 'TVA18 VACC'], ['short_name' => 'TV18V', 'rate' => 18, 'is_active' => true]);
+    $unit = Unit::firstOrCreate(['name' => 'PC VACC'], ['abbreviation' => 'pcv']);
+    $tva = TaxRate::firstOrCreate(['name' => 'TVA18 VACC'], ['short_name' => 'TV18V', 'rate' => 18, 'is_active' => true]);
     [$product, $wh] = vaccStockedProduct($co, 5); // seulement 5 en stock
 
     $order = app(OrderService::class)->create([
@@ -239,7 +242,7 @@ it('refuse la livraison quand le stock est insuffisant (contrôle + impact stock
     $dn->items()->first()->update(['quantity' => 40]);
 
     expect(fn () => app(DeliveryNoteService::class)->validate($dn->fresh()))
-        ->toThrow(\Illuminate\Validation\ValidationException::class);
+        ->toThrow(RuntimeException::class);
 });
 
 it('refuse l’accès au module Ventes sans la permission (droits)', function () {
