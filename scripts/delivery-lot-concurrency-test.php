@@ -140,8 +140,12 @@ function allocate(PDO $db, array $job): array
     $stmt = $db->prepare("INSERT INTO deliveries(reference,status,requested_quantity,idempotency_key) VALUES(?,'draft',?,?) ON DUPLICATE KEY UPDATE reference=VALUES(reference)");
     $stmt->execute([$job['delivery'], $job['quantity'], $job['key']]);
     $deliveryId = (int) $db->query("SELECT id FROM deliveries WHERE reference=".$db->quote($job['delivery']).' FOR UPDATE')->fetchColumn();
-    if ($db->query("SELECT status FROM deliveries WHERE id={$deliveryId}")->fetchColumn() === 'validated') {
+    $status = $db->query("SELECT status FROM deliveries WHERE id={$deliveryId}")->fetchColumn();
+    if ($status === 'validated') {
         $db->commit(); return ['outcome' => 'IDEMPOTENT'];
+    }
+    if ($status === 'cancelled') {
+        $db->commit(); return ['outcome' => 'REFUSED_CANCELLED'];
     }
     $remaining = (float) $job['quantity'];
     $lots = $db->query("SELECT * FROM lots WHERE usable_quantity>0 AND status='available' ORDER BY received_at,id FOR UPDATE")->fetchAll();
