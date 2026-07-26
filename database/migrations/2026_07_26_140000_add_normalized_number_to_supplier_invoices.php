@@ -20,7 +20,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('supplier_invoices', function (Blueprint $table) {
-            $table->string('supplier_invoice_number_normalized', 60)->nullable()->after('supplier_invoice_number');
+            // 100 caractères : borne l'index (utf8mb4 → 400 octets, très en deçà de
+            // la limite MySQL 8.4) et couvre tout numéro fournisseur réaliste.
+            $table->string('supplier_invoice_number_normalized', 100)->nullable()->after('supplier_invoice_number');
         });
 
         // Backfill des lignes existantes (toutes, y compris soft-deleted).
@@ -35,10 +37,12 @@ return new class extends Migration
                 }
             });
 
-        // Index d'unicité DÉFENSIF : si des doublons normalisés préexistent (base
-        // dev polluée), on ne pose qu'un index simple + on journalise — la garde
-        // applicative protège de toute façon. Sinon, index UNIQUE (barrière DB
-        // concurrente forte).
+        // Détection des collisions AVANT l'index unique. En cas de doublons
+        // normalisés préexistants, la migration S'ARRÊTE avec un rapport
+        // exploitable — elle ne choisit JAMAIS silencieusement une facture à
+        // conserver et ne modifie AUCUN numéro historique. L'opérateur doit
+        // arbitrer les doublons (avoir / extourne / correction manuelle tracée)
+        // avant de relancer.
         $dupes = DB::table('supplier_invoices')
             ->select('company_id', 'supplier_id', 'supplier_invoice_number_normalized', DB::raw('COUNT(*) as n'))
             ->whereNotNull('supplier_invoice_number_normalized')
@@ -46,16 +50,23 @@ return new class extends Migration
             ->havingRaw('COUNT(*) > 1')
             ->get();
 
-        Schema::table('supplier_invoices', function (Blueprint $table) use ($dupes) {
-            $cols = ['company_id', 'supplier_id', 'supplier_invoice_number_normalized'];
-            if ($dupes->isEmpty()) {
-                $table->unique($cols, 'uq_supplier_invoice_number_norm');
-            } else {
-                $table->index($cols, 'ix_supplier_invoice_number_norm');
-                logger()->warning('[ACHATS A1] Index UNIQUE non posé : doublons normalisés préexistants sur supplier_invoices.', [
-                    'groupes_en_doublon' => $dupes->count(),
-                ]);
-            }
+        if ($dupes->isNotEmpty()) {
+            $report = $dupes->map(fn ($d) => sprintf(
+                '- société %d / fournisseur %d / numéro « %s » : %d occurrences',
+                $d->company_id, $d->supplier_id, $d->supplier_invoice_number_normalized, $d->n
+            ))->implode("\n");
+            throw new \RuntimeException(
+                "[ACHATS A1] Migration ARRÊTÉE : doublons de numéro fournisseur normalisé préexistants — "
+                . "l'index unique ne peut pas être posé sans arbitrage. Aucune donnée n'a été modifiée. "
+                . "Résolvez ces collisions (avoir / extourne / correction tracée), puis relancez :\n" . $report
+            );
+        }
+
+        Schema::table('supplier_invoices', function (Blueprint $table) {
+            $table->unique(
+                ['company_id', 'supplier_id', 'supplier_invoice_number_normalized'],
+                'uq_supplier_invoice_number_norm'
+            );
         });
     }
 
