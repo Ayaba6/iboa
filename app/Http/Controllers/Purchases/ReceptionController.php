@@ -95,104 +95,13 @@ class ReceptionController extends Controller
             'items.*.received_quantity.min'      => 'La quantité reçue ne peut pas être négative.',
         ]);
 
-        // [SEC-PHASE2 §2] Maker-checker (mode strict production) : celui qui a
-        // saisi la réception ne la valide pas — l'entrée de stock est certifiée
-        // par un second regard. Configurable (petites équipes : désactivé).
-        try {
-            app(\App\Services\MakerCheckerService::class)->assert($reception->created_by, 'reception.validate', "la réception {$reception->number}", $reception);
-        } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        // Compteurs pour message final transparent à l'utilisateur
+        // [ACHATS Réceptions] Règles métier centralisées dans le service
+        // transactionnel — le contrôleur ne fait que valider, déléguer, répondre.
         $movementsCreated = 0;
         $linesSkipped     = 0;
-
         try {
-            DB::transaction(function () use ($request, $reception, &$movementsCreated, &$linesSkipped) {
-                // Re-fetch under lock to prevent concurrent double-validation (TOCTOU).
-                $reception = Reception::lockForUpdate()->findOrFail($reception->id);
-                if ($reception->status !== 'brouillon') {
-                    throw new \RuntimeException('Seules les réceptions en brouillon peuvent être validées.');
-                }
-
-                $warehouseId = $request->warehouse_id;
-
-                // Passe 1 — persister les quantités reçues + synchroniser les lignes BC.
-                foreach ($request->items as $itemId => $itemData) {
-                    $item = $reception->items()->find($itemId);
-                    if (!$item) {
-                        continue;
-                    }
-
-                    $receivedQty = (float) ($itemData['received_quantity'] ?? 0);
-
-                    $item->update([
-                        'received_quantity' => $receivedQty,
-                        'lot_number'        => $itemData['lot_number']   ?? null,
-                        'expiry_date'       => $itemData['expiry_date']  ?? null,
-                    ]);
-
-                    // Update received_quantity on the linked PO item
-                    if ($item->purchase_order_item_id) {
-                        $poItem = $item->purchaseOrderItem;
-                        if ($poItem) {
-                            $totalReceived = $poItem->received_quantity + $receivedQty;
-                            $poItem->update(['received_quantity' => min($totalReceived, $poItem->quantity)]);
-                        }
-                    }
-                }
-
-                // Passe 2 — [Sync ERP] entrées stock depuis les quantités PERSISTÉES,
-                // journalisées + idempotentes + relançables (sync_logs).
-                $reception->update(['warehouse_id' => $warehouseId]);
-                app(\App\Services\Sync\SyncOrchestrator::class)->run(
-                    sourceModule: 'achats',
-                    targetModule: 'stock',
-                    eventName: 'reception.validated',
-                    action: 'create_stock_entries',
-                    source: $reception,
-                    callback: function () use ($reception, &$movementsCreated, &$linesSkipped) {
-                        [$movementsCreated, $linesSkipped] =
-                            app(\App\Services\Sync\Handlers\ReplayReceptionStockSync::class)($reception->fresh('items'));
-                    },
-                    payload: ['warehouse_id' => $warehouseId],
-                    handlerClass: \App\Services\Sync\Handlers\ReplayReceptionStockSync::class,
-                );
-
-                // Mark reception as validated
-                $reception->update([
-                    'status'       => 'valide',
-                    'validated_by' => Auth::id(),
-                    'validated_at' => now(),
-                ]);
-
-                // [Gap inter-modules — recette] Génération AUTOMATIQUE des bobines
-                // et lots pour les articles à suivi bobine/lot : l'action manuelle
-                // « Générer les bobines » restait facile à rater et bloquait
-                // ensuite la consommation matière en production. Le service filtre
-                // lui-même les articles éligibles et ne double PAS l'entrée de
-                // stock (traçabilité pure sur ce chemin).
-                try {
-                    app(\App\Modules\Production\Services\CoilReceptionService::class)
-                        ->createFromReception($reception->fresh('items.product.itemCategory'), onlyTracked: true);
-                } catch (\Illuminate\Validation\ValidationException) {
-                    // Déjà générées ou rien d'éligible — silencieux.
-                }
-
-                // Update PO status
-                $po = $reception->purchaseOrder;
-                if ($po) {
-                    $po->load('items');
-                    $allReceived = $po->items->every(
-                        fn($i) => (float) $i->received_quantity >= (float) $i->quantity
-                    );
-                    $po->update(['status' => $allReceived ? 'recu' : 'partiellement_recu']);
-                }
-
-                // [Sync ERP] event domaine apres commit — point d'extension decouple
-                DB::afterCommit(fn () => event(new \App\Events\ReceptionValidated($reception)));
-            });
+            [$movementsCreated, $linesSkipped] = app(\App\Services\PurchaseReceptionService::class)
+                ->validate($reception, (int) $request->warehouse_id, (array) $request->items);
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
