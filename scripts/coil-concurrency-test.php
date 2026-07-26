@@ -55,6 +55,10 @@ try {
 
     $summary = [
         'generated_at' => gmdate('c'),
+        'git_sha' => gitHeadSha(),
+        'driver' => 'mysql',
+        'php_version' => PHP_VERSION,
+        'process_model' => 'independent PHP processes / independent PDO connections',
         'database' => $db,
         'scenarios' => $report,
     ];
@@ -70,6 +74,19 @@ try {
     }
 }
 
+function gitHeadSha(): ?string
+{
+    $pipes = [];
+    $process = proc_open(['git', 'rev-parse', 'HEAD'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, dirname(__DIR__));
+    if (! is_resource($process)) {
+        return null;
+    }
+    $sha = trim(stream_get_contents($pipes[1]));
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    return proc_close($process) === 0 ? $sha : null;
+}
 function workerMain(string $dsnBase, string $user, string $pass, string $db, string $payload): never
 {
     try {
