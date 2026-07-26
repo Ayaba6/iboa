@@ -51,15 +51,17 @@ class ReplayReceptionStockSync
             // utilisable ; la QUARANTAINE entre au DÉPÔT QUAR (jamais disponible) ;
             // le REFUSÉ n'entre PAS en stock. (Rétro-compat : accepted = received
             // quand aucune ventilation n'a été saisie.)
-            $accepted   = (float) $item->accepted_quantity;
-            $quarantine = (float) $item->quarantine_quantity;
-            $refused    = (float) $item->rejected_quantity;
-            $received   = (float) $item->received_quantity;
-            // Rétro-compat : ligne NON ventilée (tous les buckets à 0 mais un reçu
-            // positif — création directe hors service) → tout le reçu est accepté.
-            if ($accepted <= 0 && $quarantine <= 0 && $refused <= 0 && $received > 0) {
-                $accepted = $received;
+            // [#4] Le replay NE DÉCIDE PAS de l'acceptation : il lit une disposition
+            // déjà déterminée. Une ligne à disposition INCONNUE (accepted ET
+            // quarantine NULL — historique non classé, jamais ventilé) ne crée
+            // AUCUN stock vendable et est signalée comme non rejouable.
+            if ($item->accepted_quantity === null && $item->quarantine_quantity === null) {
+                $skipped++;
+
+                continue;
             }
+            $accepted   = (float) ($item->accepted_quantity ?? 0);
+            $quarantine = (float) ($item->quarantine_quantity ?? 0);
 
             $product = Product::find($item->product_id);
             if ($product?->isCoilManaged() && (float) $item->unit_cost <= 0 && ($accepted + $quarantine) > 0) {

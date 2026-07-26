@@ -21,6 +21,9 @@ class ReceptionItem extends Model
         'accepted_quantity',
         'quarantine_quantity',
         'disposition_origin',
+        'reconstructed_quantity',
+        'reconstruction_confidence',
+        'reconstructed_at',
         'unit_cost',
         'lot_number',
         'expiry_date',
@@ -31,10 +34,12 @@ class ReceptionItem extends Model
         'expected_quantity'   => 'decimal:4',
         'received_quantity'   => 'decimal:4',
         'rejected_quantity'   => 'decimal:4',
-        'accepted_quantity'   => 'decimal:4',
-        'quarantine_quantity' => 'decimal:4',
-        'unit_cost'           => 'integer',
-        'expiry_date'         => 'date',
+        'accepted_quantity'      => 'decimal:4',
+        'quarantine_quantity'    => 'decimal:4',
+        'reconstructed_quantity' => 'decimal:4',
+        'reconstructed_at'       => 'datetime',
+        'unit_cost'              => 'integer',
+        'expiry_date'            => 'date',
     ];
 
     // -------------------------------------------------------------------------

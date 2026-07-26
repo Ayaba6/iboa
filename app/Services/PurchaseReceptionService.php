@@ -61,10 +61,13 @@ class PurchaseReceptionService
 
                 $receivedQty = (float) ($itemData['received_quantity'] ?? 0);
 
-                // [#1/#7] Ventilation accepté / quarantaine / refusé. Rétro-compatible :
-                // sans ventilation explicite, tout le reçu est accepté (comportement
-                // historique). L'invariant reçu = accepté + quarantaine + refusé est
-                // imposé sinon.
+                // [#1/#2/#4] DÉCISION EXPLICITE — jamais « non ventilé = accepté ».
+                // Trois cas, tous traçables :
+                //  a) ventilation fournie → décision saisie (CERTIFIED) ;
+                //  b) aucune ventilation ET article soumis à contrôle qualité →
+                //     ventilation OBLIGATOIRE (refus) ;
+                //  c) aucune ventilation ET article sans QC obligatoire → décision
+                //     explicite « no_quality_required » : accepté = reçu (CERTIFIED).
                 $hasBreakdown = array_key_exists('accepted_quantity', $itemData)
                     || array_key_exists('quarantine_quantity', $itemData)
                     || array_key_exists('refused_quantity', $itemData);
@@ -79,21 +82,30 @@ class PurchaseReceptionService
                             $item->id, $accepted, $quarantine, $refused, $receivedQty
                         ));
                     }
+                    $origin = 'saisie';
+                } elseif ($this->requiresQualityControl($item)) {
+                    throw new \RuntimeException(sprintf(
+                        'Contrôle qualité requis pour « %s » : la ventilation accepté / quarantaine / refusé '
+                        . 'est obligatoire à la réception (pas d\'acceptation implicite).',
+                        $item->description ?: ('ligne ' . $item->id)
+                    ));
                 } else {
-                    $accepted = $receivedQty;
+                    $accepted   = $receivedQty;
                     $quarantine = 0.0;
-                    $refused = 0.0;
+                    $refused    = 0.0;
+                    $origin     = 'no_quality_required';
                 }
 
                 $item->update([
-                    'received_quantity'   => $receivedQty,
-                    'accepted_quantity'   => $accepted,
-                    'quarantine_quantity' => $quarantine,
-                    'rejected_quantity'   => $refused,
-                    'disposition_origin'  => 'saisie',
-                    'quality_status'      => $quarantine > 0 ? 'en_attente' : ($refused > 0 && $accepted <= 0 ? 'rejete' : 'accepte'),
-                    'lot_number'          => $itemData['lot_number']  ?? $item->lot_number,
-                    'expiry_date'         => $itemData['expiry_date'] ?? $item->expiry_date,
+                    'received_quantity'         => $receivedQty,
+                    'accepted_quantity'         => $accepted,
+                    'quarantine_quantity'       => $quarantine,
+                    'rejected_quantity'         => $refused,
+                    'disposition_origin'        => $origin,
+                    'reconstruction_confidence' => 'CERTIFIED',
+                    'quality_status'            => $quarantine > 0 ? 'en_attente' : ($refused > 0 && $accepted <= 0 ? 'rejete' : 'accepte'),
+                    'lot_number'                => $itemData['lot_number']  ?? $item->lot_number,
+                    'expiry_date'               => $itemData['expiry_date'] ?? $item->expiry_date,
                 ]);
 
                 if ($item->purchase_order_item_id) {
@@ -155,5 +167,23 @@ class PurchaseReceptionService
         });
 
         return [$movementsCreated, $linesSkipped];
+    }
+
+    /**
+     * Article soumis à contrôle qualité obligatoire (flag article ou catégorie) ?
+     * Si oui, la ventilation à la réception est obligatoire (pas d'acceptation
+     * implicite).
+     */
+    private function requiresQualityControl($item): bool
+    {
+        $product = $item->product ?? \App\Models\Product::with('itemCategory')->find($item->product_id);
+        if (! $product) {
+            return false;
+        }
+        if ((bool) ($product->controle_qualite ?? false)) {
+            return true;
+        }
+
+        return (bool) ($product->itemCategory?->qc_required ?? false);
     }
 }

@@ -72,7 +72,8 @@ it('réception 100 KG d’une bobine (coef 0,571102) → 57,1102 MTL en stock', 
     ]);
     ReceptionItem::create([
         'reception_id' => $reception->id, 'product_id' => $coil->id,
-        'description' => 'Bobine prélaquée 25/100', 'received_quantity' => 100, 'unit_cost' => 1000,
+        'description' => 'Bobine prélaquée 25/100', 'received_quantity' => 100,
+        'accepted_quantity' => 100, 'quarantine_quantity' => 0, 'unit_cost' => 1000, // disposition explicite
     ]);
 
     [$created] = app(ReplayReceptionStockSync::class)($reception->fresh('items'));

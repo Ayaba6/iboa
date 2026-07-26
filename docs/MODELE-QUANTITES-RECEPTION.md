@@ -60,6 +60,30 @@ encore à recevoir   = commandée − reçu physique net
 
 Aucune règle unique n'impose une réception physique à toutes les dépenses.
 
+## 3bis. Absence d'information ≠ acceptation (règle de sûreté)
+
+`absence de ventilation ≠ acceptation`. Aucune règle ne convertit silencieusement
+une ligne « non ventilée » en « accepté ».
+
+- **Nouvelle réception** — décision EXPLICITE et traçable, jamais de fallback :
+  - ventilation fournie → `disposition_origin = saisie`, `reconstruction_confidence = CERTIFIED` ;
+  - article soumis à contrôle qualité (`products.controle_qualite` ou
+    `item_categories.qc_required`) sans ventilation → **refus** (ventilation obligatoire) ;
+  - article sans QC obligatoire → décision explicite `no_quality_required`
+    (`accepted = received`, CERTIFIED).
+- **Ligne historique** — `accepted_quantity`/`quarantine_quantity` = **NULL (inconnu)**,
+  `disposition_origin = legacy_unclassified`, `reconstruction_confidence = RECONSTRUCTED`,
+  valeur calculée isolée dans `reconstructed_quantity` (informative, jamais preuve qualité).
+- **Colonnes nullables** : NULL = inconnu, 0 = explicitement nul — on ne transforme
+  pas une valeur inconnue en zéro.
+- **Niveau de confiance** : `CERTIFIED` (preuve : contrôle/user/date/décision/dépôt/mouvement)
+  · `RECONSTRUCTED` (calculé sans preuve) · `UNKNOWN` (indéterminable). Affiché en
+  audit/rapports ; A2/A3 ne facturera jamais automatiquement une acceptation
+  RECONSTRUCTED/UNKNOWN sans règle (blocage/validation/attestation/dérogation).
+- **Replay** (`ReplayReceptionStockSync`) : lit une disposition DÉJÀ déterminée ; une
+  ligne à disposition inconnue (accepté NULL) ne crée **aucun** stock vendable et est
+  signalée (audit `a3:audit-receptions`).
+
 ## 4. Routage stock par disposition (implémenté)
 
 | Disposition | Effet stock |
@@ -71,12 +95,16 @@ Aucune règle unique n'impose une réception physique à toutes les dépenses.
 
 ## 5. Schéma (état actuel)
 
-- `reception_items` : `received_quantity`, `accepted_quantity`, `quarantine_quantity`,
-  `rejected_quantity` (= refusé), `disposition_origin` (`saisie` | `reconstruite`).
-- `purchase_order_items` : `received_quantity`, `accepted_quantity` (cache),
+- `reception_items` : `received_quantity`, `accepted_quantity` (**nullable**),
+  `quarantine_quantity` (**nullable**), `rejected_quantity` (= refusé),
+  `disposition_origin` (`saisie` | `no_quality_required` | `legacy_unclassified`),
+  `reconstructed_quantity` (nullable, informatif), `reconstruction_confidence`
+  (`CERTIFIED` | `RECONSTRUCTED` | `UNKNOWN`), `reconstructed_at`.
+- `purchase_order_items` : `received_quantity`, `accepted_quantity` (cache **nullable**),
   `invoiced_quantity`.
-- Backfill historique : `accepted = received − refused`, `quarantine = 0`, origine
-  **`reconstruite` (non certifiée)** — cf. #14 : on n'invente pas de décision qualité.
+- Historique : `accepted`/`quarantine` remis à **NULL** (inconnu), valeur calculée
+  isolée dans `reconstructed_quantity`, origine `legacy_unclassified`, confiance
+  `RECONSTRUCTED` — la migration n'a **modifié aucun stock** (colonnes uniquement).
 
 ## 6. À venir dans le lot Réceptions
 

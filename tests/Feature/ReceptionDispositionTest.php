@@ -97,14 +97,48 @@ it('refuse une ventilation dont la somme ≠ reçu (invariant reçu = accepté +
         ->and((float) (ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity') ?? 0))->toBe(0.0);
 });
 
-it('sans ventilation, tout le reçu est accepté (rétro-compatibilité)', function () {
-    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup();
+it('article SANS contrôle qualité : décision explicite no_quality_required (accepté = reçu, CERTIFIED)', function () {
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup(); // produit factory : controle_qualite false
 
     app(PurchaseReceptionService::class)->validate($rec, $wh->id, [
         $recItem->id => ['received_quantity' => 100],
     ]);
 
-    expect((float) $recItem->fresh()->accepted_quantity)->toBe(100.0)
-        ->and((float) ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(100.0)
-        ->and((float) (ProductStock::where('product_id', $p->id)->where('warehouse_id', $quar->id)->value('quantity') ?? 0))->toBe(0.0);
+    $ri = $recItem->fresh();
+    expect((float) $ri->accepted_quantity)->toBe(100.0)
+        ->and($ri->disposition_origin)->toBe('no_quality_required')
+        ->and($ri->reconstruction_confidence)->toBe('CERTIFIED')
+        ->and((float) ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity'))->toBe(100.0);
+});
+
+it('article AVEC contrôle qualité : ventilation obligatoire, pas d\'acceptation implicite', function () {
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup();
+    $p->update(['controle_qualite' => true]); // QC obligatoire
+
+    expect(fn () => app(PurchaseReceptionService::class)->validate($rec, $wh->id, [
+        $recItem->id => ['received_quantity' => 100],
+    ]))->toThrow(\RuntimeException::class, 'Contrôle qualité requis');
+
+    // Rien validé : brouillon, aucun stock.
+    expect($rec->fresh()->status)->toBe('brouillon')
+        ->and((float) (ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity') ?? 0))->toBe(0.0);
+});
+
+it('ligne HISTORIQUE non classée (accepté NULL) : le replay ne crée AUCUN stock vendable', function () {
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup();
+    // Simule une ligne héritée : reçu connu, disposition INCONNUE.
+    $recItem->update([
+        'received_quantity'   => 100,
+        'accepted_quantity'   => null,
+        'quarantine_quantity' => null,
+        'disposition_origin'  => 'legacy_unclassified',
+        'reconstruction_confidence' => 'RECONSTRUCTED',
+    ]);
+    $rec->update(['warehouse_id' => $wh->id]);
+
+    [$created, $skipped] = app(\App\Services\Sync\Handlers\ReplayReceptionStockSync::class)($rec->fresh('items'));
+
+    expect($created)->toBe(0)   // aucune création automatique
+        ->and($skipped)->toBe(1) // ligne signalée non rejouable
+        ->and((float) (ProductStock::where('product_id', $p->id)->where('warehouse_id', $wh->id)->value('quantity') ?? 0))->toBe(0.0);
 });
