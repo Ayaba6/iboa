@@ -85,8 +85,16 @@ principaux.
 
 ## 3. Anomalies (première passe — à compléter par lot)
 
+> **Journal d'audit base dev** : rupture de chaîne à l'entrée 394 —
+> caractérisée en lecture seule dans [AUDIT-JOURNAL-RUPTURE-394.md](AUDIT-JOURNAL-RUPTURE-394.md)
+> (SHA-256 en sidecar). `row_hash_mismatch` (cas B probable), **pas** une preuve
+> de suppression. Non réparé. Sécurité base locale = ROUGE.
+
 ### CRITIQUE
-- **A1 — Doublon facture fournisseur non empêché.** `supplier_invoices.supplier_invoice_number`
+- **A1 — Doublon facture fournisseur non empêché. [CORRIGÉ]** Normalisation +
+  colonne `supplier_invoice_number_normalized` + index unique DB + garde
+  applicative réservant le numéro dans l'historique (annulée/soft-deleted).
+  Commits `ab0a404` puis durcissement (ce lot). `supplier_invoices.supplier_invoice_number`
   est *nullable* et **non unique par fournisseur** ([migration](database/migrations/2026_04_05_112634_create_supplier_invoices_table.php:23)).
   Deux saisies du même numéro fournisseur → risque de **double comptabilisation et
   double paiement**. Attendu : unicité `(supplier_id, supplier_invoice_number)` +
