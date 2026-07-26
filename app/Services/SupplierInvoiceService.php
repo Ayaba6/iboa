@@ -38,6 +38,12 @@ class SupplierInvoiceService
 
             $company = currentCompany();
 
+            // [ACHATS A1] Anti-doublon : une même facture fournisseur (numéro
+            // fournisseur) ne peut être saisie deux fois pour le même fournisseur.
+            $this->assertNoDuplicateSupplierNumber(
+                $company->id, $data['supplier_id'] ?? null, $data['supplier_invoice_number'] ?? null, null
+            );
+
             $data['company_id'] = $company->id;
             $data['number']     = $this->sequenceService->nextNumber($company, 'facture_fournisseur');
             $data['created_by'] = Auth::id();
@@ -59,6 +65,39 @@ class SupplierInvoiceService
         });
     }
 
+    /**
+     * [ACHATS A1] Refuse un doublon de facture fournisseur : même numéro
+     * fournisseur pour le même fournisseur (hors factures annulées et hors la
+     * facture en cours de modification). Le numéro fournisseur reste facultatif ;
+     * sans lui, aucun contrôle d'unicité n'est appliqué. Le verrou pessimiste
+     * sérialise deux saisies concurrentes (la seconde voit la première).
+     *
+     * @throws \RuntimeException
+     */
+    private function assertNoDuplicateSupplierNumber(?int $companyId, ?int $supplierId, ?string $supplierNumber, ?int $exceptId): void
+    {
+        $supplierNumber = trim((string) $supplierNumber);
+        if ($supplierNumber === '' || ! $supplierId) {
+            return;
+        }
+
+        $exists = SupplierInvoice::where('company_id', $companyId)
+            ->where('supplier_id', $supplierId)
+            ->where('supplier_invoice_number', $supplierNumber)
+            ->where('status', '!=', 'annulee')
+            ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
+            ->lockForUpdate()
+            ->exists();
+
+        if ($exists) {
+            throw new \RuntimeException(sprintf(
+                'Doublon : la facture fournisseur n° « %s » existe déjà pour ce fournisseur. '
+                . 'Une même facture ne peut être saisie deux fois (risque de double paiement).',
+                $supplierNumber
+            ));
+        }
+    }
+
     public function update(SupplierInvoice $inv, array $data): SupplierInvoice
     {
         return DB::transaction(function () use ($inv, $data) {
@@ -77,6 +116,15 @@ class SupplierInvoiceService
 
             $items = $data['items'] ?? null;
             unset($data['items']);
+
+            // [ACHATS A1] Anti-doublon aussi à la modification (changement de
+            // numéro fournisseur ou de fournisseur).
+            $this->assertNoDuplicateSupplierNumber(
+                $inv->company_id,
+                $data['supplier_id'] ?? $inv->supplier_id,
+                array_key_exists('supplier_invoice_number', $data) ? $data['supplier_invoice_number'] : $inv->supplier_invoice_number,
+                $inv->id
+            );
 
             $inv->update($data);
 
