@@ -27,6 +27,7 @@ return [
             'purchase_order.approve' => true,
             'credit_note.validate'   => true,
             'credit_note.refund'     => true,
+            'quality_derogation.approve' => true,
             'journal_entry.validate' => true,
             'payroll_run.validate'   => true,
             'cash_closure.validate'  => true,
