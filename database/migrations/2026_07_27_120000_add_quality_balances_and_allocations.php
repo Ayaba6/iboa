@@ -16,57 +16,93 @@ use Illuminate\Support\Facades\Schema;
  * Consommable :
  *   dispo_libéré = libéré − consommé − réservé − retourné_depuis_libéré
  *
- * NULL = inconnu (bobines/lots historiques) : aucun solde inventé, la garde
- * quantitative ne s'applique qu'aux bobines réellement qualifiées.
+ * NULL = inconnu (bobines/lots historiques) : aucun solde inventé.
  *
  * `purchase_quality_decision_allocations` : une décision qualité CIBLE des
  * lots/bobines précis avec une quantité par cible — jamais une mise à jour en
  * bloc de toutes les bobines d'une réception.
+ *
+ * IDEMPOTENTE : le DDL MySQL n'étant pas transactionnel, un échec partiel
+ * laisserait des colonnes créées et la migration non enregistrée, donc non
+ * rejouable. Chaque ajout est donc gardé par un test d'existence.
  */
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::table('coils', function (Blueprint $table) {
-            $table->decimal('qty_released', 12, 3)->nullable()->after('quality_status');
-            $table->decimal('qty_quarantine', 12, 3)->nullable()->after('qty_released');
-            $table->decimal('qty_rejected', 12, 3)->nullable()->after('qty_quarantine');
-            $table->decimal('qty_return_pending', 12, 3)->nullable()->after('qty_rejected');
-            $table->decimal('qty_returned', 12, 3)->nullable()->after('qty_return_pending');
+            foreach ([
+                'qty_released'       => 'quality_status',
+                'qty_quarantine'     => 'qty_released',
+                'qty_rejected'       => 'qty_quarantine',
+                'qty_return_pending' => 'qty_rejected',
+                'qty_returned'       => 'qty_return_pending',
+            ] as $col => $after) {
+                if (! Schema::hasColumn('coils', $col)) {
+                    $table->decimal($col, 12, 3)->nullable()->after($after);
+                }
+            }
         });
 
         Schema::table('stock_lots', function (Blueprint $table) {
-            $table->decimal('qty_released', 12, 3)->nullable()->after('quality_status');
-            $table->decimal('qty_quarantine', 12, 3)->nullable()->after('qty_released');
-            $table->decimal('qty_rejected', 12, 3)->nullable()->after('qty_quarantine');
+            foreach ([
+                'qty_released'   => 'quality_status',
+                'qty_quarantine' => 'qty_released',
+                'qty_rejected'   => 'qty_quarantine',
+            ] as $col => $after) {
+                if (! Schema::hasColumn('stock_lots', $col)) {
+                    $table->decimal($col, 12, 3)->nullable()->after($after);
+                }
+            }
         });
 
-        Schema::create('purchase_quality_decision_allocations', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('quality_decision_id')->constrained('purchase_quality_decisions')->cascadeOnDelete();
-            $table->foreignId('reception_item_id')->constrained('reception_items')->restrictOnDelete();
-            $table->foreignId('stock_lot_id')->nullable();
-            $table->foreignId('coil_id')->nullable();
-            $table->decimal('quantity', 12, 3);
-            $table->string('unit', 10)->nullable();
-            $table->string('disposition_before', 20)->nullable();
-            $table->string('disposition_after', 20)->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('purchase_quality_decision_allocations')) {
+            Schema::create('purchase_quality_decision_allocations', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('quality_decision_id');
+                $table->unsignedBigInteger('reception_item_id');
+                $table->foreignId('stock_lot_id')->nullable();
+                $table->foreignId('coil_id')->nullable();
+                $table->decimal('quantity', 12, 3);
+                $table->string('unit', 10)->nullable();
+                $table->string('disposition_before', 20)->nullable();
+                $table->string('disposition_after', 20)->nullable();
+                $table->timestamps();
 
-            $table->index(['quality_decision_id']);
-            $table->index(['coil_id']);
-            $table->index(['stock_lot_id']);
-        });
+                // Noms de contraintes/index EXPLICITES et courts : le nom généré
+                // par défaut dépasserait la limite MySQL de 64 caractères
+                // (« purchase_quality_decision_allocations_quality_decision_id_foreign »
+                // = 65) — accepté par SQLite, refusé par MySQL.
+                $table->foreign('quality_decision_id', 'fk_pqda_decision')
+                    ->references('id')->on('purchase_quality_decisions')->cascadeOnDelete();
+                $table->foreign('reception_item_id', 'fk_pqda_reception_item')
+                    ->references('id')->on('reception_items')->restrictOnDelete();
+
+                $table->index(['quality_decision_id'], 'ix_pqda_decision');
+                $table->index(['coil_id'], 'ix_pqda_coil');
+                $table->index(['stock_lot_id'], 'ix_pqda_lot');
+            });
+        }
     }
 
     public function down(): void
     {
         Schema::dropIfExists('purchase_quality_decision_allocations');
+
         Schema::table('coils', function (Blueprint $table) {
-            $table->dropColumn(['qty_released', 'qty_quarantine', 'qty_rejected', 'qty_return_pending', 'qty_returned']);
+            foreach (['qty_released', 'qty_quarantine', 'qty_rejected', 'qty_return_pending', 'qty_returned'] as $col) {
+                if (Schema::hasColumn('coils', $col)) {
+                    $table->dropColumn($col);
+                }
+            }
         });
+
         Schema::table('stock_lots', function (Blueprint $table) {
-            $table->dropColumn(['qty_released', 'qty_quarantine', 'qty_rejected']);
+            foreach (['qty_released', 'qty_quarantine', 'qty_rejected'] as $col) {
+                if (Schema::hasColumn('stock_lots', $col)) {
+                    $table->dropColumn($col);
+                }
+            }
         });
     }
 };
