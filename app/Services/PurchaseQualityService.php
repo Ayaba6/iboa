@@ -249,6 +249,19 @@ class PurchaseQualityService
                         $coil->reference, $qty, $quarBefore
                     ));
                 }
+                // [RÈGLE A — bobine indivisible] Une bobine physique est une unité
+                // qualité indivisible : la décision porte sur la TOTALITÉ de sa
+                // quarantaine. Libérer/refuser une fraction exigerait une division
+                // physique réelle (découpe/refendage) créant des bobines filles.
+                if ($qty < $quarBefore - 0.0001) {
+                    throw new \RuntimeException(sprintf(
+                        'Bobine %s : libération/refus partiel interdit — une bobine physique est '
+                        . 'une unité qualité indivisible (quarantaine %s, décision %s). '
+                        . 'Traitez la bobine entière, ou divisez-la physiquement (découpe) pour '
+                        . 'créer des bobines filles portant chacune leur disposition.',
+                        $coil->reference, $quarBefore, $qty
+                    ));
+                }
                 $quarAfter = $quarBefore - $qty;
                 $coil->update([
                     'qty_quarantine'      => $quarAfter,

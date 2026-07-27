@@ -270,20 +270,90 @@ it('décision qualité : la libération propage le statut au LOT et aux BOBINES 
         ->and((int) $coil->fresh()->quality_decision_id)->toBeGreaterThan(0);
 });
 
-it('décision qualité : libération PARTIELLE laisse bobine et lot en libération partielle (encore bloqués)', function () {
+it('RÈGLE A : libération PARTIELLE d\'une bobine indivise REFUSÉE (unité qualité indivisible)', function () {
     $ctx = coilQualSetup(60, 40);
     [, , , , $item] = $ctx;
     $coil = makeCoil($ctx, Coil::QUALITY_QUARANTINED);
     $coil->update(['qty_released' => 0, 'qty_quarantine' => 40, 'qty_rejected' => 0]);
 
-    app(PurchaseQualityService::class)->release($item, 25.0, [
+    // 25 sur 40 : fraction d'une bobine physique → interdit sous règle A.
+    expect(fn () => app(PurchaseQualityService::class)->release($item, 25.0, [
         'reason'  => 'Partiel',
         'targets' => [['coil_id' => $coil->id, 'quantity' => 25]],
+    ]))->toThrow(\RuntimeException::class, 'indivisible');
+
+    // Bobine intacte : toujours entièrement en quarantaine.
+    expect($coil->fresh()->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
+        ->and((float) $coil->fresh()->qty_quarantine)->toBe(40.0)
+        ->and((float) $coil->fresh()->qty_released)->toBe(0.0);
+
+    // La TOTALITÉ (40) est en revanche acceptée.
+    app(PurchaseQualityService::class)->release($item, 40.0, [
+        'reason'  => 'Bobine entière conforme',
+        'targets' => [['coil_id' => $coil->id, 'quantity' => 40]],
+    ]);
+    expect($coil->fresh()->quality_status)->toBe(Coil::QUALITY_RELEASED)
+        ->and((float) $coil->fresh()->qty_released)->toBe(40.0);
+});
+
+it('DIVISION PHYSIQUE : bobine mère → filles traçables, poids réconciliés, mère au statut SPLIT', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-M-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
     ]);
 
-    // 15 restent en quarantaine → statut « libéré partiellement », non bloquant
-    // pour la part libérée mais tracé comme incomplet.
-    expect($coil->fresh()->quality_status)->toBe(Coil::QUALITY_PARTIAL_RELEASE);
+    // Découpe réelle : 70 conformes + 25 non conformes + 5 chutes = 100.
+    $children = app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [
+        ['weight' => 70, 'quality_status' => Coil::QUALITY_RELEASED],
+        ['weight' => 25, 'quality_status' => Coil::QUALITY_REJECTED],
+    ], 5.0, 'Rives abîmées sur une partie du refendage');
+
+    expect($children)->toHaveCount(2)
+        // Mère : divisée, sans disposition propre, poids transféré aux filles.
+        ->and($mother->fresh()->quality_status)->toBe(Coil::QUALITY_SPLIT)
+        ->and((float) $mother->fresh()->remaining_weight)->toBe(0.0)
+        // Filles : disposition unique chacune + traçabilité vers la mère + coût transféré.
+        ->and($children[0]->quality_status)->toBe(Coil::QUALITY_RELEASED)
+        ->and((float) $children[0]->initial_weight)->toBe(70.0)
+        ->and((int) $children[0]->parent_coil_id)->toBe($mother->id)
+        ->and((float) $children[0]->cost_per_kg)->toBe(500.0)
+        ->and($children[1]->quality_status)->toBe(Coil::QUALITY_REJECTED)
+        ->and((float) $children[1]->initial_weight)->toBe(25.0);
+
+    // Réconciliation : Σ filles + chutes = poids mère.
+    expect((float) $children[0]->initial_weight + (float) $children[1]->initial_weight + 5.0)->toBe(100.0);
+
+    // La fille conforme est consommable ; la fille refusée ne l'est pas.
+    $of = makeOf($ctx);
+    app(CoilConsumptionService::class)->consume($of, $children[0]->fresh(), 30.0, null, null);
+    expect((float) $children[0]->fresh()->remaining_weight)->toBe(40.0);
+    expect(fn () => app(CoilConsumptionService::class)->consume($of, $children[1]->fresh(), 5.0, null, null))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+});
+
+it('DIVISION : poids non réconciliés → refus (Σ filles + chutes ≠ poids mère)', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-M2-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+
+    expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [
+        ['weight' => 70, 'quality_status' => Coil::QUALITY_RELEASED],
+    ], 5.0))->toThrow(\RuntimeException::class, 'poids mère');
+
+    expect($mother->fresh()->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
+        ->and((float) $mother->fresh()->remaining_weight)->toBe(100.0);
 });
 
 it('décision qualité : le REFUS marque bobine et lot comme REFUSÉS (non consommables)', function () {

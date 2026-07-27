@@ -33,6 +33,11 @@ class Coil extends Model
     public const QUALITY_RETURN_PENDING  = 'retour_attente';
     public const QUALITY_RETURNED        = 'retourne';
     public const QUALITY_CANCELLED       = 'annule';
+    /**
+     * [RÈGLE A] Bobine mère physiquement DIVISÉE (découpe/refendage) : elle ne
+     * porte plus de disposition propre, ses enfants portent les leurs.
+     */
+    public const QUALITY_SPLIT           = 'split';
 
     /** Statuts qualité INTERDISANT toute consommation en production. */
     public const QUALITY_BLOCKING = [
@@ -48,7 +53,7 @@ class Coil extends Model
         'company_id', 'product_id', 'supplier_id', 'reception_id', 'reference', 'lot_number', 'color', 'thickness', 'width',
         'initial_weight', 'remaining_weight', 'estimated_length', 'purchase_price', 'cost_per_kg',
         'received_at', 'status', 'quality_status', 'quality_decision_id', 'notes', 'created_by', 'stock_lot_id', 'kg_per_linear_meter',
-        'qty_released', 'qty_quarantine', 'qty_rejected', 'qty_return_pending', 'qty_returned',
+        'qty_released', 'qty_quarantine', 'qty_rejected', 'qty_return_pending', 'qty_returned', 'parent_coil_id',
         // [Maquette Bobine] réception + caractéristiques + gestion
         'supplier_reference', 'warehouse_id', 'site', 'bl_number', 'origine', 'devise',
         'nuance', 'gross_weight', 'inner_diameter', 'outer_diameter', 'coating', 'surface_finish',
