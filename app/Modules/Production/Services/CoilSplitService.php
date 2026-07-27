@@ -109,6 +109,27 @@ class CoilSplitService
             $tolerance = (float) ($opts['tolerance'] ?? self::DEFAULT_WEIGHING_TOLERANCE);
             $loss      = (float) ($opts['loss'] ?? 0);
 
+            // [#8] Permission d'EXÉCUTION de la division.
+            $this->assertCan('coils.split.execute', 'exécuter une division de bobine');
+
+            // [#8] Perte au-delà du seuil : permission dédiée + maker-checker
+            // (l'exécutant ne peut pas approuver seul sa propre perte).
+            $lossValue = (int) round($loss * (float) $mother->cost_per_kg);
+            $seuilVal  = (int) config('security.maker_checker.coil_split.loss_value_threshold', 50000);
+            $seuilQty  = (float) config('security.maker_checker.coil_split.loss_qty_threshold', 50);
+            if ($loss > 0 && ($lossValue > $seuilVal || $loss > $seuilQty)) {
+                $this->assertCan('coils.split.approve_loss', sprintf(
+                    'approuver une perte de %s kg (%s FCFA) sur la division de la bobine %s',
+                    $loss, $lossValue, $mother->reference
+                ));
+                app(\App\Services\MakerCheckerService::class)->assert(
+                    $opts['proposed_by'] ?? null,
+                    'coil_split.approve_loss',
+                    sprintf('la perte de division de la bobine %s', $mother->reference),
+                    $mother
+                );
+            }
+
             // ── Réconciliation QUANTITÉ ──────────────────────────────────────
             $sum = 0.0;
             foreach ($children as $c) {
@@ -270,6 +291,23 @@ class CoilSplitService
 
             return $created;
         });
+    }
+
+    /**
+     * [#8] Garde de permission — silencieuse si aucun utilisateur authentifié
+     * (jobs, commandes artisan, imports système).
+     */
+    private function assertCan(string $permission, string $action): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return;
+        }
+        if (! $user->can($permission)) {
+            throw new \RuntimeException(sprintf(
+                'Permission « %s » requise pour %s.', $permission, $action
+            ));
+        }
     }
 
     /**

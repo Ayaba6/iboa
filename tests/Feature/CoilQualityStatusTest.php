@@ -555,6 +555,100 @@ it('COÛT RÉSIDUEL : bobine 100 kg / 50 000, 20 kg déjà consommés → seuls 
     expect((int) $children[0]->purchase_price + (int) $children[1]->purchase_price)->toBe(40000);
 });
 
+it('PERMISSIONS : division refusée sans coils.split.execute', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-PERM-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+
+    // Utilisateur sans aucune permission de division.
+    $sansDroit = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]);
+    test()->actingAs($sansDroit);
+
+    expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 100]], 0.0))
+        ->toThrow(\RuntimeException::class, 'coils.split.execute');
+
+    expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0)
+        ->and($mother->fresh()->transformation_status)->toBeNull();
+});
+
+it('MAKER-CHECKER : perte au-dessus du seuil — l\'exécutant ne peut pas approuver sa propre perte', function () {
+    config(['security.maker_checker.enabled' => true]);
+    $ctx = coilQualSetup(0, 200);
+    [$co, $wh, $p, $rec] = $ctx;
+    $admin = auth()->user(); // super_admin du setup
+
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-MC-' . uniqid(), 'initial_weight' => 200, 'remaining_weight' => 200,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 200, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 100000, 'received_at' => now(),
+    ]);
+    $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
+
+    // Exécutant simple, doté des droits d'exécution ET d'approbation de perte.
+    $executant = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]);
+    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'split_exec', 'guard_name' => 'web']);
+    foreach (['coils.split.execute', 'coils.split.approve_loss'] as $perm) {
+        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']));
+    }
+    $executant->assignRole($role);
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+    // Perte 100 kg (50 000 FCFA) : au-dessus du seuil quantité (50 kg).
+    // L'exécutant est aussi le proposeur → auto-approbation refusée.
+    test()->actingAs($executant);
+    expect(fn () => $svc->split($mother, [['weight' => 100]], 0.0, 'Découpe avec perte', [
+        'loss' => 100, 'proposed_by' => $executant->id,
+    ]))->toThrow(\RuntimeException::class, 'Séparation des tâches');
+    expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0);
+
+    // Approbateur DISTINCT du proposeur → accepté.
+    test()->actingAs($admin);
+    $children = $svc->split($mother->fresh(), [['weight' => 100]], 0.0, 'Découpe avec perte', [
+        'loss' => 100, 'proposed_by' => $executant->id,
+    ]);
+    expect($children)->toHaveCount(1)
+        ->and((float) $children[0]->initial_weight)->toBe(100.0);
+
+    // Perte valorisée et tracée sur l'opération.
+    $op = \App\Modules\Production\Models\CoilSplitOperation::where('coil_id', $mother->id)->firstOrFail();
+    expect((float) $op->loss_qty)->toBe(100.0)
+        ->and((int) $op->loss_value)->toBe(50000)          // 100 × 500
+        ->and((int) $op->transferred_cost)->toBe(50000)    // 100 × 500 aux filles
+        ->and((int) $op->residual_cost_before_split)->toBe(100000)
+        ->and((int) $op->rounding_difference)->toBe(0);    // 100 000 − 50 000 − 50 000
+});
+
+it('PERTE sous le seuil : circuit allégé, aucune approbation distincte requise', function () {
+    config(['security.maker_checker.enabled' => true]);
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-LEG-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 100, 'purchase_price' => 10000, 'received_at' => now(),
+    ]);
+
+    // Perte 2 kg (200 FCFA) : sous les deux seuils → pas de maker-checker.
+    $children = app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 98]], 0.0, 'Découpe simple', ['loss' => 2]);
+
+    expect($children)->toHaveCount(1);
+    $op = \App\Modules\Production\Models\CoilSplitOperation::where('coil_id', $mother->id)->firstOrFail();
+    expect((int) $op->loss_value)->toBe(200)
+        ->and((int) $op->rounding_difference)->toBe(0);     // 10 000 − 9 800 − 200
+});
+
 it('HÉRITAGE : mère en quarantaine → filles en quarantaine, jamais libérées automatiquement', function () {
     $ctx = coilQualSetup(0, 100);
     [$co, $wh, $p, $rec] = $ctx;

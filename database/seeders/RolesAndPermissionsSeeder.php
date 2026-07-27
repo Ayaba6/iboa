@@ -63,6 +63,10 @@ class RolesAndPermissionsSeeder extends Seeder
             // Production / Fabrication tôles bac + métaux (§9 CDC)
             'production.view', 'production.create', 'production.update', 'production.delete',
             'production.launch', 'production.validate', 'production.cancel',
+            // [Division bobine] Circuit dédié : proposer / exécuter / approuver la
+            // perte / voir la valorisation / contre-opération.
+            'coils.split.propose', 'coils.split.execute', 'coils.split.approve_loss',
+            'coils.split.view_cost', 'coils.split.reverse',
             'production.declare',           // déclaration production/rebuts (opérateurs §15 CDC)
             'production.validate_declaration', // visa chef d'équipe sur les déclarations de production (§13.3 CDC)
             'production.approve_financial',    // validation financière avant lancement OF (§13.2 CDC)

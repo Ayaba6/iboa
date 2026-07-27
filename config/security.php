@@ -28,6 +28,7 @@ return [
             'credit_note.validate'   => true,
             'credit_note.refund'     => true,
             'quality_derogation.approve' => true,
+            'coil_split.approve_loss'    => true,
             'journal_entry.validate' => true,
             'payroll_run.validate'   => true,
             'cash_closure.validate'  => true,
@@ -40,6 +41,16 @@ return [
         | par une table dédiée (motif, approbateur, expiration, trace) — pas
         | par ce fichier.
         */
+        /*
+        | [Division bobine] Seuils de PERTE au-delà desquels l'exécutant ne peut
+        | pas approuver seul (maker-checker + permission dédiée). Une découpe
+        | sans perte significative suit un circuit allégé.
+        */
+        'coil_split' => [
+            'loss_value_threshold' => env('COIL_SPLIT_LOSS_VALUE_THRESHOLD', 50000), // FCFA
+            'loss_qty_threshold'   => env('COIL_SPLIT_LOSS_QTY_THRESHOLD', 50),      // kg
+        ],
+
         'non_exemptable' => [
             'decaissement.approve',
             'credit_note.validate',
