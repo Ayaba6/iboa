@@ -40,8 +40,23 @@ class CoilSplitService
         return DB::transaction(function () use ($mother, $children, $scrap, $reason) {
             $mother = Coil::lockForUpdate()->findOrFail($mother->id);
 
-            if ($mother->quality_status === Coil::QUALITY_SPLIT) {
-                throw new \RuntimeException("Bobine {$mother->reference} : déjà divisée.");
+            // [#8] Gardes d'opérations incompatibles.
+            if ($mother->isSplit() || $mother->transformation_status === Coil::TRANSFO_TRANSFORMED) {
+                throw new \RuntimeException("Bobine {$mother->reference} : déjà divisée ou transformée.");
+            }
+            if (Coil::where('parent_coil_id', $mother->id)->exists()) {
+                throw new \RuntimeException("Bobine {$mother->reference} : des bobines filles existent déjà.");
+            }
+            if (in_array($mother->quality_status, [
+                Coil::QUALITY_RETURN_PENDING, Coil::QUALITY_RETURNED, Coil::QUALITY_CANCELLED,
+            ], true)) {
+                throw new \RuntimeException(sprintf(
+                    'Bobine %s : statut qualité « %s » — division interdite.',
+                    $mother->reference, $mother->quality_status
+                ));
+            }
+            if ((float) $mother->remaining_weight <= 0) {
+                throw new \RuntimeException("Bobine {$mother->reference} : entièrement consommée — division impossible.");
             }
 
             // Réconciliation : Σ filles + chutes = poids restant de la mère.
@@ -85,6 +100,7 @@ class CoilSplitService
                     'received_at'    => $mother->received_at,
                     'status'         => 'disponible',
                     'quality_status' => $status,
+                    'transformation_status' => Coil::TRANSFO_INTACT,
                     // Soldes quantitatifs de la fille : disposition unique (règle A).
                     'qty_released'   => $status === Coil::QUALITY_RELEASED ? $weight : 0,
                     'qty_quarantine' => $status === Coil::QUALITY_QUARANTINED ? $weight : 0,
@@ -94,10 +110,12 @@ class CoilSplitService
                 $created[] = $child;
             }
 
-            // La mère est divisée : plus de disposition propre, poids consommé par
-            // la division (les filles portent désormais la matière).
+            // [#3] La mère est TRANSFORMÉE (axe transformation), pas « dans une
+            // disposition qualité » : sa disposition qualité passe à NULL — elle
+            // appartient désormais aux bobines filles. Poids transféré aux filles.
             $mother->update([
-                'quality_status'   => Coil::QUALITY_SPLIT,
+                'transformation_status' => Coil::TRANSFO_SPLIT,
+                'quality_status'   => null,
                 'remaining_weight' => 0,
                 'status'           => 'epuisee',
                 'qty_quarantine'   => 0,
