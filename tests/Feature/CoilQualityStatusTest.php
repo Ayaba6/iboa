@@ -406,6 +406,85 @@ it('TRANSVERSE : mère libérée MAIS divisée — exclue des sélecteurs matiè
         ->and(Coil::where('parent_coil_id', $mother->id)->count())->toBe(1);
 });
 
+it('HASH : empreinte canonique STABLE et recalculable à l\'identique', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-HASH-1', 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+    $svc = \App\Modules\Production\Services\CoilSplitService::class;
+    $children = [['weight' => 60], ['weight' => 40]];
+
+    $h1 = $svc::canonicalHash($mother, 100.0, $children, 0.0, 0.0, 0.001);
+    $h2 = $svc::canonicalHash($mother, 100.0, $children, 0.0, 0.0, 0.001);
+    expect($h1)->toBe($h2)->and(strlen($h1))->toBe(64);   // déterministe
+
+    // Les décimales sont NORMALISÉES : 60 et 60.000 donnent la même empreinte.
+    expect($svc::canonicalHash($mother, 100.0, [['weight' => 60.000], ['weight' => 40]], 0.0, 0.0, 0.001))->toBe($h1);
+
+    // Toute variation économique change l'empreinte.
+    expect($svc::canonicalHash($mother, 100.0, [['weight' => 61], ['weight' => 39]], 0.0, 0.0, 0.001))->not->toBe($h1);
+    expect($svc::canonicalHash($mother, 100.0, $children, 5.0, 0.0, 0.001))->not->toBe($h1);
+
+    // L'ordre des enfants est significatif (allocation ordonnée).
+    expect($svc::canonicalHash($mother, 100.0, [['weight' => 40], ['weight' => 60]], 0.0, 0.0, 0.001))->not->toBe($h1);
+
+    // Le hash persisté correspond au recalcul.
+    app($svc)->split($mother, $children, 0.0);
+    $op = \Illuminate\Support\Facades\DB::table('coil_split_operations')->where('coil_id', $mother->id)->first();
+    expect($op->calculation_hash)->toBe($h1);
+});
+
+it('IDEMPOTENCE : même clé → une seule opération et mêmes enfants ; rejeu sans doublon', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-IDEM-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+    $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
+
+    $first = $svc->split($mother, [['weight' => 60], ['weight' => 40]], 0.0, 'Découpe', ['idempotency_key' => 'SPLIT-1']);
+    expect($first)->toHaveCount(2);
+
+    // Rejeu même clé → mêmes enfants, aucune opération ni bobine supplémentaire.
+    $replay = $svc->split($mother->fresh(), [['weight' => 60], ['weight' => 40]], 0.0, 'Découpe', ['idempotency_key' => 'SPLIT-1']);
+    expect($replay)->toHaveCount(2)
+        ->and(collect($replay)->pluck('id')->all())->toBe(collect($first)->pluck('id')->all())
+        ->and(\Illuminate\Support\Facades\DB::table('coil_split_operations')->where('coil_id', $mother->id)->count())->toBe(1)
+        ->and(Coil::where('parent_coil_id', $mother->id)->count())->toBe(2);
+});
+
+it('ROLLBACK transactionnel : erreur sur la DERNIÈRE fille → aucune fille ni opération persistée', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-RB-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+
+    // Dernière fille à poids nul → refus ; la validation précède toute création.
+    expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 60], ['weight' => 40], ['weight' => 0]], 0.0))
+        ->toThrow(\RuntimeException::class);
+
+    // Rien n'est persisté : ni filles, ni opération ; mère intacte.
+    expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0)
+        ->and(\Illuminate\Support\Facades\DB::table('coil_split_operations')->where('coil_id', $mother->id)->count())->toBe(0)
+        ->and($mother->fresh()->transformation_status)->toBeNull()
+        ->and((float) $mother->fresh()->remaining_weight)->toBe(100.0);
+});
+
 it('HÉRITAGE : mère en quarantaine → filles en quarantaine, jamais libérées automatiquement', function () {
     $ctx = coilQualSetup(0, 100);
     [$co, $wh, $p, $rec] = $ctx;

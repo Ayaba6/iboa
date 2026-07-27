@@ -51,6 +51,29 @@ class CoilSplitService
         return DB::transaction(function () use ($mother, $children, $scrap, $reason, $opts) {
             $mother = Coil::lockForUpdate()->findOrFail($mother->id);
 
+            // [#13] Idempotence AVANT les gardes : un rejeu de la même opération
+            // doit renvoyer les mêmes enfants, pas buter sur « déjà divisée ».
+            $key = trim((string) ($opts['idempotency_key'] ?? ''));
+            if ($key !== '') {
+                $existing = DB::table('coil_split_operations')
+                    ->where('coil_id', $mother->id)->where('idempotency_key', $key)->first();
+                if ($existing) {
+                    // Même clé + contenu DIFFÉRENT → refus métier explicite.
+                    $replayHash = self::canonicalHash(
+                        $mother, (float) $existing->mother_qty_before, $children,
+                        (float) ($opts['scrap'] ?? $scrap), (float) ($opts['loss'] ?? 0),
+                        (float) ($opts['tolerance'] ?? self::DEFAULT_WEIGHING_TOLERANCE)
+                    );
+                    if ($existing->calculation_hash !== null && $existing->calculation_hash !== $replayHash) {
+                        throw new \RuntimeException(
+                            'Clé d\'idempotence de division réutilisée avec un contenu différent — refus.'
+                        );
+                    }
+
+                    return Coil::where('parent_coil_id', $mother->id)->orderBy('id')->get()->all();
+                }
+            }
+
             // [#8] Gardes d'opérations incompatibles.
             if ($mother->isSplit() || $mother->transformation_status === Coil::TRANSFO_TRANSFORMED) {
                 throw new \RuntimeException("Bobine {$mother->reference} : déjà divisée ou transformée.");
@@ -81,16 +104,6 @@ class CoilSplitService
             $divisible = (float) $mother->remaining_weight;
             if ($divisible <= 0) {
                 throw new \RuntimeException("Bobine {$mother->reference} : aucun solde divisible (entièrement consommée).");
-            }
-
-            // [#13] Idempotence durable par bobine mère.
-            $key = trim((string) ($opts['idempotency_key'] ?? ''));
-            if ($key !== '') {
-                $existing = DB::table('coil_split_operations')
-                    ->where('coil_id', $mother->id)->where('idempotency_key', $key)->first();
-                if ($existing) {
-                    return Coil::where('parent_coil_id', $mother->id)->orderBy('id')->get()->all();
-                }
             }
 
             $tolerance = (float) ($opts['tolerance'] ?? self::DEFAULT_WEIGHING_TOLERANCE);
@@ -138,7 +151,7 @@ class CoilSplitService
                 'reason'                       => $reason,
                 'created_by'                   => Auth::id(),
                 'idempotency_key'              => $key !== '' ? $key : null,
-                'calculation_hash'             => hash('sha256', json_encode([$mother->id, $divisible, $children, $scrap, $loss])),
+                'calculation_hash'             => self::canonicalHash($mother, $divisible, $children, $scrap, $loss, $tolerance),
                 'created_at'                   => now(),
                 'updated_at'                   => now(),
             ]);
@@ -236,6 +249,50 @@ class CoilSplitService
 
             return $created;
         });
+    }
+
+    /**
+     * [#7] Empreinte CANONIQUE et STABLE de l'opération de division.
+     *
+     * Contraintes respectées :
+     *  - ordre des champs FIXE (aucune dépendance à l'ordre des clés d'un tableau) ;
+     *  - décimales NORMALISÉES (number_format à précision fixe) — jamais de float
+     *    brut dont la représentation varie ;
+     *  - enfants sérialisés dans l'ORDRE de saisie, champs figés ;
+     *  - valeurs nulles représentées de façon stable ('~') ;
+     *  - encodage UTF-8, aucun horodatage (variable selon l'environnement).
+     *
+     * Recalculable à l'identique sous SQLite et MySQL.
+     */
+    public static function canonicalHash(Coil $mother, float $divisible, array $children, float $scrap, float $loss, float $tolerance): string
+    {
+        $n = fn ($v) => number_format((float) $v, 3, '.', '');
+        $s = fn ($v) => $v === null || $v === '' ? '~' : (string) $v;
+
+        $parts = [
+            'v1',                                   // version d'algorithme
+            'mother:' . $mother->id,
+            'ref:' . $s($mother->reference),
+            'qty_before:' . $n($divisible),
+            'quality_before:' . $s($mother->quality_status),
+            'cost_per_kg:' . $n($mother->cost_per_kg),
+            'historical_cost:' . $n($mother->purchase_price),
+            'method:proportion_poids',
+            'tolerance:' . $n($tolerance),
+            'scrap:' . $n($scrap),
+            'loss:' . $n($loss),
+        ];
+        // Enfants dans l'ordre de saisie, champs figés.
+        $i = 0;
+        foreach ($children as $c) {
+            $i++;
+            $parts[] = 'child:' . $i
+                . '|w:' . $n($c['weight'] ?? 0)
+                . '|q:' . $s($c['quality_status'] ?? null)
+                . '|r:' . $s($c['reference'] ?? null);
+        }
+
+        return hash('sha256', implode("\n", $parts));
     }
 
     /**
