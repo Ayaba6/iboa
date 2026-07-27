@@ -136,7 +136,9 @@ class CoilSplitService
             $operationId = DB::table('coil_split_operations')->insertGetId([
                 'company_id'                   => $mother->company_id,
                 'coil_id'                      => $mother->id,
-                'number'                       => 'DIV-' . $mother->reference . '-' . now()->format('YmdHis'),
+                // Référence bornée : le numéro reste sous la limite de colonne
+                // (MySQL rejette au-delà, SQLite tronquerait silencieusement).
+                'number'                       => 'DIV-' . mb_substr((string) $mother->reference, 0, 50) . '-' . now()->format('YmdHis'),
                 'mother_qty_before'            => $divisible,
                 'mother_quality_status_before' => $mother->quality_status,
                 'mother_cost_per_kg'           => $costPerKg,
