@@ -9,35 +9,46 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * [RÈGLE A — division physique d'une bobine] Une bobine physique est une unité
- * qualité INDIVISIBLE. Lorsqu'une partie identifiable est non conforme, la seule
- * façon de traiter séparément les portions est une opération PHYSIQUE réelle
- * (découpe / refendage / séparation) qui crée des bobines FILLES traçables :
+ * qualité INDIVISIBLE. Traiter séparément des portions exige une opération
+ * PHYSIQUE réelle (découpe / refendage) créant des bobines FILLES traçables.
  *
- *   Bobine mère → fille conforme + fille non conforme (+ chutes / pertes)
+ * PRÉSERVATION DE L'HISTORIQUE (règle absolue) :
+ *   « division physique ≠ suppression de l'historique »
+ *   - `quality_status` de la mère est CONSERVÉ (statut certifié avant division)
+ *     et figé dans `quality_status_before_transformation` ;
+ *   - `initial_weight` (poids reçu) et le coût historique (`cost_per_kg`,
+ *     `purchase_price`) ne sont JAMAIS modifiés ;
+ *   - seuls les SOLDES ACTIFS tombent à zéro (remaining_weight, qty_*), la mère
+ *     devenant non consommable / non réservable ;
+ *   - `transferred_to_children_qty` trace la matière passée aux filles.
  *
- * La mère passe alors au statut SPLIT (elle ne porte plus de disposition propre)
- * et chaque fille porte sa propre disposition, son poids, son coût et sa
- * traçabilité vers la mère.
+ * Réconciliations imposées :
+ *   quantité : poids divisible mère = Σ poids filles + chutes + pertes (± tolérance)
+ *   valeur   : coût historique mère = Σ coûts filles + valeur chutes + valeur
+ *              pertes + écart d'arrondi documenté
  *
- * Invariant de réconciliation :
- *   poids mère = Σ poids filles + chutes + pertes
+ * Chaque division produit un DOCUMENT append-only (coil_split_operations +
+ * items) : jamais une simple relation parent_coil_id.
  */
 class CoilSplitService
 {
+    /** Tolérance de pesée par défaut (kg) — paramétrable par appel. */
+    public const DEFAULT_WEIGHING_TOLERANCE = 0.001;
+
     /**
      * @param  array<int,array{weight:float,quality_status?:string,reference?:string}>  $children
-     * @param  float  $scrap  chutes/pertes assumées (non réattribuées à une fille)
-     * @return array<int,Coil>  bobines filles créées
+     * @param  array{scrap?:float,loss?:float,tolerance?:float,reason?:string,idempotency_key?:string,requires_post_split_qc?:bool}  $opts
+     * @return array<int,Coil>
      *
      * @throws \RuntimeException
      */
-    public function split(Coil $mother, array $children, float $scrap = 0.0, ?string $reason = null): array
+    public function split(Coil $mother, array $children, float $scrap = 0.0, ?string $reason = null, array $opts = []): array
     {
         if ($children === []) {
             throw new \RuntimeException('Division de bobine : au moins une bobine fille est requise.');
         }
 
-        return DB::transaction(function () use ($mother, $children, $scrap, $reason) {
+        return DB::transaction(function () use ($mother, $children, $scrap, $reason, $opts) {
             $mother = Coil::lockForUpdate()->findOrFail($mother->id);
 
             // [#8] Gardes d'opérations incompatibles.
@@ -55,84 +66,209 @@ class CoilSplitService
                     $mother->reference, $mother->quality_status
                 ));
             }
-            if ((float) $mother->remaining_weight <= 0) {
-                throw new \RuntimeException("Bobine {$mother->reference} : entièrement consommée — division impossible.");
-            }
-
-            // Réconciliation : Σ filles + chutes = poids restant de la mère.
-            $sum = 0.0;
-            foreach ($children as $c) {
-                $sum += (float) ($c['weight'] ?? 0);
-            }
-            $motherWeight = (float) $mother->remaining_weight;
-            if (abs(($sum + $scrap) - $motherWeight) > 0.001) {
+            // [#6] Bobine REFUSÉE : division en filles utilisables interdite sans
+            // contre-décision / requalification approuvée.
+            if ($mother->quality_status === Coil::QUALITY_REJECTED) {
                 throw new \RuntimeException(sprintf(
-                    'Division de bobine %s : Σ filles (%s) + chutes (%s) = %s ≠ poids mère (%s).',
-                    $mother->reference, $sum, $scrap, $sum + $scrap, $motherWeight
+                    'Bobine %s : refusée — la division en bobines utilisables exige une '
+                    . 'contre-décision ou une requalification approuvée.',
+                    $mother->reference
                 ));
             }
 
-            $created = [];
-            $i = 0;
-            foreach ($children as $c) {
-                $weight = (float) ($c['weight'] ?? 0);
-                if ($weight <= 0) {
-                    continue;
-                }
-                $i++;
-                $status = $c['quality_status'] ?? Coil::QUALITY_QUARANTINED;
-
-                $child = Coil::create([
-                    'company_id'     => $mother->company_id,
-                    'product_id'     => $mother->product_id,
-                    'supplier_id'    => $mother->supplier_id,
-                    'reception_id'   => $mother->reception_id,
-                    'warehouse_id'   => $mother->warehouse_id,
-                    'stock_lot_id'   => $mother->stock_lot_id,
-                    'parent_coil_id' => $mother->id,
-                    'reference'      => $c['reference'] ?? ($mother->reference . '-' . $i),
-                    'lot_number'     => $mother->lot_number,
-                    'initial_weight' => $weight,
-                    'remaining_weight' => $weight,
-                    // Coût TRANSFÉRÉ de la mère (jamais recalculé au cours du jour).
-                    'cost_per_kg'    => $mother->cost_per_kg,
-                    'purchase_price' => (int) round($weight * (float) $mother->cost_per_kg),
-                    'received_at'    => $mother->received_at,
-                    'status'         => 'disponible',
-                    'quality_status' => $status,
-                    'transformation_status' => Coil::TRANSFO_INTACT,
-                    // Soldes quantitatifs de la fille : disposition unique (règle A).
-                    'qty_released'   => $status === Coil::QUALITY_RELEASED ? $weight : 0,
-                    'qty_quarantine' => $status === Coil::QUALITY_QUARANTINED ? $weight : 0,
-                    'qty_rejected'   => $status === Coil::QUALITY_REJECTED ? $weight : 0,
-                    'created_by'     => Auth::id(),
-                ]);
-                $created[] = $child;
+            // [#10] Seul le SOLDE physique restant est divisible (jamais la
+            // quantité historique totale déjà partiellement consommée).
+            $divisible = (float) $mother->remaining_weight;
+            if ($divisible <= 0) {
+                throw new \RuntimeException("Bobine {$mother->reference} : aucun solde divisible (entièrement consommée).");
             }
 
-            // [#3] La mère est TRANSFORMÉE (axe transformation), pas « dans une
-            // disposition qualité » : sa disposition qualité passe à NULL — elle
-            // appartient désormais aux bobines filles. Poids transféré aux filles.
+            // [#13] Idempotence durable par bobine mère.
+            $key = trim((string) ($opts['idempotency_key'] ?? ''));
+            if ($key !== '') {
+                $existing = DB::table('coil_split_operations')
+                    ->where('coil_id', $mother->id)->where('idempotency_key', $key)->first();
+                if ($existing) {
+                    return Coil::where('parent_coil_id', $mother->id)->orderBy('id')->get()->all();
+                }
+            }
+
+            $tolerance = (float) ($opts['tolerance'] ?? self::DEFAULT_WEIGHING_TOLERANCE);
+            $loss      = (float) ($opts['loss'] ?? 0);
+
+            // ── Réconciliation QUANTITÉ ──────────────────────────────────────
+            $sum = 0.0;
+            foreach ($children as $c) {
+                $w = (float) ($c['weight'] ?? 0);
+                if ($w <= 0) {
+                    throw new \RuntimeException('Division : poids de bobine fille nul ou négatif refusé.');
+                }
+                $sum += $w;
+            }
+            $ecart = ($sum + $scrap + $loss) - $divisible;
+            if (abs($ecart) > $tolerance) {
+                throw new \RuntimeException(sprintf(
+                    'Division de bobine %s : Σ filles (%s) + chutes (%s) + pertes (%s) = %s ≠ poids divisible mère (%s), '
+                    . 'écart %s au-delà de la tolérance de pesée (%s).',
+                    $mother->reference, $sum, $scrap, $loss, $sum + $scrap + $loss, $divisible, round($ecart, 4), $tolerance
+                ));
+            }
+
+            // ── Politique d'HÉRITAGE qualité des filles [#6] ─────────────────
+            $requiresQc = (bool) ($opts['requires_post_split_qc'] ?? false);
+
+            // ── Document de division (append-only) ───────────────────────────
+            $costPerKg      = (float) $mother->cost_per_kg;
+            $historicalCost = (int) $mother->purchase_price;
+            $operationId = DB::table('coil_split_operations')->insertGetId([
+                'company_id'                   => $mother->company_id,
+                'coil_id'                      => $mother->id,
+                'number'                       => 'DIV-' . $mother->reference . '-' . now()->format('YmdHis'),
+                'mother_qty_before'            => $divisible,
+                'mother_quality_status_before' => $mother->quality_status,
+                'mother_cost_per_kg'           => $costPerKg,
+                'mother_historical_cost'       => $historicalCost,
+                'allocation_method'            => 'proportion_poids',
+                'weighing_tolerance'           => $tolerance,
+                'scrap_qty'                    => $scrap,
+                'loss_qty'                     => $loss,
+                'scrap_value'                  => (int) round($scrap * $costPerKg),
+                'loss_value'                   => (int) round($loss * $costPerKg),
+                'requires_post_split_quality_control' => $requiresQc,
+                'reason'                       => $reason,
+                'created_by'                   => Auth::id(),
+                'idempotency_key'              => $key !== '' ? $key : null,
+                'calculation_hash'             => hash('sha256', json_encode([$mother->id, $divisible, $children, $scrap, $loss])),
+                'created_at'                   => now(),
+                'updated_at'                   => now(),
+            ]);
+
+            // ── Création des filles ──────────────────────────────────────────
+            $created = [];
+            $i = 0;
+            $transferredCost = 0;
+            foreach ($children as $c) {
+                $weight = (float) $c['weight'];
+                $i++;
+                $status = $this->childQualityStatus($mother, $c['quality_status'] ?? null, $requiresQc);
+                // Coût transféré au prorata du poids (méthode figée sur l'opération).
+                $childCost = (int) round($weight * $costPerKg);
+                $transferredCost += $childCost;
+
+                $child = Coil::create([
+                    'company_id'       => $mother->company_id,
+                    'product_id'       => $mother->product_id,
+                    'supplier_id'      => $mother->supplier_id,
+                    'reception_id'     => $mother->reception_id,
+                    'warehouse_id'     => $mother->warehouse_id,
+                    'stock_lot_id'     => $mother->stock_lot_id,
+                    'parent_coil_id'   => $mother->id,
+                    'reference'        => $c['reference'] ?? ($mother->reference . '-' . $i),
+                    'lot_number'       => $mother->lot_number,
+                    'initial_weight'   => $weight,
+                    'remaining_weight' => $weight,
+                    // Coût TRANSFÉRÉ de la mère — jamais recalculé au CMP courant.
+                    'cost_per_kg'      => $mother->cost_per_kg,
+                    'purchase_price'   => $childCost,
+                    'received_at'      => $mother->received_at,
+                    'status'           => 'disponible',
+                    'quality_status'   => $status,
+                    'transformation_status' => Coil::TRANSFO_INTACT,
+                    'qty_released'     => $status === Coil::QUALITY_RELEASED ? $weight : 0,
+                    'qty_quarantine'   => $status === Coil::QUALITY_QUARANTINED ? $weight : 0,
+                    'qty_rejected'     => $status === Coil::QUALITY_REJECTED ? $weight : 0,
+                    'created_by'       => Auth::id(),
+                ]);
+                $created[] = $child;
+
+                DB::table('coil_split_operation_items')->insert([
+                    'split_operation_id'  => $operationId,
+                    'child_coil_id'       => $child->id,
+                    'weight'              => $weight,
+                    'transferred_cost'    => $childCost,
+                    'quality_disposition' => $status,
+                    'warehouse_id'        => $child->warehouse_id,
+                    'sort_order'          => $i,
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
+                ]);
+            }
+
+            // ── Réconciliation VALEUR [#3/#6] ────────────────────────────────
+            // coût historique mère = Σ coûts filles + chutes + pertes + arrondi
+            $scrapValue = (int) round($scrap * $costPerKg);
+            $lossValue  = (int) round($loss * $costPerKg);
+            $rounding   = $historicalCost - ($transferredCost + $scrapValue + $lossValue);
+            DB::table('coil_split_operations')->where('id', $operationId)
+                ->update(['rounding_difference' => $rounding]);
+
+            // ── Clôture LOGISTIQUE de la mère — historique PRÉSERVÉ ──────────
             $mother->update([
-                'transformation_status' => Coil::TRANSFO_SPLIT,
-                'quality_status'   => null,
-                'remaining_weight' => 0,
-                'status'           => 'epuisee',
-                'qty_quarantine'   => 0,
-                'qty_released'     => 0,
-                'notes'            => trim(($mother->notes ?? '') . "\n" . sprintf(
-                    '[DIVISION %s] %d fille(s), chutes %s. %s',
-                    now()->format('d/m/Y H:i'), count($created), $scrap, $reason ?? ''
+                'transformation_status'                => Coil::TRANSFO_SPLIT,
+                // statut qualité CONSERVÉ + figé explicitement
+                'quality_status_before_transformation' => $mother->quality_status,
+                'transferred_to_children_qty'          => $sum,
+                'transformed_at'                       => now(),
+                'transformed_by'                       => Auth::id(),
+                // soldes ACTIFS à zéro (la matière est passée aux filles)
+                'remaining_weight'                     => 0,
+                'qty_quarantine'                       => 0,
+                'qty_released'                         => 0,
+                'status'                               => 'epuisee',
+                // initial_weight, cost_per_kg, purchase_price : INCHANGÉS
+                'notes' => trim(($mother->notes ?? '') . "\n" . sprintf(
+                    '[DIVISION %s] %d fille(s), chutes %s, pertes %s. %s',
+                    now()->format('d/m/Y H:i'), count($created), $scrap, $loss, $reason ?? ''
                 )),
             ]);
 
             app(AuditService::class)->log('bobine.division', $mother, [], [
-                'filles'  => array_map(fn ($c) => ['ref' => $c->reference, 'poids' => (float) $c->initial_weight, 'qualite' => $c->quality_status], $created),
-                'chutes'  => $scrap,
-                'motif'   => $reason,
+                'operation'        => $operationId,
+                'qte_divisible'    => $divisible,
+                'filles'           => array_map(fn ($c) => ['ref' => $c->reference, 'poids' => (float) $c->initial_weight, 'qualite' => $c->quality_status], $created),
+                'chutes'           => $scrap,
+                'pertes'           => $loss,
+                'cout_transfere'   => $transferredCost,
+                'ecart_arrondi'    => $rounding,
+                'statut_avant'     => $mother->quality_status_before_transformation,
+                'motif'            => $reason,
             ]);
 
             return $created;
         });
+    }
+
+    /**
+     * [#6] Politique CENTRALE d'héritage du statut qualité des filles —
+     * l'appelant ne choisit pas librement :
+     *   mère libérée   → filles libérées, SAUF si un contrôle post-division est
+     *                    requis (refendage, découpe de zone défectueuse…) → quarantaine ;
+     *   mère quarantaine → filles en quarantaine (jamais libérées automatiquement) ;
+     *   mère refusée   → division déjà bloquée en amont ;
+     *   mère inconnue  → filles en quarantaine (jamais libérées automatiquement).
+     * Un statut demandé ne peut qu'être PLUS restrictif que la politique.
+     */
+    private function childQualityStatus(Coil $mother, ?string $requested, bool $requiresQc): string
+    {
+        $policy = match (true) {
+            $mother->quality_status === Coil::QUALITY_RELEASED && ! $requiresQc => Coil::QUALITY_RELEASED,
+            default => Coil::QUALITY_QUARANTINED, // quarantaine, inconnu, ou contrôle requis
+        };
+
+        // Le demandeur peut durcir (quarantaine/refus), jamais assouplir.
+        if ($requested !== null && $requested !== $policy) {
+            $moreRestrictive = [Coil::QUALITY_QUARANTINED, Coil::QUALITY_REJECTED];
+            if (in_array($requested, $moreRestrictive, true)) {
+                return $requested;
+            }
+            throw new \RuntimeException(sprintf(
+                'Division : disposition « %s » demandée pour une fille alors que la politique '
+                . 'd\'héritage impose « %s » (mère : %s). Une fille ne peut pas être moins '
+                . 'restrictive que sa mère.',
+                $requested, $policy, $mother->quality_status ?? 'inconnu'
+            ));
+        }
+
+        return $policy;
     }
 }

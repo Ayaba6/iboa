@@ -59,6 +59,7 @@ class Coil extends Model
         'initial_weight', 'remaining_weight', 'estimated_length', 'purchase_price', 'cost_per_kg',
         'received_at', 'status', 'quality_status', 'quality_decision_id', 'notes', 'created_by', 'stock_lot_id', 'kg_per_linear_meter',
         'qty_released', 'qty_quarantine', 'qty_rejected', 'qty_return_pending', 'qty_returned', 'parent_coil_id', 'transformation_status',
+        'quality_status_before_transformation', 'transferred_to_children_qty', 'transformed_at', 'transformed_by',
         // [Maquette Bobine] réception + caractéristiques + gestion
         'supplier_reference', 'warehouse_id', 'site', 'bl_number', 'origine', 'devise',
         'nuance', 'gross_weight', 'inner_diameter', 'outer_diameter', 'coating', 'surface_finish',

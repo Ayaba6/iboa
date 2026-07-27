@@ -308,30 +308,50 @@ it('DIVISION PHYSIQUE : bobine mère → filles traçables, poids réconciliés,
         'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
     ]);
 
-    // Découpe réelle : 70 conformes + 25 non conformes + 5 chutes = 100.
+    // Mère LIBÉRÉE avant division (statut historique à préserver).
+    $mother->update(['quality_status' => Coil::QUALITY_RELEASED, 'qty_released' => 100, 'qty_quarantine' => 0]);
+
+    // Découpe réelle : 70 + 25 filles + 5 chutes = 100.
     $children = app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [
-        ['weight' => 70, 'quality_status' => Coil::QUALITY_RELEASED],
-        ['weight' => 25, 'quality_status' => Coil::QUALITY_REJECTED],
+        ['weight' => 70],
+        ['weight' => 25, 'quality_status' => Coil::QUALITY_REJECTED], // durcissement autorisé
     ], 5.0, 'Rives abîmées sur une partie du refendage');
 
+    $m = $mother->fresh();
     expect($children)->toHaveCount(2)
-        // [#3] Mère : axe TRANSFORMATION = divisée ; disposition qualité NULL
-        // (elle appartient aux filles) ; poids transféré ; non consommable.
-        ->and($mother->fresh()->transformation_status)->toBe(Coil::TRANSFO_SPLIT)
-        ->and($mother->fresh()->quality_status)->toBeNull()
-        ->and($mother->fresh()->isQualityBlocked())->toBeTrue()
-        ->and($mother->fresh()->isSplit())->toBeTrue()
-        ->and((float) $mother->fresh()->remaining_weight)->toBe(0.0)
-        // Filles : disposition unique chacune + traçabilité vers la mère + coût transféré.
-        ->and($children[0]->quality_status)->toBe(Coil::QUALITY_RELEASED)
+        // [#3] Axe TRANSFORMATION = divisée.
+        ->and($m->transformation_status)->toBe(Coil::TRANSFO_SPLIT)
+        ->and($m->isSplit())->toBeTrue()
+        // [#1] HISTORIQUE QUALITÉ PRÉSERVÉ (jamais remis à NULL).
+        ->and($m->quality_status)->toBe(Coil::QUALITY_RELEASED)
+        ->and($m->quality_status_before_transformation)->toBe(Coil::QUALITY_RELEASED)
+        // [#2] POIDS HISTORIQUE PRÉSERVÉ ; seuls les soldes actifs à zéro.
+        ->and((float) $m->initial_weight)->toBe(100.0)
+        ->and((float) $m->remaining_weight)->toBe(0.0)
+        ->and((float) $m->transferred_to_children_qty)->toBe(95.0)
+        // [#3] COÛT HISTORIQUE PRÉSERVÉ.
+        ->and((float) $m->cost_per_kg)->toBe(500.0)
+        ->and((int) $m->purchase_price)->toBe(50000)
+        // Mère non consommable / non réservable.
+        ->and($m->isQualityBlocked())->toBeTrue()
+        // Filles : disposition unique, traçabilité, coût transféré (non recalculé).
+        ->and($children[0]->quality_status)->toBe(Coil::QUALITY_RELEASED) // héritage mère libérée
         ->and((float) $children[0]->initial_weight)->toBe(70.0)
         ->and((int) $children[0]->parent_coil_id)->toBe($mother->id)
         ->and((float) $children[0]->cost_per_kg)->toBe(500.0)
-        ->and($children[1]->quality_status)->toBe(Coil::QUALITY_REJECTED)
-        ->and((float) $children[1]->initial_weight)->toBe(25.0);
+        ->and((int) $children[0]->purchase_price)->toBe(35000)      // 70 × 500
+        ->and($children[1]->quality_status)->toBe(Coil::QUALITY_REJECTED);
 
-    // Réconciliation : Σ filles + chutes = poids mère.
-    expect((float) $children[0]->initial_weight + (float) $children[1]->initial_weight + 5.0)->toBe(100.0);
+    // [#4] Document de division append-only + réconciliation VALEUR.
+    $op = \Illuminate\Support\Facades\DB::table('coil_split_operations')->where('coil_id', $mother->id)->first();
+    expect($op)->not->toBeNull()
+        ->and((float) $op->mother_qty_before)->toBe(100.0)
+        ->and($op->mother_quality_status_before)->toBe(Coil::QUALITY_RELEASED)
+        ->and((int) $op->mother_historical_cost)->toBe(50000)
+        ->and((float) $op->scrap_qty)->toBe(5.0)
+        ->and((int) $op->scrap_value)->toBe(2500)                    // 5 × 500
+        ->and((int) $op->rounding_difference)->toBe(0);              // 35000+12500+2500 = 50000
+    expect(\Illuminate\Support\Facades\DB::table('coil_split_operation_items')->where('split_operation_id', $op->id)->count())->toBe(2);
 
     // La fille conforme est consommable ; la fille refusée ne l'est pas.
     $of = makeOf($ctx);
@@ -339,6 +359,89 @@ it('DIVISION PHYSIQUE : bobine mère → filles traçables, poids réconciliés,
     expect((float) $children[0]->fresh()->remaining_weight)->toBe(40.0);
     expect(fn () => app(CoilConsumptionService::class)->consume($of, $children[1]->fresh(), 5.0, null, null))
         ->toThrow(\Illuminate\Validation\ValidationException::class);
+});
+
+it('HÉRITAGE : mère en quarantaine → filles en quarantaine, jamais libérées automatiquement', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-H1-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+    $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
+
+    // Demander « libéré » pour une fille d'une mère en quarantaine → refus.
+    expect(fn () => $svc->split($mother, [['weight' => 100, 'quality_status' => Coil::QUALITY_RELEASED]], 0.0))
+        ->toThrow(\RuntimeException::class, 'moins restrictive');
+
+    // Sans demande : la politique impose la quarantaine.
+    $children = $svc->split($mother->fresh(), [['weight' => 60], ['weight' => 40]], 0.0);
+    expect($children[0]->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
+        ->and($children[1]->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
+        // Statut historique de la mère conservé.
+        ->and($mother->fresh()->quality_status)->toBe(Coil::QUALITY_QUARANTINED);
+});
+
+it('HÉRITAGE : contrôle post-division requis → filles en quarantaine même si mère libérée', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-H2-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_RELEASED,
+        'qty_released' => 100, 'qty_quarantine' => 0, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+
+    $children = app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 100]], 0.0, 'Refendage', ['requires_post_split_qc' => true]);
+
+    expect($children[0]->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
+        ->and($children[0]->isQualityBlocked())->toBeTrue();
+    $op = \Illuminate\Support\Facades\DB::table('coil_split_operations')->where('coil_id', $mother->id)->first();
+    expect((bool) $op->requires_post_split_quality_control)->toBeTrue();
+});
+
+it('DIVISION : bobine REFUSÉE non divisible sans contre-décision', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-R-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_REJECTED,
+        'qty_released' => 0, 'qty_quarantine' => 0, 'qty_rejected' => 100,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+
+    expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 100]], 0.0))
+        ->toThrow(\RuntimeException::class, 'contre-décision');
+});
+
+it('DIVISION après consommation partielle : seul le SOLDE restant est divisible', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-P-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 60, // 40 déjà consommés
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_RELEASED,
+        'qty_released' => 100, 'qty_quarantine' => 0, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+    $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
+
+    // Diviser 100 (quantité historique) → refus : seul le solde 60 est divisible.
+    expect(fn () => $svc->split($mother, [['weight' => 100]], 0.0))
+        ->toThrow(\RuntimeException::class, 'divisible');
+
+    // 60 = solde restant → accepté ; poids historique inchangé.
+    $children = $svc->split($mother->fresh(), [['weight' => 60]], 0.0);
+    expect((float) $children[0]->initial_weight)->toBe(60.0)
+        ->and((float) $mother->fresh()->initial_weight)->toBe(100.0)   // historique intact
+        ->and((float) $mother->fresh()->transferred_to_children_qty)->toBe(60.0);
 });
 
 it('DIVISION : seconde division de la même mère REFUSÉE (opération incompatible)', function () {
@@ -353,11 +456,12 @@ it('DIVISION : seconde division de la même mère REFUSÉE (opération incompati
     ]);
     $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
 
-    $svc->split($mother, [['weight' => 100, 'quality_status' => Coil::QUALITY_RELEASED]], 0.0);
+    // Mère en quarantaine → filles en quarantaine (politique d'héritage).
+    $svc->split($mother, [['weight' => 100]], 0.0);
     expect($mother->fresh()->transformation_status)->toBe(Coil::TRANSFO_SPLIT);
 
     // Seconde division : refusée (déjà divisée + filles existantes).
-    expect(fn () => $svc->split($mother->fresh(), [['weight' => 50, 'quality_status' => Coil::QUALITY_RELEASED]], 50.0))
+    expect(fn () => $svc->split($mother->fresh(), [['weight' => 50]], 50.0))
         ->toThrow(\RuntimeException::class);
     expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(1);
 });
@@ -374,8 +478,8 @@ it('DIVISION : poids non réconciliés → refus (Σ filles + chutes ≠ poids m
     ]);
 
     expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [
-        ['weight' => 70, 'quality_status' => Coil::QUALITY_RELEASED],
-    ], 5.0))->toThrow(\RuntimeException::class, 'poids mère');
+        ['weight' => 70],
+    ], 5.0))->toThrow(\RuntimeException::class, 'tolérance de pesée');
 
     expect($mother->fresh()->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
         ->and((float) $mother->fresh()->remaining_weight)->toBe(100.0);

@@ -31,11 +31,21 @@ return new class extends Migration
             }
         });
 
-        // Reprise : 'split' n'est plus une disposition qualité.
-        DB::table('coils')->where('quality_status', 'split')->update([
-            'transformation_status' => 'divisee',
-            'quality_status'        => null,
-        ]);
+        // Reprise : 'split' n'est plus une disposition qualité — il migre vers
+        // l'axe transformation. Le statut qualité antérieur n'étant PAS prouvable
+        // pour ces lignes (l'information avait été écrasée), il reste NULL =
+        // INCONNU. On n'invente jamais « libéré ». Un rapport est journalisé.
+        $rows = DB::table('coils')->where('quality_status', 'split')->get(['id', 'reference']);
+        if ($rows->isNotEmpty()) {
+            DB::table('coils')->where('quality_status', 'split')->update([
+                'transformation_status' => 'divisee',
+                'quality_status'        => null, // inconnu : aucune preuve du statut antérieur
+            ]);
+            logger()->warning('[Division] Bobines reclassées split → transformation_status=divisee ; statut qualité antérieur NON prouvable, laissé à NULL (inconnu).', [
+                'nombre'  => $rows->count(),
+                'bobines' => $rows->pluck('reference')->all(),
+            ]);
+        }
     }
 
     public function down(): void
