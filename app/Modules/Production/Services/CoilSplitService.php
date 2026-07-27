@@ -117,7 +117,10 @@ class CoilSplitService
             $lossValue = (int) round($loss * (float) $mother->cost_per_kg);
             $seuilVal  = (int) config('security.maker_checker.coil_split.loss_value_threshold', 50000);
             $seuilQty  = (float) config('security.maker_checker.coil_split.loss_qty_threshold', 50);
-            if ($loss > 0 && ($lossValue > $seuilVal || $loss > $seuilQty)) {
+            // `approved` : l'approbation a déjà été tracée sur une PROPOSITION
+            // persistée (CoilSplitProposalService) — on ne redemande pas ici.
+            $alreadyApproved = (bool) ($opts['approved'] ?? false);
+            if (! $alreadyApproved && $loss > 0 && ($lossValue > $seuilVal || $loss > $seuilQty)) {
                 $this->assertCan('coils.split.approve_loss', sprintf(
                     'approuver une perte de %s kg (%s FCFA) sur la division de la bobine %s',
                     $loss, $lossValue, $mother->reference
@@ -299,15 +302,10 @@ class CoilSplitService
      */
     private function assertCan(string $permission, string $action): void
     {
-        $user = Auth::user();
-        if (! $user) {
-            return;
-        }
-        if (! $user->can($permission)) {
-            throw new \RuntimeException(sprintf(
-                'Permission « %s » requise pour %s.', $permission, $action
-            ));
-        }
+        // [#1] Délégué au contexte d'exécution : l'absence d'utilisateur n'autorise
+        // RIEN — un traitement automatique doit déclarer un acteur système autorisé
+        // (ExecutionContext::asSystem), sinon l'exécution est refusée.
+        \App\Services\ExecutionContext::assertCan($permission, $action);
     }
 
     /**
