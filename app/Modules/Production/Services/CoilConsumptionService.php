@@ -64,6 +64,23 @@ class CoilConsumptionService
                 ),
             ]);
         }
+
+        // [Qualité #1/#2] Garde QUANTITATIVE : un statut « libéré partiellement »
+        // n'autorise rien à lui seul. On compare la demande au solde réellement
+        // libéré et non encore consommé/retourné.
+        if ($coil->hasQualityBalances()) {
+            $availableReleased = $coil->availableReleasedQuantity();
+            if ($weight > $availableReleased + 0.001) {
+                throw ValidationException::withMessages([
+                    'quality' => sprintf(
+                        'Bobine %s : %s demandé mais seulement %s libéré et disponible '
+                        . '(libéré %s, quarantaine %s). La quarantaine doit être libérée par la qualité.',
+                        $coil->reference, $weight, round($availableReleased, 3),
+                        (float) $coil->qty_released, (float) ($coil->qty_quarantine ?? 0)
+                    ),
+                ]);
+            }
+        }
         if ($weight > (float) $coil->remaining_weight + 0.001) {
             throw ValidationException::withMessages([
                 'weight' => 'Poids demandé ('.$weight.' kg) supérieur au restant de la bobine ('.$coil->remaining_weight.' kg).',
@@ -87,6 +104,15 @@ class CoilConsumptionService
             if ($weight > (float) $coil->remaining_weight + 0.001) {
                 throw ValidationException::withMessages([
                     'weight' => 'Poids demandé supérieur au restant de la bobine (concurrence).',
+                ]);
+            }
+            // [Qualité #2] Recontrôle SOUS VERROU du solde libéré : deux
+            // consommations concurrentes ne peuvent pas dépasser ensemble la
+            // quantité libérée (la perdante lit l'état commité par la gagnante).
+            if ($coil->isQualityBlocked() || ($coil->hasQualityBalances()
+                && $weight > $coil->availableReleasedQuantity() + 0.001)) {
+                throw ValidationException::withMessages([
+                    'quality' => 'Solde libéré par la qualité insuffisant pour cette consommation (concurrence).',
                 ]);
             }
 

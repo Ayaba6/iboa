@@ -48,6 +48,7 @@ class Coil extends Model
         'company_id', 'product_id', 'supplier_id', 'reception_id', 'reference', 'lot_number', 'color', 'thickness', 'width',
         'initial_weight', 'remaining_weight', 'estimated_length', 'purchase_price', 'cost_per_kg',
         'received_at', 'status', 'quality_status', 'quality_decision_id', 'notes', 'created_by', 'stock_lot_id', 'kg_per_linear_meter',
+        'qty_released', 'qty_quarantine', 'qty_rejected', 'qty_return_pending', 'qty_returned',
         // [Maquette Bobine] réception + caractéristiques + gestion
         'supplier_reference', 'warehouse_id', 'site', 'bl_number', 'origine', 'devise',
         'nuance', 'gross_weight', 'inner_diameter', 'outer_diameter', 'coating', 'surface_finish',
@@ -74,6 +75,35 @@ class Coil extends Model
     {
         return $this->quality_status !== null
             && in_array($this->quality_status, self::QUALITY_BLOCKING, true);
+    }
+
+    /**
+     * [Qualité #1] La bobine porte-t-elle des soldes quantitatifs par disposition ?
+     * (false = bobine historique/non qualifiée : garde quantitative inapplicable,
+     * seule la garde de poids restant s'applique — signalé par l'audit.)
+     */
+    public function hasQualityBalances(): bool
+    {
+        return $this->qty_released !== null || $this->qty_quarantine !== null;
+    }
+
+    /**
+     * [Qualité #1/#2] Quantité RÉELLEMENT consommable :
+     *   dispo = libéré − consommé − retourné depuis le libéré
+     * où consommé = poids initial − poids restant. Un statut « libéré
+     * partiellement » n'autorise JAMAIS à lui seul la consommation : c'est ce
+     * solde qui fait foi.
+     */
+    public function availableReleasedQuantity(): float
+    {
+        if (! $this->hasQualityBalances()) {
+            return (float) $this->remaining_weight; // héritage : pas de solde qualité
+        }
+        $released = (float) ($this->qty_released ?? 0);
+        $consumed = max(0.0, (float) $this->initial_weight - (float) $this->remaining_weight);
+        $returned = (float) ($this->qty_returned ?? 0);
+
+        return max(0.0, $released - $consumed - $returned);
     }
 
     public function company(): BelongsTo

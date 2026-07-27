@@ -175,11 +175,11 @@ class PurchaseQualityService
                 },
             ]);
 
-            // 6bis. [#11] Propagation du statut qualité au LOT et aux BOBINES de la
-            // réception : la quarantaine est une disposition transversale, pas
-            // seulement un emplacement. Après décision, le reliquat de quarantaine
-            // détermine le statut (libéré / partiellement libéré / refusé).
-            $this->propagateQualityStatus($item, $type, (float) ($quarBefore - $qty), $decision->id);
+            // 6bis. [#5] Propagation CIBLÉE : la décision ne met à jour que les
+            // bobines/lots explicitement visés (`targets`), avec une quantité par
+            // cible, tracée dans purchase_quality_decision_allocations. Sans cible,
+            // AUCUNE bobine n'est touchée (la décision reste au niveau de la ligne).
+            $this->allocateToTargets($item, $decision, $type, (array) ($opts['targets'] ?? []));
 
             // 7. Agrégat commande (cache réconciliable).
             if ($isAcceptance && $item->purchase_order_item_id && ($poItem = $item->purchaseOrderItem)) {
@@ -200,29 +200,99 @@ class PurchaseQualityService
     }
 
     /**
-     * [#11] Propage la disposition qualité vers le lot et les bobines liés à la
-     * ligne de réception. Statut dérivé de l'état APRÈS décision :
-     *   - quarantaine restante > 0        → PARTIAL_RELEASE (une part reste bloquée) ;
-     *   - plus de quarantaine, acceptation → RELEASED ;
-     *   - plus de quarantaine, refus       → REJECTED (retour fournisseur attendu).
+     * [#5/#1] Applique la décision aux cibles EXPLICITES (bobines / lots), avec
+     * une quantité par cible et des soldes quantitatifs mis à jour. Chaque cible
+     * produit une ligne d'allocation (append-only) portant disposition avant/après.
+     *
+     * Format attendu : $targets = [['coil_id' => 12, 'quantity' => 40], ['stock_lot_id' => 3, 'quantity' => 10]]
+     * Aucune cible ⇒ aucune bobine/lot modifié (jamais de mise à jour en bloc).
+     *
+     * @throws \RuntimeException si la somme des cibles dépasse la quantité décidée
      */
-    private function propagateQualityStatus(ReceptionItem $item, string $type, float $quarantineAfter, int $decisionId): void
+    private function allocateToTargets(ReceptionItem $item, PurchaseQualityDecision $decision, string $type, array $targets): void
     {
+        if ($targets === []) {
+            return;
+        }
         $isAcceptance = in_array($type, ['release', 'derogation_acceptance'], true);
-        $status = $quarantineAfter > 0.0001
-            ? \App\Modules\Production\Models\Coil::QUALITY_PARTIAL_RELEASE
-            : ($isAcceptance
-                ? \App\Modules\Production\Models\Coil::QUALITY_RELEASED
-                : \App\Modules\Production\Models\Coil::QUALITY_REJECTED);
+        $sum = 0.0;
+        foreach ($targets as $t) {
+            $sum += (float) ($t['quantity'] ?? 0);
+        }
+        if ($sum > (float) $decision->quantity + 0.0001) {
+            throw new \RuntimeException(sprintf(
+                'Allocations qualité (%s) supérieures à la quantité décidée (%s).',
+                $sum, $decision->quantity
+            ));
+        }
 
-        \App\Modules\Production\Models\Coil::where('reception_id', $item->reception_id)
-            ->where('product_id', $item->product_id)
-            ->update(['quality_status' => $status, 'quality_decision_id' => $decisionId]);
+        foreach ($targets as $t) {
+            $qty = (float) ($t['quantity'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
 
-        \App\Models\StockLot::where('source_type', \App\Models\Reception::class)
-            ->where('source_id', $item->reception_id)
-            ->where('product_id', $item->product_id)
-            ->update(['quality_status' => $status]);
+            $coil = isset($t['coil_id'])
+                ? \App\Modules\Production\Models\Coil::lockForUpdate()->find($t['coil_id'])
+                : null;
+            $lot = isset($t['stock_lot_id'])
+                ? \App\Models\StockLot::lockForUpdate()->find($t['stock_lot_id'])
+                : null;
+
+            $before = $coil?->quality_status ?? $lot?->quality_status;
+
+            if ($coil) {
+                $quarBefore = (float) ($coil->qty_quarantine ?? 0);
+                if ($qty > $quarBefore + 0.0001) {
+                    throw new \RuntimeException(sprintf(
+                        'Bobine %s : décision de %s supérieure à sa quarantaine (%s).',
+                        $coil->reference, $qty, $quarBefore
+                    ));
+                }
+                $quarAfter = $quarBefore - $qty;
+                $coil->update([
+                    'qty_quarantine'      => $quarAfter,
+                    'qty_released'        => $isAcceptance ? (float) ($coil->qty_released ?? 0) + $qty : (float) ($coil->qty_released ?? 0),
+                    'qty_rejected'        => $isAcceptance ? (float) ($coil->qty_rejected ?? 0) : (float) ($coil->qty_rejected ?? 0) + $qty,
+                    'quality_status'      => $this->statusFor($isAcceptance, $quarAfter),
+                    'quality_decision_id' => $decision->id, // dernière décision (l'historique reste dans les allocations)
+                ]);
+            }
+            if ($lot) {
+                $quarBefore = (float) ($lot->qty_quarantine ?? 0);
+                $quarAfter  = max(0.0, $quarBefore - $qty);
+                $lot->update([
+                    'qty_quarantine' => $quarAfter,
+                    'qty_released'   => $isAcceptance ? (float) ($lot->qty_released ?? 0) + $qty : (float) ($lot->qty_released ?? 0),
+                    'qty_rejected'   => $isAcceptance ? (float) ($lot->qty_rejected ?? 0) : (float) ($lot->qty_rejected ?? 0) + $qty,
+                    'quality_status' => $this->statusFor($isAcceptance, $quarAfter),
+                ]);
+            }
+
+            DB::table('purchase_quality_decision_allocations')->insert([
+                'quality_decision_id' => $decision->id,
+                'reception_item_id'   => $item->id,
+                'stock_lot_id'        => $lot?->id,
+                'coil_id'             => $coil?->id,
+                'quantity'            => $qty,
+                'unit'                => 'KG',
+                'disposition_before'  => $before,
+                'disposition_after'   => $this->statusFor($isAcceptance, $coil ? (float) $coil->fresh()->qty_quarantine : 0.0),
+                'created_at'          => now(),
+                'updated_at'          => now(),
+            ]);
+        }
+    }
+
+    private function statusFor(bool $isAcceptance, float $quarantineAfter): string
+    {
+        if ($quarantineAfter > 0.0001) {
+            return \App\Modules\Production\Models\Coil::QUALITY_PARTIAL_RELEASE;
+        }
+
+        return $isAcceptance
+            ? \App\Modules\Production\Models\Coil::QUALITY_RELEASED
+            : \App\Modules\Production\Models\Coil::QUALITY_REJECTED;
     }
 
     /**

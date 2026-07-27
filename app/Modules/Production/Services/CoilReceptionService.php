@@ -120,12 +120,26 @@ class CoilReceptionService
                             ? Coil::QUALITY_RELEASED
                             : Coil::QUALITY_PARTIAL_RELEASE);
                 }
+                // [Qualité #1] Soldes QUANTITATIFS par disposition (NULL si la
+                // disposition est inconnue — aucun solde inventé).
+                $balAccepted   = $qualityStatus === null ? null : (float) $qAccepted;
+                $balQuarantine = $qualityStatus === null ? null : (float) $qQuarantine;
+                $balRejected   = $qualityStatus === null ? null : (float) $item->rejected_quantity;
+
                 if ($lot) {
-                    $lot->update(['quality_status' => $qualityStatus]);
+                    $lot->update([
+                        'quality_status' => $qualityStatus,
+                        'qty_released'   => $balAccepted,
+                        'qty_quarantine' => $balQuarantine,
+                        'qty_rejected'   => $balRejected,
+                    ]);
                 }
 
                 $coil = Coil::create([
                     'quality_status' => $qualityStatus,
+                    'qty_released'   => $balAccepted,
+                    'qty_quarantine' => $balQuarantine,
+                    'qty_rejected'   => $balRejected,
                     'company_id' => $reception->company_id,
                     'product_id' => $item->product_id,
                     'supplier_id' => $reception->supplier_id,
