@@ -208,7 +208,7 @@ class CuttingController extends Controller
     {
         return [
             'optimization' => $opt,
-            'coils'        => \App\Modules\Production\Models\Coil::where('status', '!=', 'epuisee')->where('valuation_status', 'valorisation_definitive')->where('cost_per_kg', '>', 0)->orderByDesc('received_at')->get(['id', 'reference', 'width', 'thickness']),
+            'coils'        => \App\Modules\Production\Models\Coil::usableAsMaterial()->where('valuation_status', 'valorisation_definitive')->where('cost_per_kg', '>', 0)->orderByDesc('received_at')->get(['id', 'reference', 'width', 'thickness']),
             'products'     => \App\Models\Product::orderBy('name')->get(['id', 'name', 'reference']),
             'lines'        => \App\Modules\Production\Models\ProductionLine::orderBy('name')->get(['id', 'code', 'name']),
         ];

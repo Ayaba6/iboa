@@ -100,6 +100,94 @@ class Coil extends Model
         return $this->transformation_status === self::TRANSFO_SPLIT;
     }
 
+    // -------------------------------------------------------------------------
+    // [#1] État OPÉRATIONNEL centralisé — ne jamais tester `quality_status` ou
+    // `status` directement pour décider d'un usage matière. Une mère divisée peut
+    // rester historiquement « libérée » tout en étant inutilisable.
+    // -------------------------------------------------------------------------
+
+    /** Statut QUALITÉ (historique) : la bobine a-t-elle été libérée ? */
+    public function isQualityReleased(): bool
+    {
+        return $this->quality_status === self::QUALITY_RELEASED;
+    }
+
+    /**
+     * La bobine est-elle OPÉRATIONNELLEMENT active (utilisable comme matière) ?
+     * Faux si divisée/transformée, bloquée qualité, épuisée ou sans solde.
+     */
+    public function isOperationallyActive(): bool
+    {
+        return ! $this->isQualityBlocked()
+            && $this->status !== 'epuisee'
+            && (float) $this->remaining_weight > 0;
+    }
+
+    public function isConsumable(): bool
+    {
+        return $this->isOperationallyActive();
+    }
+
+    public function isReservable(): bool
+    {
+        return $this->isOperationallyActive();
+    }
+
+    public function isTransferable(): bool
+    {
+        return $this->isOperationallyActive();
+    }
+
+    /** Quantité réellement disponible (0 si non opérationnelle). */
+    public function availableQuantity(): float
+    {
+        if (! $this->isOperationallyActive()) {
+            return 0.0;
+        }
+
+        return $this->hasQualityBalances()
+            ? $this->availableReleasedQuantity()
+            : (float) $this->remaining_weight;
+    }
+
+    /**
+     * [#3] Valeur ACTIVE en stock — distincte du coût HISTORIQUE (purchase_price,
+     * conservé même après division). Une mère divisée vaut 0 en stock actif : sa
+     * valeur a été transférée aux filles. Les états de stock/valorisation doivent
+     * sommer CECI, jamais purchase_price.
+     */
+    public function activeInventoryValue(): float
+    {
+        if (! $this->isOperationallyActive()) {
+            return 0.0;
+        }
+
+        return (float) $this->remaining_weight * (float) $this->cost_per_kg;
+    }
+
+    /** Coût historique d'acquisition — jamais modifié par une transformation. */
+    public function historicalTotalCost(): int
+    {
+        return (int) $this->purchase_price;
+    }
+
+    /**
+     * Scope des bobines utilisables comme matière (sélecteurs OF, réservation,
+     * découpe, MRP, tableaux de bord…). Exclut les divisées/transformées, les
+     * bloquées qualité et les épuisées.
+     */
+    public function scopeUsableAsMaterial($query)
+    {
+        return $query->where('status', '!=', 'epuisee')
+            ->where('remaining_weight', '>', 0)
+            // non divisée / non transformée (NULL = historique intacte)
+            ->where(fn ($q) => $q->whereNull('transformation_status')
+                ->orWhere('transformation_status', self::TRANSFO_INTACT))
+            // non bloquée qualité (NULL = historique, non bloquant)
+            ->where(fn ($q) => $q->whereNull('quality_status')
+                ->orWhereNotIn('quality_status', self::QUALITY_BLOCKING));
+    }
+
     /**
      * [Qualité #1] La bobine porte-t-elle des soldes quantitatifs par disposition ?
      * (false = bobine historique/non qualifiée : garde quantitative inapplicable,

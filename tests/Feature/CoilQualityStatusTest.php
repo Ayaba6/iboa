@@ -361,6 +361,51 @@ it('DIVISION PHYSIQUE : bobine mère → filles traçables, poids réconciliés,
         ->toThrow(\Illuminate\Validation\ValidationException::class);
 });
 
+it('TRANSVERSE : mère libérée MAIS divisée — exclue des sélecteurs matière et de la valeur active', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-T-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_RELEASED,
+        'valuation_status' => 'valorisation_definitive',
+        'qty_released' => 100, 'qty_quarantine' => 0, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+
+    // Avant division : utilisable, valeur active 50 000.
+    expect(Coil::usableAsMaterial()->pluck('id')->contains($mother->id))->toBeTrue()
+        ->and($mother->isConsumable())->toBeTrue()
+        ->and($mother->activeInventoryValue())->toBe(50000.0);
+
+    $children = app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 100]], 0.0);
+    $m = $mother->fresh();
+    $children[0]->update(['valuation_status' => 'valorisation_definitive']);
+
+    // Après division : historiquement LIBÉRÉE, mais opérationnellement inactive.
+    expect($m->isQualityReleased())->toBeTrue()          // historique conservé
+        ->and($m->isOperationallyActive())->toBeFalse()  // mais inutilisable
+        ->and($m->isConsumable())->toBeFalse()
+        ->and($m->isReservable())->toBeFalse()
+        ->and($m->isTransferable())->toBeFalse()
+        ->and($m->availableQuantity())->toBe(0.0)
+        // [#3] Pas de double valorisation : valeur ACTIVE nulle, coût HISTORIQUE conservé.
+        ->and($m->activeInventoryValue())->toBe(0.0)
+        ->and($m->historicalTotalCost())->toBe(50000)
+        // Absente des sélecteurs matière ; la fille les remplace.
+        ->and(Coil::usableAsMaterial()->pluck('id')->contains($mother->id))->toBeFalse()
+        ->and(Coil::usableAsMaterial()->pluck('id')->contains($children[0]->id))->toBeTrue();
+
+    // Valeur active totale = celle des filles seulement (pas mère + filles).
+    $valeurActive = Coil::usableAsMaterial()->get()->sum(fn ($c) => $c->activeInventoryValue());
+    expect($valeurActive)->toBe(50000.0); // et non 100 000
+
+    // Mère toujours visible en généalogie/traçabilité.
+    expect(Coil::find($mother->id))->not->toBeNull()
+        ->and(Coil::where('parent_coil_id', $mother->id)->count())->toBe(1);
+});
+
 it('HÉRITAGE : mère en quarantaine → filles en quarantaine, jamais libérées automatiquement', function () {
     $ctx = coilQualSetup(0, 100);
     [$co, $wh, $p, $rec] = $ctx;
