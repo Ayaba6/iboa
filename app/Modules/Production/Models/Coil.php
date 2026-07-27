@@ -21,10 +21,33 @@ class Coil extends Model
 {
     use HasCompanyScope, HasCreator, HasFactory, SoftDeletes;
 
+    /**
+     * [Qualité #11] Statuts QUALITÉ (distincts du statut logistique `status`).
+     * NULL = inconnu (bobine historique) — jamais interprété comme « libéré ».
+     */
+    public const QUALITY_RECEIVED        = 'recu';
+    public const QUALITY_QUARANTINED     = 'quarantaine';
+    public const QUALITY_RELEASED        = 'libere';
+    public const QUALITY_PARTIAL_RELEASE = 'libere_partiel';
+    public const QUALITY_REJECTED        = 'refuse';
+    public const QUALITY_RETURN_PENDING  = 'retour_attente';
+    public const QUALITY_RETURNED        = 'retourne';
+    public const QUALITY_CANCELLED       = 'annule';
+
+    /** Statuts qualité INTERDISANT toute consommation en production. */
+    public const QUALITY_BLOCKING = [
+        self::QUALITY_QUARANTINED,
+        self::QUALITY_RECEIVED,          // reçu mais pas encore contrôlé/libéré
+        self::QUALITY_REJECTED,
+        self::QUALITY_RETURN_PENDING,
+        self::QUALITY_RETURNED,
+        self::QUALITY_CANCELLED,
+    ];
+
     protected $fillable = [
         'company_id', 'product_id', 'supplier_id', 'reception_id', 'reference', 'lot_number', 'color', 'thickness', 'width',
         'initial_weight', 'remaining_weight', 'estimated_length', 'purchase_price', 'cost_per_kg',
-        'received_at', 'status', 'notes', 'created_by', 'stock_lot_id', 'kg_per_linear_meter',
+        'received_at', 'status', 'quality_status', 'quality_decision_id', 'notes', 'created_by', 'stock_lot_id', 'kg_per_linear_meter',
         // [Maquette Bobine] réception + caractéristiques + gestion
         'supplier_reference', 'warehouse_id', 'site', 'bl_number', 'origine', 'devise',
         'nuance', 'gross_weight', 'inner_diameter', 'outer_diameter', 'coating', 'surface_finish',
@@ -40,6 +63,18 @@ class Coil extends Model
         'tolerance_thickness' => 'decimal:3',
         'is_stock_managed' => 'boolean', 'lot_tracking' => 'boolean', 'allow_negative_stock' => 'boolean',
     ];
+
+    /**
+     * [Qualité #11] La bobine est-elle bloquée par son statut qualité ?
+     * Un statut NULL (historique, inconnu) n'est PAS bloquant — il est signalé
+     * par `a3:audit-receptions` plutôt que d'arrêter la production existante ;
+     * il n'est jamais présenté comme une libération.
+     */
+    public function isQualityBlocked(): bool
+    {
+        return $this->quality_status !== null
+            && in_array($this->quality_status, self::QUALITY_BLOCKING, true);
+    }
 
     public function company(): BelongsTo
     {

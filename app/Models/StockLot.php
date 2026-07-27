@@ -28,6 +28,7 @@ class StockLot extends Model
         'source_id',
         'created_by',
         'status',
+        'quality_status',
         'valuation_status',
         'valuation_reason',
         'valuation_responsible_id',

@@ -175,6 +175,12 @@ class PurchaseQualityService
                 },
             ]);
 
+            // 6bis. [#11] Propagation du statut qualité au LOT et aux BOBINES de la
+            // réception : la quarantaine est une disposition transversale, pas
+            // seulement un emplacement. Après décision, le reliquat de quarantaine
+            // détermine le statut (libéré / partiellement libéré / refusé).
+            $this->propagateQualityStatus($item, $type, (float) ($quarBefore - $qty), $decision->id);
+
             // 7. Agrégat commande (cache réconciliable).
             if ($isAcceptance && $item->purchase_order_item_id && ($poItem = $item->purchaseOrderItem)) {
                 $poItem->update([
@@ -191,6 +197,32 @@ class PurchaseQualityService
 
             return $decision->fresh();
         });
+    }
+
+    /**
+     * [#11] Propage la disposition qualité vers le lot et les bobines liés à la
+     * ligne de réception. Statut dérivé de l'état APRÈS décision :
+     *   - quarantaine restante > 0        → PARTIAL_RELEASE (une part reste bloquée) ;
+     *   - plus de quarantaine, acceptation → RELEASED ;
+     *   - plus de quarantaine, refus       → REJECTED (retour fournisseur attendu).
+     */
+    private function propagateQualityStatus(ReceptionItem $item, string $type, float $quarantineAfter, int $decisionId): void
+    {
+        $isAcceptance = in_array($type, ['release', 'derogation_acceptance'], true);
+        $status = $quarantineAfter > 0.0001
+            ? \App\Modules\Production\Models\Coil::QUALITY_PARTIAL_RELEASE
+            : ($isAcceptance
+                ? \App\Modules\Production\Models\Coil::QUALITY_RELEASED
+                : \App\Modules\Production\Models\Coil::QUALITY_REJECTED);
+
+        \App\Modules\Production\Models\Coil::where('reception_id', $item->reception_id)
+            ->where('product_id', $item->product_id)
+            ->update(['quality_status' => $status, 'quality_decision_id' => $decisionId]);
+
+        \App\Models\StockLot::where('source_type', \App\Models\Reception::class)
+            ->where('source_id', $item->reception_id)
+            ->where('product_id', $item->product_id)
+            ->update(['quality_status' => $status]);
     }
 
     /**

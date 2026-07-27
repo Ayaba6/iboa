@@ -51,6 +51,19 @@ class CoilConsumptionService
         if ($weight <= 0) {
             throw ValidationException::withMessages(['weight' => 'Le poids consommé doit être positif.']);
         }
+
+        // [Qualité #11] Une bobine non libérée par la qualité n'est JAMAIS
+        // consommable : QUARANTINED → CONSUMED est interdit. La libération passe
+        // obligatoirement par une décision qualité (PurchaseQualityService).
+        if ($coil->isQualityBlocked()) {
+            throw ValidationException::withMessages([
+                'quality' => sprintf(
+                    'Bobine %s : statut qualité « %s » — consommation interdite tant que la '
+                    . 'qualité ne l\'a pas libérée.',
+                    $coil->reference, $coil->quality_status
+                ),
+            ]);
+        }
         if ($weight > (float) $coil->remaining_weight + 0.001) {
             throw ValidationException::withMessages([
                 'weight' => 'Poids demandé ('.$weight.' kg) supérieur au restant de la bobine ('.$coil->remaining_weight.' kg).',

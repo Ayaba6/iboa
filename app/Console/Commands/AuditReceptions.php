@@ -93,6 +93,33 @@ class AuditReceptions extends Command
         $this->line("8. Réconciliation ventilation après décisions : {$badAggregate} incohérence(s)");
         $critical += $badAggregate;
 
+        // 9. [Qualité #11] Bobine consommée alors qu'elle est bloquée par la qualité
+        //    (quarantaine / refusée / en retour) — QUARANTINED → CONSUMED interdit.
+        $consumedBlocked = DB::table('production_consumptions as pc')
+            ->join('coils as c', 'c.id', '=', 'pc.coil_id')
+            ->whereNull('pc.reversed_at')
+            ->whereIn('c.quality_status', ['quarantaine', 'recu', 'refuse', 'retour_attente', 'retourne', 'annule'])
+            ->count();
+        $this->line("9. Bobines consommées sans libération qualité : {$consumedBlocked}");
+        $critical += $consumedBlocked;
+
+        // 10. [Qualité #11] Incohérence dépôt ↔ statut qualité : bobine marquée
+        //     LIBÉRÉE mais physiquement rattachée au dépôt de quarantaine.
+        $quarWarehouseIds = DB::table('warehouses')
+            ->where('code', 'like', '%QUAR%')->orWhere('name', 'like', '%uarantaine%')
+            ->pluck('id');
+        $releasedInQuar = $quarWarehouseIds->isEmpty() ? 0 : DB::table('coils')
+            ->whereIn('warehouse_id', $quarWarehouseIds)
+            ->where('quality_status', 'libere')
+            ->count();
+        $this->line("10. Bobines « libérées » restées au dépôt quarantaine : {$releasedInQuar}");
+        $critical += $releasedInQuar;
+
+        // 11. Informatif : bobines/lots au statut qualité INCONNU (historique).
+        $unknownCoils = DB::table('coils')->whereNull('quality_status')->count();
+        $unknownLots  = DB::table('stock_lots')->whereNull('quality_status')->count();
+        $this->line("11. Statut qualité inconnu — bobines : {$unknownCoils} | lots : {$unknownLots} (informatif)");
+
         if ($critical > 0) {
             $this->error("{$critical} anomalie(s) CRITIQUE(s) de réception. Aucune modification effectuée.");
 

@@ -104,7 +104,28 @@ class CoilReceptionService
                     $lot->increment('initial_quantity', $weight);
                 }
 
+                // [Qualité #11] Statut qualité INITIAL de la bobine, dérivé de la
+                // disposition de la ligne (jamais deviné) :
+                //  - quarantaine > 0            → QUARANTINED (non consommable) ;
+                //  - accepté = reçu (certifié)  → RELEASED ;
+                //  - accepté partiel            → PARTIAL_RELEASE ;
+                //  - disposition inconnue (NULL)→ NULL (inconnu, signalé par l'audit).
+                $qAccepted   = $item->accepted_quantity;
+                $qQuarantine = $item->quarantine_quantity;
+                $qualityStatus = null;
+                if ($qAccepted !== null || $qQuarantine !== null) {
+                    $qualityStatus = ((float) $qQuarantine) > 0
+                        ? Coil::QUALITY_QUARANTINED
+                        : (((float) $qAccepted) >= $weight - 0.0001
+                            ? Coil::QUALITY_RELEASED
+                            : Coil::QUALITY_PARTIAL_RELEASE);
+                }
+                if ($lot) {
+                    $lot->update(['quality_status' => $qualityStatus]);
+                }
+
                 $coil = Coil::create([
+                    'quality_status' => $qualityStatus,
                     'company_id' => $reception->company_id,
                     'product_id' => $item->product_id,
                     'supplier_id' => $reception->supplier_id,
