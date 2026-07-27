@@ -485,6 +485,76 @@ it('ROLLBACK transactionnel : erreur sur la DERNIÈRE fille → aucune fille ni 
         ->and((float) $mother->fresh()->remaining_weight)->toBe(100.0);
 });
 
+it('APPEND-ONLY : opération et lignes de division immuables, même par Eloquent direct', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-AO-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 100,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_QUARANTINED,
+        'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+    app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [['weight' => 100]], 0.0);
+
+    $op   = \App\Modules\Production\Models\CoilSplitOperation::where('coil_id', $mother->id)->firstOrFail();
+    $item = \App\Modules\Production\Models\CoilSplitOperationItem::where('split_operation_id', $op->id)->firstOrFail();
+
+    // Modification refusée (poids, coût, méthode, hash…).
+    expect(fn () => $op->update(['scrap_qty' => 99]))->toThrow(\RuntimeException::class, 'APPEND-ONLY');
+    expect(fn () => $op->update(['calculation_hash' => str_repeat('0', 64)]))->toThrow(\RuntimeException::class, 'APPEND-ONLY');
+    expect(fn () => $op->update(['allocation_method' => 'autre']))->toThrow(\RuntimeException::class, 'APPEND-ONLY');
+    // Suppression refusée.
+    expect(fn () => $op->delete())->toThrow(\RuntimeException::class, 'APPEND-ONLY');
+    // Lignes : modification et suppression refusées.
+    expect(fn () => $item->update(['weight' => 5]))->toThrow(\RuntimeException::class, 'APPEND-ONLY');
+    expect(fn () => $item->update(['transferred_cost' => 1]))->toThrow(\RuntimeException::class, 'APPEND-ONLY');
+    expect(fn () => $item->delete())->toThrow(\RuntimeException::class, 'APPEND-ONLY');
+
+    // Rien n'a bougé.
+    $fresh = $op->fresh();
+    expect((float) $fresh->scrap_qty)->toBe(0.0)
+        ->and($fresh->allocation_method)->toBe('proportion_poids')
+        ->and(\App\Modules\Production\Models\CoilSplitOperationItem::where('split_operation_id', $op->id)->count())->toBe(1)
+        ->and((float) $item->fresh()->weight)->toBe(100.0);
+});
+
+it('COÛT RÉSIDUEL : bobine 100 kg / 50 000, 20 kg déjà consommés → seuls 40 000 sont répartis', function () {
+    $ctx = coilQualSetup(0, 100);
+    [$co, $wh, $p, $rec] = $ctx;
+    // Bobine reçue 100 kg à 500 F/kg = 50 000 ; 20 kg déjà consommés (10 000).
+    $mother = Coil::create([
+        'company_id' => $co->id, 'product_id' => $p->id, 'reception_id' => $rec->id,
+        'reference' => 'BOB-RES-' . uniqid(), 'initial_weight' => 100, 'remaining_weight' => 80,
+        'status' => 'disponible', 'quality_status' => Coil::QUALITY_RELEASED,
+        'qty_released' => 100, 'qty_quarantine' => 0, 'qty_rejected' => 0,
+        'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
+    ]);
+
+    // Division du reliquat : 50 + 30 filles = 80.
+    $children = app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 50], ['weight' => 30]], 0.0);
+
+    $op = \App\Modules\Production\Models\CoilSplitOperation::where('coil_id', $mother->id)->firstOrFail();
+
+    expect((float) $op->mother_initial_weight)->toBe(100.0)      // historique
+        ->and((float) $op->mother_qty_before)->toBe(80.0)         // reliquat divisible
+        ->and((float) $op->consumed_before_split)->toBe(20.0)     // déjà consommé
+        ->and((int) $op->mother_historical_cost)->toBe(50000)     // coût historique total
+        ->and((int) $op->consumed_cost_before_split)->toBe(10000) // valeur déjà consommée
+        ->and((int) $op->residual_cost_before_split)->toBe(40000) // SEULE valeur répartissable
+        ->and((int) $op->transferred_cost)->toBe(40000)           // 25 000 + 15 000
+        ->and((int) $op->rounding_difference)->toBe(0);           // 40 000 − 40 000
+
+    // Coûts des filles au coût HISTORIQUE de la mère (jamais le CMP courant).
+    expect((int) $children[0]->purchase_price)->toBe(25000)       // 50 × 500
+        ->and((int) $children[1]->purchase_price)->toBe(15000)    // 30 × 500
+        ->and((float) $children[0]->cost_per_kg)->toBe(500.0);
+
+    // La valeur déjà consommée (10 000) n'est PAS redistribuée.
+    expect((int) $children[0]->purchase_price + (int) $children[1]->purchase_price)->toBe(40000);
+});
+
 it('HÉRITAGE : mère en quarantaine → filles en quarantaine, jamais libérées automatiquement', function () {
     $ctx = coilQualSetup(0, 100);
     [$co, $wh, $p, $rec] = $ctx;

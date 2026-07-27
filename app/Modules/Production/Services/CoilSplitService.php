@@ -130,10 +130,27 @@ class CoilSplitService
             // ── Politique d'HÉRITAGE qualité des filles [#6] ─────────────────
             $requiresQc = (bool) ($opts['requires_post_split_qc'] ?? false);
 
-            // ── Document de division (append-only) ───────────────────────────
-            $costPerKg      = (float) $mother->cost_per_kg;
-            $historicalCost = (int) $mother->purchase_price;
+            // ── Snapshot AVANT division + valeur RÉSIDUELLE [#3/#5] ──────────
+            // Seule la valeur NON ENCORE CONSOMMÉE est répartissable : répartir le
+            // coût historique total redistribuerait une valeur déjà passée en
+            // consommation. Coût historique de la bobine uniquement — jamais le
+            // CMP courant, ni le dernier prix d'achat.
+            $costPerKg       = (float) $mother->cost_per_kg;
+            $historicalCost  = (int) $mother->purchase_price;
+            $initialWeight   = (float) $mother->initial_weight;
+            $consumedBefore  = max(0.0, $initialWeight - $divisible);
+            $consumedCost    = (int) round($consumedBefore * $costPerKg);
+            $residualCost    = (int) round($divisible * $costPerKg);
+
             $operationId = DB::table('coil_split_operations')->insertGetId([
+                'mother_initial_weight'      => $initialWeight,
+                'consumed_before_split'      => $consumedBefore,
+                'returned_before_split'      => (float) ($mother->qty_returned ?? 0),
+                'released_before_split'      => (float) ($mother->qty_released ?? 0),
+                'quarantine_before_split'    => (float) ($mother->qty_quarantine ?? 0),
+                'residual_cost_before_split' => $residualCost,
+                'consumed_cost_before_split' => $consumedCost,
+                'warehouse_before_split'     => $mother->warehouse_id,
                 'company_id'                   => $mother->company_id,
                 'coil_id'                      => $mother->id,
                 // Référence bornée : le numéro reste sous la limite de colonne
@@ -209,13 +226,15 @@ class CoilSplitService
                 ]);
             }
 
-            // ── Réconciliation VALEUR [#3/#6] ────────────────────────────────
-            // coût historique mère = Σ coûts filles + chutes + pertes + arrondi
+            // ── Réconciliation VALEUR sur le RÉSIDUEL [#5] ───────────────────
+            // valeur résiduelle = Σ coûts filles + chutes + nouvelles pertes + arrondi
+            // (et NON le coût historique total : la part déjà consommée n'est
+            //  jamais redistribuée aux filles).
             $scrapValue = (int) round($scrap * $costPerKg);
             $lossValue  = (int) round($loss * $costPerKg);
-            $rounding   = $historicalCost - ($transferredCost + $scrapValue + $lossValue);
+            $rounding   = $residualCost - ($transferredCost + $scrapValue + $lossValue);
             DB::table('coil_split_operations')->where('id', $operationId)
-                ->update(['rounding_difference' => $rounding]);
+                ->update(['rounding_difference' => $rounding, 'transferred_cost' => $transferredCost]);
 
             // ── Clôture LOGISTIQUE de la mère — historique PRÉSERVÉ ──────────
             $mother->update([
