@@ -59,6 +59,40 @@ class AuditReceptions extends Command
         $legacy = DB::table('reception_items')->where('disposition_origin', 'legacy_unclassified')->count();
         $this->line("4. Lignes reconstruites : {$reconstructed} | non classées (historique) : {$legacy} (informatif)");
 
+        // 5. [Qualité] Décision supérieure au reliquat au moment de la décision
+        //    (quarantine_after négatif = quantité libérée/refusée au-delà du disponible).
+        $overDecision = DB::table('purchase_quality_decisions')->where('quarantine_after', '<', 0)->count();
+        $this->line("5. Décisions qualité dépassant la quarantaine : {$overDecision}");
+        $critical += $overDecision;
+
+        // 6. [Qualité] Mouvement de libération sans document de décision.
+        $orphanMoves = DB::table('stock_movements')
+            ->where('reference_type', 'quality_decision')
+            ->whereNotIn('reference_id', DB::table('purchase_quality_decisions')->pluck('id'))
+            ->count();
+        $this->line("6. Mouvements qualité sans décision : {$orphanMoves}");
+        $critical += $orphanMoves;
+
+        // 7. [Qualité] Décision d'acceptation sans mouvement de stock associé.
+        $decisionNoMove = DB::table('purchase_quality_decisions as d')
+            ->whereIn('d.type', ['release', 'derogation_acceptance', 'reject_after_control'])
+            ->where('d.status', 'appliquee')
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('stock_movements')
+                ->where('reference_type', 'quality_decision')
+                ->whereColumn('reference_id', 'd.id'))
+            ->count();
+        $this->line("7. Décisions qualité sans mouvement : {$decisionNoMove}");
+        $critical += $decisionNoMove;
+
+        // 8. [Qualité] Réconciliation : accepté ligne ≠ ventilation initiale + décisions.
+        //    (uniquement lignes CERTIFIED — l'historique non classé est déjà signalé en 3)
+        $badAggregate = DB::table('reception_items as ri')
+            ->whereNotNull('ri.accepted_quantity')
+            ->whereRaw('ABS(COALESCE(ri.accepted_quantity,0) + COALESCE(ri.quarantine_quantity,0) + COALESCE(ri.rejected_quantity,0) - ri.received_quantity) > 0.0001')
+            ->count();
+        $this->line("8. Réconciliation ventilation après décisions : {$badAggregate} incohérence(s)");
+        $critical += $badAggregate;
+
         if ($critical > 0) {
             $this->error("{$critical} anomalie(s) CRITIQUE(s) de réception. Aucune modification effectuée.");
 
