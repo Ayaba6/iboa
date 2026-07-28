@@ -80,11 +80,11 @@ it('ACTEUR SYSTÈME AUTORISÉ : exécution acceptée sous contexte explicite', f
     [$co, $mother] = splitSetup();
     auth()->logout();
 
-    // Acteur système PLEINEMENT habilité : exécution + dérogation technique
-    // (l'exécution hors proposition reste une procédure exceptionnelle).
+    // Acteur ENREGISTRÉ au registre fermé (coil_recovery_job) : ses permissions
+    // viennent du registre, pas de l'appelant.
     $children = ExecutionContext::asSystem(
-        'import-bobines', ['coils.split.execute', 'coils.split.technical_override'],
-        origin: 'artisan:coils:import', reason: 'Import quotidien',
+        'coil_recovery_job', ['coils.split.execute', 'coils.split.technical_override'],
+        origin: 'queue:coil-recovery', reason: 'Reprise après incident',
         callback: fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
             ->split($mother, [['weight' => 200]], 0.0, 'Reprise technique')
     );
@@ -98,7 +98,7 @@ it('ACTEUR SYSTÈME SANS PERMISSION : exécution refusée', function () {
     auth()->logout();
 
     expect(fn () => ExecutionContext::asSystem(
-        'job-sans-droit', ['autre.permission'],
+        'purchase_import', ['autre.permission'],
         origin: 'queue:job', reason: 'Test',
         callback: fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
             ->split($mother, [['weight' => 200]], 0.0, 'Reprise technique')
@@ -112,7 +112,7 @@ it('le contexte système est bien restauré après exécution (pas de fuite)', f
     auth()->logout();
     expect(ExecutionContext::systemActor())->toBeNull();
 
-    ExecutionContext::asSystem('x', ['coils.split.execute'], 'o', 'r', fn () => null);
+    ExecutionContext::asSystem('purchase_import', [], 'o', 'r', fn () => null);
 
     expect(ExecutionContext::systemActor())->toBeNull(); // restauré
 });
@@ -159,7 +159,7 @@ it('ACTEUR SYSTÈME : ne contourne PAS la proposition sans droit de dérogation'
 
     // Acteur système autorisé à exécuter, mais SANS technical_override.
     expect(fn () => ExecutionContext::asSystem(
-        'job-division', ['coils.split.execute'],
+        'coil_recovery_job', ['coils.split.execute'],
         origin: 'queue:job', reason: 'Traitement automatique',
         callback: fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
             ->split($mother, [['weight' => 200]], 0.0, 'Automatique')
@@ -283,4 +283,63 @@ it('exécution du payload EXACT approuvé : acceptée', function () {
         ->and((float) $children[0]->initial_weight)->toBe(120.0)
         ->and((float) $children[1]->initial_weight)->toBe(80.0)
         ->and($prop->fresh()->status)->toBe(CoilSplitProposal::STATUS_EXECUTED);
+});
+
+
+// ── [#8/#9] Registre FERMÉ des acteurs système ──────────────────────────────
+
+it('REGISTRE : acteur systeme INCONNU refuse (pas d auto-declaration)', function () {
+    splitSetup();
+    auth()->logout();
+
+    expect(fn () => ExecutionContext::asSystem('acteur-invente', ['coils.split.execute'], 'o', 'r', fn () => 'ok'))
+        ->toThrow(\RuntimeException::class, 'INCONNU');
+});
+
+it('REGISTRE : acteur DÉSACTIVÉ refusé', function () {
+    splitSetup();
+    auth()->logout();
+    config(['system_actors.purchase_import.active' => false]);
+
+    expect(fn () => ExecutionContext::asSystem('purchase_import', [], 'o', 'r', fn () => 'ok'))
+        ->toThrow(\RuntimeException::class, 'DÉSACTIVÉ');
+});
+
+it('REGISTRE : acteur EXPIRÉ refusé', function () {
+    splitSetup();
+    auth()->logout();
+    config(['system_actors.purchase_import.expires_at' => now()->subDay()->toDateTimeString()]);
+
+    expect(fn () => ExecutionContext::asSystem('purchase_import', [], 'o', 'r', fn () => 'ok'))
+        ->toThrow(\RuntimeException::class, 'EXPIRÉ');
+});
+
+it('REGISTRE : les permissions DEMANDÉES ne priment pas sur celles enregistrées', function () {
+    [$co, $mother] = splitSetup();
+    auth()->logout();
+
+    // purchase_import ne détient QUE receptions.create au registre : demander
+    // coils.split.execute ne l'accorde pas.
+    expect(fn () => ExecutionContext::asSystem(
+        'purchase_import', ['coils.split.execute', 'coils.split.technical_override'],
+        origin: 'queue:job', reason: 'Tentative escalade',
+        callback: fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+            ->split($mother, [['weight' => 200]], 0.0, 'Escalade')
+    ))->toThrow(\RuntimeException::class, 'non accordée');
+
+    expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0);
+});
+
+it('REGISTRE : asRegisteredSystemActor fournit les permissions sans declaration appelant', function () {
+    [$co, $mother] = splitSetup();
+    auth()->logout();
+
+    $children = ExecutionContext::asRegisteredSystemActor(
+        'coil_recovery_job', 'Reprise après incident',
+        fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+            ->split($mother, [['weight' => 200]], 0.0, 'Reprise technique')
+    );
+
+    expect($children)->toHaveCount(1);
+    expect(ExecutionContext::systemActor())->toBeNull(); // contexte restauré
 });

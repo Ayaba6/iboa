@@ -32,12 +32,20 @@ class ExecutionContext
      */
     public static function asSystem(string $id, array $permissions, string $origin, string $reason, \Closure $callback): mixed
     {
+        // [#8/#9] Les permissions demandées par l'appelant ne font pas foi : elles
+        // sont INTERSECTÉES avec celles du registre fermé. Un acteur inconnu,
+        // désactivé ou expiré est refusé.
+        $registered = self::resolveRegisteredActor($id);
+        $effective  = array_values(array_intersect($permissions, $registered['permissions']));
+
         $previous = self::$systemActor;
         self::$systemActor = [
             'id'          => $id,
             'type'        => 'system',
-            'permissions' => $permissions,
-            'origin'      => $origin,
+            // permissions EFFECTIVES = registre (∩ demandées), jamais l'inverse
+            'permissions' => $effective,
+            'origin'      => $registered['origin'] ?? $origin,
+            'owner'       => $registered['owner'] ?? null,
             'reason'      => $reason,
             'started_at'  => now()->toIso8601String(),
         ];
@@ -47,6 +55,45 @@ class ExecutionContext
         } finally {
             self::$systemActor = $previous;
         }
+    }
+
+    /**
+     * [#9] Exécute sous un acteur système ENREGISTRÉ — la forme recommandée :
+     * l'appelant ne déclare aucune permission, le registre les fournit.
+     */
+    public static function asRegisteredSystemActor(string $id, string $reason, \Closure $callback): mixed
+    {
+        $registered = self::resolveRegisteredActor($id);
+
+        return self::asSystem($id, $registered['permissions'], $registered['origin'] ?? 'registre', $reason, $callback);
+    }
+
+    /**
+     * Résout un acteur dans le registre FERMÉ (config/system_actors.php).
+     *
+     * @throws \RuntimeException si inconnu, désactivé ou expiré
+     */
+    private static function resolveRegisteredActor(string $id): array
+    {
+        $actor = config('system_actors.' . $id);
+
+        if (! is_array($actor)) {
+            throw new \RuntimeException(sprintf(
+                'Acteur système « %s » INCONNU : seuls les acteurs enregistrés au registre '
+                . 'sont autorisés (un appelant ne peut pas s\'auto-déclarer).', $id
+            ));
+        }
+        if (! ($actor['active'] ?? false)) {
+            throw new \RuntimeException(sprintf('Acteur système « %s » DÉSACTIVÉ.', $id));
+        }
+        if (! empty($actor['expires_at']) && now()->greaterThan(\Illuminate\Support\Carbon::parse($actor['expires_at']))) {
+            throw new \RuntimeException(sprintf(
+                'Acteur système « %s » EXPIRÉ le %s.', $id, $actor['expires_at']
+            ));
+        }
+        $actor['permissions'] = array_values((array) ($actor['permissions'] ?? []));
+
+        return $actor;
     }
 
     /** Acteur système courant (null si aucun). */
