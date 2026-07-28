@@ -157,9 +157,14 @@ class SalesInsightsService
      */
     public function upcomingDueInvoices(int $days = 30): Collection
     {
-        $today = now()->toDateString();
+        $today = now()->startOfDay();
         $limit = now()->addDays($days)->toDateString();
 
+        // [Ventes §1] `is_overdue` et `days_to_due` sont calculés en PHP, pas en SQL.
+        // La version précédente utilisait DATEDIFF() et NOW(), propres à MySQL :
+        // l'appel levait « no such function: NOW » sur SQLite, ce qui rendait cette
+        // méthode intestable sur le moteur de la suite rapide. Elle interpolait en
+        // plus une date directement dans la chaîne SQL, sans liaison de paramètre.
         return DB::table('invoices as i')
             ->join('clients as c', 'c.id', '=', 'i.client_id')
             ->where('i.company_id', currentCompany()->id)
@@ -171,12 +176,17 @@ class SalesInsightsService
             })
             ->select('i.id', 'i.number', 'i.status', 'i.issued_at', 'i.due_at',
                 'i.total_ttc', 'i.paid_amount', 'i.remaining_amount',
-                'c.name as client_name',
-                DB::raw("CASE WHEN i.due_at < '{$today}' THEN 1 ELSE 0 END as is_overdue"),
-                DB::raw("DATEDIFF(i.due_at, NOW()) as days_to_due"))
+                'c.name as client_name')
             ->orderBy('i.due_at')
             ->limit(20)
-            ->get();
+            ->get()
+            ->map(function ($row) use ($today) {
+                $dueAt = $row->due_at ? Carbon::parse($row->due_at)->startOfDay() : null;
+                $row->is_overdue = $dueAt && $dueAt->lt($today) ? 1 : 0;
+                $row->days_to_due = $dueAt ? $today->diffInDays($dueAt, false) : null;
+
+                return $row;
+            });
     }
 
     /**
