@@ -443,9 +443,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::resource('factures', \App\Http\Controllers\Sales\InvoiceController::class)
                 ->middleware('invoice.locked');
             Route::get('factures/{facture}/pdf', [\App\Http\Controllers\Sales\InvoiceController::class, 'pdf'])->name('factures.pdf');
-            // Échéancier client sur facture
+        });
+        // [Ventes §7] Échéancier client sur facture — SORTI du groupe `invoices.view`.
+        // Ces trois routes écrivent : elles créaient ou effaçaient un échéancier
+        // complet sous une simple permission de CONSULTATION, et `destroyAll()`
+        // n'effectue aucune vérification supplémentaire côté contrôleur.
+        // Une permission de lecture ne doit jamais autoriser une suppression.
+        Route::middleware('permission:invoices.create')->group(function () {
             Route::post('factures/{facture}/schedules',        [\App\Http\Controllers\Treasury\ClientPaymentScheduleController::class, 'store'])->name('factures.schedules.store');
             Route::post('factures/{facture}/schedules-custom', [\App\Http\Controllers\Treasury\ClientPaymentScheduleController::class, 'storeCustom'])->name('factures.schedules.store-custom');
+        });
+        Route::middleware('permission:invoices.delete')->group(function () {
             Route::delete('factures/{facture}/schedules',      [\App\Http\Controllers\Treasury\ClientPaymentScheduleController::class, 'destroyAll'])->name('factures.schedules.destroy-all');
         });
         Route::middleware(['permission:invoices.validate', 'invoice.locked'])->group(function () {
@@ -920,7 +928,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // ── Échéancier clients ──────────────────────────────────────────────
             Route::get('echeancier-clients', [\App\Http\Controllers\Treasury\ClientPaymentScheduleController::class, 'upcoming'])->name('echeancier-clients');
-            Route::delete('schedules-clients/{schedule}', [\App\Http\Controllers\Treasury\ClientPaymentScheduleController::class, 'destroy'])->name('schedules-clients.destroy');
+            // [Ventes §7] Même défaut que l'échéancier sur facture : cette suppression
+            // était couverte par les seules permissions de LECTURE du groupe
+            // (treasury.view + payments.view), et le contrôleur ne vérifie que le
+            // statut de l'échéance, jamais un droit.
+            Route::delete('schedules-clients/{schedule}', [\App\Http\Controllers\Treasury\ClientPaymentScheduleController::class, 'destroy'])
+                ->middleware('permission:invoices.delete')
+                ->name('schedules-clients.destroy');
 
             // ── Échéancier fournisseurs ─────────────────────────────────────────
             Route::get('echeancier-fournisseurs', [\App\Http\Controllers\Treasury\SupplierDueController::class, 'upcoming'])->name('echeancier-fournisseurs');
