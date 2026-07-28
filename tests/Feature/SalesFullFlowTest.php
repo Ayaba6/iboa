@@ -110,7 +110,7 @@ describe('Chemin A — Devis → Validation commerciale → financière → BL �
     it('parcourt Devis → Commande brouillon → submit → validate → BL → Facture', function () {
 
         $user    = saleAdmin();
-        $client  = Client::factory()->create(['is_active' => true]);
+        $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit', 'credit_limit' => 1_000_000]);
         $product = saleProduct(200);
         $taxRate = TaxRate::firstOrCreate(
             ['name' => 'TVA 18% SF'],
@@ -229,7 +229,7 @@ describe('Chemin A — Devis → Validation commerciale → financière → BL �
 
     it('bloque la préparation tant que la commande issue d\'un devis n\'est pas validée', function () {
         $user    = saleAdmin();
-        $client  = Client::factory()->create(['is_active' => true]);
+        $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit', 'credit_limit' => 1_000_000]);
         $product = saleProduct(50);
         $taxRate = TaxRate::firstOrCreate(['name' => 'TVA 18% SF'], ['short_name' => 'TVA18', 'rate' => 18, 'is_active' => true]);
         $unit    = Unit::firstOrCreate(['name' => 'Kg SF'], ['abbreviation' => 'kg']);
@@ -261,7 +261,7 @@ describe('Chemin B — Validation commerciale → financière → BL → Facture
     it('parcourt Order brouillon → submit → validate → BL → Facture', function () {
 
         $user    = saleAdmin();
-        $client  = Client::factory()->create(['is_active' => true]);
+        $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit', 'credit_limit' => 1_000_000]);
         $product = saleProduct(200);
         $taxRate = TaxRate::firstOrCreate(
             ['name' => 'TVA 18% SF'],
@@ -343,7 +343,7 @@ describe('Règles métier ventes', function () {
 
     it('bloque la livraison si commande non confirmée', function () {
         $user    = saleAdmin();
-        $client  = Client::factory()->create(['is_active' => true]);
+        $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit', 'credit_limit' => 1_000_000]);
         $product = saleProduct(50);
         $taxRate = TaxRate::firstOrCreate(['name' => 'TVA 18% SF'], ['short_name' => 'TVA18', 'rate' => 18, 'is_active' => true]);
         $unit    = Unit::firstOrCreate(['name' => 'Kg SF'], ['abbreviation' => 'kg']);
@@ -365,7 +365,7 @@ describe('Règles métier ventes', function () {
 
     it('bloque la soumission d\'une commande déjà soumise', function () {
         $user    = saleAdmin();
-        $client  = Client::factory()->create(['is_active' => true]);
+        $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit', 'credit_limit' => 1_000_000]);
         $product = saleProduct(50);
         $taxRate = TaxRate::firstOrCreate(['name' => 'TVA 18% SF'], ['short_name' => 'TVA18', 'rate' => 18, 'is_active' => true]);
         $unit    = Unit::firstOrCreate(['name' => 'Kg SF'], ['abbreviation' => 'kg']);

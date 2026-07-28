@@ -81,4 +81,3 @@ it('déduit uniquement les acomptes confirmés non affectés de l encours prévi
         ->and($exposure['deposits'])->toBe(20000)
         ->and($exposure['projected'])->toBe(140000);
 });
-
