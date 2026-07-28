@@ -379,7 +379,7 @@ it('TRANSVERSE : mère libérée MAIS divisée — exclue des sélecteurs matiè
         ->and($mother->activeInventoryValue())->toBe(50000.0);
 
     $children = app(\App\Modules\Production\Services\CoilSplitService::class)
-        ->split($mother, [['weight' => 100]], 0.0);
+        ->split($mother, [['weight' => 100]], 0.0, 'Division technique (test)');
     $m = $mother->fresh();
     $children[0]->update(['valuation_status' => 'valorisation_definitive']);
 
@@ -434,7 +434,7 @@ it('HASH : empreinte canonique STABLE et recalculable à l\'identique', function
     expect($svc::canonicalHash($mother, 100.0, [['weight' => 40], ['weight' => 60]], 0.0, 0.0, 0.001))->not->toBe($h1);
 
     // Le hash persisté correspond au recalcul.
-    app($svc)->split($mother, $children, 0.0);
+    app($svc)->split($mother, $children, 0.0, 'Division technique (test)');
     $op = \Illuminate\Support\Facades\DB::table('coil_split_operations')->where('coil_id', $mother->id)->first();
     expect($op->calculation_hash)->toBe($h1);
 });
@@ -475,7 +475,7 @@ it('ROLLBACK transactionnel : erreur sur la DERNIÈRE fille → aucune fille ni 
 
     // Dernière fille à poids nul → refus ; la validation précède toute création.
     expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
-        ->split($mother, [['weight' => 60], ['weight' => 40], ['weight' => 0]], 0.0))
+        ->split($mother, [['weight' => 60], ['weight' => 40], ['weight' => 0]], 0.0, 'Division technique (test)'))
         ->toThrow(\RuntimeException::class);
 
     // Rien n'est persisté : ni filles, ni opération ; mère intacte.
@@ -495,7 +495,7 @@ it('APPEND-ONLY : opération et lignes de division immuables, même par Eloquent
         'qty_released' => 0, 'qty_quarantine' => 100, 'qty_rejected' => 0,
         'warehouse_id' => $wh->id, 'cost_per_kg' => 500, 'purchase_price' => 50000, 'received_at' => now(),
     ]);
-    app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [['weight' => 100]], 0.0);
+    app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [['weight' => 100]], 0.0, 'Division technique (test)');
 
     $op   = \App\Modules\Production\Models\CoilSplitOperation::where('coil_id', $mother->id)->firstOrFail();
     $item = \App\Modules\Production\Models\CoilSplitOperationItem::where('split_operation_id', $op->id)->firstOrFail();
@@ -533,7 +533,7 @@ it('COÛT RÉSIDUEL : bobine 100 kg / 50 000, 20 kg déjà consommés → seuls 
 
     // Division du reliquat : 50 + 30 filles = 80.
     $children = app(\App\Modules\Production\Services\CoilSplitService::class)
-        ->split($mother, [['weight' => 50], ['weight' => 30]], 0.0);
+        ->split($mother, [['weight' => 50], ['weight' => 30]], 0.0, 'Division technique (test)');
 
     $op = \App\Modules\Production\Models\CoilSplitOperation::where('coil_id', $mother->id)->firstOrFail();
 
@@ -571,7 +571,7 @@ it('PERMISSIONS : division refusée sans coils.split.execute', function () {
     test()->actingAs($sansDroit);
 
     expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
-        ->split($mother, [['weight' => 100]], 0.0))
+        ->split($mother, [['weight' => 100]], 0.0, 'Division technique (test)'))
         ->toThrow(\RuntimeException::class, 'coils.split.execute');
 
     expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0)
@@ -596,7 +596,7 @@ it('MAKER-CHECKER : perte au-dessus du seuil — l\'exécutant ne peut pas appro
     // Exécutant simple, doté des droits d'exécution ET d'approbation de perte.
     $executant = User::factory()->create(['company_id' => $co->id, 'email_verified_at' => now()]);
     $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'split_exec', 'guard_name' => 'web']);
-    foreach (['coils.split.execute', 'coils.split.approve_loss'] as $perm) {
+    foreach (['coils.split.execute', 'coils.split.approve_loss', 'coils.split.technical_override'] as $perm) {
         $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']));
     }
     $executant->assignRole($role);
@@ -662,11 +662,11 @@ it('HÉRITAGE : mère en quarantaine → filles en quarantaine, jamais libérée
     $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
 
     // Demander « libéré » pour une fille d'une mère en quarantaine → refus.
-    expect(fn () => $svc->split($mother, [['weight' => 100, 'quality_status' => Coil::QUALITY_RELEASED]], 0.0))
+    expect(fn () => $svc->split($mother, [['weight' => 100, 'quality_status' => Coil::QUALITY_RELEASED]], 0.0, 'Division technique (test)'))
         ->toThrow(\RuntimeException::class, 'moins restrictive');
 
     // Sans demande : la politique impose la quarantaine.
-    $children = $svc->split($mother->fresh(), [['weight' => 60], ['weight' => 40]], 0.0);
+    $children = $svc->split($mother->fresh(), [['weight' => 60], ['weight' => 40]], 0.0, 'Division technique (test)');
     expect($children[0]->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
         ->and($children[1]->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
         // Statut historique de la mère conservé.
@@ -705,7 +705,7 @@ it('DIVISION : bobine REFUSÉE non divisible sans contre-décision', function ()
     ]);
 
     expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
-        ->split($mother, [['weight' => 100]], 0.0))
+        ->split($mother, [['weight' => 100]], 0.0, 'Division technique (test)'))
         ->toThrow(\RuntimeException::class, 'contre-décision');
 });
 
@@ -722,11 +722,11 @@ it('DIVISION après consommation partielle : seul le SOLDE restant est divisible
     $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
 
     // Diviser 100 (quantité historique) → refus : seul le solde 60 est divisible.
-    expect(fn () => $svc->split($mother, [['weight' => 100]], 0.0))
+    expect(fn () => $svc->split($mother, [['weight' => 100]], 0.0, 'Division technique (test)'))
         ->toThrow(\RuntimeException::class, 'divisible');
 
     // 60 = solde restant → accepté ; poids historique inchangé.
-    $children = $svc->split($mother->fresh(), [['weight' => 60]], 0.0);
+    $children = $svc->split($mother->fresh(), [['weight' => 60]], 0.0, 'Division technique (test)');
     expect((float) $children[0]->initial_weight)->toBe(60.0)
         ->and((float) $mother->fresh()->initial_weight)->toBe(100.0)   // historique intact
         ->and((float) $mother->fresh()->transferred_to_children_qty)->toBe(60.0);
@@ -745,11 +745,11 @@ it('DIVISION : seconde division de la même mère REFUSÉE (opération incompati
     $svc = app(\App\Modules\Production\Services\CoilSplitService::class);
 
     // Mère en quarantaine → filles en quarantaine (politique d'héritage).
-    $svc->split($mother, [['weight' => 100]], 0.0);
+    $svc->split($mother, [['weight' => 100]], 0.0, 'Division technique (test)');
     expect($mother->fresh()->transformation_status)->toBe(Coil::TRANSFO_SPLIT);
 
     // Seconde division : refusée (déjà divisée + filles existantes).
-    expect(fn () => $svc->split($mother->fresh(), [['weight' => 50]], 50.0))
+    expect(fn () => $svc->split($mother->fresh(), [['weight' => 50]], 50.0, 'Division technique (test)'))
         ->toThrow(\RuntimeException::class);
     expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(1);
 });
@@ -767,7 +767,7 @@ it('DIVISION : poids non réconciliés → refus (Σ filles + chutes ≠ poids m
 
     expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)->split($mother, [
         ['weight' => 70],
-    ], 5.0))->toThrow(\RuntimeException::class, 'tolérance de pesée');
+    ], 5.0, 'Division technique (test)'))->toThrow(\RuntimeException::class, 'tolérance de pesée');
 
     expect($mother->fresh()->quality_status)->toBe(Coil::QUALITY_QUARANTINED)
         ->and((float) $mother->fresh()->remaining_weight)->toBe(100.0);

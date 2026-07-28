@@ -67,6 +67,9 @@ class RolesAndPermissionsSeeder extends Seeder
             // perte / voir la valorisation / contre-opération.
             'coils.split.propose', 'coils.split.execute', 'coils.split.approve_loss',
             'coils.split.view_cost', 'coils.split.reverse',
+            // Voie technique exceptionnelle (hors proposition) — permission
+            // distincte, à n'accorder qu'aux profils d'exploitation habilités.
+            'coils.split.technical_override', 'coils.split.approve_technical',
             'production.declare',           // déclaration production/rebuts (opérateurs §15 CDC)
             'production.validate_declaration', // visa chef d'équipe sur les déclarations de production (§13.3 CDC)
             'production.approve_financial',    // validation financière avant lancement OF (§13.2 CDC)

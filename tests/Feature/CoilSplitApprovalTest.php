@@ -80,11 +80,13 @@ it('ACTEUR SYSTÈME AUTORISÉ : exécution acceptée sous contexte explicite', f
     [$co, $mother] = splitSetup();
     auth()->logout();
 
+    // Acteur système PLEINEMENT habilité : exécution + dérogation technique
+    // (l'exécution hors proposition reste une procédure exceptionnelle).
     $children = ExecutionContext::asSystem(
-        'import-bobines', ['coils.split.execute'],
+        'import-bobines', ['coils.split.execute', 'coils.split.technical_override'],
         origin: 'artisan:coils:import', reason: 'Import quotidien',
         callback: fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
-            ->split($mother, [['weight' => 200]], 0.0)
+            ->split($mother, [['weight' => 200]], 0.0, 'Reprise technique')
     );
 
     expect($children)->toHaveCount(1)
@@ -99,7 +101,7 @@ it('ACTEUR SYSTÈME SANS PERMISSION : exécution refusée', function () {
         'job-sans-droit', ['autre.permission'],
         origin: 'queue:job', reason: 'Test',
         callback: fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
-            ->split($mother, [['weight' => 200]], 0.0)
+            ->split($mother, [['weight' => 200]], 0.0, 'Reprise technique')
     ))->toThrow(\RuntimeException::class, 'non accordée');
 
     expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0);
@@ -113,6 +115,57 @@ it('le contexte système est bien restauré après exécution (pas de fuite)', f
     ExecutionContext::asSystem('x', ['coils.split.execute'], 'o', 'r', fn () => null);
 
     expect(ExecutionContext::systemActor())->toBeNull(); // restauré
+});
+
+// ── [#2] Exécution directe interdite hors proposition approuvée ─────────────
+
+it('EXÉCUTION DIRECTE sans proposition ni motif technique : REFUSÉE', function () {
+    [$co, $mother] = splitSetup();
+    // Utilisateur habilité à exécuter, mais pas de proposition ni de motif.
+    test()->actingAs(userWith(['coils.split.execute'], $co->id));
+
+    expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 200]], 0.0))
+        ->toThrow(\RuntimeException::class, 'proposition approuvée est requise');
+
+    expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0);
+});
+
+it('EXCEPTION TECHNIQUE : refusée sans coils.split.technical_override', function () {
+    [$co, $mother] = splitSetup();
+    test()->actingAs(userWith(['coils.split.execute'], $co->id));
+
+    expect(fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 200]], 0.0, 'Reprise incident atelier'))
+        ->toThrow(\RuntimeException::class, 'coils.split.technical_override');
+
+    expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0);
+});
+
+it('EXCEPTION TECHNIQUE : autorisée avec permission + motif, et JOURNALISÉE', function () {
+    [$co, $mother] = splitSetup();
+    test()->actingAs(userWith(['coils.split.execute', 'coils.split.technical_override'], $co->id));
+
+    $children = app(\App\Modules\Production\Services\CoilSplitService::class)
+        ->split($mother, [['weight' => 200]], 0.0, 'Reprise incident atelier');
+
+    expect($children)->toHaveCount(1)
+        ->and(\App\Models\AuditLog::where('action', 'bobine.division.derogation_technique')->exists())->toBeTrue();
+});
+
+it('ACTEUR SYSTÈME : ne contourne PAS la proposition sans droit de dérogation', function () {
+    [$co, $mother] = splitSetup();
+    auth()->logout();
+
+    // Acteur système autorisé à exécuter, mais SANS technical_override.
+    expect(fn () => ExecutionContext::asSystem(
+        'job-division', ['coils.split.execute'],
+        origin: 'queue:job', reason: 'Traitement automatique',
+        callback: fn () => app(\App\Modules\Production\Services\CoilSplitService::class)
+            ->split($mother, [['weight' => 200]], 0.0, 'Automatique')
+    ))->toThrow(\RuntimeException::class, 'coils.split.technical_override');
+
+    expect(Coil::where('parent_coil_id', $mother->id)->count())->toBe(0);
 });
 
 // ── [#3] Proposition persistée + machine d'états ────────────────────────────

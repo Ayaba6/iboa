@@ -109,8 +109,35 @@ class CoilSplitService
             $tolerance = (float) ($opts['tolerance'] ?? self::DEFAULT_WEIGHING_TOLERANCE);
             $loss      = (float) ($opts['loss'] ?? 0);
 
-            // [#8] Permission d'EXÉCUTION de la division.
+            // [#2] VOIE NORMALE OBLIGATOIRE : toute division métier passe par une
+            // PROPOSITION approuvée (CoilSplitProposalService). Un appel direct
+            // n'est toléré que par une procédure technique EXCEPTIONNELLE :
+            // permission dédiée `coils.split.technical_override` + motif, tracée
+            // au journal d'audit. Un acteur système ne contourne pas la
+            // proposition sans cette autorisation explicite.
+            // Autorisation AVANT règle métier : identité et droit d'exécuter
+            // d'abord, voie d'exécution ensuite.
             $this->assertCan('coils.split.execute', 'exécuter une division de bobine');
+
+            $viaProposal = ($opts['approved'] ?? false) === true;
+            if (! $viaProposal) {
+                $technicalReason = trim((string) ($opts['technical_reason'] ?? $reason ?? ''));
+                if ($technicalReason === '') {
+                    throw new \RuntimeException(
+                        'Division de bobine : une proposition approuvée est requise. '
+                        . 'À défaut, la procédure technique exceptionnelle exige un motif '
+                        . 'et la permission « coils.split.technical_override ».'
+                    );
+                }
+                $this->assertCan('coils.split.technical_override', sprintf(
+                    'exécuter une division technique exceptionnelle sur la bobine %s (hors proposition)',
+                    $mother->reference
+                ));
+                app(AuditService::class)->log('bobine.division.derogation_technique', $mother, [], [
+                    'motif'  => $technicalReason,
+                    'acteur' => \App\Services\ExecutionContext::describe(),
+                ]);
+            }
 
             // [#8] Perte au-delà du seuil : permission dédiée + maker-checker
             // (l'exécutant ne peut pas approuver seul sa propre perte).
