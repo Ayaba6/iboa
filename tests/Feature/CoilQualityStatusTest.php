@@ -73,7 +73,7 @@ function makeCoil(array $ctx, ?string $qualityStatus, float $weight = 100): Coil
     ]);
 }
 
-function makeOf(array $ctx): ProductionOrder
+function makeCoilQualityOf(array $ctx): ProductionOrder
 {
     [$co, , $p] = $ctx;
     $fy = FiscalYear::firstOrCreate(['label' => '2026'], ['starts_at' => '2026-01-01', 'ends_at' => '2026-12-31', 'status' => 'ouvert', 'is_current' => true]);
@@ -88,7 +88,7 @@ function makeOf(array $ctx): ProductionOrder
 it('bobine EN QUARANTAINE : consommation production REFUSÉE (QUARANTINED → CONSUMED interdit)', function () {
     $ctx  = coilQualSetup(60, 40);
     $coil = makeCoil($ctx, Coil::QUALITY_QUARANTINED);
-    $of   = makeOf($ctx);
+    $of   = makeCoilQualityOf($ctx);
 
     expect(fn () => app(CoilConsumptionService::class)->consume($of, $coil, 10.0, null, null))
         ->toThrow(\Illuminate\Validation\ValidationException::class);
@@ -100,7 +100,7 @@ it('bobine EN QUARANTAINE : consommation production REFUSÉE (QUARANTINED → CO
 
 it('bobine REFUSÉE ou en RETOUR : consommation également refusée', function () {
     $ctx = coilQualSetup(60, 40);
-    $of  = makeOf($ctx);
+    $of  = makeCoilQualityOf($ctx);
 
     foreach ([Coil::QUALITY_REJECTED, Coil::QUALITY_RETURN_PENDING, Coil::QUALITY_RECEIVED] as $status) {
         $coil = makeCoil($ctx, $status);
@@ -113,7 +113,7 @@ it('bobine REFUSÉE ou en RETOUR : consommation également refusée', function (
 it('bobine LIBÉRÉE : consommation autorisée', function () {
     $ctx  = coilQualSetup(100, 0);
     $coil = makeCoil($ctx, Coil::QUALITY_RELEASED);
-    $of   = makeOf($ctx);
+    $of   = makeCoilQualityOf($ctx);
 
     app(CoilConsumptionService::class)->consume($of, $coil, 30.0, null, null);
 
@@ -124,7 +124,7 @@ it('bobine LIBÉRÉE : consommation autorisée', function () {
 it('bobine HISTORIQUE (statut qualité NULL) : consommable mais jamais présentée comme libérée', function () {
     $ctx  = coilQualSetup(100, 0);
     $coil = makeCoil($ctx, null); // héritage : statut inconnu
-    $of   = makeOf($ctx);
+    $of   = makeCoilQualityOf($ctx);
 
     app(CoilConsumptionService::class)->consume($of, $coil, 10.0, null, null);
 
@@ -136,7 +136,7 @@ it('bobine HISTORIQUE (statut qualité NULL) : consommable mais jamais présent�
 it('GARDE QUANTITATIVE : bobine 10 000 reçue, 6 000 libérée, 2 000 consommée → 5 000 refusé, 4 000 accepté', function () {
     $ctx = coilQualSetup(6000, 4000);
     [$co, $wh, $p, $rec] = $ctx;
-    $of = makeOf($ctx);
+    $of = makeCoilQualityOf($ctx);
 
     // Bobine partiellement libérée : reçu 10 000 = libéré 6 000 + quarantaine 4 000.
     $coil = Coil::create([
@@ -354,7 +354,7 @@ it('DIVISION PHYSIQUE : bobine mère → filles traçables, poids réconciliés,
     expect(\Illuminate\Support\Facades\DB::table('coil_split_operation_items')->where('split_operation_id', $op->id)->count())->toBe(2);
 
     // La fille conforme est consommable ; la fille refusée ne l'est pas.
-    $of = makeOf($ctx);
+    $of = makeCoilQualityOf($ctx);
     app(CoilConsumptionService::class)->consume($of, $children[0]->fresh(), 30.0, null, null);
     expect((float) $children[0]->fresh()->remaining_weight)->toBe(40.0);
     expect(fn () => app(CoilConsumptionService::class)->consume($of, $children[1]->fresh(), 5.0, null, null))
@@ -778,7 +778,7 @@ it('décision qualité : le REFUS marque bobine et lot comme REFUSÉS (non conso
     [, , , , $item] = $ctx;
     $coil = makeCoil($ctx, Coil::QUALITY_QUARANTINED);
     $coil->update(['qty_released' => 0, 'qty_quarantine' => 40, 'qty_rejected' => 0]);
-    $of = makeOf($ctx);
+    $of = makeCoilQualityOf($ctx);
 
     app(PurchaseQualityService::class)->rejectAfterControl($item, 40.0, [
         'reason'  => 'Non conforme',

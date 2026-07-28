@@ -21,7 +21,7 @@ use Spatie\Permission\Models\Role;
 
 uses(\Tests\Concerns\RefreshDatabase::class);
 
-function recSetup(): array
+function receptionDispositionSetup(): array
 {
     $fy = FiscalYear::firstOrCreate(['label' => '2026'], ['starts_at' => '2026-01-01', 'ends_at' => '2026-12-31', 'status' => 'ouvert', 'is_current' => true]);
     $co = Company::firstOrCreate(['name' => 'REC'], ['email' => 'rec@iboa.test', 'current_fiscal_year_id' => $fy->id]);
@@ -60,7 +60,7 @@ function recSetup(): array
 }
 
 it('ventile 100 reçu = 70 accepté + 20 quarantaine + 10 refusé, avec routage stock', function () {
-    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup();
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = receptionDispositionSetup();
 
     app(PurchaseReceptionService::class)->validate($rec, $wh->id, [
         $recItem->id => ['received_quantity' => 100, 'accepted_quantity' => 70, 'quarantine_quantity' => 20, 'refused_quantity' => 10],
@@ -86,7 +86,7 @@ it('ventile 100 reçu = 70 accepté + 20 quarantaine + 10 refusé, avec routage 
 });
 
 it('refuse une ventilation dont la somme ≠ reçu (invariant reçu = accepté + quarantaine + refusé)', function () {
-    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup();
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = receptionDispositionSetup();
 
     expect(fn () => app(PurchaseReceptionService::class)->validate($rec, $wh->id, [
         $recItem->id => ['received_quantity' => 100, 'accepted_quantity' => 70, 'quarantine_quantity' => 20, 'refused_quantity' => 5],
@@ -98,7 +98,7 @@ it('refuse une ventilation dont la somme ≠ reçu (invariant reçu = accepté +
 });
 
 it('article SANS contrôle qualité : décision explicite no_quality_required (accepté = reçu, CERTIFIED)', function () {
-    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup(); // produit factory : controle_qualite false
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = receptionDispositionSetup(); // produit factory : controle_qualite false
 
     app(PurchaseReceptionService::class)->validate($rec, $wh->id, [
         $recItem->id => ['received_quantity' => 100],
@@ -112,7 +112,7 @@ it('article SANS contrôle qualité : décision explicite no_quality_required (a
 });
 
 it('article AVEC contrôle qualité : ventilation obligatoire, pas d\'acceptation implicite', function () {
-    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup();
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = receptionDispositionSetup();
     $p->update(['controle_qualite' => true]); // QC obligatoire
 
     expect(fn () => app(PurchaseReceptionService::class)->validate($rec, $wh->id, [
@@ -125,7 +125,7 @@ it('article AVEC contrôle qualité : ventilation obligatoire, pas d\'acceptatio
 });
 
 it('ligne HISTORIQUE non classée (accepté NULL) : le replay ne crée AUCUN stock vendable', function () {
-    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = recSetup();
+    [$co, $wh, $quar, $p, $po, $poItem, $rec, $recItem] = receptionDispositionSetup();
     // Simule une ligne héritée : reçu connu, disposition INCONNUE.
     $recItem->update([
         'received_quantity'   => 100,
