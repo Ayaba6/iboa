@@ -106,7 +106,7 @@
                     {{-- PRIMAIRE : Soumettre à validation interne --}}
                     @can('sales.submit')
                     <form action="{{ route('ventes.devis.submit', $quote) }}" method="POST"
-                          onsubmit="return confirm('Soumettre ce devis à la validation interne ?')">
+                          data-confirm="Soumettre ce devis à la validation interne ?">
                         @csrf
                         <button type="submit" class="{{ $btnPrimary }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +120,7 @@
 
                     {{-- Supprimer --}}
                     <form action="{{ route('ventes.devis.destroy', $quote) }}" method="POST"
-                          onsubmit="return confirm('Supprimer définitivement ce devis brouillon ?')">
+                          data-confirm="Supprimer définitivement ce devis brouillon ?">
                         @csrf @method('DELETE')
                         <button type="submit" class="{{ $btnDangerOutline }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +143,7 @@
                     {{-- VALIDER --}}
                     @can('sales.validate')
                     <form action="{{ route('ventes.devis.validate-internal', $quote) }}" method="POST"
-                          onsubmit="return confirm('Valider ce devis ?')">
+                          data-confirm="Valider ce devis ?">
                         @csrf
                         <button type="submit" class="{{ $btnPrimary }} bg-emerald-600 hover:bg-emerald-700">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,7 +209,7 @@
                     @if(!$quote->converted_to_order_id)
                         @can('sales.transform')
                         <form action="{{ route('ventes.devis.convert', $quote) }}" method="POST"
-                              onsubmit="return confirm('Transformer ce devis en commande ?')">
+                              data-confirm="Transformer ce devis en commande ?">
                             @csrf
                             <button type="submit" class="{{ $btnPrimary }} bg-emerald-600 hover:bg-emerald-700">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,7 +267,7 @@
                 @if(in_array($quote->status, ['refuse', 'annule', 'expire', 'envoye', 'accepte']))
                     @if(!$quote->converted_to_order_id)
                     <form action="{{ route('ventes.devis.destroy', $quote) }}" method="POST"
-                          onsubmit="return confirm('Supprimer définitivement ce devis ?')">
+                          data-confirm="Supprimer définitivement ce devis ?">
                         @csrf @method('DELETE')
                         <button type="submit" class="{{ $btnDangerOutline }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

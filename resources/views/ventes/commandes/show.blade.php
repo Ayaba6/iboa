@@ -49,7 +49,7 @@
                     </a>
                     @can('sales.submit')
                     <form action="{{ route('ventes.commandes.submit', $order) }}" method="POST"
-                          onsubmit="return confirm('Soumettre cette commande à la validation interne ?')">
+                          data-confirm="Soumettre cette commande à la validation interne ?">
                         @csrf
                         <button type="submit" class="{{ $btnP }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +62,7 @@
                     @endcan
                     @can('delete', $order)
                     <form action="{{ route('ventes.commandes.destroy', $order) }}" method="POST"
-                          onsubmit="return confirm('Supprimer définitivement cette commande brouillon ?')">
+                          data-confirm="Supprimer définitivement cette commande brouillon ?">
                         @csrf @method('DELETE')
                         <button type="submit" class="{{ $btnDO }}">Supprimer</button>
                     </form>
@@ -79,7 +79,7 @@
                     </span>
                     @can('sales.validate')
                     <form action="{{ route('ventes.commandes.validate-internal', $order) }}" method="POST"
-                          onsubmit="return confirm('Valider cette commande ?')">
+                          data-confirm="Valider cette commande ?">
                         @csrf
                         <button type="submit" class="{{ $btnP }} bg-emerald-600 hover:bg-emerald-700">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,7 +183,7 @@
                         @can('production.approve_financial')
                         @if(!$order->hasActiveProductionOrder())
                         <form action="{{ route('ventes.commandes.revoke-production', $order) }}" method="POST"
-                              onsubmit="return confirm('Révoquer l\'approbation de production de cette commande ?')">
+                              data-confirm="Révoquer l'approbation de production de cette commande ?">
                             @csrf
                             <button type="submit" class="inline-flex items-center px-2.5 py-2 border border-gray-300 text-gray-600 bg-white rounded-[4px] text-sm font-medium hover:bg-gray-50">Révoquer</button>
                         </form>
@@ -227,7 +227,7 @@
                     @php $activeBp = $order->activeBonPreparation(); @endphp
                     @if($order->isReadyForDelivery())
                     <form action="{{ route('ventes.commandes.delivery-note', $order) }}" method="POST"
-                          onsubmit="return confirm('Créer un bon de livraison depuis cette commande ?')">
+                          data-confirm="Créer un bon de livraison depuis cette commande ?">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors">
@@ -249,7 +249,7 @@
                     </a>
                     @endif
                     <form action="{{ route('ventes.commandes.cancel', $order) }}" method="POST"
-                          onsubmit="return confirm('Annuler cette commande ?')">
+                          data-confirm="Annuler cette commande ?">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-[4px] text-sm font-semibold hover:bg-red-50 transition-colors">
@@ -264,7 +264,7 @@
                 {{-- En préparation / Partiellement livré: Créer BL supplémentaire + Créer Facture --}}
                 @if(in_array($order->status, ['en_preparation', 'partiellement_livre']))
                     <form action="{{ route('ventes.commandes.delivery-note', $order) }}" method="POST"
-                          onsubmit="return confirm('Créer un bon de livraison complémentaire ?')">
+                          data-confirm="Créer un bon de livraison complémentaire ?">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors">
@@ -275,7 +275,7 @@
                         </button>
                     </form>
                     <form action="{{ route('ventes.commandes.invoice', $order) }}" method="POST"
-                          onsubmit="return confirm('Créer une facture depuis cette commande ?')">
+                          data-confirm="Créer une facture depuis cette commande ?">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors">
@@ -290,7 +290,7 @@
                 {{-- Livré: Créer Facture --}}
                 @if($order->status === 'livre')
                     <form action="{{ route('ventes.commandes.invoice', $order) }}" method="POST"
-                          onsubmit="return confirm('Créer une facture depuis cette commande ?')">
+                          data-confirm="Créer une facture depuis cette commande ?">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors">
@@ -306,7 +306,7 @@
                 @if($order->status === 'annule')
                     @can('reopen', $order)
                     <form action="{{ route('ventes.commandes.reopen', $order) }}" method="POST"
-                          onsubmit="return confirm('Réouvrir cette commande annulée ? Elle repassera en brouillon.')">
+                          data-confirm="Réouvrir cette commande annulée ? Elle repassera en brouillon.">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors">

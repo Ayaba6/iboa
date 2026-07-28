@@ -195,12 +195,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const alpine  = modalEl && modalEl._x_dataStack && modalEl._x_dataStack[0];
 
         if (!alpine || typeof alpine.show !== 'function') {
-            /* Fallback : confirm natif */
-            if (window.confirm(confirmMsg)) {
-                form.onsubmit = null;
-                form.removeAttribute('data-confirm');
-                form.submit();
-            }
+            /* Échec visible et sûr : ne jamais contourner la modale applicative. */
+            window.alert('La confirmation applicative est indisponible. Rechargez la page avant de réessayer.');
+            console.error('ERP confirmation modal unavailable; form submission blocked.', { action: form.action });
             return;
         }
 
@@ -234,7 +231,9 @@ document.addEventListener('DOMContentLoaded', function () {
             ? { message: optsOrMessage }
             : (optsOrMessage ?? {});
         if (!alpine || typeof alpine.show !== 'function') {
-            return window.confirm(opts.message ?? 'Confirmer ?');
+            window.alert('La confirmation applicative est indisponible. Rechargez la page avant de réessayer.');
+            console.error('ERP confirmation modal unavailable; requested action blocked.', opts);
+            return false;
         }
         return alpine.show(opts);
     };

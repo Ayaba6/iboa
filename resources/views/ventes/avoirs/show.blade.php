@@ -64,7 +64,7 @@
                 @if($creditNote->status === 'brouillon')
                     @can('sales.submit')
                     <form action="{{ route('ventes.avoirs.submit', $creditNote) }}" method="POST"
-                          onsubmit="return confirm('Soumettre cet avoir à la validation interne ?')">
+                          data-confirm="Soumettre cet avoir à la validation interne ?">
                         @csrf
                         <button type="submit" class="{{ $avBtnP }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@
                     </form>
                     @endcan
                     <form action="{{ route('ventes.avoirs.destroy', $creditNote) }}" method="POST"
-                          onsubmit="return confirm('Supprimer définitivement cet avoir ?')">
+                          data-confirm="Supprimer définitivement cet avoir ?">
                         @csrf @method('DELETE')
                         <button type="submit" class="{{ $avBtnDO }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +97,7 @@
                     </span>
                     @can('sales.validate')
                     <form action="{{ route('ventes.avoirs.validate-internal', $creditNote) }}" method="POST"
-                          onsubmit="return confirm('Valider cet avoir ? Cette action génère une écriture comptable.')">
+                          data-confirm="Valider cet avoir ? Cette action génère une écriture comptable.">
                         @csrf
                         <button type="submit" class="{{ $avBtnP }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,7 +148,7 @@
                 {{-- Appliquer à la facture --}}
                 @if($creditNote->status === 'valide' && $creditNote->invoice_id && $creditNote->remaining_credit > 0)
                 <form action="{{ route('ventes.avoirs.apply', $creditNote) }}" method="POST"
-                      onsubmit="return confirm('Appliquer cet avoir sur la facture liée ?')">
+                      data-confirm="Appliquer cet avoir sur la facture liée ?">
                     @csrf
                     <button type="submit"
                             class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-[4px] text-sm font-medium hover:bg-green-700 transition-colors">
@@ -164,7 +164,7 @@
                 @if(in_array($creditNote->status, ['valide', 'applique'], true) && !$creditNote->replacement_delivery_id)
                 @can('update', $creditNote)
                 <form action="{{ route('ventes.avoirs.replacement', $creditNote) }}" method="POST"
-                      onsubmit="return confirm('Générer un bon de livraison de remplacement (brouillon) pour ce client ?')">
+                      data-confirm="Générer un bon de livraison de remplacement (brouillon) pour ce client ?">
                     @csrf
                     <button type="submit"
                             class="inline-flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-[4px] text-sm font-medium hover:bg-amber-700 transition-colors">

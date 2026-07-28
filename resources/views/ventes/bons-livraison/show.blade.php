@@ -65,7 +65,7 @@
                     </a>
                     @can('sales.submit')
                     <form action="{{ route('ventes.bons-livraison.submit', $deliveryNote) }}" method="POST"
-                          onsubmit="return confirm('Soumettre ce bon de livraison à la validation interne ?')">
+                          data-confirm="Soumettre ce bon de livraison à la validation interne ?">
                         @csrf
                         <button type="submit" class="{{ $blBtnP }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +88,7 @@
                     </span>
                     @can('sales.validate')
                     <form action="{{ route('ventes.bons-livraison.validate-internal', $deliveryNote) }}" method="POST"
-                          onsubmit="return confirm('Valider ce bon de livraison ? Le stock sera décrémenté.')">
+                          data-confirm="Valider ce bon de livraison ? Le stock sera décrémenté.">
                         @csrf
                         <button type="submit" class="{{ $blBtnP }} bg-emerald-700 hover:bg-emerald-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +139,7 @@
                 {{-- Validé: Créer Facture --}}
                 @if($deliveryNote->status === 'valide')
                     <form action="{{ route('ventes.bons-livraison.invoice', $deliveryNote) }}" method="POST"
-                          onsubmit="return confirm('Créer une facture depuis ce bon de livraison ?')">
+                          data-confirm="Créer une facture depuis ce bon de livraison ?">
                         @csrf
                         <button type="submit"
                                 class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">

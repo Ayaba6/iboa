@@ -12,6 +12,8 @@
 @section('content')
 <div class="space-y-3">
 
+    <x-sales.module-nav />
+
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
@@ -153,7 +155,7 @@
                                 @can('bon_preparations.update')
                                 @if($bp->status === 'en_attente')
                                 <form method="POST" action="{{ route('ventes.bons-preparation.start-loading', $bp) }}"
-                                      onsubmit="return confirm('Démarrer le chargement du BP {{ addslashes($bp->number) }} ?')">
+                                      data-confirm="Démarrer le chargement du BP {{ addslashes($bp->number) }} ?">
                                     @csrf
                                     <button type="submit"
                                             class="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Démarrer le chargement">
@@ -165,7 +167,7 @@
                                 </form>
                                 @elseif($bp->status === 'en_cours')
                                 <form method="POST" action="{{ route('ventes.bons-preparation.finish-loading', $bp) }}"
-                                      onsubmit="return confirm('Terminer le chargement du BP {{ addslashes($bp->number) }} ?')">
+                                      data-confirm="Terminer le chargement du BP {{ addslashes($bp->number) }} ?">
                                     @csrf
                                     <button type="submit"
                                             class="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" title="Terminer le chargement">

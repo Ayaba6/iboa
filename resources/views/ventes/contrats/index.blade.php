@@ -85,7 +85,7 @@
                         @if($ct->status === 'brouillon')
                         <span class="text-gray-300 mx-1">|</span>
                         <form method="POST" action="{{ route('ventes.contrats.destroy', $ct) }}" class="inline"
-                              onsubmit="return confirm('Supprimer le contrat {{ $ct->number }} ?')">
+                              data-confirm="Supprimer le contrat {{ $ct->number }} ?">
                             @csrf @method('DELETE')
                             <button type="submit" class="text-[12px] font-medium text-red-400 hover:text-red-600 hover:underline">Supprimer</button>
                         </form>

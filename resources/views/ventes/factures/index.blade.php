@@ -15,6 +15,8 @@
 @endphp
 <div class="space-y-3">
 
+    <x-sales.module-nav />
+
     {{-- ══ Barre titre + actions (pattern Sage X3) ══════════════════════════ --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
@@ -209,7 +211,7 @@
                                     </svg>
                                 </a>
                                 <form action="{{ route('ventes.factures.validate', $invoice) }}" method="POST"
-                                      onsubmit="return confirm('Valider la facture {{ addslashes($invoice->number) }} ?')">
+                                      data-confirm="Valider la facture {{ addslashes($invoice->number) }} ?">
                                     @csrf
                                     <button type="submit" aria-label="Valider la facture {{ $invoice->number }}"
                                             class="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" title="Valider">

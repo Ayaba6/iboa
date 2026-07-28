@@ -27,6 +27,8 @@
 
 <div class="space-y-3">
 
+    <x-sales.module-nav />
+
     {{-- ── Entête + onglets ─────────────────────────────────────────────────── --}}
     <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>

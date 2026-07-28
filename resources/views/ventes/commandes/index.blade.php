@@ -11,6 +11,8 @@
 @php $fmt = fn($n) => number_format((int)$n, 0, ',', ' '); @endphp
 <div class="space-y-3">
 
+    <x-sales.module-nav />
+
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
@@ -145,7 +147,7 @@
                                 {{-- Supprimer (draft seulement) --}}
                                 @if($order->status === 'brouillon')
                                 <form action="{{ route('ventes.commandes.destroy', $order) }}" method="POST"
-                                      onsubmit="return confirm('Supprimer la commande {{ addslashes($order->number) }} ?')">
+                                      data-confirm="Supprimer la commande {{ addslashes($order->number) }} ?">
                                     @csrf @method('DELETE')
                                     <button type="submit"
                                             class="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Supprimer">

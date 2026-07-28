@@ -97,7 +97,7 @@
                 @if($invoice->status === 'brouillon')
                     @can('sales.submit')
                     <form action="{{ route('ventes.factures.submit', $invoice) }}" method="POST"
-                          onsubmit="return confirm('Soumettre cette facture à la validation interne ?')">
+                          data-confirm="Soumettre cette facture à la validation interne ?">
                         @csrf
                         <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-800 transition-colors shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +120,7 @@
                     </span>
                     @can('sales.validate')
                     <form action="{{ route('ventes.factures.validate-internal', $invoice) }}" method="POST"
-                          onsubmit="return confirm('Valider cette facture ? Elle sera émise et ne pourra plus être modifiée.')">
+                          data-confirm="Valider cette facture ? Elle sera émise et ne pourra plus être modifiée.">
                         @csrf
                         <button type="submit" class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-[4px] text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +177,7 @@
                 {{-- Envoyer par email --}}
                 @if($invoice->client?->email && $invoice->status !== 'brouillon')
                 <form action="{{ route('ventes.factures.send-email', $invoice) }}" method="POST"
-                      onsubmit="return confirm('Envoyer la facture à {{ addslashes($invoice->client->email) }} ?')">
+                      data-confirm="Envoyer la facture à {{ addslashes($invoice->client->email) }} ?">
                     @csrf
                     <button type="submit" class="btn btn-secondary">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +246,7 @@
                 {{-- [UX-2] Convertir une proforma en facture standard --}}
                 @if($invoice->type === 'proforma' && in_array($invoice->status, ['emise', 'envoyee']))
                 <form action="{{ route('ventes.factures.convert-proforma', $invoice) }}" method="POST"
-                      onsubmit="return confirm('Convertir cette proforma en facture standard ?\n\nUne nouvelle facture (compta + stock) sera générée. La proforma sera marquée annulée.')">
+                      data-confirm="Convertir cette proforma en facture standard ?\n\nUne nouvelle facture (compta + stock) sera générée. La proforma sera marquée annulée.">
                     @csrf
                     <button type="submit" class="btn btn-teal" title="Convertir en facture standard avec impact compta + stock">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -833,7 +833,7 @@
             {{-- Delete all --}}
             <div class="px-3 py-1.5 border-t border-emerald-100 flex justify-end">
                 <form action="{{ route('ventes.factures.schedules.destroy-all', $invoice) }}" method="POST"
-                      onsubmit="return confirm('Supprimer tout l\'échéancier ?')">
+                      data-confirm="Supprimer tout l'échéancier ?">
                     @csrf @method('DELETE')
                     <button type="submit"
                             class="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1">

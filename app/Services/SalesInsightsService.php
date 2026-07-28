@@ -24,6 +24,7 @@ class SalesInsightsService
      */
     public function dashboardKpis(): array
     {
+        $companyId      = currentCompany()->id;
         $today          = now();
         $todayStr       = $today->toDateString();
         $startOfMonth   = $today->copy()->startOfMonth();
@@ -36,6 +37,7 @@ class SalesInsightsService
 
         // ── Agrégats factures en une requête ────────────────────────────────
         $invoiceAgg = DB::table('invoices')
+            ->where('company_id', $companyId)
             ->whereNull('deleted_at')
             ->selectRaw("
                 -- CA mois courant
@@ -102,6 +104,7 @@ class SalesInsightsService
 
         // ── Devis : taux de conversion ───────────────────────────────────────
         $quoteAgg = DB::table('quotes')
+            ->where('company_id', $companyId)
             ->whereNull('deleted_at')
             ->selectRaw("
                 SUM(CASE WHEN status NOT IN ('brouillon','annule') THEN 1 ELSE 0 END) AS sent,
@@ -117,8 +120,9 @@ class SalesInsightsService
 
         // ── Commandes en cours ───────────────────────────────────────────────
         $ordersInProgress = (int) DB::table('orders')
+            ->where('company_id', $companyId)
             ->whereNull('deleted_at')
-            ->whereIn('status', ['confirmee', 'partiellement_livre'])
+            ->whereIn('status', ['confirme', 'en_preparation', 'partiellement_livre'])
             ->count();
 
         // ── Nouveaux clients ce mois ─────────────────────────────────────────
@@ -158,6 +162,7 @@ class SalesInsightsService
 
         return DB::table('invoices as i')
             ->join('clients as c', 'c.id', '=', 'i.client_id')
+            ->where('i.company_id', currentCompany()->id)
             ->whereNull('i.deleted_at')
             ->whereIn('i.status', ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])
             ->where('i.remaining_amount', '>', 0)
@@ -182,6 +187,7 @@ class SalesInsightsService
         $from = now()->subMonths(12)->startOfMonth();
         return DB::table('invoices as i')
             ->join('clients as c', 'c.id', '=', 'i.client_id')
+            ->where('i.company_id', currentCompany()->id)
             ->whereNull('i.deleted_at')
             ->whereNotIn('i.status', ['brouillon', 'annulee'])
             ->where('i.type', '!=', 'avoir')
@@ -205,6 +211,7 @@ class SalesInsightsService
         return DB::table('invoice_items as it')
             ->join('invoices as i', 'i.id', '=', 'it.invoice_id')
             ->join('products as p', 'p.id', '=', 'it.product_id')
+            ->where('i.company_id', currentCompany()->id)
             ->whereNull('i.deleted_at')
             ->whereNotIn('i.status', ['brouillon', 'annulee'])
             ->where('i.type', '!=', 'avoir')
@@ -225,6 +232,7 @@ class SalesInsightsService
     {
         $from = now()->subMonths($months - 1)->startOfMonth();
         return DB::table('invoices')
+            ->where('company_id', currentCompany()->id)
             ->whereNull('deleted_at')
             ->whereNotIn('status', ['brouillon', 'annulee'])
             ->where('type', '!=', 'avoir')
@@ -244,6 +252,7 @@ class SalesInsightsService
     public function quotesPipeline(): array
     {
         $rows = DB::table('quotes')
+            ->where('company_id', currentCompany()->id)
             ->whereNull('deleted_at')
             ->select('status', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_ttc) as total'))
             ->groupBy('status')
@@ -356,6 +365,8 @@ class SalesInsightsService
                 ->whereNotIn('status', ['brouillon', 'annulee', 'payee'])->count(),
             'low_stock' => (int) DB::table('product_stocks')
                 ->join('products', 'products.id', '=', 'product_stocks.product_id')
+                ->join('warehouses', 'warehouses.id', '=', 'product_stocks.warehouse_id')
+                ->where('warehouses.company_id', $co)
                 ->where('products.stock_min', '>', 0)
                 ->whereColumn('product_stocks.quantity', '<=', 'products.stock_min')->count(),
         ];
@@ -374,7 +385,7 @@ class SalesInsightsService
     {
         $from     = now()->subMonths($months - 1)->startOfMonth();
         $prevFrom = (clone $from)->subYear();
-        $q = fn ($start, $end = null) => DB::table('invoices')->whereNull('deleted_at')
+        $q = fn ($start, $end = null) => DB::table('invoices')->where('company_id', currentCompany()->id)->whereNull('deleted_at')
             ->whereNotIn('status', ['brouillon', 'annulee'])->where('type', '!=', 'avoir')
             ->where('issued_at', '>=', $start)->when($end, fn ($x) => $x->where('issued_at', '<', $end))
             ->selectRaw('DATE_FORMAT(issued_at, "%Y-%m") m, SUM(subtotal_ht) ht')->groupBy('m')->pluck('ht', 'm');

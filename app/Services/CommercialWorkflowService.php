@@ -29,6 +29,7 @@ class CommercialWorkflowService
         private InvoiceService $invoiceService,
         private CreditNoteService $creditNoteService,
         private BonPreparationService $bonPrepService,
+        private CustomerCreditExposureService $creditExposureService,
     ) {}
 
     // ── Soumission ────────────────────────────────────────────────────────────
@@ -48,27 +49,23 @@ class CommercialWorkflowService
             app(SalesFloorWaiverService::class)->assertDocumentMayProceed($document);
         }
 
-        // [CDC §dépassement-crédit] Commande dépassant la limite de crédit → bloquée,
-        // redirigée vers responsable hiérarchique pour autorisation.
         if ($document instanceof Order) {
-            $client = $document->client ?? Client::find($document->client_id);
-            if ($client && $client->isOverCreditLimit()) {
-                // Notifie le responsable commercial pour déblocage manuel
-                ValidationStepNotification::sendToRoles(
-                    ['responsable_commercial', 'directeur'],
-                    title: 'Dépassement de crédit client',
-                    message: "Commande {$document->number} bloquée — client {$client->name} dépasse sa limite de crédit (".number_format($client->credit_limit, 0, ',', ' ').' XOF).',
-                    url: route('ventes.commandes.show', $document),
-                    modelType: 'Order', modelId: $document->id,
-                    type: 'credit_limit_exceeded', icon: 'exclamation-triangle', color: 'red',
-                );
-                throw new \RuntimeException(
-                    "Commande bloquée : la limite de crédit du client {$client->name} est dépassée ({$client->credit_usage_percent}% utilisé). Contactez le responsable hiérarchique."
-                );
-            }
-        }
+            $document = DB::transaction(function () use ($document, $motif) {
+                // Verrouille le document puis le client. Le verrou client sérialise toutes
+                // les commandes concurrentes qui consomment le même plafond de crédit.
+                $fresh = Order::lockForUpdate()->findOrFail($document->id);
+                if (! $fresh->isSubmittable()) {
+                    throw new \RuntimeException("Cette commande a déjà été soumise (statut : {$fresh->status}).");
+                }
 
-        $document->submit($motif);
+                $this->creditExposureService->assertMaySubmit($fresh);
+                $fresh->submit($motif);
+
+                return $fresh->fresh('client');
+            });
+        } else {
+            $document->submit($motif);
+        }
 
         // [CDC §13.1/§17] Document soumis → notifie exactement le rôle qui valide
         // ce type de document, jamais un envoi large. Message enrichi :

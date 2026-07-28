@@ -11,6 +11,8 @@
 @php $fmt = fn($n) => number_format((int)$n, 0, ',', ' '); @endphp
 <div class="space-y-3">
 
+    <x-sales.module-nav />
+
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
