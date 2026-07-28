@@ -51,8 +51,16 @@ class CommercialWorkflowService
 
         if ($document instanceof Order) {
             $document = DB::transaction(function () use ($document, $motif) {
-                // Verrouille le document puis le client. Le verrou client sérialise toutes
-                // les commandes concurrentes qui consomment le même plafond de crédit.
+                // [Ventes §3] ORDRE DE VERROUILLAGE GLOBAL : client D'ABORD, commandes ensuite.
+                //
+                // Cet ordre n'est pas cosmétique. Le contrôle de crédit lit les commandes
+                // ouvertes du client en lecture verrouillante : il verrouille donc des
+                // lignes de `orders` APRÈS avoir pris le verrou client. Si la commande
+                // courante était verrouillée AVANT le client, deux soumissions concurrentes
+                // sur le même client formaient une attente circulaire —
+                // « SQLSTATE[40001] Deadlock found », observé en course réelle.
+                Client::query()->whereKey($document->client_id)->lockForUpdate()->firstOrFail();
+
                 $fresh = Order::lockForUpdate()->findOrFail($document->id);
                 if (! $fresh->isSubmittable()) {
                     throw new \RuntimeException("Cette commande a déjà été soumise (statut : {$fresh->status}).");

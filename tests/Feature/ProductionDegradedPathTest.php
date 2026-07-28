@@ -83,8 +83,16 @@ function degStockedOrder(Company $co, Client $client, int $qty, int $stock = 100
 it('1. bloque la commande d’un client dépassant son plafond de crédit', function () {
     degAdmin();
     $co = degCompany();
-    // Encours (balance) 200 000 > plafond 100 000 → dépassement
-    $client = Client::factory()->create(['is_active' => true, 'credit_limit' => 100000, 'balance' => 200000]);
+    // [Ventes §4] L'encours doit venir de PIÈCES RÉELLES, jamais du champ
+    // dénormalisé `balance` : une valeur posée à la main prouverait seulement
+    // que le champ a été écrit, pas que le contrôle de crédit fonctionne.
+    $client = Client::factory()->create(['is_active' => true, 'credit_limit' => 100000, 'balance' => 0]);
+    \App\Models\Invoice::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'client_id' => $client->id, 'number' => 'FAC-DEG-CREDIT-001', 'type' => 'facture',
+        'status' => 'emise', 'issued_at' => now(), 'subtotal_ht' => 200000,
+        'total_ttc' => 200000, 'remaining_amount' => 200000,
+    ]);
     [$order] = degStockedOrder($co, $client, 10);
 
     expect($client->isOverCreditLimit())->toBeTrue();

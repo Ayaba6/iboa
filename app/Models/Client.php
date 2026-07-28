@@ -286,25 +286,47 @@ class Client extends Model
         return (bool) $this->is_tax_exempt;
     }
 
-    /** Vérifier si l'encours dépasse le plafond de crédit. */
-    public function isOverCreditLimit(): bool
+    /**
+     * [Ventes §4] Exposition crédit du client — SOURCE UNIQUE.
+     *
+     * Délègue à CustomerCreditExposureService. Le modèle ne recalcule plus
+     * l'encours à partir du seul `balance` : `balance` ne couvre que les
+     * factures ouvertes, alors que le blocage appliqué à la soumission d'une
+     * commande tient aussi compte des commandes ouvertes et des acomptes.
+     * Deux formules = un écran qui annonce un disponible que le contrôle
+     * n'accorde pas.
+     *
+     * @return array{limited:bool,limit:int,outstanding:int,open_orders:int,new_order:int,deposits:int,projected:int,available:int}
+     */
+    public function creditExposure(?int $companyId = null): array
     {
-        if (!$this->credit_limit || $this->credit_limit <= 0) return false;
-        return $this->balance > $this->credit_limit;
+        return app(\App\Services\CustomerCreditExposureService::class)
+            ->assessClient($this, $companyId);
     }
 
-    /** Montant disponible avant d'atteindre le plafond. */
+    /** Vérifier si l'encours prévisionnel dépasse le plafond de crédit. */
+    public function isOverCreditLimit(): bool
+    {
+        $exposure = $this->creditExposure();
+
+        return $exposure['limited'] && $exposure['projected'] > $exposure['limit'];
+    }
+
+    /** Montant disponible avant d'atteindre le plafond (encours prévisionnel). */
     public function getAvailableCreditAttribute(): int
     {
-        if (!$this->credit_limit || $this->credit_limit <= 0) return PHP_INT_MAX;
-        return max(0, (int)$this->credit_limit - (int)$this->balance);
+        return $this->creditExposure()['available'];
     }
 
     /** Taux d'utilisation du crédit en %. */
     public function getCreditUsagePercentAttribute(): float
     {
-        if (!$this->credit_limit || $this->credit_limit <= 0) return 0;
-        return round(($this->balance / $this->credit_limit) * 100, 1);
+        $exposure = $this->creditExposure();
+        if (! $exposure['limited']) {
+            return 0;
+        }
+
+        return round(($exposure['projected'] / $exposure['limit']) * 100, 1);
     }
 
     /**
