@@ -208,7 +208,7 @@ class ProductionOrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         [$data, $lines] = $this->validateData($request);
-        $order = $this->service->create($data, $lines);
+        $order = $this->service->create($data, $lines, 'interface');
         $this->uploadDocuments($order, $request);
 
         // [Audit création OF] « Enregistrer + soumettre » : envoie directement
@@ -732,6 +732,10 @@ class ProductionOrderController extends Controller
         $validated = $request->validate([
             'client_id'          => ['nullable', 'integer', 'exists:clients,id'],
             'order_id'           => ['nullable', 'integer', 'exists:orders,id'],
+            // [MTO §1] Motif de dérogation « OF MTO sans commande ». Nullable ici :
+            // c'est MtoOrderRequirementGuard qui décide s'il est exigible, car lui
+            // seul connaît le mode de production de l'article.
+            'derogation_motif'   => ['nullable', 'string', 'max:500'],
             'product_id'         => ['nullable', 'integer', 'exists:products,id', new \App\Rules\ProductFlux('fabrique')],
             'bill_of_material_id'=> ['nullable', 'integer', 'exists:bills_of_materials,id'],
             'production_line_id' => ['nullable', 'integer', 'exists:production_lines,id'],

@@ -36,12 +36,21 @@ class ProductionService
     public function __construct(
         private DocumentSequenceService $sequences,
         private ProductionAccountingService $accounting,
+        private MtoOrderRequirementGuard $mtoGuard,
     ) {}
 
-    /** Crée un OF en brouillon avec numéro auto + lignes de détail. */
-    public function create(array $data, array $lines = []): ProductionOrder
+    /**
+     * Crée un OF en brouillon avec numéro auto + lignes de détail.
+     *
+     * @param  string  $channel  Canal d'origine, journalisé en cas de dérogation MTO.
+     */
+    public function create(array $data, array $lines = [], string $channel = 'interface'): ProductionOrder
     {
-        return DB::transaction(function () use ($data, $lines) {
+        // [MTO §1] Un article MTO exige une commande client. Vérifié AVANT la
+        // transaction : inutile d'ouvrir un verrou pour un OF qui sera refusé.
+        $derogation = $this->mtoGuard->assertSatisfied($data, $channel);
+
+        return DB::transaction(function () use ($data, $lines, $derogation, $channel) {
             $company = currentCompany();
 
             // [X3 §14] OF interdit pour un article dont la CATÉGORIE n'est pas
@@ -107,9 +116,19 @@ class ProductionService
             // (OF manuel sans saisie, ou OF auto MTO depuis commande).
             $this->applyDefaults($data);
 
+            // Le motif de dérogation appartient au journal d'audit, pas à l'OF :
+            // il ne doit pas atteindre l'affectation de masse.
+            unset($data['derogation_motif']);
+
             $order = ProductionOrder::create($data);
             $this->syncLines($order, $lines);
             $this->recomputeQuantities($order);
+
+            // [MTO §1] Dérogation accordée : tracée une fois l'OF numéroté, dans la
+            // même transaction — pas d'OF dérogatoire sans sa trace, ni l'inverse.
+            if ($derogation !== null) {
+                $this->mtoGuard->journalize($order, $derogation, $channel);
+            }
 
             return $order->fresh('lines');
         });
