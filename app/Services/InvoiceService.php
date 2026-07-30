@@ -186,6 +186,17 @@ class InvoiceService
             $dn = DeliveryNote::lockForUpdate()->findOrFail($dn->id);
             $dn->load('items', 'order');
 
+            // [MTO §15] Un BL non validé n'est pas facturable. Sans cette garde, le
+            // contrôle qualité posé sur la VALIDATION se contournait en facturant
+            // directement un brouillon : la marchandise partait, la facture aussi,
+            // et le garde n'avait jamais été consulté.
+            if (in_array($dn->status, ['brouillon', 'en_attente_validation', 'refuse', 'annule'], true)) {
+                throw new \RuntimeException(sprintf(
+                    'Le bon de livraison %s est « %s » : il doit être validé avant d’être facturé.',
+                    $dn->number, $dn->status
+                ));
+            }
+
             // [SYNC-FIX-01] Guard : un BL ne peut être facturé qu'une seule fois (hors annulation).
             $existingInvoice = Invoice::where('delivery_note_id', $dn->id)
                 ->whereNotIn('status', ['annulee'])

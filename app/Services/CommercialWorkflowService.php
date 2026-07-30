@@ -200,13 +200,15 @@ class CommercialWorkflowService
      *
      * @throws \RuntimeException
      */
-    public function validateDeliveryNote(DeliveryNote $dn, ?string $motif = null): void
+    public function validateDeliveryNote(DeliveryNote $dn, ?string $motif = null, ?string $derogationQualite = null): void
     {
         $this->assertPermission('sales.validate');
         $dn->assertCanValidate();
 
-        // [VENTE↔PRODUCTION] Blocages livraison pour commandes fabriquées (QC + qté produite).
-        app(ProductionDeliveryGuard::class)->assertDeliverable($dn);
+        // [MTO §15] Qualité et quantité CONFORME, article par article. `$motif` est
+        // le motif de WORKFLOW : le réutiliser ici ferait d'une note de validation
+        // ordinaire une acceptation de risque qualité. D'où un paramètre séparé.
+        app(ProductionDeliveryGuard::class)->assertDeliverable($dn, $derogationQualite);
 
         DB::transaction(function () use ($dn, $motif) {
             // [CONCURRENCE] Verrou + re-check statut frais : empêche la double

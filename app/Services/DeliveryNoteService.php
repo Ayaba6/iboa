@@ -112,14 +112,16 @@ class DeliveryNoteService
      * Validate a delivery note: status -> valide, create stock-out movements,
      * update delivered_quantity on order items, and advance the order status.
      */
-    public function validate(DeliveryNote $dn): DeliveryNote
+    public function validate(DeliveryNote $dn, ?string $derogationQualite = null): DeliveryNote
     {
         if ($dn->status !== 'brouillon') {
             throw new \RuntimeException('Seuls les bons de livraison en brouillon peuvent être validés.');
         }
 
-        // [VENTE↔PRODUCTION] Blocages livraison pour commandes fabriquées (QC + qté produite).
-        app(ProductionDeliveryGuard::class)->assertDeliverable($dn);
+        // [MTO §15] Qualité et quantité CONFORME, article par article. Le motif de
+        // dérogation est un paramètre distinct : il ne doit jamais être confondu
+        // avec le motif de workflow, sous peine de déroger sans le vouloir.
+        app(ProductionDeliveryGuard::class)->assertDeliverable($dn, $derogationQualite);
 
         return DB::transaction(function () use ($dn) {
             $dn->update([

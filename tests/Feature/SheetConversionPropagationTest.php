@@ -51,6 +51,13 @@ it('propage nb tôles / longueur unitaire de la commande au BL puis à la factur
         ->and((float) $blItem->metrage_par_tole)->toBe(5.0)
         ->and((float) $blItem->quantity)->toBe(50.0); // métrage total conservé
 
+    // [MTO §15 — adaptation documentée du 30/07/2026] Un BL en brouillon n'est plus
+    // facturable : la barrière qualité est posée sur la VALIDATION, et facturer
+    // un brouillon la contournait entièrement. Cette commande ne porte aucun OF,
+    // la validation passe donc sans contrôle qualité — on rétablit simplement
+    // l'étape que le parcours sautait, sans toucher à son objet.
+    app(DeliveryNoteService::class)->validate($bl->fresh());
+
     // BL → facture : nb tôles / longueur hérités.
     $invoice = app(InvoiceService::class)->createFromDeliveryNote($bl->fresh());
     $invItem = $invoice->items->first();

@@ -128,7 +128,15 @@ it('parcourt Vente → Production tôle bac : gate financière réelle, bobine, 
         'thickness_ok' => true, 'length_ok' => true, 'color_ok' => true, 'visual_ok' => true,
         'status' => 'conforme', 'controlled_at' => now(),
     ]);
-    $output->update(['status' => 'validee', 'validated_at' => now()]);
+    // [MTO §15 — adaptation documentée du 30/07/2026] Libération qualité exigée en
+    // plus du visa avant toute livraison. Même motif que FerABetonWorkflowTest :
+    // le parcours contrôlait la production sans jamais la libérer, et le garde
+    // ne lisait pas `quality_released_at`.
+    $output->update([
+        'status'              => 'validee',
+        'validated_at'        => now(),
+        'quality_released_at' => now(),
+    ]);
     $svc->finish($of->fresh());
     expect($of->fresh()->status)->toBe('termine');
 

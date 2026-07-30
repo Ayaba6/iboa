@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Notifications\ValidationStepNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Modules\Production\Services\ProductionDeliveryGuard;
 
 /** [CDC §bon-preparation] Gère le cycle de vie des bons de préparation. */
 class BonPreparationService
@@ -118,11 +119,17 @@ class BonPreparationService
     /**
      * Magasinier démarre le chargement.
      */
-    public function startLoading(BonPreparation $bp): BonPreparation
+    public function startLoading(BonPreparation $bp, ?string $derogationQualite = null): BonPreparation
     {
         if ($bp->status !== 'en_attente') {
             throw new \RuntimeException('Ce bon de préparation ne peut pas être démarré (statut : ' . $bp->status . ').');
         }
+
+        // [MTO §15] On ne commence pas à préparer une production que personne n'a
+        // contrôlée. Barrière QUALITÉ seulement : une préparation est par nature
+        // partielle, ses quantités ne se jugent qu'au bon de livraison.
+        app(ProductionDeliveryGuard::class)->assertPreparable($bp, $derogationQualite);
+
         $bp->update(['status' => 'en_cours']);
         return $bp->fresh();
     }
@@ -130,11 +137,17 @@ class BonPreparationService
     /**
      * Magasinier marque le chargement comme terminé.
      */
-    public function finishLoading(BonPreparation $bp): BonPreparation
+    public function finishLoading(BonPreparation $bp, ?string $derogationQualite = null): BonPreparation
     {
         if ($bp->status !== 'en_cours') {
             throw new \RuntimeException('Le chargement doit être démarré avant d\'être clôturé.');
         }
+
+        // [MTO §15] Rejoué à la clôture : un contrôle qualité a pu basculer en
+        // « non conforme » ou « à reprendre » pendant le chargement. On ne
+        // confirme pas comme chargé un produit devenu non livrable.
+        app(ProductionDeliveryGuard::class)->assertPreparable($bp, $derogationQualite);
+
         $bp->update([
             'status'    => 'charge',
             'loaded_by' => Auth::id(),

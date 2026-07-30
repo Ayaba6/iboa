@@ -133,7 +133,17 @@ it('parcourt Vente → Production fer à béton : dépôt PF par défaut + rése
         'thickness_ok' => true, 'length_ok' => true, 'color_ok' => true, 'visual_ok' => true,
         'status' => 'conforme', 'controlled_at' => now(),
     ]);
-    $output->update(['status' => 'validee', 'validated_at' => now()]);
+    // [MTO §15 — adaptation documentée du 30/07/2026] La libération qualité est
+    // désormais exigée en plus du visa pour qu'une production soit livrable. Ce
+    // parcours déclarait la production, la faisait viser, posait un contrôle
+    // conforme… puis livrait sans jamais la libérer. Le garde sommait alors
+    // `quantity` sans regarder `quality_released_at` : la fixture ne contournait
+    // pas la règle, la règle n'existait pas. C'est l'étape qui manquait.
+    $output->update([
+        'status'              => 'validee',
+        'validated_at'        => now(),
+        'quality_released_at' => now(),
+    ]);
     $svc->finish($of->fresh());
     expect($of->fresh()->status)->toBe('termine');
 

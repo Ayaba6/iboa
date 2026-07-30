@@ -66,20 +66,22 @@ class BonPreparationController extends Controller
             : $pdf->download($filename);
     }
 
-    public function startLoading(BonPreparation $bonPreparation): RedirectResponse
+    public function startLoading(Request $request, BonPreparation $bonPreparation): RedirectResponse
     {
         try {
-            $this->service->startLoading($bonPreparation);
+            // [MTO §15] Champ DISTINCT de tout autre motif : déroger à la qualité
+            // doit être un geste explicite, jamais l'effet de bord d'une note.
+            $this->service->startLoading($bonPreparation, $request->input('derogation_qualite_motif'));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
         return back()->with('success', 'Chargement démarré.');
     }
 
-    public function finishLoading(BonPreparation $bonPreparation): RedirectResponse
+    public function finishLoading(Request $request, BonPreparation $bonPreparation): RedirectResponse
     {
         try {
-            $this->service->finishLoading($bonPreparation);
+            $this->service->finishLoading($bonPreparation, $request->input('derogation_qualite_motif'));
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

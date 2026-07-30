@@ -185,8 +185,19 @@ it('parcourt Devis → Commande → Validation → OF → Réservation → Produ
     ]);
     expect($qc->status)->toBe('conforme');
 
-    // [CDC §13.3] Visa chef d'équipe sur la déclaration avant clôture OF
-    $output->update(['status' => 'validee', 'validated_at' => now()]);
+    // [CDC §13.3] Visa chef d'équipe sur la déclaration avant clôture OF.
+    //
+    // [MTO §15 — adaptation documentée du 30/07/2026] La LIBÉRATION QUALITÉ est
+    // désormais exigée en plus du visa. La chaîne livrait auparavant une
+    // production que personne n'avait libérée : le garde sommait `quantity` sans
+    // regarder `quality_released_at`. Ce n'est pas la fixture qui contournait la
+    // règle, c'est la règle qui n'existait pas. Le contrôle qualité conforme
+    // ci-dessus étant acquis, la libération est l'étape qui manquait au parcours.
+    $output->update([
+        'status'              => 'validee',
+        'validated_at'        => now(),
+        'quality_released_at' => now(),
+    ]);
 
     $prodSvc->finish($of->fresh());
     $of->refresh();

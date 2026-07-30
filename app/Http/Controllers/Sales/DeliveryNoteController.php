@@ -186,11 +186,13 @@ class DeliveryNoteController extends Controller
      * POST ventes/bons-livraison/{deliveryNote}/validate — validate the delivery note
      * and decrement stock.
      */
-    public function validateNote(DeliveryNote $bonsLivraison)
+    public function validateNote(Request $request, DeliveryNote $bonsLivraison)
     {
         $this->authorize('validate', $bonsLivraison);
         try {
-            $dn = $this->service->validate($bonsLivraison);
+            // [MTO §15] Motif de dérogation qualité — champ dédié, jamais confondu
+            // avec le motif de workflow.
+            $dn = $this->service->validate($bonsLivraison, $request->input('derogation_qualite_motif'));
             return redirect()
                 ->route('ventes.bons-livraison.show', $dn)
                 ->with('success', 'Bon de livraison ' . $dn->number . ' validé.');
@@ -216,7 +218,11 @@ class DeliveryNoteController extends Controller
     {
         $request->validate(['motif' => ['nullable', 'string', 'max:500']]);
         try {
-            $this->workflow->validateDeliveryNote($bonsLivraison, $request->motif);
+            $this->workflow->validateDeliveryNote(
+                $bonsLivraison,
+                $request->motif,
+                $request->input('derogation_qualite_motif'),
+            );
             return back()->with('success', "BL {$bonsLivraison->number} validé.");
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Ex. « Stock insuffisant » remonté par StockService lors de la sortie.
