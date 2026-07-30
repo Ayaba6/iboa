@@ -70,11 +70,24 @@ class ProductionOrderController extends Controller
             ->when($vue === 'clotures', fn ($q) => $q->whereIn('status', ['termine', 'annule']))
             ->orderByDesc('id')->paginate(25)->withQueryString();
 
+        // [Perf] Un COUNT GROUPÉ au lieu de trois requêtes séparées — même idiome que
+        // PurchaseRequestController et DeliveryNoteController. Les trois compteurs
+        // portaient sur le SEUL champ `status` : les recompter un par un revenait à
+        // parcourir trois fois la même table.
+        //
+        // `en_retard` reste à part : son critère est une DATE d'échéance dépassée, pas
+        // un statut. Le fondre dans le regroupement produirait un compteur faux.
+        $parStatut = ProductionOrder::query()
+            ->groupBy('status')
+            ->pluck(\Illuminate\Support\Facades\DB::raw('COUNT(*)'), 'status')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+
         $stats = [
-            'brouillon' => ProductionOrder::where('status', 'brouillon')->count(),
-            'en_cours'  => ProductionOrder::whereIn('status', ['lance', 'en_cours'])->count(),
+            'brouillon' => $parStatut['brouillon'] ?? 0,
+            'en_cours'  => ($parStatut['lance'] ?? 0) + ($parStatut['en_cours'] ?? 0),
             'en_retard' => ProductionOrder::enRetard()->count(),
-            'termine'   => ProductionOrder::where('status', 'termine')->count(),
+            'termine'   => $parStatut['termine'] ?? 0,
             // [FIX KPI] Mètres réellement produits = déclarations (outputs), pas les
             // lignes planifiées — vides pour les OF MTO générés automatiquement.
             'metres'    => (float) \App\Modules\Production\Models\ProductionOutput::whereHas(
