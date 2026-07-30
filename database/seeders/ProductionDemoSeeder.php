@@ -15,6 +15,7 @@ use App\Modules\Production\Services\ProductionCostService;
 use App\Modules\Production\Services\ProductionService;
 use App\Modules\Production\Services\ProductionStockService;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Concerns\PicksCompatibleCoil;
 
 /**
  * Données de démonstration du module Production (fabrication tôles bac).
@@ -25,6 +26,8 @@ use Illuminate\Database\Seeder;
  */
 class ProductionDemoSeeder extends Seeder
 {
+    use PicksCompatibleCoil;
+
     public function run(): void
     {
         $company = Company::first();
@@ -89,9 +92,11 @@ class ProductionDemoSeeder extends Seeder
             $production->start($order); // en_cours
 
             // Consommation + production + chute
-            $coil = $coils->random()->fresh();
-            if ($coil->remaining_weight > 200) {
-                $consume->consume($order, $coil, rand(100, 200), rand(20, 60));
+            // [MTO §9] Bobine COMPATIBLE avec l'OF, non plus un tirage dans le lot.
+            $besoin = rand(100, 200);
+            $coil   = $this->pickOrCreateCompatibleCoil($order, $besoin);
+            if ($coil) {
+                $consume->consume($order, $coil, $besoin, rand(20, 60));
             }
             // Déclaration plafonnée au demandé (garde « Autoriser dépassement qté » = Non par défaut).
             $out = $stock->recordOutput($order, ['warehouse_id' => $warehouse->id, 'length' => 6, 'quantity' => min(rand(8, 30), (int) $order->quantity_requested), 'unit_cost' => rand(2500, 4000)]);

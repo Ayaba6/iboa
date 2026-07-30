@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Modules\Production\Models\ProductionOrder;
 use App\Modules\Production\Services\CoilConsumptionService;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Concerns\PicksCompatibleCoil;
 
 /**
  * Complète les consommations matière des OF « en cours » qui n'en ont pas.
@@ -14,6 +15,8 @@ use Illuminate\Database\Seeder;
  */
 class ProductionConsumptionSeeder extends Seeder
 {
+    use PicksCompatibleCoil;
+
     public function run(): void
     {
         $company = Company::first();
@@ -29,8 +32,8 @@ class ProductionConsumptionSeeder extends Seeder
         $n = 0;
         foreach ($orders as $order) {
             $need = random_int(80, 200);
-            $coil = Coil::where('company_id', $company->id)->where('status', '!=', 'epuisee')
-                ->where('remaining_weight', '>=', $need)->inRandomOrder()->first();
+            // [MTO §9] Bobine COMPATIBLE avec l'OF, non plus une bobine au hasard.
+            $coil = $this->pickOrCreateCompatibleCoil($order, $need);
             if ($coil) {
                 $consume->consume($order, $coil, $need, round($need / 4, 2));
                 $n++;

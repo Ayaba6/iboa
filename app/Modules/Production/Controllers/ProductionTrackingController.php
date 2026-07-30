@@ -57,7 +57,17 @@ class ProductionTrackingController extends Controller
                 : null;
         }
 
-        $coils      = Coil::usableAsMaterial()->where('valuation_status', 'valorisation_definitive')->where('cost_per_kg', '>', 0)->orderBy('reference')->get(['id', 'reference', 'remaining_weight', 'cost_per_kg']);
+        // [MTO §9] Dès qu'un OF est choisi, la liste se restreint à ses bobines
+        // compatibles. Tant qu'aucun OF n'est sélectionné, il n'y a rien à quoi
+        // comparer : la liste complète reste affichée, et c'est le contrôle serveur
+        // à la consommation qui refusera un attelage incohérent.
+        $coils = $order
+            ? app(\App\Modules\Production\Services\CoilCompatibilityService::class)
+                ->compatibleCoilsQuery($order)->orderBy('reference')
+                ->get(['id', 'reference', 'remaining_weight', 'cost_per_kg'])
+            : Coil::usableAsMaterial()->where('valuation_status', 'valorisation_definitive')
+                ->where('cost_per_kg', '>', 0)->orderBy('reference')
+                ->get(['id', 'reference', 'remaining_weight', 'cost_per_kg']);
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
         $nextNumber = $this->nextTrackingNumber();
 

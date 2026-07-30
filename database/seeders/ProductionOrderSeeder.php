@@ -18,6 +18,7 @@ use App\Modules\Production\Services\ProductionService;
 use App\Modules\Production\Services\ProductionStockService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Database\Seeders\Concerns\PicksCompatibleCoil;
 
 /**
  * 100 ordres de fabrication à statuts variés, pilotés par les services métier
@@ -26,6 +27,8 @@ use Illuminate\Support\Carbon;
  */
 class ProductionOrderSeeder extends Seeder
 {
+    use PicksCompatibleCoil;
+
     private const DISTRIBUTION = [
         'brouillon' => 15,
         'lance'     => 15,
@@ -144,10 +147,8 @@ class ProductionOrderSeeder extends Seeder
         // 1-2 consommations de bobines disponibles
         foreach (range(1, random_int(1, 2)) as $_) {
             $need = random_int(80, 220);
-            $coil = Coil::where('company_id', $order->company_id)
-                ->where('status', '!=', 'epuisee')
-                ->where('remaining_weight', '>=', $need)
-                ->inRandomOrder()->first();
+            // [MTO §9] Bobine COMPATIBLE avec l'OF, non plus une bobine au hasard.
+            $coil = $this->pickOrCreateCompatibleCoil($order, $need);
             if ($coil) {
                 $c = $consume->consume($order, $coil, $need, round($need / 4, 2));
                 $c->update(['consumed_at' => $launchedAt->copy()->addDay()]);

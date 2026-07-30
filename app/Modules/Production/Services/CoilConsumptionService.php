@@ -27,7 +27,10 @@ use Illuminate\Validation\ValidationException;
  */
 class CoilConsumptionService
 {
-    public function __construct(private StockService $stock) {}
+    public function __construct(
+        private StockService $stock,
+        private CoilCompatibilityService $compatibility,
+    ) {}
 
     /** Enregistre une consommation de matière depuis une bobine. */
     public function consume(ProductionOrder $order, Coil $coil, float $weight, ?float $length = null, ?string $date = null): ProductionConsumption
@@ -37,6 +40,12 @@ class CoilConsumptionService
         if (! $order->isInProgress()) {
             throw ValidationException::withMessages(['status' => 'La consommation n\'est possible que sur un OF « en cours ».']);
         }
+
+        // [MTO §9] La bobine doit correspondre à ce que l'OF fabrique : article de
+        // la nomenclature, lot, dépôt, société, état, caractéristiques physiques.
+        // Vérifié ici plutôt qu'au formulaire pour couvrir tous les canaux, et
+        // AVANT la transaction : inutile de verrouiller pour un refus certain.
+        $this->compatibility->assertCompatible($order, $coil);
 
         // Saisie en mètres linéaires sans poids : conversion obligatoire en KG.
         if ($weight <= 0 && $length !== null && $length > 0) {
@@ -96,6 +105,12 @@ class CoilConsumptionService
         return DB::transaction(function () use ($order, $coil, $weight, $length, $date) {
             // Verrous : bobine puis lot (ordre stable → pas d'interblocage).
             $coil = Coil::lockForUpdate()->findOrFail($coil->id);
+
+            // [MTO §9] Recontrôle SOUS VERROU : entre la vérification d'entrée et
+            // ici, la bobine a pu être divisée, déplacée, bloquée par la qualité ou
+            // réservée à un autre OF. La perdante lit l'état commité par la gagnante.
+            $this->compatibility->assertCompatible($order, $coil);
+
             if ($coil->valuation_status !== 'valorisation_definitive' || (float) $coil->cost_per_kg <= 0) {
                 throw ValidationException::withMessages([
                     'cost' => "Bobine {$coil->reference} non valorisée : consommation concurrente refusée.",

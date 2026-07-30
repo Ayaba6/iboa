@@ -287,7 +287,13 @@ class ProductionOrderController extends Controller
         ];
 
         // Données pour les formulaires d'exécution (OF en cours)
-        $coils      = $order->isInProgress() ? Coil::usableAsMaterial()->where('valuation_status', 'valorisation_definitive')->where('cost_per_kg', '>', 0)->orderBy('reference')->get() : collect();
+        // [MTO §9] Ne proposer que les bobines compatibles avec CET OF : article de
+        // la nomenclature et dépôt matière. Confort d'écran uniquement — le refus
+        // opposable reste celui de CoilCompatibilityService à la consommation.
+        $coils      = $order->isInProgress()
+            ? app(\App\Modules\Production\Services\CoilCompatibilityService::class)
+                ->compatibleCoilsQuery($order)->orderBy('reference')->get()
+            : collect();
         $machines   = $order->isInProgress() ? \App\Modules\Production\Models\ProductionMachine::where('is_active', true)->orderBy('name')->get() : collect();
         $employees  = in_array($order->status, ['lance', 'en_cours', 'termine'], true) ? \App\Models\Employee::orderBy('last_name')->get() : collect();
         $warehouses = $order->isInProgress() ? \App\Models\Warehouse::orderByDesc('is_default')->orderBy('name')->get() : collect();
