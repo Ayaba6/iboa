@@ -17,7 +17,7 @@
         <div class="flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-gray-50 to-white flex-wrap gap-2">
             <div>
                 <h2 class="text-[22px] font-bold text-gray-900 leading-tight">Planification MTS — production pour stock</h2>
-                <p class="text-[11.5px] text-gray-400">Articles fabriqués pour le stock (fer à béton…). Besoin net = cible + sécurité − disponible − production planifiée.</p>
+                <p class="text-[11.5px] text-gray-400">Articles fabriqués pour le stock (fer à béton…). Besoin net = cible + sécurité + demande client ferme − disponible − OF planifiés − réceptions attendues.</p>
             </div>
             <div class="flex items-center gap-1.5">
                 <a href="{{ route('production.orders.eligible') }}"
@@ -36,7 +36,9 @@
                     <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Physique</th>
                     <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Réservé</th>
                     <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Disponible</th>
-                    <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Min</th>
+                    <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide" title="Commandes clients confirmées non encore livrées">Demande client</th>
+                    <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide" title="Commandes fournisseurs engagées et non soldées">Attendu</th>
+                    <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Seuil</th>
                     <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Cible</th>
                     <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">OF planifiés</th>
                     <th class="px-3 py-1.5 text-right text-[11px] font-bold text-emerald-900 uppercase tracking-wide">Besoin net</th>
@@ -54,13 +56,23 @@
                     <td class="px-3 py-1.5 text-right tabular-nums">{{ number_format($r['physique'], 0, ',', ' ') }}</td>
                     <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ number_format($r['reserve'], 0, ',', ' ') }}</td>
                     <td class="px-3 py-1.5 text-right tabular-nums font-semibold {{ $r['dispo'] <= 0 ? 'text-red-600' : '' }}">{{ number_format($r['dispo'], 0, ',', ' ') }}</td>
-                    <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $r['p']->stock_min ? number_format($r['p']->stock_min, 0, ',', ' ') : '—' }}</td>
-                    <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $r['cible'] ? number_format($r['cible'], 0, ',', ' ') : '—' }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums {{ $r['client'] > 0 ? 'text-gray-900 font-medium' : 'text-gray-400' }}">{{ number_format($r['client'], 0, ',', ' ') }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums {{ $r['recu'] > 0 ? 'text-indigo-700' : 'text-gray-400' }}">{{ number_format($r['recu'], 0, ',', ' ') }}</td>
+                    {{-- Comparaisons NUMÉRIQUES : une colonne decimal remonte « 0.00 », chaîne VRAIE en PHP.
+                         Un simple test de véracité affichait « 0 » ici et « — » en Cible, pour le même zéro. --}}
+                    <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $r['seuil'] > 0 ? number_format($r['seuil'], 0, ',', ' ') : '—' }}</td>
+                    <td class="px-3 py-1.5 text-right tabular-nums text-gray-500">{{ $r['cible'] > 0 ? number_format($r['cible'], 0, ',', ' ') : '—' }}</td>
                     <td class="px-3 py-1.5 text-right tabular-nums text-blue-700">{{ number_format($r['plan'], 0, ',', ' ') }}</td>
                     <td class="px-3 py-1.5 text-right tabular-nums font-bold {{ $r['besoin'] > 0 ? 'text-amber-700' : 'text-gray-400' }}">{{ number_format($r['besoin'], 0, ',', ' ') }}</td>
                     <td class="px-3 py-1.5 text-center">
-                        @if($r['etat'] === 'rupture')<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Rupture</span>
-                        @elseif($r['etat'] === 'sous_min')<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Sous le minimum</span>
+                        @if($r['etat'] === 'non_parametre')
+                            {{-- Un article sans seuil n'est pas « en rupture » : il n'est pas piloté.
+                                 L'action utile est de compléter sa fiche, pas de lancer une production. --}}
+                            <a href="{{ route('products.edit', $r['p']) }}"
+                               class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                               title="Ni minimum, ni maximum, ni point de commande, ni stock de sécurité : le besoin ne peut pas être calculé.">Seuil non défini</a>
+                        @elseif($r['etat'] === 'rupture')<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Rupture</span>
+                        @elseif($r['etat'] === 'sous_min')<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Sous le seuil</span>
                         @else<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">OK</span>@endif
                     </td>
                     <td class="px-3 py-1.5 text-right">
@@ -73,7 +85,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="10" class="px-3 py-6 text-center text-gray-400 text-[12.5px]">Aucun article MTS actif.</td></tr>
+                <tr><td colspan="12" class="px-3 py-6 text-center text-gray-400 text-[12.5px]">Aucun article MTS actif.</td></tr>
                 @endforelse
             </tbody>
         </table>

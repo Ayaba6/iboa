@@ -79,8 +79,13 @@ it('sous le minimum : état affiché et OF proposé pour le besoin', function ()
     $wh = Warehouse::firstOrCreate(['code' => 'WH-MTS2'], ['name' => 'Dépôt MTS2', 'company_id' => $co->id, 'is_active' => true]);
     ProductStock::create(['product_id' => $fer->id, 'warehouse_id' => $wh->id, 'quantity' => 100, 'reserved_quantity' => 0]);
 
+    // [MTS §1 — adaptation documentée du 30/07/2026] Le badge dit « Sous le seuil »
+    // et non plus « Sous le minimum » : le seuil de déclenchement provient
+    // désormais du POINT DE COMMANDE quand il est renseigné, et du minimum
+    // seulement à défaut. Continuer à l'appeler « minimum » serait devenu faux.
+    // Le comportement vérifié est identique : état sous-seuil, OF proposé.
     $this->get(route('production.orders.mts'))
         ->assertOk()
-        ->assertSee('Sous le minimum')   // dispo 100 < min 500
+        ->assertSee('Sous le seuil')     // dispo 100 < seuil 500 (repli sur stock_min)
         ->assertSee('Créer OF MTS');     // besoin = 500 − 100 = 400 > 0
 });
