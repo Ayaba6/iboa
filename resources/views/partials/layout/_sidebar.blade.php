@@ -448,6 +448,11 @@ request()->routeIs('achats.*')                                                  
                             $puser->can('quality.view') ? [route('qualite.releases.index'),         'Libération qualité', 'qualite.releases*'] : null,
                             $puser->can('quality.view') ? [route('qualite.certificats.index'),      'Certificats qualité', 'qualite.certificats*'] : null,
                             $puser->can('production.update') ? [route('production.mrp'), 'Réappro (MRP)', 'production.mrp'] : null,
+                            // [MRP] Le calcul des besoins ne proposait que des ACHATS ; les
+                            // articles fabriqués pour le stock n'avaient aucune proposition.
+                            // `production.update` et non `view` : tout le groupe de routes MRP
+                            // l'exige déjà, annoncer le lien plus bas afficherait un 403.
+                            $puser->can('production.update') ? [route('production.mrp.of'), 'Propositions d\'OF', 'production.mrp.of'] : null,
                             $puser->can('production.cost.view') ? [route('production.treasury'), 'Prévision trésorerie', 'production.treasury'] : null,
                             $puser->can('production.report.view') ? [route('production.reports'), 'Rapports', 'production.reports'] : null,
                         ]) as [$href, $label, $match])

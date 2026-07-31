@@ -1614,6 +1614,9 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
     Route::middleware('permission:production.update')->group(function () {
         Route::get('mrp', [\App\Modules\Production\Controllers\MrpController::class, 'index'])->name('mrp');
         Route::post('mrp/generate', [\App\Modules\Production\Controllers\MrpController::class, 'generate'])->name('mrp.generate');
+        // [MRP] Propositions d'ordre de fabrication — articles fabriqués pour le stock.
+        Route::get('mrp/ordres-fabrication', [\App\Modules\Production\Controllers\MrpController::class, 'ofProposals'])->name('mrp.of');
+        Route::post('mrp/ordres-fabrication', [\App\Modules\Production\Controllers\MrpController::class, 'generateOrders'])->name('mrp.of.generate');
     });
 
     // Réception bobine ← Achats : génère des Coil depuis une réception validée

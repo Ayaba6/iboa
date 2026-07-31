@@ -4,8 +4,10 @@ namespace App\Modules\Production\Services;
 
 use App\Models\Product;
 use App\Modules\Production\Models\Coil;
+use App\Modules\Production\Models\ProductionOrder;
 use App\Services\PurchaseRequestService;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * [PRODUCTION] MRP simplifié — réapprovisionnement bobines (matières premières).
@@ -17,7 +19,73 @@ use Illuminate\Support\Collection;
  */
 class MrpService
 {
-    public function __construct(private PurchaseRequestService $purchaseRequests) {}
+    public function __construct(
+        private PurchaseRequestService $purchaseRequests,
+        private NetRequirementService $requirements,
+        private ProductionService $production,
+    ) {}
+
+    /**
+     * [MRP] Propositions d'ORDRE DE FABRICATION.
+     *
+     * Le MRP ne savait proposer que des achats : il ne regardait que les bobines
+     * et sortait une demande d'achat. Les articles FABRIQUES pour le stock
+     * n'etaient couverts par aucune proposition, alors que `origin = 'mrp'`
+     * existait deja dans l'enumeration des OF sans qu'aucun code puisse la
+     * produire.
+     *
+     * Les besoins viennent de NetRequirementService : meme regle que l'ecran de
+     * planification MTS, pas une seconde implementation.
+     *
+     * @return Collection<int, array<string,mixed>>
+     */
+    public function productionProposals(): Collection
+    {
+        return $this->requirements->proposals();
+    }
+
+    /**
+     * Genere les OF correspondant aux propositions retenues.
+     *
+     * Volontairement TOLERANT aux refus : un article dont l'OF est rejete (regle
+     * metier, garde MTO, nomenclature devenue inactive) n'interrompt pas la
+     * generation des autres. Chaque refus est rendu avec son motif plutot que
+     * silencieusement avale.
+     *
+     * Naturellement idempotent : le besoin net deduit les OF deja planifies, donc
+     * un second passage immediat ne propose plus rien.
+     *
+     * @param  array<int>  $productIds  ids retenus ; vide = toutes les propositions
+     * @return array{created: list<ProductionOrder>, skipped: list<array{produit:string,raison:string}>}
+     */
+    public function generateProductionOrders(array $productIds = []): array
+    {
+        $proposals = $this->productionProposals();
+        if ($productIds) {
+            $proposals = $proposals->filter(fn ($r) => in_array($r['p']->id, $productIds, true))->values();
+        }
+
+        $created = [];
+        $skipped = [];
+
+        foreach ($proposals as $row) {
+            try {
+                $created[] = $this->production->create([
+                    'product_id'          => $row['p']->id,
+                    'bill_of_material_id' => $row['bom_id'],
+                    'quantity_requested'  => $row['besoin'],
+                    'origin'              => 'mrp',
+                ], [], 'mrp');
+            } catch (ValidationException $e) {
+                $skipped[] = [
+                    'produit' => $row['p']->name,
+                    'raison'  => implode(' ', collect($e->errors())->flatten()->all()),
+                ];
+            }
+        }
+
+        return compact('created', 'skipped');
+    }
 
     /**
      * Analyse des besoins matière (bobines sous seuil).

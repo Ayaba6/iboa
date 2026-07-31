@@ -17,6 +17,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use App\Modules\Production\Services\NetRequirementService;
 
 class ProductionOrderController extends Controller
 {
@@ -147,98 +148,12 @@ class ProductionOrderController extends Controller
      */
     public function mts(Request $request): View
     {
-        $products = \App\Models\Product::where('production_mode', 'mts')
-            ->where('is_stockable', true)->where('is_active', true)
-            ->orderBy('name')->get();
-
-        $ids = $products->pluck('id');
-
-        $stocks = \App\Models\ProductStock::whereIn('product_id', $ids)
-            ->selectRaw('product_id, SUM(quantity) qty, SUM(reserved_quantity) reserved')
-            ->groupBy('product_id')->get()->keyBy('product_id');
-
-        $planned = ProductionOrder::whereIn('product_id', $ids)
-            ->whereNotIn('status', ['termine', 'annule'])
-            ->selectRaw('product_id, SUM(quantity_requested) qty')
-            ->groupBy('product_id')->pluck('qty', 'product_id');
-
-        // [MTS §2] RÉCEPTIONS ATTENDUES — commandes fournisseurs engagées et non
-        // soldées. Sans ce terme, un article dont la livraison arrive demain est
-        // proposé à la fabrication aujourd'hui, et on produit ce qu'on a déjà acheté.
-        //
-        // Les statuts sont ceux de l'énumération RÉELLE de la colonne
-        // (`envoye`, `confirme`, `partiellement_recu`) — au masculin. Écrits au
-        // féminin, ils ne correspondraient à aucune ligne et le terme vaudrait
-        // silencieusement zéro.
-        $attendu = \Illuminate\Support\Facades\DB::table('purchase_order_items as poi')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->whereNull('po.deleted_at')
-            ->whereIn('po.status', ['envoye', 'confirme', 'partiellement_recu'])
-            ->whereIn('poi.product_id', $ids)
-            ->whereColumn('poi.received_quantity', '<', 'poi.quantity')
-            ->selectRaw('poi.product_id AS pid, SUM(poi.quantity - poi.received_quantity) AS qte')
-            ->groupBy('poi.product_id')->get()->pluck('qte', 'pid');
-
-        // [MTS §2] DEMANDE CLIENT FERME non encore livrée. Le cahier parle de
-        // « demandes prévisionnelles » ; l'ERP ne porte AUCUNE table de prévision
-        // de vente (les seules tables `forecast` concernent la trésorerie). Le
-        // carnet de commandes ouvert est donc la seule demande réelle disponible —
-        // et le cahier l'exige explicitement au même endroit. On ne simule pas une
-        // prévision qui n'existe pas.
-        $demande = \Illuminate\Support\Facades\DB::table('order_items as oi')
-            ->join('orders as o', 'o.id', '=', 'oi.order_id')
-            ->whereNull('o.deleted_at')
-            ->whereIn('o.status', ['confirme', 'en_preparation', 'partiellement_livre'])
-            ->whereIn('oi.product_id', $ids)
-            ->whereColumn('oi.delivered_quantity', '<', 'oi.quantity')
-            ->selectRaw('oi.product_id AS pid, SUM(oi.quantity - oi.delivered_quantity) AS qte')
-            ->groupBy('oi.product_id')->get()->pluck('qte', 'pid');
-
-        $rows = $products->map(function ($p) use ($stocks, $planned, $attendu, $demande) {
-            $physique = (float) ($stocks[$p->id]->qty ?? 0);
-            $reserve  = (float) ($stocks[$p->id]->reserved ?? 0);
-            $dispo    = $physique - $reserve;
-            $plan     = (float) ($planned[$p->id] ?? 0);
-            $recu     = (float) ($attendu[$p->id] ?? 0);
-            $client   = (float) ($demande[$p->id] ?? 0);
-
-            // Seuils lus en NUMÉRIQUE, jamais en truthiness : une colonne decimal
-            // remonte la chaîne « 0.00 », qui est vraie en PHP. L'ancien
-            // `$p->stock_max ?: $p->stock_min` retenait donc « 0.00 » comme cible,
-            // et l'écran affichait « 0 » d'un côté, « — » de l'autre, pour le même zéro.
-            $min     = (float) ($p->stock_min ?? 0);
-            $max     = (float) ($p->stock_max ?? 0);
-            $reorder = (float) ($p->reorder_point ?? 0);
-            $secu    = (float) ($p->stock_securite ?? 0);
-
-            // Cible = niveau de recomplètement. À défaut de maximum, le point de
-            // commande puis le minimum en tiennent lieu.
-            $cible = $max > 0 ? $max : ($reorder > 0 ? $reorder : $min);
-            // Seuil de déclenchement : le point de commande prime sur le minimum.
-            $seuil = $reorder > 0 ? $reorder : $min;
-
-            $parametre = $cible > 0 || $seuil > 0 || $secu > 0;
-
-            // `max(0, …)` rendrait un ENTIER quand la borne s'applique et un flottant
-            // sinon : deux types pour une même grandeur, selon la donnée. La borne
-            // est donc flottante elle aussi.
-            $besoin = max(0.0, $cible + $secu + $client - $dispo - $plan - $recu);
-
-            // Un article sans aucun seuil n'est pas « en rupture » : il n'est pas
-            // piloté. Le dire évite d'accuser le stock quand c'est le paramétrage
-            // qui manque — et donne la bonne action : compléter la fiche article.
-            $etat = match (true) {
-                ! $parametre                  => 'non_parametre',
-                $dispo <= 0                   => 'rupture',
-                $seuil > 0 && $dispo < $seuil => 'sous_min',
-                default                       => 'ok',
-            };
-
-            return compact('p', 'physique', 'reserve', 'dispo', 'plan', 'recu', 'client',
-                'cible', 'seuil', 'secu', 'besoin', 'etat', 'parametre');
-        });
-
-        return view('production.orders.mts', ['rows' => $rows]);
+        // [MTS §2] Le calcul du besoin net vit dans NetRequirementService : les
+        // propositions d'OF du MRP appliquent la MEME regle, et deux
+        // implementations d'une meme regle de gestion finissent par diverger.
+        return view('production.orders.mts', [
+            'rows' => app(NetRequirementService::class)->forMtsProducts(),
+        ]);
     }
 
     public function create(Request $request): View
