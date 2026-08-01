@@ -7,15 +7,24 @@
  *  - un devis validé (accepté) se convertit en commande ;
  *  - la commande conserve le client, les lignes, quantités, prix et TVA du devis ;
  *  - un même devis ne peut pas être converti deux fois (garde converted_to_order_id).
+ *
+ * [BUG-A3-SALES-CONV-002] Les deux cas d'origine couvraient les MONTANTS et les
+ * LIGNES, jamais les TERMES CONTRACTUELS. Ils passaient donc au vert pendant que
+ * la conversion perdait le mode de prix, les conditions de paiement, le tarif et
+ * le dépôt. Les champs omis ne restaient pas vides : ils prenaient le DÉFAUT de
+ * la colonne `orders`, ce qui est plus grave qu'une perte, car une valeur
+ * plausible remplace la valeur négociée sans rien signaler.
  */
 
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\FiscalYear;
 use App\Models\Product;
+use App\Models\Quote;
 use App\Models\TaxRate;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\QuoteService;
 use Spatie\Permission\Models\Role;
 
@@ -95,4 +104,134 @@ it('interdit de convertir deux fois le même devis', function () {
     // Seconde conversion refusée (déjà converti).
     expect(fn () => $svc->convertToOrder($quote->fresh()))
         ->toThrow(\RuntimeException::class);
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// [BUG-A3-SALES-CONV-002] Termes contractuels
+//
+// Constaté en exploitation sur DEV-2026-00005 → CMD-2026-006 :
+//   price_mode    ht                → ttc
+//   payment_terms immediate         → NULL
+//   price_list    TARIF-TEST-VENTES → NULL
+//   warehouse_id  DEPTBC            → delivery_warehouse_id NULL
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Devis dont CHAQUE terme transférable porte une valeur distinctive, choisie
+ * différente du défaut de la colonne cible : un champ oublié ne peut donc pas
+ * passer inaperçu derrière une coïncidence.
+ */
+function qtocDevisNegocie(): array
+{
+    $u = qtocAdmin();
+    test()->actingAs($u);
+    $co = Company::where('name', 'QTOC')->firstOrFail();
+    app()->instance('current_company', $co);
+
+    $depot = Warehouse::firstOrCreate(['code' => 'DEPTBC'], ['name' => 'Dépôt tôle bac', 'company_id' => $co->id, 'is_active' => true]);
+
+    // `quotes.sales_rep_id` et `orders.sales_rep_id` référencent `users`, alors
+    // que `clients.sales_rep_id` et `commissions.sales_rep_id` référencent
+    // `sales_reps` : même nom de colonne, deux cibles. Anomalie de schéma
+    // signalée à part ; ici on respecte la contrainte réelle.
+    $rep = User::factory()->create(['company_id' => $co->id, 'name' => 'Représentant Conversion']);
+    $unit = Unit::firstOrCreate(['name' => 'Mètre QTOC'], ['abbreviation' => 'mqtoc']);
+    $tva = TaxRate::firstOrCreate(['name' => 'TVA 18 QTOC'], ['short_name' => 'TVA18', 'rate' => 18, 'type' => 'tva', 'is_active' => true]);
+
+    $devis = Quote::create([
+        'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
+        'client_id' => Client::factory()->create(['is_active' => true])->id,
+        'number' => 'DEV-CONV-'.uniqid(), 'status' => 'valide',
+        'issued_at' => now()->toDateString(), 'expires_at' => now()->addDays(30)->toDateString(),
+        'currency_code' => 'XOF', 'exchange_rate' => 1,
+        'subtotal_ht' => 200000, 'total_discount' => 0, 'total_tax' => 36000, 'total_ttc' => 236000,
+        'reference' => 'REF-CLIENT-CONV', 'notes' => 'Termes négociés à conserver.',
+        // Valeurs négociées — aucune ne coïncide avec le défaut de `orders`.
+        'price_mode'            => 'ht',        // défaut commande : 'ttc'
+        'net_prices'            => true,        // défaut commande : 0
+        'default_tax_label'     => 'EXO',       // défaut commande : 'TVA 18%' — portée fiscale
+        'priority'              => 'haute',     // défaut commande : 'normale'
+        'payment_terms'         => 'immediate',
+        'payment_method'        => 'especes',
+        'price_list'            => 'TARIF-TEST-VENTES',
+        'project_reference'     => 'PRJ-CONV-002',
+        'delivery_address'      => 'Zone industrielle Kossodo, Ouagadougou',
+        'delivery_location'     => 'Chantier Kossodo',
+        'incoterm'              => 'DAP',
+        'fiscal_representative' => 'Cabinet Sawadogo',
+        'fiscal_regime'         => 'reel_normal',
+        'warehouse_id'          => $depot->id,
+        'sales_rep_id'          => $rep->id,
+        'contact_id'            => null,
+    ]);
+
+    $devis->items()->create([
+        'product_id' => Product::factory()->create(['production_mode' => 'mto'])->id,
+        'description' => 'Tôle bac prélaquée', 'unit_id' => $unit->id,
+        'quantity' => 50, 'nb_toles' => 10, 'metrage_par_tole' => 5,
+        'unit_price' => 4000, 'discount_percent' => 0,
+        'tax_rate_id' => $tva->id, 'tax_rate_value' => 18,
+        'line_total_ht' => 200000, 'line_tax' => 36000, 'line_total_ttc' => 236000, 'sort_order' => 0,
+    ]);
+
+    return ['devis' => $devis, 'depot' => $depot, 'rep' => $rep];
+}
+
+it('reporte sur la commande chaque terme négocié du devis', function () {
+    ['devis' => $devis, 'depot' => $depot, 'rep' => $rep] = qtocDevisNegocie();
+
+    $commande = app(QuoteService::class)->convertToOrder($devis->fresh())->fresh();
+
+    $attendus = [
+        'price_mode'            => 'ht',
+        'default_tax_label'     => 'EXO',
+        'priority'              => 'haute',
+        'payment_terms'         => 'immediate',
+        'payment_method'        => 'especes',
+        'price_list'            => 'TARIF-TEST-VENTES',
+        'project_reference'     => 'PRJ-CONV-002',
+        'delivery_address'      => 'Zone industrielle Kossodo, Ouagadougou',
+        'delivery_location'     => 'Chantier Kossodo',
+        'incoterm'              => 'DAP',
+        'fiscal_representative' => 'Cabinet Sawadogo',
+        'fiscal_regime'         => 'reel_normal',
+    ];
+
+    // Rapport groupé : la liste complète des pertes vaut mieux qu'un échec sur le
+    // premier champ, qui masquerait les onze autres.
+    $ecarts = [];
+    foreach ($attendus as $champ => $attendu) {
+        $obtenu = $commande->{$champ};
+        if ((string) $obtenu !== (string) $attendu) {
+            $ecarts[$champ] = sprintf('attendu « %s », obtenu « %s »', $attendu, $obtenu ?? 'NULL');
+        }
+    }
+    expect($ecarts)->toBe([]);
+
+    expect((bool) $commande->net_prices)->toBeTrue();
+    expect((int) $commande->sales_rep_id)->toBe((int) $rep->id);
+    expect((int) $commande->delivery_warehouse_id)->toBe((int) $depot->id);
+});
+
+it('ne laisse aucun défaut de colonne écraser une valeur du devis', function () {
+    ['devis' => $devis] = qtocDevisNegocie();
+
+    $commande = app(QuoteService::class)->convertToOrder($devis->fresh())->fresh();
+
+    // Les défauts de `orders` qui produisent une valeur plausible et fausse.
+    expect($commande->price_mode)->not->toBe('ttc');
+    expect($commande->default_tax_label)->not->toBe('TVA 18%');
+    expect($commande->priority)->not->toBe('normale');
+});
+
+it('conserve les trois quantités distinctes de la tôle bac', function () {
+    ['devis' => $devis] = qtocDevisNegocie();
+
+    $commande = app(QuoteService::class)->convertToOrder($devis->fresh());
+    $ligne = $commande->fresh()->items->first();
+
+    // Les fusionner rendrait le métrage irrécupérable côté production.
+    expect((float) $ligne->quantity)->toBe(50.0)
+        ->and((float) $ligne->nb_toles)->toBe(10.0)
+        ->and((float) $ligne->metrage_par_tole)->toBe(5.0);
 });

@@ -29,6 +29,7 @@ class QuoteService
         return $this->repository->search($filters, $perPage);
     }
 
+
     public function create(array $data): Quote
     {
         // [Parametrage Vente] client bloque = aucun document commercial
@@ -47,6 +48,13 @@ class QuoteService
             $data['number']       = $this->sequenceService->nextNumber($company, 'devis');
             $data['created_by']   = Auth::id();
             $data['status']       = $data['status'] ?? 'brouillon';
+
+            // [UI — doublon retiré] `default_tax_label` était saisi dans un champ
+            // « Taxes » distinct de « TVA par défaut », stocké, jamais lu, et pouvait
+            // contredire la TVA réellement appliquée aux lignes. Le champ a disparu de
+            // l'écran ; la valeur est DÉRIVÉE de l'état réel par un service UNIQUE,
+            // partagé par devis, commande et facture.
+            $data['default_tax_label'] = app(\App\Services\Sales\SalesTaxLabelService::class)->derive($data, $items);
 
             // Validité par défaut : 30 jours après émission si non renseignée —
             // évite les devis sans expiration (badge « Expire dans Nj » inopérant).
@@ -289,10 +297,20 @@ class QuoteService
             $company = currentCompany();
             $orderNumber = $this->sequenceService->nextNumber($company, 'commande');
 
-            // [FIX-MAJEUR] Propagate all financial and contractual fields from quote
             // [CDC §16.1] La commande issue d'un devis démarre en brouillon : elle doit
             // passer par le même circuit Validation commerciale → Validation financière
             // que toute commande créée directement, avant préparation/livraison.
+            //
+            // [BUG-A3-SALES-CONV-002] Les TERMES CONTRACTUELS sont recopiés au même
+            // titre que les montants. Ils étaient omis, et l'omission ne laissait pas
+            // la commande vide : les colonnes de `orders` portent des défauts, si bien
+            // qu'une valeur plausible remplaçait la valeur négociée sans rien signaler.
+            // Trois défauts réécrivaient le devis — `price_mode` → 'ttc' (un devis en
+            // HT devenait une commande en TTC), `default_tax_label` → 'TVA 18%' (portée
+            // fiscale : un libellé EXO était écrasé) et `priority` → 'normale'.
+            // Constaté sur DEV-2026-00005 → CMD-2026-006.
+            //
+            // Règle : une valeur par défaut ne remplace jamais une valeur du devis.
             $order = Order::create([
                 'company_id'             => $company->id,
                 'client_id'              => $quote->client_id,
@@ -314,6 +332,32 @@ class QuoteService
                 'terms'                  => $quote->terms,
                 'footer_note'            => $quote->footer_note,
                 'created_by'             => Auth::id(),
+
+                // Termes tarifaires et fiscaux.
+                'price_mode'             => $quote->price_mode,
+                'net_prices'             => $quote->net_prices,
+                'price_list'             => $quote->price_list,
+                'default_tax_label'      => $quote->default_tax_label,
+                'fiscal_regime'          => $quote->fiscal_regime,
+                'fiscal_representative'  => $quote->fiscal_representative,
+
+                // Conditions de règlement.
+                'payment_terms'          => $quote->payment_terms,
+                'payment_method'         => $quote->payment_method,
+
+                // Logistique. `quotes.warehouse_id` est le dépôt d'expédition prévu ;
+                // il porte le nom `delivery_warehouse_id` côté commande.
+                'delivery_warehouse_id'  => $quote->warehouse_id,
+                'delivery_address'       => $quote->delivery_address,
+                'delivery_location'      => $quote->delivery_location,
+                'delivery_date'          => $quote->desired_delivery_date,
+                'incoterm'               => $quote->incoterm,
+
+                // Suivi commercial.
+                'contact_id'             => $quote->contact_id,
+                'sales_rep_id'           => $quote->sales_rep_id,
+                'project_reference'      => $quote->project_reference,
+                'priority'               => $quote->priority,
             ]);
 
             foreach ($quote->items as $item) {
@@ -428,10 +472,16 @@ class QuoteService
             $lineTax = (int) round($ht * ($tax / 100));
             $ttc   = $ht + $lineTax;
 
+            // [Ventes] Unité et coût dérivés de l'article quand ils ne sont pas
+            // fournis. Sans cela, `unit_id` restait NULL sur 100 % des lignes et
+            // le coût n'existait qu'à la facture — donc aucune marge au devis.
+            $item = app(\App\Services\Sales\SalesLineDefaultsService::class)->apply($item);
+
             $quote->items()->create([
                 'product_id'       => $item['product_id'] ?? null,
                 'description'      => $item['description'] ?? '',
                 'unit_id'          => $item['unit_id'] ?? null,
+                'unit_cost'        => $item['unit_cost'] ?? null,
                 'quantity'         => $qty,
                 'nb_toles'         => $nbToles,
                 'metrage_par_tole' => $metrage,
