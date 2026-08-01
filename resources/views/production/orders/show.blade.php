@@ -10,6 +10,12 @@
 @endsection
 
 @section('content')
+{{-- [BUG-A3-MTO-FIN-001] Exigence financière calculée UNE fois pour toute la page.
+     Le bandeau d'éligibilité et la synthèse de lancement l'affichent tous deux ;
+     l'évaluer deux fois relancerait le calcul des encaissements confirmés et,
+     pour un client à crédit, l'exposition complète. `null` = OF de stock, sans
+     commande client, donc sans exigence à couvrir. --}}
+@php $exigenceFinanciere = $order->order?->productionFinancialRequirement($order); @endphp
 <style>
     /* Style SAGE scoped : tables .tbl de la fiche OF */
     .of-sage .tbl thead tr { background: #eef5f0; border-bottom: 1px solid #d1d5db; }
@@ -177,8 +183,8 @@
          de lancement puisque les deux appellent la même règle — c'est ce qui
          manquait : l'écran annonçait « Bloquant » pendant que le lancement
          approuvait. Afficher ne modifie rien : le calcul est sans effet de bord. --}}
-    @if(in_array($order->status, ['brouillon','matiere_allouee']) && $order->order)
-    @php $exigence = $order->order->productionFinancialRequirement($order); @endphp
+    @if(in_array($order->status, ['brouillon','matiere_allouee']) && $exigenceFinanciere)
+    @php $exigence = $exigenceFinanciere; @endphp
     <div class="bg-white rounded-[4px] border {{ $exigence->satisfied ? 'border-emerald-100' : 'border-red-100' }} shadow-sm p-5">
         <div class="flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Éligibilité financière</h2>
@@ -1322,7 +1328,7 @@
                  plus qu'avec son auteur, et l'éligibilité se recalcule. --}}
             <div>
                 <dt class="text-[11px] font-bold text-gray-500">Éligibilité financière</dt>
-                <dd>{{ $order->order ? $order->order->productionFinancialRequirement($order)->label() : 'Sans commande client' }}</dd>
+                <dd>{{ $exigenceFinanciere?->label() ?? 'Sans commande client' }}</dd>
             </div>
             <div>
                 <dt class="text-[11px] font-bold text-gray-500">Dérogation DAF/DG</dt>
