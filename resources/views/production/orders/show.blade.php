@@ -171,36 +171,53 @@
         </div>
     </div>
 
-    {{-- ══ Validation financière avant lancement (§13.2 CDC) ══ --}}
-    @if(in_array($order->status, ['brouillon','matiere_allouee']) && !in_array($order->financial_authorization, ['approved','bypassed']))
-    <div class="bg-white rounded-[4px] border border-red-100 shadow-sm p-5">
+    {{-- ══ Éligibilité financière avant lancement (§13.2 CDC) ══
+         [BUG-A3-MTO-FIN-001] Le verdict est CALCULÉ à l'affichage, jamais lu dans
+         une colonne d'état. L'écran ne pouvait pas dire autre chose que la garde
+         de lancement puisque les deux appellent la même règle — c'est ce qui
+         manquait : l'écran annonçait « Bloquant » pendant que le lancement
+         approuvait. Afficher ne modifie rien : le calcul est sans effet de bord. --}}
+    @if(in_array($order->status, ['brouillon','matiere_allouee']) && $order->order)
+    @php $exigence = $order->order->productionFinancialRequirement($order); @endphp
+    <div class="bg-white rounded-[4px] border {{ $exigence->satisfied ? 'border-emerald-100' : 'border-red-100' }} shadow-sm p-5">
         <div class="flex items-center justify-between">
-            <h2 class="text-[13px] font-bold text-gray-900">Validation financière requise</h2>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium bg-red-100 text-red-700">Bloquant</span>
+            <h2 class="text-[13px] font-bold text-gray-900">Éligibilité financière</h2>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $exigence->satisfied ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">
+                {{ $exigence->satisfied ? $exigence->label() : 'Bloquant' }}
+            </span>
         </div>
-        <p class="text-sm text-gray-600 mt-2">
-            @php $modeLabel = match($order->payment_mode){'comptant'=>'comptant','acompte'=>'acompte','credit'=>'à crédit',default=>null}; @endphp
-            @if($modeLabel)Client {{ $modeLabel }}@if($order->payment_rate !== null) — {{ number_format($order->payment_rate, 1) }}% encaissé@endif.
-            @else Le lancement requiert une autorisation financière (DAF/DG). @endif
-            {{ $order->financial_notes }}
-        </p>
-        @can('production.approve_financial')
-        <form method="POST" action="{{ route('production.orders.authorize-finance', $order) }}" class="mt-4 flex flex-col sm:flex-row gap-2 sm:items-end">
-            @csrf
-            <div class="flex-1">
-                <label class="text-xs text-gray-500">Note (optionnel)</label>
-                <input type="text" name="financial_notes" maxlength="500" placeholder="Ex. acompte reçu hors système, accord DG..."
-                       class="w-full border border-gray-300 rounded-[4px] text-sm px-3 py-2">
-            </div>
-            <label class="inline-flex items-center gap-1.5 text-sm text-gray-600">
-                <input type="checkbox" name="bypass" value="1" class="rounded border-gray-300">
-                Dérogation exceptionnelle
-            </label>
-            <button class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] whitespace-nowrap">Autoriser le lancement</button>
-        </form>
-        @else
-        <p class="text-xs text-gray-400 mt-3">Seul le DAF/DG peut autoriser le lancement de cet OF.</p>
-        @endcan
+        <p class="text-sm text-gray-600 mt-2">{{ $exigence->reason }}</p>
+        <p class="text-[11px] text-gray-400 mt-1">Source : {{ $exigence->source }}</p>
+
+        @unless($exigence->satisfied)
+            @can('production.approve_financial')
+            <form method="POST" action="{{ route('production.orders.authorize-finance', $order) }}" class="mt-4 flex flex-col sm:flex-row gap-2 sm:items-end">
+                @csrf
+                <div class="flex-1">
+                    <label class="text-xs text-gray-500">Motif de la dérogation <span class="text-red-600">*</span></label>
+                    <input type="text" name="financial_notes" maxlength="500" minlength="10" required
+                           placeholder="Ex. accord DG du 12/07, règlement bancaire en cours de compensation"
+                           class="w-full border border-gray-300 rounded-[4px] text-sm px-3 py-2">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500">Valable jusqu'au</label>
+                    <input type="date" name="expires_at" min="{{ today()->toDateString() }}"
+                           class="border border-gray-300 rounded-[4px] text-sm px-3 py-2">
+                </div>
+                <label class="inline-flex items-center gap-1.5 text-sm text-gray-600">
+                    <input type="checkbox" name="bypass" value="1" class="rounded border-gray-300">
+                    Dérogation exceptionnelle
+                </label>
+                <button class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] whitespace-nowrap">Déroger et autoriser</button>
+            </form>
+            <p class="text-[11px] text-gray-400 mt-2">
+                Montant qui resterait non couvert : {{ number_format($exigence->uncoveredAmount(), 0, ',', ' ') }} FCFA.
+                Il sera consigné avec votre nom.
+            </p>
+            @else
+            <p class="text-xs text-gray-400 mt-3">Seul le DAF/DG peut déroger à l'exigence financière de cet OF.</p>
+            @endcan
+        @endunless
     </div>
     @endif
 
@@ -1297,7 +1314,36 @@
             <div><dt class="text-[11px] font-bold text-gray-500">Lancé le</dt><dd class="tabular-nums">{{ optional($order->launched_at)->format('d/m/Y') ?? '—' }}{{ $order->heure_lancement ? ' ' . substr($order->heure_lancement, 0, 5) : '' }}</dd></div>
             <div><dt class="text-[11px] font-bold text-gray-500">Mode lancement</dt><dd>{{ ucfirst($order->mode_lancement ?? 'manuel') }}</dd></div>
             <div><dt class="text-[11px] font-bold text-gray-500">Équipe prévue</dt><dd>{{ $order->equipe_prevue ?? '—' }} {{ $order->nb_operateurs ? '(' . $order->nb_operateurs . ' op.)' : '' }}</dd></div>
-            <div><dt class="text-[11px] font-bold text-gray-500">Autorisation financière</dt><dd>{{ match($order->financial_authorization){ 'approved' => '✔ Approuvée', 'bypassed' => 'Non requise', 'rejected' => '✖ Refusée', default => 'En attente' } }}</dd></div>
+            {{-- [BUG-A3-MTO-FIN-001] Deux informations DISTINCTES, jamais confondues.
+                 « ✔ Approuvée » s'affichait sur la seule présence de
+                 `financial_authorization`, que la garde écrivait elle-même sans
+                 auteur dès que la couverture était acquise : l'écran attestait une
+                 décision que personne n'avait prise. La dérogation ne s'affiche
+                 plus qu'avec son auteur, et l'éligibilité se recalcule. --}}
+            <div>
+                <dt class="text-[11px] font-bold text-gray-500">Éligibilité financière</dt>
+                <dd>{{ $order->order ? $order->order->productionFinancialRequirement($order)->label() : 'Sans commande client' }}</dd>
+            </div>
+            <div>
+                <dt class="text-[11px] font-bold text-gray-500">Dérogation DAF/DG</dt>
+                <dd>
+                    @if(in_array($order->financial_authorization, ['approved','bypassed']) && $order->financial_authorized_by)
+                        {{ $order->financial_authorization === 'bypassed' ? 'Exceptionnelle' : 'Accordée' }}
+                        — {{ optional($order->financialAuthorizedBy)->name ?? 'utilisateur #'.$order->financial_authorized_by }},
+                        le {{ optional($order->financial_authorized_at)->format('d/m/Y') ?? '—' }}
+                        @if($order->financial_authorization_expires_at)
+                            (valable jusqu'au {{ $order->financial_authorization_expires_at->format('d/m/Y') }})
+                        @endif
+                        @if($order->financial_authorization_unpaid)
+                            — risque accepté {{ number_format($order->financial_authorization_unpaid, 0, ',', ' ') }} FCFA
+                        @endif
+                    @elseif($order->financial_authorization)
+                        Trace incomplète (aucun auteur) — non retenue
+                    @else
+                        Aucune
+                    @endif
+                </dd>
+            </div>
         </dl>
     </div>
 

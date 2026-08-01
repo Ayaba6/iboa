@@ -52,7 +52,12 @@ it('parcourt Vente → Production tôle bac : gate financière réelle, bobine, 
     $company = Company::first();
     $this->actingAs($user);
 
-    $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit']);
+    // [BUG-A3-MTO-FIN-001 §9] « Crédit disponible » est une voie d'éligibilité à
+    // part entière. Avec le plafond par défaut de la factory (5 000 000) ce
+    // client passerait la garde sans autorisation DAF, et l'étape 4 ci-dessous
+    // n'aurait plus de sujet. Plafond à 0 = aucun crédit accordé = refus, ce qui
+    // conserve au parcours le chemin qu'il a été écrit pour éprouver.
+    $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit', 'credit_limit' => 0]);
     $unit    = Unit::firstOrCreate(['name' => 'Pièce TBC'], ['abbreviation' => 'ptbc']);
     $taxRate = TaxRate::firstOrCreate(['name' => 'TVA 18% TBC'], ['short_name' => 'TVA18T', 'rate' => 18, 'is_active' => true]);
     $wh      = Warehouse::firstOrCreate(['code' => 'WH-TBC'], ['name' => 'Dépôt TBC', 'company_id' => $company->id, 'is_active' => true, 'is_default' => true]);

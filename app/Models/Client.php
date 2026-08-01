@@ -26,9 +26,27 @@ class Client extends Model
     const TYPE_DISTRIBUTEUR = 'distributeur';
     const TYPE_MINIER       = 'minier';
 
-    // Modes de règlement
+    // Modes de règlement — SOURCE UNIQUE. Toute comparaison passe par ces
+    // constantes : `Order::requiredBeforeProduction()` et la garde financière du
+    // lancement d'OF comparaient à « comptant » et « acompte », valeurs qu'aucun
+    // client ne porte. Le comptant échappait donc au contrôle de paiement.
+    //
+    // La liste est CLOSE, et ces deux valeurs sont les seules exploitables :
+    //   - `StoreClientRequest` / `UpdateClientRequest` valident `in:cash,credit` ;
+    //   - la liste déroulante de `clients/_form.blade.php` n'offre que ces deux
+    //     options ; `bon_preparations.payment_mode` est un ENUM('cash','credit') ;
+    //   - la colonne `clients.payment_mode` était elle-même un ENUM('cash','credit')
+    //     avant sa relaxation en varchar, faite pour la seule parité de tests
+    //     (migration 2026_07_24_170000, dont le `down()` restaure l'ENUM).
+    //
+    // Aucun mode « acompte » n'existe donc, et il ne faut pas en déclarer un : le
+    // taux d'acompte exigible n'a aucun support structuré rattaché au client.
+    // Voir BUG-A3-SALES-DEPOSIT-004 et ProductionFinancialRequirement::TYPE_DEPOSIT.
     const PAYMENT_CASH   = 'cash';
     const PAYMENT_CREDIT = 'credit';
+
+    /** Modes reconnus. Un mode absent de cette liste n'ouvre AUCUN droit. */
+    public const PAYMENT_MODES = [self::PAYMENT_CASH, self::PAYMENT_CREDIT];
 
     protected $fillable = [
         'site_id',
@@ -79,7 +97,6 @@ class Client extends Model
         'blocage_commande',
         // Paramètres commerciaux
         'credit_limit',
-        'encours_autorise',
         'compte_collectif',
         'canal',
         'zone_commerciale',
@@ -110,7 +127,6 @@ class Client extends Model
         'sales_rep_id',
         // [Parité Sage X3] Juridique / fiscal
         'forme_juridique',
-        'regime_imposition',
         'no_agrement',
         // [Parité Sage X3] Risque crédit
         'code_risque',
@@ -130,7 +146,6 @@ class Client extends Model
 
     protected $casts = [
         'credit_limit'     => 'integer',
-        'encours_autorise' => 'decimal:2',
         'default_discount' => 'decimal:2',
         'balance'          => 'integer',
         'is_active'        => 'boolean',

@@ -54,19 +54,21 @@ function acAdmin(Company $co): User
     return $u;
 }
 
-it('CDC §33 : client acompte 50 % — devis→commande→acompte→OF→production→PF prêt à livrer', function () {
+it('CDC §33 : client comptant — devis→commande→règlement→OF→production→PF prêt à livrer', function () {
     $company = acCompany();
     $user = acAdmin($company);
     $this->actingAs($user);
 
-    // Seuil d'acompte à 50 % (scénario §33).
-    SalesSetting::current()->update(['deposit_required_rate' => 50]);
+    // [BUG-A3-MTO-FIN-001] Le scénario §33 était joué sur un client
+    // `payment_mode => 'acompte'` et un seuil global à 50 %. Ce mode n'est pas
+    // saisissable (Form Requests `in:cash,credit`) et aucune ligne de la base ne
+    // le porte : la chaîne était éprouvée sur une configuration inexistante.
+    // Elle est rejouée au COMPTANT, où l'exigence vaut 100 % du TTC.
 
     $taxRate = TaxRate::firstOrCreate(['name' => 'TVA 18% AC'], ['short_name' => 'TVA18AC', 'rate' => 18, 'is_active' => true]);
     $warehouse = Warehouse::firstOrCreate(['code' => 'WH-AC'], ['name' => 'Dépôt AC', 'company_id' => $company->id, 'is_active' => true, 'is_default' => true]);
 
-    // Client « comptant » avec acompte obligatoire (mode acompte).
-    $client = Client::factory()->create(['is_active' => true, 'payment_mode' => 'acompte']);
+    $client = Client::factory()->create(['is_active' => true, 'payment_mode' => Client::PAYMENT_CASH]);
 
     // Tôle bac prélaquée rouge 0,27 — fabriquée à la commande, 4 000 FCFA/m.
     $tole = Product::factory()->create([
@@ -113,14 +115,14 @@ it('CDC §33 : client acompte 50 % — devis→commande→acompte→OF→product
     expect($of)->not->toBeNull();
     $of->update(['bill_of_material_id' => $bom->id, 'production_line_id' => $line->id]);
 
-    // ── Acompte 50 % (118 000) — encaissement libre confirmé ────────────────
+    // ── Règlement intégral (236 000) — encaissement libre confirmé ──────────
     ClientPayment::create([
         'company_id' => $company->id, 'client_id' => $client->id, 'status' => 'confirme',
-        'is_acompte' => true, 'amount' => 118000, 'unallocated_amount' => 118000,
+        'is_acompte' => true, 'amount' => 236000, 'unallocated_amount' => 236000,
         'payment_date' => now(), 'number' => 'ENC-AC-' . uniqid(),
     ]);
 
-    // La gate financière passe grâce à l'acompte 50 % (aucun bypass).
+    // La gate passe sur la couverture intégrale (aucune dérogation).
     app(ProductionService::class)->checkFinancialGate($of->fresh()); // ne lève pas
 
     // ── Production ──────────────────────────────────────────────────────────
@@ -129,7 +131,7 @@ it('CDC §33 : client acompte 50 % — devis→commande→acompte→OF→product
     $prod->submitForValidation($of->fresh());
     $prod->validateByChef($of->fresh());
     $prod->validateByResponsable($of->fresh());
-    $prod->launch($of->fresh());   // gate franchie par acompte
+    $prod->launch($of->fresh());   // gate franchie par le règlement
     $prod->start($of->fresh());
     $of->refresh();
     expect($of->status)->toBe('en_cours');

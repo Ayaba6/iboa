@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Traits\HasAttachments;
 use App\Models\Traits\HasCompanyScope;
 use App\Models\Traits\HasCreator;
+use App\Services\Production\ProductionFinancialEligibilityService;
 use App\Traits\HasCommercialWorkflow;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -250,31 +251,35 @@ class Order extends Model
     }
 
     /**
-     * [MTO §1.3] Montant minimum requis avant production selon le mode de paiement
-     * du client : comptant = 100 % TTC ; acompte = TTC × taux paramétré ;
-     * crédit/inconnu = jamais éligible financièrement (chemin approbation/DAF).
+     * [MTO §1.3] Montant à encaisser avant production. `null` = aucun chemin par
+     * le paiement (crédit, mode inconnu) : l'éligibilité passe alors par le
+     * plafond de crédit ou par une dérogation.
+     *
+     * Ne décide de rien à elle seule — elle sert à répartir les acomptes libres
+     * entre commandes sœurs dans {@see confirmedReceipts()}. La décision
+     * complète est {@see productionFinancialRequirement()}.
      */
     public function requiredBeforeProduction(): ?int
     {
-        $mode = $this->client?->payment_mode;
-        if ($mode === 'comptant') {
-            return (int) $this->total_ttc;
-        }
-        if ($mode === 'acompte') {
-            $rate = (float) (\App\Models\SalesSetting::current()->deposit_required_rate ?? 70);
-
-            return (int) ceil((int) $this->total_ttc * $rate / 100);
-        }
-
-        return null; // crédit / non défini : pas de chemin financier direct
+        return app(ProductionFinancialEligibilityService::class)->requiredAmount($this);
     }
 
-    /** [MTO §1.3] Éligibilité financière = encaissements confirmés ≥ minimum requis. */
-    public function isFinanciallyEligibleForProduction(): bool
+    /**
+     * [BUG-A3-MTO-FIN-001] Exigence financière complète et son verdict.
+     *
+     * Point d'entrée unique pour les écrans comme pour la garde de lancement.
+     * Le calcul n'écrit RIEN : afficher l'éligibilité ne peut plus créer
+     * d'autorisation en base.
+     */
+    public function productionFinancialRequirement(?\App\Modules\Production\Models\ProductionOrder $productionOrder = null, bool $lock = false): \App\Services\Production\ProductionFinancialRequirement
     {
-        $required = $this->requiredBeforeProduction();
+        return app(ProductionFinancialEligibilityService::class)->evaluate($this, $productionOrder, $lock);
+    }
 
-        return $required !== null && $this->confirmedReceipts() >= $required;
+    /** [MTO §1.3] Éligibilité financière — calculée, jamais persistée. */
+    public function isFinanciallyEligibleForProduction(?\App\Modules\Production\Models\ProductionOrder $productionOrder = null): bool
+    {
+        return $this->productionFinancialRequirement($productionOrder)->satisfied;
     }
 
     /** [MTO §1.3] Approbation gérant valide (posée et non expirée). */
@@ -384,5 +389,30 @@ class Order extends Model
     protected function getValidatedStatuses(): array
     {
         return ['confirme', 'en_preparation', 'partiellement_livre', 'livre', 'facture'];
+    }
+
+    /**
+     * [Ventes §17] Statuts depuis lesquels une commande peut être annulée.
+     *
+     * La version générique du trait s'arrête à `brouillon` et
+     * `en_attente_validation`. Appliquée aux commandes, elle rendait
+     * `cancelDocument()` — donc le motif, l'auteur et le journal d'audit —
+     * INACCESSIBLE dès la confirmation. L'interface contournait le blocage avec
+     * un second bouton « Annuler » branché sur un chemin sans motif : une
+     * commande confirmée disparaissait sans qu'on sache ni qui, ni pourquoi.
+     *
+     * La liste ci-dessous est le complément exact des statuts refusés par
+     * OrderService::cancel() — `annule`, `facture`, `livre` — pour que les deux
+     * gardes ne puissent pas diverger.
+     */
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, [
+            'brouillon',
+            'en_attente_validation',
+            'confirme',
+            'en_preparation',
+            'partiellement_livre',
+        ], true);
     }
 }

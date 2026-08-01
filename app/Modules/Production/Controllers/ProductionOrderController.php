@@ -18,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use App\Modules\Production\Services\NetRequirementService;
+use Illuminate\Validation\Rule;
 
 class ProductionOrderController extends Controller
 {
@@ -91,8 +92,18 @@ class ProductionOrderController extends Controller
             'termine'   => $parStatut['termine'] ?? 0,
             // [FIX KPI] Mètres réellement produits = déclarations (outputs), pas les
             // lignes planifiées — vides pour les OF MTO générés automatiquement.
+            //
+            // Le filtre portait sur `status = termine`, ce qui contredisait cette
+            // intention : un mètre déclaré sur un OF en cours est du métal qui est
+            // sorti de la ligne. Le bandeau annonçait 26 m au-dessus de lignes qui
+            // en totalisaient 27.
+            //
+            // Les OF ANNULÉS restent exclus : leurs déclarations sont censées avoir
+            // été contre-passées. Si tel n'est pas le cas, c'est une anomalie de
+            // données à corriger — pas quelque chose qu'un indicateur doit absorber
+            // en silence.
             'metres'    => (float) \App\Modules\Production\Models\ProductionOutput::whereHas(
-                            'productionOrder', fn ($q) => $q->where('status', 'termine')
+                            'productionOrder', fn ($q) => $q->where('status', '!=', 'annule')
                         )->sum('total_meters'),
         ];
 
@@ -496,14 +507,26 @@ class ProductionOrderController extends Controller
     }
 
     /**
-     * [§13.2 CDC] Validation financière DAF/DG avant lancement OF.
-     * Client comptant < 100% | acompte < 70% | crédit → autorisation obligatoire.
+     * [§13.2 CDC] Dérogation financière DAF/DG avant lancement d'OF.
+     *
+     * [BUG-A3-MTO-FIN-001] SEUL point du code autorisé à écrire
+     * `financial_authorization`. La garde de lancement ne l'écrit plus : une
+     * couverture acquise par encaissement se recalcule, elle ne se décrète pas.
+     * Cette colonne ne consigne donc plus qu'une décision humaine, et une
+     * décision humaine se justifie — d'où le motif désormais OBLIGATOIRE, la
+     * validité datée et le montant de risque accepté figé au moment du choix.
      */
     public function authorizeFinance(Request $request, ProductionOrder $order): RedirectResponse
     {
         $request->validate([
-            'financial_notes' => ['nullable', 'string', 'max:500'],
+            // Motif obligatoire : une dérogation sans justification est
+            // indéfendable en audit, et c'est elle qui explique l'écart accepté.
+            'financial_notes' => ['required', 'string', 'min:10', 'max:500'],
+            'expires_at'      => ['nullable', 'date', 'after_or_equal:today'],
             'bypass'          => ['nullable', 'boolean'],
+        ], [
+            'financial_notes.required' => 'Le motif de la dérogation est obligatoire.',
+            'financial_notes.min'      => 'Le motif doit être explicite (10 caractères minimum).',
         ]);
 
         abort_if(
@@ -512,14 +535,34 @@ class ProductionOrderController extends Controller
             'OF déjà autorisé financièrement.'
         );
 
+        // Montant de risque accepté, figé à l'instant de la décision. Recalculé
+        // plus tard il vaudrait autre chose : c'est bien la photo du moment qui
+        // documente ce que le décideur a couvert de sa signature.
+        $exigence = $this->service->financialRequirementFor($order);
+
         $order->update([
-            'financial_authorization' => $request->boolean('bypass') ? 'bypassed' : 'approved',
-            'financial_authorized_at' => now(),
-            'financial_authorized_by' => auth()->id(),
-            'financial_notes'         => $request->input('financial_notes') ?? 'Autorisation manuelle DAF/DG.',
+            'financial_authorization'            => $request->boolean('bypass') ? 'bypassed' : 'approved',
+            'financial_authorized_at'            => now(),
+            'financial_authorized_by'            => auth()->id(),
+            'financial_authorization_expires_at' => $request->input('expires_at'),
+            'financial_authorization_unpaid'     => $exigence?->uncoveredAmount() ?? 0,
+            'financial_notes'                    => $request->input('financial_notes'),
         ]);
 
-        return back()->with('success', 'Autorisation financière accordée. L\'OF peut être lancé.');
+        app(\App\Services\AuditService::class)->log(
+            'production.of.derogation_financiere',
+            $order,
+            ['financial_authorization' => null],
+            [
+                'financial_authorization' => $order->financial_authorization,
+                'expires_at'              => $request->input('expires_at'),
+                'montant_non_couvert'     => $exigence?->uncoveredAmount() ?? 0,
+                'motif'                   => $request->input('financial_notes'),
+                'exigence'                => $exigence?->toArray(),
+            ],
+        );
+
+        return back()->with('success', 'Dérogation financière enregistrée. L\'OF peut être lancé.');
     }
 
     // ─── §13.3 CDC : validation 2-niveaux ────────────────────────────────────
@@ -761,7 +804,7 @@ class ProductionOrderController extends Controller
             'documents.*'        => ['file', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx', 'max:5120'],
             // [Audit création OF] entête étendue
             'of_type'            => ['nullable', 'in:standard,reprise,retouche,speciale_client'],
-            'origin'             => ['nullable', 'in:manuel,commande_client,stock_minimum,mrp'],
+            'origin'             => ['nullable', Rule::in(ProductionOrder::origins())],
             'atelier'            => ['nullable', 'string', 'max:60'],
             'bom_version'        => ['nullable', 'string', 'max:20'],
             'routing_version'    => ['nullable', 'string', 'max:20'],

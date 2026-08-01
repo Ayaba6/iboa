@@ -226,7 +226,12 @@ it('annulation partielle : seul le paiement annulé est défait, l\'autre reste'
 // [Preuve §1] Un encaissement qui finance un OF ACTIF est inannulable.
 it('refuse d\'annuler un encaissement finançant un OF actif', function () {
     [$co, $client, $cash] = afSetup();
-    $client->update(['payment_mode' => 'comptant']);
+    // [BUG-A3-MTO-FIN-001] Le mode était posé à 'comptant', valeur qu'aucun
+    // formulaire n'accepte et qu'aucune ligne de la base ne porte. La garde
+    // ci-dessous s'appuie sur `requiredBeforeProduction()`, qui retournait donc
+    // null : la boucle passait au `continue` et l'annulation était autorisée.
+    // Le test passait au vert sans jamais éprouver la garde qu'il nomme.
+    $client->update(['payment_mode' => Client::PAYMENT_CASH]);
     $p = \App\Models\Product::factory()->create(['production_mode' => 'mto']);
     $order = \App\Models\Order::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,

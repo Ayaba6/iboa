@@ -18,6 +18,7 @@ use App\Modules\Production\Models\ProductionOrder;
 use App\Modules\Production\Models\ProductionOutput;
 use App\Notifications\ValidationStepNotification;
 use App\Services\DocumentSequenceService;
+use App\Services\Production\ProductionFinancialRequirement;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -264,93 +265,64 @@ class ProductionService
     }
 
     /**
-     * [§13.2 CDC] Vérifie la condition financière avant lancement.
-     * Comptant : 100% encaissé. Acompte : ≥70%. Crédit : validation DAF/DG explicite.
-     * Sans commande liée ou si déjà autorisé → passe.
+     * [§13.2 CDC] Exigence financière d'un OF, ou `null` s'il n'y en a aucune
+     * (OF de stock, sans commande de vente rattachée).
      *
-     * @throws ValidationException si condition non remplie
+     * LECTURE PURE. Aucune écriture, aucune notification. C'est la condition
+     * pour que l'écran et le lancement partagent la même règle : tant que
+     * l'évaluation écrivait `financial_authorization`, consulter l'éligibilité
+     * revenait à l'accorder.
      */
-    public function checkFinancialGate(ProductionOrder $order): void
+    public function financialRequirementFor(ProductionOrder $order, bool $lock = false): ?ProductionFinancialRequirement
     {
-        // Déjà autorisé ou bypassé
-        if (in_array($order->financial_authorization, ['approved', 'bypassed'], true)) {
-            return;
-        }
-
-        // Pas de commande de vente liée → pas de gate financière
         if (! $order->order_id) {
-            return;
+            return null; // OF de stock (MTS) : aucun engagement client à couvrir.
         }
 
         $order->loadMissing('order.client');
         $salesOrder = $order->order;
+
         if (! $salesOrder) {
-            return;
+            return null;
         }
 
-        $client = $salesOrder->client;
-        $totalTtc = (float) $salesOrder->total_ttc;
-        if ($totalTtc <= 0) {
-            return;
+        return $salesOrder->productionFinancialRequirement($order, $lock);
+    }
+
+    /**
+     * [§13.2 CDC] Garde financière : refuse le lancement si l'exigence n'est pas
+     * remplie. Ne modifie RIEN — ni en cas de refus, ni en cas de succès.
+     *
+     * [BUG-A3-MTO-FIN-001] Cette méthode réimplémentait la règle avec des
+     * littéraux (« comptant », « acompte ») qu'aucun client ne porte : aucune
+     * branche de refus ne s'appliquait au comptant, et l'exécution atteignait la
+     * ligne finale, qui écrivait `financial_authorization = 'approved'` sans
+     * auteur. L'écran lisait cette colonne et affichait « ✔ Approuvée ».
+     *
+     * Deux corrections distinctes en découlent :
+     *   1. la règle n'est plus écrite ici mais dans
+     *      {@see \App\Services\Production\ProductionFinancialEligibilityService} ;
+     *   2. une couverture acquise par paiement n'inscrit plus d'autorisation.
+     *      `financial_authorization` ne consigne désormais qu'une DÉROGATION
+     *      humaine, avec son auteur.
+     *
+     * @throws ValidationException si l'exigence n'est pas remplie
+     */
+    public function checkFinancialGate(ProductionOrder $order, bool $lock = false): ?ProductionFinancialRequirement
+    {
+        $exigence = $this->financialRequirementFor($order, $lock);
+
+        if ($exigence === null) {
+            return null;
         }
 
-        // [Scénario B CDC] L'approbation gérant (motif obligatoire, validité datée,
-        // permission production.approve_financial) EST l'autorisation métier de
-        // produire sans règlement : la gate la reconnaît — sinon la commande
-        // apparaissait éligible au tableau mais le lancement exigeait une seconde
-        // autorisation DAF redondante.
-        if ($salesOrder->hasValidProductionApproval()) {
-            $order->update([
-                'financial_authorization' => 'approved',
-                'financial_authorized_at' => now(),
-                'financial_authorized_by' => $salesOrder->production_approved_by,
-                'financial_notes' => 'Approbation gérant sur la commande : '.($salesOrder->production_approval_reason ?? ''),
-            ]);
-
-            return;
-        }
-
-        // [MTO §1.3 — méthode centrale] Encaissements confirmés de la commande :
-        // allocations factures + paiements caisse (BP) + acomptes libres client.
-        // Même source que l'éligibilité du tableau coordinateur (Order::confirmedReceipts).
-        $paid = (float) $salesOrder->confirmedReceipts();
-        $rate = $totalTtc > 0 ? round(($paid / $totalTtc) * 100, 1) : 0;
-
-        // Déterminer le mode de paiement du client
-        $paymentMode = $client?->payment_mode ?? 'credit'; // défaut = crédit si non défini
-
-        $order->update(['payment_mode' => $paymentMode, 'payment_rate' => $rate]);
-
-        if ($paymentMode === 'comptant' && $rate < 100) {
-            $this->notifyFinancialGateBlocked($order, "Client comptant : paiement à {$rate}% — solde requis avant fabrication.");
+        if (! $exigence->satisfied) {
             throw ValidationException::withMessages([
-                'financial' => "Client comptant : paiement intégral requis avant fabrication ({$rate}% encaissé sur {$totalTtc} FCFA). Demandez l'autorisation financière.",
+                'financial' => $exigence->reason.' Demandez l\'autorisation financière.',
             ]);
         }
 
-        // [CDC §9] Seuil d'acompte paramétrable (SalesSetting.deposit_required_rate, défaut 70 %).
-        $depositRate = (float) (SalesSetting::current()->deposit_required_rate ?? 70);
-        if ($paymentMode === 'acompte' && $rate < $depositRate) {
-            $seuil = rtrim(rtrim(number_format($depositRate, 2, '.', ''), '0'), '.');
-            $this->notifyFinancialGateBlocked($order, "Client acompte : {$rate}% encaissé — seuil {$seuil}% non atteint.");
-            throw ValidationException::withMessages([
-                'financial' => "Client acompte : acompte ≥ {$seuil}% requis ({$rate}% encaissé). Demandez l'autorisation DAF.",
-            ]);
-        }
-
-        if ($paymentMode === 'credit') {
-            $this->notifyFinancialGateBlocked($order, 'Client crédit — validation DAF/DG requise avant lancement OF.');
-            throw ValidationException::withMessages([
-                'financial' => 'Client crédit : validation DAF/DG obligatoire avant lancement OF. Demandez l\'autorisation financière.',
-            ]);
-        }
-
-        // Condition remplie — on enregistre l'autorisation automatique
-        $order->update([
-            'financial_authorization' => 'approved',
-            'financial_authorized_at' => now(),
-            'financial_notes' => "Autorisé automatiquement : {$paymentMode} / {$rate}%",
-        ]);
+        return $exigence;
     }
 
     // ─── §13.3 CDC : validation 2-niveaux avant lancement ───────────────────
@@ -436,8 +408,11 @@ class ProductionService
             ]);
         }
 
-        // §13.2 CDC — Gate financière obligatoire
-        $this->checkFinancialGate($order);
+        // §13.2 CDC — La garde financière n'est PLUS appelée ici : elle s'exécute
+        // sous verrou, dans la transaction ci-dessous. L'appeler deux fois la
+        // rendrait inopérante — le premier passage écrit
+        // `financial_authorization = 'approved'`, et le second sortirait aussitôt
+        // sur ce même drapeau sans rien revérifier.
 
         // [CDC §3 — cohérence stock] Rupture matière = lancement BLOQUÉ. On ne
         // fabrique pas sans composant disponible. Les articles allow_negative_stock
@@ -463,17 +438,92 @@ class ProductionService
             }
         }
 
-        DB::transaction(function () use ($order) {
-            $snapshot = app(ProductionSnapshotService::class)->capture($order);
-            $order->update($snapshot + ['status' => 'lance', 'launched_at' => now()]);
+        // [BUG-A3-MTO-FIN-001 §4] Ordre imposé, du verrou à la journalisation.
+        // Le contrôle financier était auparavant joué hors transaction : entre sa
+        // lecture et le changement de statut, un règlement pouvait être annulé,
+        // une approbation révoquée, ou un second lancement passer en parallèle —
+        // et l'OF partait sur une éligibilité qui n'existait plus.
+        try {
+            DB::transaction(function () use ($order) {
+                // (2) Verrou sur l'OF, puis (3) sur la commande. La commande porte
+                // les encaissements et l'approbation : verrouiller l'OF seul
+                // laisserait la couverture changer sous nos pieds.
+                $verrouille = ProductionOrder::whereKey($order->getKey())->lockForUpdate()->firstOrFail();
+                if ($verrouille->order_id) {
+                    \App\Models\Order::whereKey($verrouille->order_id)->lockForUpdate()->first();
+                }
 
-            // Le snapshot et les opérations constituent une seule décision métier :
-            // toute erreur de génération annule le lancement complet de l'OF.
-            if (! $order->operations()->exists()
-                && ! empty($snapshot['routing_snapshot']['operations'])) {
-                app(RoutingService::class)->generateWorkOrders($order);
+                // (4) L'OF est-il toujours lançable ? Un OF déjà lancé ne se relance pas.
+                $this->assertStatus($verrouille, ['brouillon', 'matiere_allouee']);
+
+                // (5) à (10) Configuration client, encaissements confirmés, exposition
+                // crédit et dérogation sont relus SOUS VERROU, puis confrontés à la
+                // règle unique. Refus → exception, et la transaction n'a rien écrit.
+                $exigence = $this->checkFinancialGate($verrouille, lock: true);
+
+                // (11) Changement de statut.
+                $snapshot = app(ProductionSnapshotService::class)->capture($order);
+                $order->update($snapshot + [
+                    'status'      => 'lance',
+                    'launched_at' => now(),
+                ] + $this->traceFinanciere($verrouille, $exigence));
+
+                // Le snapshot et les opérations constituent une seule décision métier :
+                // toute erreur de génération annule le lancement complet de l'OF.
+                if (! $order->operations()->exists()
+                    && ! empty($snapshot['routing_snapshot']['operations'])) {
+                    app(RoutingService::class)->generateWorkOrders($order);
+                }
+
+                // (12) Journalisation. Le lancement d'OF-2026-0007 n'avait laissé
+                // AUCUNE entrée dans `audit_logs` : l'incident n'a pu être
+                // reconstitué que par recoupement de colonnes. Le fondement
+                // financier de la décision est désormais consigné à la source.
+                app(\App\Services\AuditService::class)->log(
+                    'production.of.lancement',
+                    $order,
+                    [],
+                    ['financier' => $exigence?->toArray() ?? ['type' => 'sans_commande', 'satisfied' => true]],
+                );
+            });
+            // (13) Commit.
+        } catch (ValidationException $e) {
+            // [§5 — invariant de refus] Un refus n'écrit RIEN. La notification au
+            // DAF est donc émise APRÈS l'annulation de la transaction : émise à
+            // l'intérieur, elle aurait été annulée avec le reste, et le DAF
+            // n'aurait jamais su qu'un lancement avait été bloqué.
+            $motif = $e->errors()['financial'][0] ?? null;
+            if ($motif !== null) {
+                $this->notifyFinancialGateBlocked($order, $motif);
             }
-        });
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Colonnes d'information consignant le fondement financier du lancement.
+     *
+     * `financial_authorization` n'y figure PAS, et c'est le cœur de la
+     * correction : une couverture acquise par encaissement n'est pas une
+     * autorisation. Cette colonne ne consigne qu'une dérogation humaine, posée
+     * par {@see \App\Modules\Production\Controllers\ProductionOrderController::authorizeFinance()}
+     * avec son auteur. L'ancienne version l'écrivait avec
+     * `financial_authorized_at = now()` et `financial_authorized_by = NULL`, ce
+     * que l'écran présentait comme « ✔ Approuvée ».
+     */
+    private function traceFinanciere(ProductionOrder $order, ?ProductionFinancialRequirement $exigence): array
+    {
+        if ($exigence === null) {
+            return [];
+        }
+
+        $ttc = (int) ($order->order?->total_ttc ?? 0);
+
+        return [
+            'payment_mode' => $order->order?->client?->payment_mode,
+            'payment_rate' => $ttc > 0 ? round($exigence->coveredAmount / $ttc * 100, 2) : 0,
+        ];
     }
 
     /**

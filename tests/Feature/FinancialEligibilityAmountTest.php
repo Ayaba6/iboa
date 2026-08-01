@@ -4,6 +4,15 @@
  * [GO conditionnel — correction 1] Éligibilité financière au MONTANT réellement
  * encaissé (et non à la simple existence d'un BP). Méthode centrale partagée
  * entre le tableau coordinateur et la gate financière de lancement OF.
+ *
+ * [BUG-A3-MTO-FIN-001] Ce fichier éprouvait auparavant des clients
+ * `payment_mode => 'acompte'` et `'comptant'`. Ni l'une ni l'autre de ces
+ * valeurs n'est saisissable : les Form Requests valident `in:cash,credit` et la
+ * liste déroulante n'offre que deux options. La base ne contient que 'cash' et
+ * 'credit'. Le cas nommé « comptant : 100 % exigé » — le seul qui couvrait
+ * exactement le défaut survenu en exploitation — passait au vert sur un mode
+ * inexistant pendant que le mode réel, 'cash', échappait à toute vérification.
+ * Les scénarios sont donc rejoués sur les valeurs réelles.
  */
 
 use App\Models\BonPreparation;
@@ -12,10 +21,10 @@ use App\Models\Company;
 use App\Models\FiscalYear;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\SalesSetting;
 use App\Models\User;
 use App\Modules\Production\Models\ProductionOrder;
 use App\Modules\Production\Services\ProductionService;
+use App\Services\Production\ProductionFinancialRequirement;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
@@ -31,9 +40,9 @@ function feCompany(): Company
 }
 
 /** Commande confirmée 1 000 000 TTC, client en mode donné, ligne MTO. */
-function feOrder(Company $co, string $paymentMode): Order
+function feOrder(Company $co, string $paymentMode, int $plafond = 0): Order
 {
-    $client = Client::factory()->create(['payment_mode' => $paymentMode]);
+    $client = Client::factory()->create(['payment_mode' => $paymentMode, 'credit_limit' => $plafond]);
     $order = Order::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
         'client_id' => $client->id, 'number' => 'CMD-FE-' . uniqid(),
@@ -56,31 +65,21 @@ function feBp(Order $order, int $amount): BonPreparation
     ]);
 }
 
-it('scénario du rapport : BP de 50 000 sur 500 000 requis (acompte 50 %) → NON éligible', function () {
+it('scénario du rapport : BP de 50 000 sur 1 000 000 requis → NON éligible', function () {
     $co = feCompany();
-    SalesSetting::current()->update(['deposit_required_rate' => 50]);
-    $order = feOrder($co, 'acompte');
+    $order = feOrder($co, Client::PAYMENT_CASH);
     feBp($order, 50000);
 
-    expect($order->fresh()->requiredBeforeProduction())->toBe(500000)
+    expect($order->fresh()->requiredBeforeProduction())->toBe(1000000)
         ->and($order->fresh()->confirmedReceipts())->toBe(50000)
         ->and($order->fresh()->isFinanciallyEligibleForProduction())->toBeFalse();
 });
 
-it('acompte 50 % atteint (500 000 encaissés) → éligible', function () {
-    $co = feCompany();
-    SalesSetting::current()->update(['deposit_required_rate' => 50]);
-    $order = feOrder($co, 'acompte');
-    feBp($order, 500000);
-
-    expect($order->fresh()->isFinanciallyEligibleForProduction())->toBeTrue();
-});
-
 it('comptant : 100 % exigé — paiement partiel non éligible, intégral éligible', function () {
     $co = feCompany();
-    $partial = feOrder($co, 'comptant');
+    $partial = feOrder($co, Client::PAYMENT_CASH);
     feBp($partial, 900000);
-    $full = feOrder($co, 'comptant');
+    $full = feOrder($co, Client::PAYMENT_CASH);
     feBp($full, 1000000);
 
     expect($partial->fresh()->requiredBeforeProduction())->toBe(1000000)
@@ -88,23 +87,50 @@ it('comptant : 100 % exigé — paiement partiel non éligible, intégral éligi
         ->and($full->fresh()->isFinanciallyEligibleForProduction())->toBeTrue();
 });
 
-it('crédit : jamais éligible financièrement (chemin approbation gérant)', function () {
+it('comptant : un franc manquant reste un manque', function () {
     $co = feCompany();
-    $order = feOrder($co, 'credit');
-    feBp($order, 1000000);
+    $order = feOrder($co, Client::PAYMENT_CASH);
+    feBp($order, 999999);
 
-    expect($order->fresh()->requiredBeforeProduction())->toBeNull()
-        ->and($order->fresh()->isFinanciallyEligibleForProduction())->toBeFalse();
+    expect($order->fresh()->isFinanciallyEligibleForProduction())->toBeFalse();
 });
 
-it('la gate financière de lancement OF compte désormais le paiement caisse (BP)', function () {
+/**
+ * CHANGEMENT DE RÈGLE MÉTIER — à valider explicitement.
+ *
+ * Ce cas affirmait auparavant : « crédit : jamais éligible financièrement ». La
+ * consigne §2 de la correction impose désormais d'évaluer le crédit sur le
+ * plafond, l'exposition courante et prévisionnelle, les impayés échus et les
+ * dérogations. Un client à crédit dont l'encours prévisionnel reste sous son
+ * plafond devient donc éligible sans approbation gérant préalable.
+ *
+ * Le plafond NUL reste un refus : il signifie « aucun crédit accordé », et non
+ * « crédit illimité » — c'est le sens que lui donnerait `CustomerCreditExposureService`,
+ * dont le `limited = false` sert l'affichage commercial, pas une garde de production.
+ */
+it('crédit : refusé sans plafond, autorisé sous plafond', function () {
+    $co = feCompany();
+
+    $sansPlafond = feOrder($co, Client::PAYMENT_CREDIT, plafond: 0);
+    expect($sansPlafond->fresh()->isFinanciallyEligibleForProduction())->toBeFalse();
+
+    $sousPlafond = feOrder($co, Client::PAYMENT_CREDIT, plafond: 5_000_000);
+    $exigence = $sousPlafond->fresh()->productionFinancialRequirement();
+    expect($exigence->type)->toBe(ProductionFinancialRequirement::TYPE_CREDIT)
+        ->and($exigence->satisfied)->toBeTrue();
+
+    // Plafond inférieur au TTC : cette commande seule le fait dépasser.
+    $auDessus = feOrder($co, Client::PAYMENT_CREDIT, plafond: 999_999);
+    expect($auDessus->fresh()->isFinanciallyEligibleForProduction())->toBeFalse();
+});
+
+it('la gate financière de lancement OF compte le paiement caisse (BP)', function () {
     $co = feCompany();
     $u = User::factory()->create(['company_id' => $co->id]);
     $u->assignRole(Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']));
     test()->actingAs($u);
 
-    SalesSetting::current()->update(['deposit_required_rate' => 50]);
-    $order = feOrder($co, 'acompte');
+    $order = feOrder($co, Client::PAYMENT_CASH);
     $of = ProductionOrder::create([
         'company_id' => $co->id, 'fiscal_year_id' => $co->current_fiscal_year_id,
         'number' => 'OF-FE-' . uniqid(), 'status' => 'brouillon',
@@ -115,8 +141,8 @@ it('la gate financière de lancement OF compte désormais le paiement caisse (BP
     expect(fn () => app(ProductionService::class)->checkFinancialGate($of->fresh()))
         ->toThrow(ValidationException::class);
 
-    // Paiement caisse 50 % (BP) : la gate passe — même source que le tableau.
-    feBp($order, 500000);
+    // Paiement caisse intégral (BP) : la gate passe — même source que le tableau.
+    feBp($order, 1000000);
     app(ProductionService::class)->checkFinancialGate($of->fresh()); // ne lève pas
-    expect(true)->toBeTrue();
+    expect($order->fresh()->isFinanciallyEligibleForProduction())->toBeTrue();
 });

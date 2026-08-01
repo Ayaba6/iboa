@@ -48,7 +48,16 @@ it('B — MTO approuvé : gate refusée puis approbation gérant, production, li
     $co   = Company::first();
     $this->actingAs($user);
 
-    $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit']);
+    // [BUG-A3-MTO-FIN-001 §2] CHANGEMENT DE RÈGLE MÉTIER — à valider.
+    // Ce scénario reposait sur « client à crédit = refus systématique ». La
+    // consigne §2 impose désormais d'évaluer le crédit (plafond, exposition
+    // courante et prévisionnelle, impayés échus). Avec le plafond par défaut de
+    // la factory — 5 000 000 pour une commande de 59 000 TTC — ce client
+    // passerait maintenant SANS approbation gérant, et le parcours « refus puis
+    // approbation » n'aurait plus de sujet.
+    // Le plafond est donc mis à 0 : aucun crédit accordé, ce qui reste un refus
+    // et conserve au scénario B le chemin qu'il a été écrit pour éprouver.
+    $client  = Client::factory()->create(['is_active' => true, 'payment_mode' => 'credit', 'credit_limit' => 0]);
     $unit    = Unit::firstOrCreate(['name' => 'Pièce E2E'], ['abbreviation' => 'pe2e']);
     $taxRate = TaxRate::firstOrCreate(['name' => 'TVA 18% E2E'], ['short_name' => 'TVAE2E', 'rate' => 18, 'is_active' => true]);
     $wh      = Warehouse::firstOrCreate(['code' => 'WH-E2E'], ['name' => 'Dépôt E2E', 'company_id' => $co->id, 'is_active' => true, 'is_default' => true]);
@@ -96,8 +105,18 @@ it('B — MTO approuvé : gate refusée puis approbation gérant, production, li
     // 4. La gate reconnaît l'approbation : lancement + démarrage passent.
     $svc->launch($of->fresh(), force: true); // force = dérogation matière (pas de BOM dans ce scénario)
     $svc->start($of->fresh());
-    expect($of->fresh()->status)->toBe('en_cours')
-        ->and($of->fresh()->financial_authorization)->toBe('approved');
+    expect($of->fresh()->status)->toBe('en_cours');
+
+    // [BUG-A3-MTO-FIN-001] Ce cas vérifiait auparavant
+    // `financial_authorization === 'approved'` sur l'OF. La garde recopiait alors
+    // l'approbation de la commande dans cette colonne — au lancement automatique
+    // près, c'est le même geste qui a produit la fausse piste d'audit
+    // d'OF-2026-0007. L'approbation vit là où elle a été prise, sur la COMMANDE,
+    // avec son auteur et sa validité ; l'OF ne la duplique plus, il la consulte.
+    expect($of->fresh()->financial_authorization)->toBeNull();
+    expect($order->fresh()->production_approved_by)->not->toBeNull();
+    expect($of->fresh()->order->productionFinancialRequirement($of->fresh())->type)
+        ->toBe(\App\Services\Production\ProductionFinancialRequirement::TYPE_MANUAL_OVERRIDE);
 
     // 5. Déclaration + CQ + clôture.
     $output = app(ProductionStockService::class)->recordOutput($of->fresh(), [

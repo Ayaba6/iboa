@@ -40,6 +40,8 @@ class ProductionOrder extends Model
         'couleur_ral','revetement','tolerance_longueur','tolerance_epaisseur',
         // §13.2 CDC — Validation financière avant lancement OF
         'financial_authorization','financial_authorized_at','financial_authorized_by','financial_notes','payment_mode','payment_rate',
+        // [BUG-A3-MTO-FIN-001] Portée de la dérogation : jusqu'à quand, sur quel montant non couvert
+        'financial_authorization_expires_at','financial_authorization_unpaid',
         // §13.10 CDC — Modification OF exceptionnelle, workflow 4 étapes
         'modification_status','modification_reason',
         'modification_requested_at','modification_requested_by',
@@ -54,6 +56,7 @@ class ProductionOrder extends Model
         'thickness'=>'decimal:2','length'=>'decimal:2','usable_width'=>'decimal:1',
         'quantity_requested'=>'decimal:2','quantity_produced'=>'decimal:2','launched_at'=>'date','finished_at'=>'date',
         'financial_authorized_at'=>'datetime','payment_rate'=>'decimal:2',
+        'financial_authorization_expires_at'=>'date','financial_authorization_unpaid'=>'integer',
         'modification_requested_at'=>'datetime','modification_chef_avis_at'=>'datetime',
         'modification_commercial_avis_at'=>'datetime','modification_finance_avis_at'=>'datetime',
         'modification_dg_approved_at'=>'datetime',
@@ -79,6 +82,8 @@ class ProductionOrder extends Model
     public function billOfMaterial(): BelongsTo { return $this->belongsTo(BillOfMaterial::class); }
     public function productionLine(): BelongsTo { return $this->belongsTo(ProductionLine::class); }
     public function responsible(): BelongsTo { return $this->belongsTo(User::class, 'responsible_id'); }
+    /** [BUG-A3-MTO-FIN-001] Auteur de la dérogation financière — obligatoire pour qu'elle compte. */
+    public function financialAuthorizedBy(): BelongsTo { return $this->belongsTo(User::class, 'financial_authorized_by'); }
     public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
     public function lines(): HasMany { return $this->hasMany(ProductionOrderLine::class); }
     public function consumptions(): HasMany { return $this->hasMany(ProductionConsumption::class); }
