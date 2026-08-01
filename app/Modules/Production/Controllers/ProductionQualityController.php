@@ -8,6 +8,7 @@ use App\Modules\Production\Models\ProductionQualityControl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProductionQualityController extends Controller
 {
@@ -82,10 +83,57 @@ class ProductionQualityController extends Controller
         return back()->with('success', 'Contrôle qualité enregistré.');
     }
 
-    public function destroy(ProductionQualityControl $qualityControl): RedirectResponse
+    /**
+     * [BUG-A3-QUALITY-DELETE-006] Suppression d'un contrôle qualité — tracée.
+     *
+     * La version précédente appelait `delete()` sur un modèle sans SoftDeletes :
+     * la ligne disparaissait définitivement, sans motif, sans auteur et sans
+     * entrée d'audit. Ce n'est pas anodin, parce que toutes les gardes qualité
+     * lisent le DERNIER contrôle enregistré — libération
+     * ({@see \App\Modules\Quality\Services\QualityReleaseService}), clôture d'OF
+     * et garde de livraison ({@see \App\Modules\Production\Services\ProductionDeliveryGuard}).
+     * Retirer un `non_conforme` faisait redevenir « dernier » un `conforme`
+     * antérieur : la marchandise repartait et l'historique affirmait qu'aucun
+     * défaut n'avait été constaté. La garde de livraison additionne par ailleurs
+     * `rejected_quantity` sur les contrôles, si bien qu'une suppression
+     * augmentait mécaniquement la quantité livrable.
+     *
+     * La suppression reste possible — une saisie sur le mauvais OF doit pouvoir
+     * être retirée — mais elle est désormais logique, motivée, signée et
+     * journalisée.
+     */
+    public function destroy(Request $request, ProductionQualityControl $qualityControl): RedirectResponse
     {
-        $qualityControl->delete();
+        $request->validate([
+            'reason' => ['required', 'string', 'min:10', 'max:255'],
+        ], [
+            'reason.required' => 'Le motif de suppression est obligatoire.',
+            'reason.min'      => 'Le motif doit être explicite (10 caractères minimum).',
+        ]);
 
-        return back()->with('success', 'Contrôle qualité supprimé.');
+        $avant = $qualityControl->only([
+            'production_order_id', 'status', 'rejected_quantity', 'reason',
+            'controller_id', 'controlled_at', 'created_by',
+        ]);
+
+        DB::transaction(function () use ($qualityControl, $request, $avant) {
+            // Motif et auteur sont posés AVANT la suppression logique : écrits
+            // après, ils viseraient une ligne déjà retirée du périmètre par défaut.
+            $qualityControl->forceFill([
+                'deletion_reason' => $request->input('reason'),
+                'deleted_by'      => Auth::id(),
+            ])->save();
+
+            $qualityControl->delete();
+
+            app(\App\Services\AuditService::class)->log(
+                'production.qc.suppression',
+                $qualityControl,
+                $avant,
+                ['motif' => $request->input('reason'), 'supprime_par' => Auth::id()],
+            );
+        });
+
+        return back()->with('success', 'Contrôle qualité supprimé — motif et auteur consignés.');
     }
 }
