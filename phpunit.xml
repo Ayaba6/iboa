@@ -24,6 +24,11 @@
         <env name="BROADCAST_CONNECTION" value="null" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>
         <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <!-- Moteur ANNONCÉ par cette configuration. TestEngineIntegrityTest le
+             confronte au moteur réellement ouvert : sans ce marqueur, une suite
+             lancée avec la mauvaise commande rend un rapport vert qui atteste
+             d'un moteur qu'elle n'a jamais touché. -->
+        <env name="DB_ENGINE_EXPECTED" value="sqlite" force="true"/>
         <env name="DB_DATABASE" value=":memory:" force="true"/>
         <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>

@@ -14,9 +14,41 @@ use Tests\TestCase;
 |
 */
 
+/*
+| Annonce du moteur, imprimée avant la première ligne du rapport.
+|
+| `php artisan test --env=testing.mysql` a servi une session entière à produire
+| des lignes « parité MySQL ✓ » : cette commande tourne sur SQLite, `phpunit.xml`
+| imposant `DB_CONNECTION=sqlite` en `force="true"`. Le rapport était vert et
+| n'attestait rien. Aucun test ne pouvait le dire — une course SQLite lancée par
+| erreur est parfaitement cohérente avec elle-même.
+|
+| Le seul remède est de rendre le moteur ILLISIBLE autrement qu'en le lisant :
+| il s'affiche désormais en tête de chaque exécution, quelle que soit la commande.
+| La suite MySQL se lance avec `pest -c phpunit.mysql.xml`.
+*/
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->beforeEach(fn () => $this->refreshDatabase())
+    ->beforeEach(function () {
+        // L'annonce doit être faite APRÈS le démarrage de l'application.
+        // Une première version lisait l'environnement du processus au
+        // chargement de ce fichier : elle affichait « MYSQL / iboa_erp » pour
+        // une course qui s'exécutait sur SQLite en mémoire, les surcharges
+        // `force="true"` de phpunit n'étant pas encore appliquées. Une bannière
+        // fausse est pire qu'une bannière absente.
+        static $annonce = false;
+        if (! $annonce) {
+            $annonce = true;
+            $c = \Illuminate\Support\Facades\DB::connection();
+            fwrite(STDOUT, sprintf(
+                "\n  Moteur réel : %s / %s\n\n",
+                strtoupper($c->getDriverName()),
+                (string) $c->getDatabaseName()
+            ));
+        }
+
+        $this->refreshDatabase();
+    })
     ->in('Feature');
 
 /*
