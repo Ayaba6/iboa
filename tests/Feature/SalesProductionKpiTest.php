@@ -26,9 +26,13 @@ it('computes production-aware sales KPIs', function(){
     $of2->outputs()->create(['company_id'=>$co->id,'product_id'=>$p->id,'length'=>6,'quantity'=>5,'total_meters'=>30,'produced_at'=>now()]);
     // livrée non facturée
     Order::create(['company_id'=>$co->id,'fiscal_year_id'=>$co->current_fiscal_year_id,'client_id'=>$client->id,'number'=>'C3','status'=>'livre','issued_at'=>now()]);
-    // devis: 2 total, 1 converti
+    // Devis : 1 converti, 1 brouillon, 1 refuse.
+    // Le brouillon n'est PAS au denominateur — il n'a jamais ete propose au
+    // client, donc il n'a pas pu etre converti. Le refuse, lui, compte : c'est
+    // une offre sortie et perdue. Attendu : 1 converti / 2 offres sorties = 50 %.
     Quote::create(['company_id'=>$co->id,'fiscal_year_id'=>$co->current_fiscal_year_id,'client_id'=>$client->id,'number'=>'Q1','status'=>'converti','issued_at'=>now()]);
     Quote::create(['company_id'=>$co->id,'fiscal_year_id'=>$co->current_fiscal_year_id,'client_id'=>$client->id,'number'=>'Q2','status'=>'brouillon','issued_at'=>now()]);
+    Quote::create(['company_id'=>$co->id,'fiscal_year_id'=>$co->current_fiscal_year_id,'client_id'=>$client->id,'number'=>'Q3','status'=>'refuse','issued_at'=>now()]);
 
     $k=app(SalesProductionService::class)->dashboardKpis();
     expect($k['en_production'])->toBe(1);
