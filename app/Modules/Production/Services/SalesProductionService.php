@@ -142,9 +142,22 @@ class SalesProductionService
             ->whereDoesntHave('invoices', fn ($q) => $q->where('status', '!=', 'annulee'))
             ->count();
 
-        $totalQuotes = \App\Models\Quote::count();
-        $converted   = \App\Models\Quote::where('status', 'converti')->count();
-        $tauxTransfo = $totalQuotes > 0 ? round($converted / $totalQuotes * 100, 1) : 0;
+        // Le dénominateur ne retient que les devis SORTIS, c'est-à-dire ceux dont
+        // la conversion était possible. Il comptait auparavant tous les devis :
+        // un brouillon jamais soumis, un devis en attente de validation interne
+        // ou un devis annulé faisaient baisser le taux sans qu'aucune vente ait
+        // été perdue. Constaté à 83,3 % là où tout ce qui avait été proposé au
+        // client avait été converti.
+        //
+        // Les états conservés — envoye, valide, accepte, refuse, expire,
+        // converti — correspondent tous à une offre ayant existé et dont l'issue
+        // est mesurable. Départager plus finement (un devis validé mais jamais
+        // envoyé compte-t-il ?) est une décision commerciale, pas technique.
+        $horsPerimetre = ['brouillon', 'en_attente_validation', 'annule'];
+
+        $offresSorties = \App\Models\Quote::whereNotIn('status', $horsPerimetre)->count();
+        $converted     = \App\Models\Quote::where('status', 'converti')->count();
+        $tauxTransfo   = $offresSorties > 0 ? round($converted / $offresSorties * 100, 1) : 0;
 
         return [
             'en_production'           => $enProduction,
