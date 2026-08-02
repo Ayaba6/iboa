@@ -5,6 +5,7 @@ namespace App\Modules\Production\Services;
 use App\Models\Order;
 use App\Models\ProductStock;
 use App\Models\StockReservation;
+use App\Services\Sales\FulfillmentStrategyResolver;
 use Illuminate\Support\Collection;
 
 /**
@@ -51,8 +52,41 @@ class SalesProductionService
     {
         $order->loadMissing('items.product');
 
-        $lines = $order->items->filter(fn ($i) => $i->product_id)->map(function ($item) use ($order) {
+        $resolver = app(FulfillmentStrategyResolver::class);
+
+        $lines = $order->items->filter(fn ($i) => $i->product_id)->map(function ($item) use ($order, $resolver) {
             $ordered   = (float) $item->quantity;
+            $mode      = $resolver->resolve($item->product);
+
+            // [D5] MTO — la production est déclenchée par la commande, pas par un
+            // manque de stock. Aucun stock général n'est retenu : un même code
+            // article couvre des couleurs, épaisseurs, profils, largeurs et
+            // longueurs différents, peut être en quarantaine, affecté à un autre
+            // client ou issu d'un autre OF. Rien de tout cela n'est vérifié par
+            // une simple égalité de `product_id`.
+            //
+            // Une réutilisation de stock MTO passera par une réaffectation
+            // explicite et tracée ; tant que ce workflow n'existe pas, l'absence
+            // de déduction est la seule réponse sûre.
+            if ($mode === FulfillmentStrategyResolver::MTO) {
+                $delivered = (float) $item->delivered_quantity;
+                $reste     = max(0, $ordered - $delivered);
+
+                return [
+                    'product_id' => $item->product_id,
+                    'product'    => $item->product?->name ?? $item->description,
+                    'mode'       => $mode,
+                    'source'     => 'commande',
+                    'ordered'    => $ordered,
+                    'delivered'  => round($delivered, 2),
+                    'available'  => 0.0,
+                    'reserved'   => 0.0,
+                    'reservable' => 0.0,
+                    'to_produce' => round($reste, 2),
+                    'decision'   => $reste <= 0 ? 'livre' : 'produce',
+                ];
+            }
+
             // [FIX BUG-007] Cohérence commande ↔ BL : si la commande fixe un dépôt de
             // livraison, la dispo se calcule sur CE dépôt (le BL y puisera). Sinon
             // tous dépôts confondus (le BL résout alors le dépôt détenant le stock).
@@ -76,6 +110,8 @@ class SalesProductionService
             return [
                 'product_id' => $item->product_id,
                 'product'    => $item->product?->name ?? $item->description,
+                'mode'       => $mode,
+                'source'     => 'stock',
                 'ordered'    => $ordered,
                 'delivered'  => round($delivered, 2),
                 'available'  => round($available, 2),

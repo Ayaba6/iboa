@@ -1,8 +1,22 @@
 <?php
 
 /**
- * [BUG-003] L'OF auto-généré (MTO) réclame le manquant réel (commandé − stock),
- * pas la quantité totale commandée — malgré la réservation propre de la commande.
+ * [D5] L'OF auto-généré en MTO porte la quantité commandée COMPLÈTE.
+ *
+ * RÈGLE INVERSÉE. Ce fichier affirmait l'inverse sous le titre « BUG-003 » :
+ * l'OF ne réclamait que `commandé − stock général`, et aucun OF n'était créé
+ * quand le stock couvrait la commande.
+ *
+ * La déduction supposait, sans jamais le vérifier, que du stock portant le même
+ * `product_id` est interchangeable avec la commande. Il ne l'est pas : un même
+ * code article couvre des couleurs, épaisseurs, profils, largeurs, longueurs,
+ * nuances et revêtements différents ; le stock peut être en quarantaine, affecté
+ * à un autre client, ou issu d'un autre OF. Aucune de ces dimensions n'entrait
+ * dans le calcul — seul le code article était comparé.
+ *
+ * En MTO, c'est la commande qui déclenche la production, pas le manque de stock.
+ * La réutilisation d'un reliquat passera par une réaffectation explicite et
+ * tracée ; tant que ce workflow n'existe pas, l'OF couvre la totalité.
  */
 
 use App\Models\Client;
@@ -44,7 +58,7 @@ function pomqOrder(Product $p, int $qty): App\Models\Order
     return $o;
 }
 
-it('OF réclame uniquement le manquant (80 en stock, commande 100 → OF 20)', function () {
+it('OF de 100 pour une commande de 100, malgré 80 en stock', function () {
     $this->actingAs(pomqAdmin());
     $co = Company::first();
     $wh = Warehouse::where('company_id', $co->id)->first();
@@ -56,10 +70,10 @@ it('OF réclame uniquement le manquant (80 en stock, commande 100 → OF 20)', f
 
     $of = ProductionOrder::where('product_id', $p->id)->first();
     expect($of)->not->toBeNull();
-    expect((float) $of->quantity_requested)->toBe(20.0);
+    expect((float) $of->quantity_requested)->toBe(100.0);
 });
 
-it('aucun OF si le stock couvre toute la commande', function () {
+it('crée quand même un OF quand le stock couvre toute la commande', function () {
     $this->actingAs(pomqAdmin());
     $co = Company::first();
     $wh = Warehouse::where('company_id', $co->id)->first();
@@ -69,5 +83,12 @@ it('aucun OF si le stock couvre toute la commande', function () {
 
     app(OrderService::class)->confirm(pomqOrder($p, 100));
 
-    expect(ProductionOrder::where('product_id', $p->id)->exists())->toBeFalse();
+    // 200 en stock pour 100 commandés : l'ancienne règle ne créait AUCUN OF et
+    // servait la commande sur un reliquat dont rien ne prouvait la compatibilité.
+    $of = ProductionOrder::where('product_id', $p->id)->first();
+    expect($of)->not->toBeNull();
+    expect((float) $of->quantity_requested)->toBe(100.0);
+
+    // Et le stock général n'est pas réservé au passage.
+    expect(\App\Models\StockReservation::where('order_id', $of->order_id)->count())->toBe(0);
 });

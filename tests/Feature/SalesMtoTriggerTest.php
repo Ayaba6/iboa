@@ -58,14 +58,13 @@ it('auto-creates a draft OF when confirming an order with an MTO product short o
     expect((float) $of->quantity_requested)->toBe(20.0);
 });
 
-it('OF quantity = shortfall (commandé − stock), pas la quantité totale, malgré la réservation propre (BUG-003)', function () {
+it('[D5] OF = quantité commandée COMPLÈTE, jamais le manquant (80 en stock, commande 100 → OF 100)', function () {
     $this->actingAs(mtoAdmin());
     $co = Company::first();
     $wh = Warehouse::where('company_id', $co->id)->first();
     $product = Product::factory()->create(['production_mode' => 'mto', 'is_stockable' => true]);
     BillOfMaterial::create(['company_id' => $co->id, 'product_id' => $product->id, 'name' => 'BOM MTO2', 'is_active' => true]);
 
-    // 80 en stock, commande 100 → il ne manque que 20 à produire.
     \App\Models\ProductStock::create(['product_id' => $product->id, 'warehouse_id' => $wh->id, 'quantity' => 80, 'reserved_quantity' => 0, 'avg_cost' => 500]);
 
     $order = mtoOrder($product, 100);
@@ -73,8 +72,19 @@ it('OF quantity = shortfall (commandé − stock), pas la quantité totale, malg
 
     $of = ProductionOrder::where('order_id', $order->id)->where('product_id', $product->id)->first();
     expect($of)->not->toBeNull();
-    // Avant le fix : la réservation propre (80) réduisait le dispo à 0 → OF réclamait 100.
-    expect((float) $of->quantity_requested)->toBe(20.0);
+
+    // RÈGLE INVERSÉE — décision D5. Ce cas exigeait auparavant un OF de 20,
+    // c'est-à-dire `commandé − stock général`. La déduction supposait que 80
+    // unités portant le même `product_id` sont interchangeables avec la
+    // commande : rien ne le vérifiait — ni couleur, ni épaisseur, ni profil, ni
+    // affectation à un autre client, ni statut qualité.
+    //
+    // En MTO la commande déclenche la production, pas le manque de stock. Un
+    // reliquat ne sera réutilisé que par une réaffectation explicite et tracée.
+    expect((float) $of->quantity_requested)->toBe(100.0);
+
+    // Et le stock général n'est pas réservé au passage.
+    expect(\App\Models\StockReservation::where('order_id', $order->id)->count())->toBe(0);
 });
 
 it('does not trigger an OF for an MTS product', function () {
