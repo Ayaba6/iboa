@@ -46,6 +46,15 @@ class CommercialWorkflowService
         $this->assertPermission('sales.submit');
 
         if ($document instanceof Order || $document instanceof Quote) {
+            // [D2 — défense en profondeur] Contrôlé EN PREMIER, avant le prix
+            // plancher et le crédit. Le contrôle posé à la saisie ne dispense pas
+            // de celui-ci : un article peut devenir incomplet après coup. Et un
+            // document dont un article n'a pas de stratégie d'approvisionnement
+            // n'a pas à être évalué plus loin — le refus qui suivrait porterait
+            // sur un autre motif et masquerait la vraie cause.
+            $resolver = app(\App\Services\Sales\FulfillmentStrategyResolver::class);
+            $resolver->assertLines($resolver->lignesDe($document));
+
             app(SalesFloorWaiverService::class)->assertDocumentMayProceed($document);
         }
 
@@ -348,6 +357,16 @@ class CommercialWorkflowService
             return;
         }
 
+        // [Ventes §17] La commande a sa propre implémentation : elle libère les
+        // réservations de stock et verrouille la ligne contre une course
+        // annulation/confirmation. Déléguer évite d'avoir deux annulations de
+        // commande divergentes — le défaut exact que ce lot corrige.
+        if ($document instanceof Order) {
+            app(OrderService::class)->cancel($document, $motif);
+
+            return;
+        }
+
         // Statut d'annulation selon le type
         $cancelledStatus = match (true) {
             $document instanceof Invoice => 'annulee',
@@ -356,10 +375,9 @@ class CommercialWorkflowService
 
         $document->cancelDocument($cancelledStatus, $motif);
 
-        // [V4] Annulation d'une commande → libère les réservations de produit fini.
-        if ($document instanceof Order) {
-            app(ReservationService::class)->releaseForOrder($document);
-        }
+        // La libération des réservations de produit fini a migré dans
+        // OrderService::cancel(), à qui les commandes sont désormais déléguées
+        // plus haut — ce point n'est plus atteint pour un Order.
 
         // [SYNC] Annulation d'une facture → recalcule le montant facturé de la commande.
         if ($document instanceof Invoice) {
@@ -376,39 +394,73 @@ class CommercialWorkflowService
     {
         $companyId = currentCompany()?->id;
 
+        // [Perf] Un COUNT GROUPÉ par table, au lieu d'un COUNT par statut.
+        //
+        // La version précédente lançait 17 requêtes, dont 5 qui REJOUAIENT à
+        // l'identique une requête déjà exécutée quelques lignes plus haut, pour
+        // recalculer `total_pending`. Sur le tableau de bord Ventes, cela
+        // représentait 12 requêtes strictement redondantes à chaque affichage.
+        //
+        // Le comptage groupé passe par le modèle : les scopes de société et de
+        // suppression logique restent appliqués, la sémantique est inchangée.
+        $countByStatus = function (string $modelClass) use ($companyId): array {
+            return $modelClass::query()
+                ->where('company_id', $companyId)
+                ->groupBy('status')
+                ->pluck(\Illuminate\Support\Facades\DB::raw('COUNT(*)'), 'status')
+                ->map(fn ($n) => (int) $n)
+                ->all();
+        };
+
+        $quotes = $countByStatus(Quote::class);
+        $orders = $countByStatus(Order::class);
+        $deliveries = $countByStatus(DeliveryNote::class);
+        $invoices = $countByStatus(Invoice::class);
+        $creditNotes = $countByStatus(CreditNote::class);
+
+        /** Somme des statuts demandés, absents comptés pour zéro. */
+        $sum = fn (array $counts, array $statuses) => array_sum(array_map(
+            fn (string $s) => $counts[$s] ?? 0,
+            $statuses
+        ));
+
+        $quotesPending = $quotes['en_attente_validation'] ?? 0;
+        $ordersPending = $orders['en_attente_validation'] ?? 0;
+        $deliveriesPending = $deliveries['en_attente_validation'] ?? 0;
+        $invoicesPending = $invoices['en_attente_validation'] ?? 0;
+        $creditNotesPending = $creditNotes['en_attente_validation'] ?? 0;
+
         return [
             // Devis
-            'quotes_brouillon' => Quote::where('company_id', $companyId)->where('status', 'brouillon')->count(),
-            'quotes_en_attente' => Quote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'quotes_envoyes' => Quote::where('company_id', $companyId)->where('status', 'envoye')->count(),
+            'quotes_brouillon' => $quotes['brouillon'] ?? 0,
+            'quotes_en_attente' => $quotesPending,
+            'quotes_envoyes' => $quotes['envoye'] ?? 0,
 
             // Commandes
-            'orders_en_attente' => Order::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'orders_confirmes' => Order::where('company_id', $companyId)->where('status', 'confirme')->count(),
+            'orders_en_attente' => $ordersPending,
+            'orders_confirmes' => $orders['confirme'] ?? 0,
 
             // Bons de livraison
-            'deliveries_en_attente' => DeliveryNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'deliveries_a_facturer' => DeliveryNote::where('company_id', $companyId)->where('status', 'valide')->count(),
+            'deliveries_en_attente' => $deliveriesPending,
+            'deliveries_a_facturer' => $deliveries['valide'] ?? 0,
 
             // Factures
-            'invoices_en_attente' => Invoice::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
-            'invoices_emises' => Invoice::where('company_id', $companyId)->whereIn('status', ['emise', 'envoyee'])->count(),
-            'invoices_impayees' => Invoice::where('company_id', $companyId)->whereIn('status', ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])->count(),
+            'invoices_en_attente' => $invoicesPending,
+            'invoices_emises' => $sum($invoices, ['emise', 'envoyee']),
+            'invoices_impayees' => $sum($invoices, ['emise', 'envoyee', 'partiellement_payee', 'en_retard']),
 
             // Avoirs
-            'credit_notes_en_attente' => CreditNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
+            'credit_notes_en_attente' => $creditNotesPending,
 
             // Documents refusés récents (7j)
             'recently_rejected' => CommercialValidation::where('action', 'refus')
                 ->where('created_at', '>=', now()->subDays(7))
                 ->count(),
 
-            // Total en attente toutes catégories
-            'total_pending' => Quote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
-                                        + Order::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
-                                        + DeliveryNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
-                                        + Invoice::where('company_id', $companyId)->where('status', 'en_attente_validation')->count()
-                                        + CreditNote::where('company_id', $companyId)->where('status', 'en_attente_validation')->count(),
+            // Total en attente toutes catégories — dérivé des compteurs déjà
+            // obtenus, plus jamais recalculé par cinq requêtes supplémentaires.
+            'total_pending' => $quotesPending + $ordersPending + $deliveriesPending
+                + $invoicesPending + $creditNotesPending,
         ];
     }
 

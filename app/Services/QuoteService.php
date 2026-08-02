@@ -37,6 +37,12 @@ class QuoteService
             !empty($data['client_id']) ? \App\Models\Client::find($data['client_id']) : null
         );
 
+        // [D2] Un article vendable sans stratégie d'approvisionnement est refusé
+        // DÈS LA LIGNE DE DEVIS. Une erreur connue à la saisie ne doit pas
+        // attendre la confirmation de commande pour se manifester.
+        app(\App\Services\Sales\FulfillmentStrategyResolver::class)
+            ->assertLines($data['items'] ?? []);
+
         return DB::transaction(function () use ($data) {
             $items = $data['items'] ?? [];
             unset($data['items']);
@@ -292,6 +298,12 @@ class QuoteService
             throw new \RuntimeException('Ce devis a déjà été converti en commande.');
         }
         $this->assertConvertible($quote);
+
+        // [D2 — défense en profondeur] L'article a pu devenir incomplet APRÈS la
+        // création du devis : reprise de données, changement de catégorie. Le
+        // devis reste consultable et corrigeable, mais ne se convertit plus.
+        $resolver = app(\App\Services\Sales\FulfillmentStrategyResolver::class);
+        $resolver->assertLines($resolver->lignesDe($quote));
 
         return DB::transaction(function () use ($quote) {
             $company = currentCompany();

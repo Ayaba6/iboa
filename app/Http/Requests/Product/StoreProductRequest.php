@@ -41,7 +41,7 @@ class StoreProductRequest extends FormRequest
             'designation_courte'    => 'nullable|string|max:80',
             'type_article'          => 'nullable|in:marchandise,matiere_premiere,produit_fini,service,consommable',
             'statut'                => 'nullable|in:actif,inactif,bloque',
-            'production_mode'       => 'nullable|in:mts,mto',
+            'production_mode'       => 'nullable|in:mts,mto,achat_revente,service,conso_interne',
             'famille1_id'           => 'nullable|exists:product_families,id',
             'famille2_id'           => 'nullable|exists:product_families,id',
             'famille3_id'           => 'nullable|exists:product_families,id',

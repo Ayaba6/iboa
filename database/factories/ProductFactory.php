@@ -13,7 +13,20 @@ class ProductFactory extends Factory
     {
         static $counter = 1;
 
+        // [D2] Un article vendable doit porter une stratégie d'approvisionnement.
+        // La fabrique en produisait sans, ce qui n'est plus un article valide :
+        // 44 tests le vendaient sans que rien ne dise s'il fallait chercher du
+        // stock ou contrôler une couverture financière.
+        //
+        // « Acheté-revendu » est le défaut neutre — ni production sur commande,
+        // ni fabrication pour stock. La stratégie est posée sur la COLONNE, pas
+        // via une catégorie : une catégorie porte aussi `is_manufactured`, et
+        // rattacher l'article à « marchandise » lui interdirait d'être fabriqué,
+        // ce qui casse les tests de production. Les deux notions sont distinctes.
+        //
+        // Un test MTO ou MTS pose son mode explicitement et écrase ce défaut.
         return [
+            'production_mode'  => 'achat_revente',
             'reference'        => 'PRD-' . str_pad($counter++, 5, '0', STR_PAD_LEFT),
             'name'             => $this->faker->words(3, true),
             'type'             => $this->faker->randomElement(['simple', 'compose', 'service']),
