@@ -22,14 +22,21 @@ class ProductionWorkflowService
             'qualityControls', 'consumptions',
         ]);
 
-        $hasOrder   = (bool) $order->order_id;
+        // La commande est jugée sur la RELATION RÉSOLUE, pas sur la clé étrangère.
+        // `order_id` peut désigner une commande supprimée logiquement ou hors
+        // périmètre de la société courante : la clé subsiste, `$order->order`
+        // rend null, et les lignes suivantes déréférençaient ce null — HTTP 500
+        // sur la fiche OF. Constaté sur OF-2026-0001 et OF-2026-0003, qui
+        // pointent CMD-2026-001 et CMD-2026-002, annulées puis supprimées.
+        $commande   = $order->order;
+        $hasOrder   = $commande !== null;
         $reserved   = $order->reservations->where('status', 'reserved')->isNotEmpty();
         $produced   = $order->outputs->isNotEmpty();
         $qc         = $order->qualityControls->sortByDesc('id')->first();
         $qcOk       = $qc && $qc->status === 'conforme';
         $qcBad      = $qc && $qc->status === 'non_conforme';
-        $delivered  = $hasOrder && $order->order->deliveryNotes->isNotEmpty();
-        $invoiced   = $hasOrder && $order->order->invoices->isNotEmpty();
+        $delivered  = $hasOrder && $commande->deliveryNotes->isNotEmpty();
+        $invoiced   = $hasOrder && $commande->invoices->isNotEmpty();
         $posted     = JournalEntry::where('company_id', $order->company_id)
                         ->where('reference', 'like', $order->number . '%')->exists();
 
@@ -37,7 +44,7 @@ class ProductionWorkflowService
 
         return [
             $this->step('commande', 'Commande client', $hasOrder ? 'done' : 'na',
-                $hasOrder ? route('ventes.commandes.show', $order->order_id) : null),
+                $hasOrder ? route('ventes.commandes.show', $commande) : null),
 
             $this->step('stock_check', 'Vérification du stock',
                 in_array($st, ['lance', 'en_cours', 'termine'], true) ? 'done' : ($st === 'brouillon' ? 'current' : 'na')),
@@ -58,11 +65,11 @@ class ProductionWorkflowService
 
             $this->step('delivery', 'Livraison',
                 $delivered ? 'done' : ($hasOrder && $st === 'termine' ? 'pending' : 'na'),
-                $hasOrder ? route('ventes.commandes.show', $order->order_id) : null),
+                $hasOrder ? route('ventes.commandes.show', $commande) : null),
 
             $this->step('invoice', 'Facturation',
                 $invoiced ? 'done' : ($hasOrder && $st === 'termine' ? 'pending' : 'na'),
-                $hasOrder ? route('ventes.commandes.show', $order->order_id) : null),
+                $hasOrder ? route('ventes.commandes.show', $commande) : null),
 
             $this->step('accounting', 'Comptabilisation',
                 $posted ? 'done' : ($st === 'termine' ? 'pending' : 'na')),
