@@ -35,7 +35,7 @@
     $typeLabel = match($order->of_type){ 'reprise' => 'Reprise', 'retouche' => 'Retouche', 'speciale_client' => 'Spéciale client', default => 'Standard' };
     $navBtn = 'inline-flex items-center justify-center w-8 h-8 rounded-[4px] text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-colors';
     $navOff = 'inline-flex items-center justify-center w-8 h-8 rounded-[4px] text-gray-300 cursor-default';
-    $sideLn = 'flex items-center gap-2 w-full text-left px-3 py-1.5 text-[12.5px] text-gray-600 hover:text-emerald-800 hover:bg-emerald-50/60 rounded-[3px] transition-colors';
+    $sideLn = 'flex items-center gap-2 w-full text-left px-3 py-1.5 text-[12px] text-gray-600 hover:text-emerald-800 hover:bg-emerald-50/60 rounded-[3px] transition-colors';
 @endphp
 <div class="w-full space-y-3 of-sage" x-data="{ cancelOpen: false, tab: 'gestion' }">
 
@@ -43,7 +43,7 @@
          produire) : sans bannière, l'utilisateur croit l'OF verrouillé et ne
          comprend pas que ses saisies de suivi continuent d'être acceptées. --}}
     @if($order->status === 'termine_partiellement')
-    <div class="rounded-[4px] border border-teal-300 bg-teal-50 px-4 py-3 text-[12.5px] text-teal-900">
+    <div class="rounded-[4px] border border-teal-300 bg-teal-50 px-4 py-3 text-[12px] text-teal-900">
         <span class="font-semibold">OF terminé partiellement</span> —
         reliquat à produire : {{ rtrim(rtrim(number_format(max(0, (float) $order->quantity_requested - (float) $order->quantity_produced), 2, ',', ' '), '0'), ',') }}
         sur {{ rtrim(rtrim(number_format((float) $order->quantity_requested, 2, ',', ' '), '0'), ',') }} demandées.
@@ -55,15 +55,15 @@
     {{-- ══ En-tête X3 : titre type + navigation fiches + actions ══ --}}
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">
+            <h1 class="text-[20px] font-bold text-gray-900 leading-tight">
                 Ordres de fabrication
-                <span class="font-normal text-gray-500 ml-2 text-[18px]">{{ $typeCode }} : {{ $typeLabel }}</span>
+                <span class="font-normal text-gray-500 ml-2 text-[15px]">{{ $typeCode }} : {{ $typeLabel }}</span>
             </h1>
             <div class="flex items-center gap-3 mt-1">
                 <span class="font-mono text-emerald-700 font-semibold text-[15px]">{{ $order->number }}</span>
                 @php $sc = match($order->status){ 'brouillon'=>'bg-gray-100 text-gray-600','lance'=>'bg-amber-100 text-amber-700','en_cours'=>'bg-sky-100 text-sky-700','termine'=>'bg-emerald-100 text-emerald-700','suspendu'=>'bg-orange-100 text-orange-700',default=>'bg-red-100 text-red-700' }; @endphp
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] text-[11px] font-medium {{ $sc }}">{{ $order->statusLabel() }}</span>
-                <span class="text-[12.5px] text-gray-500">{{ $order->client?->trade_name ?? $order->client?->name ?? 'Sans client' }} · {{ $order->product?->name ?? '—' }}</span>
+                <span class="text-[12px] text-gray-500">{{ $order->client?->trade_name ?? $order->client?->name ?? 'Sans client' }} · {{ $order->product?->name ?? '—' }}</span>
             </div>
         </div>
         <div class="flex items-center gap-1">
@@ -140,7 +140,7 @@
         </div>
 
         {{-- Sous-blocs Entête [X3] : Dates / Informations / Gestion / Statistiques --}}
-        <div class="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 text-[12.5px]">
+        <div class="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 text-[12px]">
             <div>
                 <p class="text-[11px] font-bold text-gray-900 uppercase mb-2">Dates</p>
                 <div class="space-y-1 text-gray-600">
@@ -192,7 +192,7 @@
                 {{ $exigence->satisfied ? $exigence->label() : 'Bloquant' }}
             </span>
         </div>
-        <p class="text-sm text-gray-600 mt-2">{{ $exigence->reason }}</p>
+        <p class="text-[13px] text-gray-600 mt-2">{{ $exigence->reason }}</p>
         <p class="text-[11px] text-gray-400 mt-1">Source : {{ $exigence->source }}</p>
 
         @unless($exigence->satisfied)
@@ -200,28 +200,28 @@
             <form method="POST" action="{{ route('production.orders.authorize-finance', $order) }}" class="mt-4 flex flex-col sm:flex-row gap-2 sm:items-end">
                 @csrf
                 <div class="flex-1">
-                    <label class="text-xs text-gray-500">Motif de la dérogation <span class="text-red-600">*</span></label>
+                    <label class="text-[12px] text-gray-500">Motif de la dérogation <span class="text-red-600">*</span></label>
                     <input type="text" name="financial_notes" maxlength="500" minlength="10" required
                            placeholder="Ex. accord DG du 12/07, règlement bancaire en cours de compensation"
-                           class="w-full border border-gray-300 rounded-[4px] text-sm px-3 py-2">
+                           class="w-full border border-gray-300 rounded-[4px] text-[13px] px-3 py-2">
                 </div>
                 <div>
-                    <label class="text-xs text-gray-500">Valable jusqu'au</label>
+                    <label class="text-[12px] text-gray-500">Valable jusqu'au</label>
                     <input type="date" name="expires_at" min="{{ today()->toDateString() }}"
-                           class="border border-gray-300 rounded-[4px] text-sm px-3 py-2">
+                           class="border border-gray-300 rounded-[4px] text-[13px] px-3 py-2">
                 </div>
-                <label class="inline-flex items-center gap-1.5 text-sm text-gray-600">
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-gray-600">
                     <input type="checkbox" name="bypass" value="1" class="rounded border-gray-300">
                     Dérogation exceptionnelle
                 </label>
-                <button class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] whitespace-nowrap">Déroger et autoriser</button>
+                <button class="bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] whitespace-nowrap">Déroger et autoriser</button>
             </form>
             <p class="text-[11px] text-gray-400 mt-2">
                 Montant qui resterait non couvert : {{ number_format($exigence->uncoveredAmount(), 0, ',', ' ') }} FCFA.
                 Il sera consigné avec votre nom.
             </p>
             @else
-            <p class="text-xs text-gray-400 mt-3">Seul le DAF/DG peut déroger à l'exigence financière de cet OF.</p>
+            <p class="text-[12px] text-gray-400 mt-3">Seul le DAF/DG peut déroger à l'exigence financière de cet OF.</p>
             @endcan
         @endunless
     </div>
@@ -287,26 +287,26 @@
                 <form method="POST" action="{{ route('production.orders.request-modification', $order) }}" class="flex gap-2">
                     @csrf
                     <input type="text" name="modification_reason" required maxlength="500" placeholder="Motif de la modification demandée"
-                           class="flex-1 border border-gray-300 rounded-[4px] text-sm px-3 py-2">
-                    <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] whitespace-nowrap">Demander modification</button>
+                           class="flex-1 border border-gray-300 rounded-[4px] text-[13px] px-3 py-2">
+                    <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] whitespace-nowrap">Demander modification</button>
                 </form>
                 @endcan
             @elseif($order->modification_status === 'en_attente')
-                <p class="text-sm text-gray-600">Motif : {{ $order->modification_reason }}</p>
+                <p class="text-[13px] text-gray-600">Motif : {{ $order->modification_reason }}</p>
 
                 <ol class="space-y-2">
                     {{-- Étape 1 : Chef Production --}}
                     <li class="flex items-center justify-between border rounded-[4px] p-3 {{ $order->modification_chef_avis_at ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200' }}">
                         <div>
-                            <span class="text-sm font-medium">1. Chef Production</span>
+                            <span class="text-[13px] font-medium">1. Chef Production</span>
                             @if($order->modification_chef_avis_at)
-                                <span class="text-xs text-emerald-700 ml-2">✓ {{ $order->modification_chef_avis_at->format('d/m/Y H:i') }} — {{ $order->modificationChefAvisBy?->name }}</span>
+                                <span class="text-[12px] text-emerald-700 ml-2">✓ {{ $order->modification_chef_avis_at->format('d/m/Y H:i') }} — {{ $order->modificationChefAvisBy?->name }}</span>
                             @endif
                         </div>
                         @if(!$order->modification_chef_avis_at)
                         @can('production.modification.avis_chef')
                         <form method="POST" action="{{ route('production.orders.modification-avis-chef', $order) }}">@csrf
-                            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium px-3 py-1.5 rounded-[4px]">Donner avis</button>
+                            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-medium px-3 py-1.5 rounded-[4px]">Donner avis</button>
                         </form>
                         @endcan
                         @endif
@@ -314,15 +314,15 @@
                     {{-- Étape 2 : Commercial --}}
                     <li class="flex items-center justify-between border rounded-[4px] p-3 {{ $order->modification_commercial_avis_at ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200' }} {{ !$order->modification_chef_avis_at ? 'opacity-50' : '' }}">
                         <div>
-                            <span class="text-sm font-medium">2. Commercial</span>
+                            <span class="text-[13px] font-medium">2. Commercial</span>
                             @if($order->modification_commercial_avis_at)
-                                <span class="text-xs text-emerald-700 ml-2">✓ {{ $order->modification_commercial_avis_at->format('d/m/Y H:i') }} — {{ $order->modificationCommercialAvisBy?->name }}</span>
+                                <span class="text-[12px] text-emerald-700 ml-2">✓ {{ $order->modification_commercial_avis_at->format('d/m/Y H:i') }} — {{ $order->modificationCommercialAvisBy?->name }}</span>
                             @endif
                         </div>
                         @if($order->modification_chef_avis_at && !$order->modification_commercial_avis_at)
                         @can('production.modification.avis_commercial')
                         <form method="POST" action="{{ route('production.orders.modification-avis-commercial', $order) }}">@csrf
-                            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium px-3 py-1.5 rounded-[4px]">Donner avis</button>
+                            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-medium px-3 py-1.5 rounded-[4px]">Donner avis</button>
                         </form>
                         @endcan
                         @endif
@@ -330,26 +330,26 @@
                     {{-- Étape 3 : Finance --}}
                     <li class="flex items-center justify-between border rounded-[4px] p-3 {{ $order->modification_finance_avis_at ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200' }} {{ !$order->modification_commercial_avis_at ? 'opacity-50' : '' }}">
                         <div>
-                            <span class="text-sm font-medium">3. Finance</span>
+                            <span class="text-[13px] font-medium">3. Finance</span>
                             @if($order->modification_finance_avis_at)
-                                <span class="text-xs text-emerald-700 ml-2">✓ {{ $order->modification_finance_avis_at->format('d/m/Y H:i') }} — {{ $order->modificationFinanceAvisBy?->name }}</span>
+                                <span class="text-[12px] text-emerald-700 ml-2">✓ {{ $order->modification_finance_avis_at->format('d/m/Y H:i') }} — {{ $order->modificationFinanceAvisBy?->name }}</span>
                             @endif
                         </div>
                         @if($order->modification_commercial_avis_at && !$order->modification_finance_avis_at)
                         @can('production.modification.avis_finance')
                         <form method="POST" action="{{ route('production.orders.modification-avis-finance', $order) }}">@csrf
-                            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium px-3 py-1.5 rounded-[4px]">Donner avis</button>
+                            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[12px] font-medium px-3 py-1.5 rounded-[4px]">Donner avis</button>
                         </form>
                         @endcan
                         @endif
                     </li>
                     {{-- Étape 4 : DG --}}
                     <li class="flex items-center justify-between border rounded-[4px] p-3 border-gray-200 {{ !$order->modification_finance_avis_at ? 'opacity-50' : '' }}">
-                        <span class="text-sm font-medium">4. Validation DG</span>
+                        <span class="text-[13px] font-medium">4. Validation DG</span>
                         @if($order->modification_finance_avis_at)
                         @can('production.modification.avis_dg')
                         <form method="POST" action="{{ route('production.orders.modification-approve-dg', $order) }}">@csrf
-                            <button class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-[4px]">Approuver (DG)</button>
+                            <button class="bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium px-3 py-1.5 rounded-[4px]">Approuver (DG)</button>
                         </form>
                         @endcan
                         @endif
@@ -361,14 +361,14 @@
                       onsubmit="return confirm('Rejeter cette demande de modification ?')">
                     @csrf
                     <input type="text" name="reason" required minlength="5" maxlength="500" placeholder="Motif de rejet"
-                           class="flex-1 border border-gray-300 rounded-[4px] text-sm px-3 py-2">
-                    <button class="border border-red-200 text-red-600 text-sm font-medium px-3 py-1.5 rounded-[4px] hover:bg-red-50 whitespace-nowrap">Rejeter</button>
+                           class="flex-1 border border-gray-300 rounded-[4px] text-[13px] px-3 py-2">
+                    <button class="border border-red-200 text-red-600 text-[13px] font-medium px-3 py-1.5 rounded-[4px] hover:bg-red-50 whitespace-nowrap">Rejeter</button>
                 </form>
                 @endcan
             @elseif($order->modification_status === 'approuvee')
-                <p class="text-sm text-emerald-700">Modification approuvée par {{ $order->modificationDgApprovedBy?->name }} le {{ $order->modification_dg_approved_at?->format('d/m/Y H:i') }}. L'OF est éditable jusqu'à la prochaine sauvegarde.</p>
+                <p class="text-[13px] text-emerald-700">Modification approuvée par {{ $order->modificationDgApprovedBy?->name }} le {{ $order->modification_dg_approved_at?->format('d/m/Y H:i') }}. L'OF est éditable jusqu'à la prochaine sauvegarde.</p>
                 @can('production.create')
-                <a href="{{ route('production.orders.edit', $order) }}" class="inline-block bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Modifier l'OF maintenant</a>
+                <a href="{{ route('production.orders.edit', $order) }}" class="inline-block bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Modifier l'OF maintenant</a>
                 @endcan
             @endif
         </div>
@@ -394,7 +394,7 @@
             @endphp
             <div class="flex items-center {{ !$loop->last ? 'flex-1 min-w-[140px]' : '' }}">
                 <div class="flex flex-col items-center text-center px-1">
-                    <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold {{ $dot }}">{{ $ico }}</span>
+                    <span class="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold {{ $dot }}">{{ $ico }}</span>
                     @if($s['link'])
                         <a href="{{ $s['link'] }}" class="text-[11px] mt-1 leading-tight max-w-[90px] {{ $txt }} hover:underline">{{ $s['label'] }}</a>
                     @else
@@ -409,13 +409,13 @@
         </div>
         @php $blocked = collect($workflow)->firstWhere('state', 'blocked'); @endphp
         @if($blocked)
-        <p class="mt-3 text-xs text-red-600">⛔ Bloqué à l'étape « {{ $blocked['label'] }} ».</p>
+        <p class="mt-3 text-[12px] text-red-600">⛔ Bloqué à l'étape « {{ $blocked['label'] }} ».</p>
         @endif
     </div>
 
     {{-- Frise workflow --}}
     <div class="bg-white rounded-[4px] border border-gray-300 p-5">
-        <div class="flex items-center justify-between text-xs">
+        <div class="flex items-center justify-between text-[12px]">
             @php $steps = ['brouillon'=>'Brouillon','lance'=>'Lancé','en_cours'=>'En cours','termine'=>'Terminé']; $order_idx = array_search($order->status, array_keys($steps)); @endphp
             @foreach($steps as $k => $label)
                 @php $i = array_search($k, array_keys($steps)); $done = $order->status!=='annule' && $order_idx!==false && $i <= $order_idx; @endphp
@@ -426,7 +426,7 @@
             @endforeach
         </div>
         @if($order->status === 'annule')
-            <p class="mt-3 text-sm text-red-600 font-medium">Cet ordre a été annulé.</p>
+            <p class="mt-3 text-[13px] text-red-600 font-medium">Cet ordre a été annulé.</p>
         @endif
     </div>
 
@@ -434,8 +434,8 @@
     @if($order->consumptions->isNotEmpty() || $order->outputs->isNotEmpty() || $order->wastes->isNotEmpty())
     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-white border border-gray-300 rounded-[4px] p-4">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Matière consommée</p>
-            <p class="text-base font-bold text-gray-900 tabular-nums mt-1">
+            <p class="text-[12px] text-gray-500 uppercase tracking-wider">Matière consommée</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums mt-1">
                 @if($metrics['consumed_weight'] > 0){{ number_format($metrics['consumed_weight'],2,',',' ') }} kg
                 @elseif($metrics['component_qty'] > 0){{ number_format($metrics['component_qty'],2,',',' ') }} {{ $metrics['component_unit'] }}
                 @else 0,00 kg
@@ -443,20 +443,20 @@
             </p>
         </div>
         <div class="bg-white border border-gray-300 rounded-[4px] p-4">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Coût matière</p>
-            <p class="text-base font-bold text-gray-900 tabular-nums mt-1">{{ number_format($metrics['consumed_cost'],0,',',' ') }} F</p>
+            <p class="text-[12px] text-gray-500 uppercase tracking-wider">Coût matière</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums mt-1">{{ number_format($metrics['consumed_cost'],0,',',' ') }} F</p>
         </div>
         <div class="bg-white border border-gray-300 rounded-[4px] p-4">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Produit (mètres)</p>
-            <p class="text-base font-bold text-gray-900 tabular-nums mt-1">{{ number_format($metrics['output_meters'],2,',',' ') }} m</p>
+            <p class="text-[12px] text-gray-500 uppercase tracking-wider">Produit (mètres)</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums mt-1">{{ number_format($metrics['output_meters'],2,',',' ') }} m</p>
         </div>
         <div class="bg-white border border-gray-300 rounded-[4px] p-4">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Chutes</p>
-            <p class="text-base font-bold text-gray-900 tabular-nums mt-1">{{ number_format($metrics['waste_weight'],2,',',' ') }} kg</p>
+            <p class="text-[12px] text-gray-500 uppercase tracking-wider">Chutes</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums mt-1">{{ number_format($metrics['waste_weight'],2,',',' ') }} kg</p>
         </div>
         <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] p-4">
-            <p class="text-xs text-emerald-600 uppercase tracking-wider">Rendement matière</p>
-            <p class="text-base font-bold text-emerald-800 tabular-nums mt-1">{{ $metrics['yield'] !== null ? number_format($metrics['yield'],1,',',' ').' %' : '—' }}</p>
+            <p class="text-[12px] text-emerald-600 uppercase tracking-wider">Rendement matière</p>
+            <p class="text-[15px] font-bold text-emerald-800 tabular-nums mt-1">{{ $metrics['yield'] !== null ? number_format($metrics['yield'],1,',',' ').' %' : '—' }}</p>
         </div>
     </div>
     @endif
@@ -467,7 +467,7 @@
 {{-- Caractéristiques --}}
     <div class="bg-white rounded-[4px] border border-gray-300 p-6">
         <h2 class="font-semibold text-gray-900 mb-4">Caractéristiques</h2>
-        <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px]">
             <div><dt class="text-gray-500">Type de tôle</dt><dd class="text-gray-900">{{ $order->sheet_type ?? '—' }}</dd></div>
             <div><dt class="text-gray-500">Épaisseur</dt><dd class="text-gray-900">{{ $order->thickness ?? '—' }} mm</dd></div>
             <div><dt class="text-gray-500">Couleur</dt><dd class="text-gray-900">{{ $order->color ?? '—' }}</dd></div>
@@ -483,8 +483,8 @@
         </dl>
         @if($order->notes)
         <div class="mt-4 pt-4 border-t border-gray-100">
-            <dt class="text-gray-500 text-sm">Notes</dt>
-            <dd class="text-gray-700 text-sm whitespace-pre-line mt-1">{{ $order->notes }}</dd>
+            <dt class="text-gray-500 text-[13px]">Notes</dt>
+            <dd class="text-gray-700 text-[13px] whitespace-pre-line mt-1">{{ $order->notes }}</dd>
         </div>
         @endif
     </div>
@@ -538,7 +538,7 @@
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Consommation matière</h2>
-            <span class="text-sm text-gray-500 tabular-nums">
+            <span class="text-[13px] text-gray-500 tabular-nums">
                 @if($metrics['consumed_weight'] > 0){{ number_format($metrics['consumed_weight'],2,',',' ') }} kg
                 @elseif($metrics['component_qty'] > 0){{ number_format($metrics['component_qty'],2,',',' ') }} {{ $metrics['component_unit'] }}
                 @else 0,00 kg
@@ -550,8 +550,8 @@
         <form method="POST" action="{{ route('production.orders.consume', $order) }}" class="px-3 py-1.5 bg-gray-50/60 border-b border-gray-100 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
             @csrf
             <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Bobine</label>
-                <select name="coil_id" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Bobine</label>
+                <select name="coil_id" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                     <option value="">— Choisir —</option>
                     @foreach($coils as $c)
                         <option value="{{ $c->id }}">{{ $c->reference }} ({{ number_format($c->remaining_weight,0,',',' ') }} kg · {{ number_format($c->cost_per_kg,0,',',' ') }} F/kg)</option>
@@ -559,14 +559,14 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Poids (kg)</label>
-                <input type="number" name="weight_consumed" step="0.01" min="0.01" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Poids (kg)</label>
+                <input type="number" name="weight_consumed" step="0.01" min="0.01" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Longueur (m)</label>
-                <input type="number" name="length_consumed" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Longueur (m)</label>
+                <input type="number" name="length_consumed" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
-            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Consommer</button>
+            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Consommer</button>
         </form>
         @endif
         <div class="tbl-scroll">
@@ -576,18 +576,18 @@
                     @foreach($order->consumptions as $c)
                     <tr>
                         <td class="text-gray-600">{{ optional($c->consumed_at)->format('d/m/Y') ?? '—' }}</td>
-                        <td class="font-mono text-xs text-emerald-700">{{ $c->coil?->reference ?? '—' }}</td>
+                        <td class="font-mono text-[12px] text-emerald-700">{{ $c->coil?->reference ?? '—' }}</td>
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($c->weight_consumed,2,',',' ') }} kg</td>
                         <td class="text-right tabular-nums text-gray-600">{{ number_format($c->length_consumed,2,',',' ') }} m</td>
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($c->cost,0,',',' ') }} F</td>
-                        <td class="text-right">@if($live)<form method="POST" action="{{ route('production.consumptions.destroy', $c) }}" data-confirm="Annuler cette consommation ? Le poids sera restitué.">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-xs">✕</button></form>@endif</td>
+                        <td class="text-right">@if($live)<form method="POST" action="{{ route('production.consumptions.destroy', $c) }}" data-confirm="Annuler cette consommation ? Le poids sera restitué.">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-[12px]">✕</button></form>@endif</td>
                     </tr>
                     @endforeach
                     {{-- Composants BOM consommés automatiquement à la déclaration de production --}}
                     @foreach($componentMoves as $m)
                     <tr>
                         <td class="text-gray-600">{{ optional($m->created_at)->format('d/m/Y') ?? '—' }}</td>
-                        <td class="text-gray-900">{{ $m->product?->name ?? 'Composant #'.$m->product_id }} <span class="text-[10px] text-gray-400 uppercase">auto (BOM)</span></td>
+                        <td class="text-gray-900">{{ $m->product?->name ?? 'Composant #'.$m->product_id }} <span class="text-[11px] text-gray-400 uppercase">auto (BOM)</span></td>
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($m->quantity,2,',',' ') }} {{ $m->product?->unit?->abbreviation ?: ($m->product?->unit?->name ?: 'u') }}</td>
                         @php $srcOutput = $order->outputs->firstWhere('id', $m->reference_id); @endphp
                         <td class="text-right tabular-nums {{ $srcOutput && (float) $srcOutput->total_meters > 0 ? 'text-gray-600' : 'text-gray-400' }}">
@@ -612,40 +612,40 @@
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Sorties produits finis</h2>
-            <span class="text-sm text-gray-500 tabular-nums">{{ number_format($metrics['output_qty'],0,',',' ') }} u · {{ number_format($metrics['output_meters'],2,',',' ') }} m</span>
+            <span class="text-[13px] text-gray-500 tabular-nums">{{ number_format($metrics['output_qty'],0,',',' ') }} u · {{ number_format($metrics['output_meters'],2,',',' ') }} m</span>
         </div>
         @if($live)
         <form method="POST" action="{{ route('production.orders.output', $order) }}" class="px-3 py-1.5 bg-gray-50/60 border-b border-gray-100 grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
             @csrf
             <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Entrepôt</label>
-                <select name="warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Entrepôt</label>
+                <select name="warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                     <option value="">— Défaut —</option>
                     @foreach($warehouses as $w)<option value="{{ $w->id }}">{{ $w->name }}</option>@endforeach
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Longueur (m)</label>
-                <input type="number" name="length" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Longueur (m)</label>
+                <input type="number" name="length" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Quantité</label>
-                <input type="number" name="quantity" step="0.01" min="0.01" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Quantité</label>
+                <input type="number" name="quantity" step="0.01" min="0.01" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Coût unit. (F)</label>
-                <input type="number" name="unit_cost" step="1" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Coût unit. (F)</label>
+                <input type="number" name="unit_cost" step="1" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
             {{-- [BUG-005] Traçabilité lot PF + observation de la déclaration --}}
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Lot PF</label>
-                <input type="text" name="lot_number" maxlength="60" placeholder="Auto/optionnel" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Lot PF</label>
+                <input type="text" name="lot_number" maxlength="60" placeholder="Auto/optionnel" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] font-mono">
             </div>
             <div class="md:col-span-3">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Observation</label>
-                <input type="text" name="notes" maxlength="500" placeholder="Remarque sur la déclaration (facultatif)…" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Observation</label>
+                <input type="text" name="notes" maxlength="500" placeholder="Remarque sur la déclaration (facultatif)…" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
             </div>
-            <button class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Produire</button>
+            <button class="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Produire</button>
         </form>
         @endif
         <div class="tbl-scroll">
@@ -659,7 +659,7 @@
                         <td class="text-right tabular-nums text-gray-600">{{ number_format($o->length,2,',',' ') }} m</td>
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($o->quantity,0,',',' ') }}</td>
                         <td class="text-right tabular-nums text-gray-900 font-semibold">{{ number_format($o->total_meters,2,',',' ') }}</td>
-                        <td class="text-gray-500 text-xs">{{ $o->warehouse?->name ?? '—' }}</td>
+                        <td class="text-gray-500 text-[12px]">{{ $o->warehouse?->name ?? '—' }}</td>
                         <td class="text-center">
                             @if($o->isValidated())
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-green-100" title="Validée par {{ $o->validatedBy?->name }} le {{ $o->validated_at?->format('d/m/Y H:i') }}">
@@ -680,7 +680,7 @@
                                 @endcan
                             @endif
                         </td>
-                        <td class="text-right">@if($live)<form method="POST" action="{{ route('production.outputs.destroy', $o) }}" data-confirm="Annuler cette sortie ? Le stock sera corrigé.">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-xs">✕</button></form>@endif</td>
+                        <td class="text-right">@if($live)<form method="POST" action="{{ route('production.outputs.destroy', $o) }}" data-confirm="Annuler cette sortie ? Le stock sera corrigé.">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-[12px]">✕</button></form>@endif</td>
                     </tr>
                     @empty
                     <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">Aucune sortie produite.</td></tr>
@@ -697,35 +697,35 @@
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Chutes & pertes</h2>
-            <span class="text-sm text-gray-500 tabular-nums">{{ number_format($metrics['waste_weight'],2,',',' ') }} kg · {{ number_format($metrics['waste_value'],0,',',' ') }} F</span>
+            <span class="text-[13px] text-gray-500 tabular-nums">{{ number_format($metrics['waste_weight'],2,',',' ') }} kg · {{ number_format($metrics['waste_value'],0,',',' ') }} F</span>
         </div>
         @if($live)
         <form method="POST" action="{{ route('production.orders.waste', $order) }}" class="px-3 py-1.5 bg-gray-50/60 border-b border-gray-100 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
             @csrf
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                <select name="type" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Type</label>
+                <select name="type" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                     <option value="reutilisable">Réutilisable</option>
                     <option value="non_reutilisable" selected>Non réutilisable</option>
                     <option value="rebut">Rebut</option>
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Poids (kg)</label>
-                <input type="number" name="weight" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Poids (kg)</label>
+                <input type="number" name="weight" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Machine</label>
-                <select name="machine_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Machine</label>
+                <select name="machine_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                     <option value="">—</option>
                     @foreach($machines as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Motif</label>
-                <input type="text" name="reason" maxlength="255" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Motif</label>
+                <input type="text" name="reason" maxlength="255" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
             </div>
-            <button class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Enregistrer</button>
+            <button class="bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Enregistrer</button>
         </form>
         @endif
 
@@ -734,16 +734,16 @@
         @if($live && $bomBp && ($bomBp->scrap_product_id || $bomBp->defect_product_id))
         <form method="POST" action="{{ route('production.orders.byproduct', $order) }}" class="px-3 py-1.5 bg-[#eef5f0]/40 border-b border-gray-100 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
             @csrf
-            <div class="col-span-2 md:col-span-5 text-xs font-semibold text-emerald-800 uppercase tracking-wider">Entrée sous-produits en stock</div>
+            <div class="col-span-2 md:col-span-5 text-[12px] font-semibold text-emerald-800 uppercase tracking-wider">Entrée sous-produits en stock</div>
             @if($bomBp->scrap_product_id)
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Chute — poids (kg)</label>
-                <input type="number" name="scrap_weight" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
-                <p class="text-[10px] text-gray-500 mt-0.5 truncate">{{ $bomBp->scrapProduct?->name }}</p>
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Chute — poids (kg)</label>
+                <input type="number" name="scrap_weight" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
+                <p class="text-[11px] text-gray-500 mt-0.5 truncate">{{ $bomBp->scrapProduct?->name }}</p>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Dépôt chute</label>
-                <select name="scrap_warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Dépôt chute</label>
+                <select name="scrap_warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                     <option value="">défaut</option>
                     @foreach($warehouses as $w)<option value="{{ $w->id }}">{{ $w->name }}</option>@endforeach
                 </select>
@@ -751,19 +751,19 @@
             @endif
             @if($bomBp->defect_product_id)
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Avarié — quantité</label>
-                <input type="number" name="defect_quantity" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
-                <p class="text-[10px] text-gray-500 mt-0.5 truncate">{{ $bomBp->defectProduct?->name }}</p>
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Avarié — quantité</label>
+                <input type="number" name="defect_quantity" step="0.01" min="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
+                <p class="text-[11px] text-gray-500 mt-0.5 truncate">{{ $bomBp->defectProduct?->name }}</p>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Dépôt avarié</label>
-                <select name="defect_warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Dépôt avarié</label>
+                <select name="defect_warehouse_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                     <option value="">défaut</option>
                     @foreach($warehouses as $w)<option value="{{ $w->id }}">{{ $w->name }}</option>@endforeach
                 </select>
             </div>
             @endif
-            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Entrer en stock</button>
+            <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Entrer en stock</button>
         </form>
         @endif
         <div class="tbl-scroll">
@@ -778,9 +778,9 @@
                         </td>
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($w->weight,2,',',' ') }} kg</td>
                         <td class="text-right tabular-nums text-gray-700">{{ number_format($w->value,0,',',' ') }} F</td>
-                        <td class="text-gray-500 text-xs">{{ $w->machine?->name ?? '—' }}</td>
-                        <td class="text-gray-500 text-xs max-w-xs truncate">{{ $w->reason ?? '—' }}</td>
-                        <td class="text-right">@if($live)<form method="POST" action="{{ route('production.wastes.destroy', $w) }}" data-confirm="Supprimer cette chute ?">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-xs">✕</button></form>@endif</td>
+                        <td class="text-gray-500 text-[12px]">{{ $w->machine?->name ?? '—' }}</td>
+                        <td class="text-gray-500 text-[12px] max-w-xs truncate">{{ $w->reason ?? '—' }}</td>
+                        <td class="text-right">@if($live)<form method="POST" action="{{ route('production.wastes.destroy', $w) }}" data-confirm="Supprimer cette chute ?">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-[12px]">✕</button></form>@endif</td>
                     </tr>
                     @empty
                     <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Aucune chute enregistrée.</td></tr>
@@ -804,13 +804,13 @@
                 @csrf
                 <div>
                     <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Sous-traitance F</label>
-                    <input type="number" name="subcontract_cost" step="1" min="0" value="{{ $cost->subcontract_cost ?? 0 }}" class="w-24 border border-gray-300 rounded-[4px] px-2 py-1 text-sm text-right font-mono">
+                    <input type="number" name="subcontract_cost" step="1" min="0" value="{{ $cost->subcontract_cost ?? 0 }}" class="w-24 border border-gray-300 rounded-[4px] px-2 py-1 text-[13px] text-right font-mono">
                 </div>
                 <div>
                     <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Frais indirects %</label>
-                    <input type="number" name="overhead_rate" step="0.1" min="0" max="100" value="0" class="w-20 border border-gray-300 rounded-[4px] px-2 py-1 text-sm text-right font-mono">
+                    <input type="number" name="overhead_rate" step="0.1" min="0" max="100" value="0" class="w-20 border border-gray-300 rounded-[4px] px-2 py-1 text-[13px] text-right font-mono">
                 </div>
-                <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">{{ $cost ? 'Recalculer' : 'Calculer' }}</button>
+                <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">{{ $cost ? 'Recalculer' : 'Calculer' }}</button>
             </form>
             @endcan
         </div>
@@ -818,32 +818,32 @@
         <div class="p-6">
             {{-- [CDC coût de revient industriel] Décomposition complète : matière, MO, machine, énergie, maintenance, emballage, indirects --}}
             <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-4 mb-5">
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Matière</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->material_cost,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Main-d'œuvre</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->labor_cost,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Machine</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->machine_cost,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Énergie</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->energy_cost ?? 0,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Maintenance</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->maintenance_cost ?? 0,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Emballage</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->packaging_cost ?? 0,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Sous-traitance</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->subcontract_cost ?? 0,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Frais indirects</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->overhead_cost,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Matière</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->material_cost,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Main-d'œuvre</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->labor_cost,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Machine</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->machine_cost,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Énergie</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->energy_cost ?? 0,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Maintenance</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->maintenance_cost ?? 0,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Emballage</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->packaging_cost ?? 0,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Sous-traitance</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->subcontract_cost ?? 0,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Frais indirects</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->overhead_cost,0,',',' ') }} F</p></div>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-[#eef5f0] border border-emerald-200 rounded-[4px] p-3"><p class="text-xs text-emerald-700">Coût total</p><p class="font-bold text-emerald-900 tabular-nums">{{ number_format($cost->total_cost,0,',',' ') }} F</p></div>
-                <div class="bg-sky-50 border border-sky-200 rounded-[4px] p-3"><p class="text-xs text-sky-600">Coût / mètre</p><p class="font-bold text-sky-800 tabular-nums">{{ number_format($cost->cost_per_meter,2,',',' ') }} F</p></div>
-                <div class="bg-sky-50 border border-sky-200 rounded-[4px] p-3"><p class="text-xs text-sky-600">Coût / unité</p><p class="font-bold text-sky-800 tabular-nums">{{ number_format($cost->cost_per_unit,2,',',' ') }} F</p></div>
+                <div class="bg-[#eef5f0] border border-emerald-200 rounded-[4px] p-3"><p class="text-[12px] text-emerald-700">Coût total</p><p class="font-bold text-emerald-900 tabular-nums">{{ number_format($cost->total_cost,0,',',' ') }} F</p></div>
+                <div class="bg-sky-50 border border-sky-200 rounded-[4px] p-3"><p class="text-[12px] text-sky-600">Coût / mètre</p><p class="font-bold text-sky-800 tabular-nums">{{ number_format($cost->cost_per_meter,2,',',' ') }} F</p></div>
+                <div class="bg-sky-50 border border-sky-200 rounded-[4px] p-3"><p class="text-[12px] text-sky-600">Coût / unité</p><p class="font-bold text-sky-800 tabular-nums">{{ number_format($cost->cost_per_unit,2,',',' ') }} F</p></div>
                 <div class="{{ $cost->margin >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200' }} border rounded-[4px] p-3">
-                    <p class="text-xs {{ $cost->margin >= 0 ? 'text-emerald-600' : 'text-red-600' }}">Marge estimée</p>
+                    <p class="text-[12px] {{ $cost->margin >= 0 ? 'text-emerald-600' : 'text-red-600' }}">Marge estimée</p>
                     <p class="font-bold {{ $cost->margin >= 0 ? 'text-emerald-800' : 'text-red-800' }} tabular-nums">{{ number_format($cost->margin,0,',',' ') }} F</p>
                 </div>
             </div>
 
             @if($cost->standard_total > 0)
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Coût standard</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->standard_total,0,',',' ') }} F</p></div>
-                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-xs text-gray-500">Coût réel</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->total_cost,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Coût standard</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->standard_total,0,',',' ') }} F</p></div>
+                <div class="bg-gray-50 rounded-[4px] p-3"><p class="text-[12px] text-gray-500">Coût réel</p><p class="font-bold text-gray-900 tabular-nums">{{ number_format($cost->total_cost,0,',',' ') }} F</p></div>
                 @php $fav = ($cost->variance ?? 0) <= 0; @endphp
                 <div class="{{ $fav ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200' }} border rounded-[4px] p-3">
-                    <p class="text-xs {{ $fav ? 'text-emerald-600' : 'text-red-600' }}">Écart {{ $fav ? '(favorable)' : '(défavorable)' }}</p>
+                    <p class="text-[12px] {{ $fav ? 'text-emerald-600' : 'text-red-600' }}">Écart {{ $fav ? '(favorable)' : '(défavorable)' }}</p>
                     <p class="font-bold {{ $fav ? 'text-emerald-800' : 'text-red-800' }} tabular-nums">{{ $fav ? '' : '+' }}{{ number_format($cost->variance ?? 0,0,',',' ') }} F</p>
                 </div>
             </div>
@@ -866,30 +866,30 @@
         <form method="POST" action="{{ route('production.orders.quality', $order) }}" class="px-3 py-1.5 bg-gray-50/60 border-b border-gray-100 space-y-3">
             @csrf
             <div class="flex flex-wrap gap-4">
-                <label class="inline-flex items-center gap-1.5 text-sm text-gray-700"><input type="checkbox" name="thickness_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Épaisseur</label>
-                <label class="inline-flex items-center gap-1.5 text-sm text-gray-700"><input type="checkbox" name="length_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Longueur</label>
-                <label class="inline-flex items-center gap-1.5 text-sm text-gray-700"><input type="checkbox" name="color_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Couleur</label>
-                <label class="inline-flex items-center gap-1.5 text-sm text-gray-700"><input type="checkbox" name="visual_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Visuel</label>
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-gray-700"><input type="checkbox" name="thickness_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Épaisseur</label>
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-gray-700"><input type="checkbox" name="length_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Longueur</label>
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-gray-700"><input type="checkbox" name="color_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Couleur</label>
+                <label class="inline-flex items-center gap-1.5 text-[13px] text-gray-700"><input type="checkbox" name="visual_ok" value="1" checked class="rounded border-gray-300 text-emerald-700"> Visuel</label>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Verdict</label>
-                    <select name="status" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                    <label class="block text-[12px] font-medium text-gray-600 mb-1">Verdict</label>
+                    <select name="status" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                         <option value="conforme">Conforme</option>
                         <option value="a_reprendre">À reprendre</option>
                         <option value="non_conforme">Non conforme</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Qté rejetée</label>
-                    <input type="number" name="rejected_quantity" step="0.01" min="0" value="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                    <label class="block text-[12px] font-medium text-gray-600 mb-1">Qté rejetée</label>
+                    <input type="number" name="rejected_quantity" step="0.01" min="0" value="0" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
                 </div>
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Motif (si non conforme)</label>
-                    <input type="text" name="reason" maxlength="255" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                    <label class="block text-[12px] font-medium text-gray-600 mb-1">Motif (si non conforme)</label>
+                    <input type="text" name="reason" maxlength="255" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                 </div>
             </div>
-            <div class="flex justify-end"><button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Enregistrer le contrôle</button></div>
+            <div class="flex justify-end"><button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Enregistrer le contrôle</button></div>
         </form>
         @endif
         @endcan
@@ -900,7 +900,7 @@
                     @forelse($order->qualityControls as $qc)
                     <tr>
                         <td class="text-gray-600">{{ optional($qc->controlled_at)->format('d/m/Y') ?? '—' }}</td>
-                        <td class="text-xs">
+                        <td class="text-[12px]">
                             @foreach(['thickness_ok'=>'Ép.','length_ok'=>'Long.','color_ok'=>'Coul.','visual_ok'=>'Vis.'] as $f=>$lbl)
                                 <span class="inline-flex items-center gap-0.5 mr-1 {{ $qc->$f ? 'text-emerald-600' : 'text-red-500' }}">{{ $qc->$f ? '✓' : '✕' }} {{ $lbl }}</span>
                             @endforeach
@@ -910,8 +910,8 @@
                             <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $qcc }}">{{ $qc->statusLabel() }}</span>
                         </td>
                         <td class="text-right tabular-nums text-gray-700">{{ number_format($qc->rejected_quantity,0,',',' ') }}</td>
-                        <td class="text-gray-500 text-xs max-w-xs truncate">{{ $qc->reason ?? '—' }}</td>
-                        <td class="text-right">@can('production.update')<form method="POST" action="{{ route('production.quality.destroy', $qc) }}" data-confirm="Supprimer ce contrôle ?">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-xs">✕</button></form>@endcan</td>
+                        <td class="text-gray-500 text-[12px] max-w-xs truncate">{{ $qc->reason ?? '—' }}</td>
+                        <td class="text-right">@can('production.update')<form method="POST" action="{{ route('production.quality.destroy', $qc) }}" data-confirm="Supprimer ce contrôle ?">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-[12px]">✕</button></form>@endcan</td>
                     </tr>
                     @empty
                     <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Aucun contrôle qualité.</td></tr>
@@ -932,13 +932,13 @@
             <div class="flex items-center gap-3">
                 <h2 class="text-[13px] font-bold text-gray-900">Opérations (gamme)</h2>
                 @if($opProgress['total'] > 0)
-                <span class="text-sm text-gray-500 tabular-nums">{{ $opProgress['done'] }}/{{ $opProgress['total'] }} · {{ $opProgress['percent'] }}%</span>
+                <span class="text-[13px] text-gray-500 tabular-nums">{{ $opProgress['done'] }}/{{ $opProgress['total'] }} · {{ $opProgress['percent'] }}%</span>
                 @endif
             </div>
             @can('production.update')
             @if($order->operations->isEmpty() && in_array($order->status, ['lance','en_cours'], true))
             <form method="POST" action="{{ route('production.orders.operations', $order) }}">@csrf
-                <button class="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
+                <button class="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Générer depuis la gamme
                 </button>
@@ -959,9 +959,9 @@
                 <tbody>
                     @forelse($order->operations as $op)
                     <tr>
-                        <td class="text-gray-500 font-mono text-xs">{{ $op->sequence }}</td>
+                        <td class="text-gray-500 font-mono text-[12px]">{{ $op->sequence }}</td>
                         <td class="text-gray-800">{{ $op->name }}</td>
-                        <td class="text-gray-600 text-xs">{{ $op->workCenter?->name ?? '—' }}</td>
+                        <td class="text-gray-600 text-[12px]">{{ $op->workCenter?->name ?? '—' }}</td>
                         <td class="text-right tabular-nums text-gray-600">{{ number_format($op->planned_minutes,0,',',' ') }}</td>
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($op->real_minutes,0,',',' ') }}</td>
                         <td>
@@ -971,9 +971,9 @@
                         <td class="text-right whitespace-nowrap">
                             @if($woLive)
                                 @if($op->status === 'pending')
-                                <form method="POST" action="{{ route('production.operations.start', $op) }}" class="inline">@csrf<button class="text-sky-600 hover:underline text-xs font-medium">Démarrer</button></form>
+                                <form method="POST" action="{{ route('production.operations.start', $op) }}" class="inline">@csrf<button class="text-sky-600 hover:underline text-[12px] font-medium">Démarrer</button></form>
                                 @elseif($op->status === 'in_progress')
-                                <form method="POST" action="{{ route('production.operations.finish', $op) }}" class="inline">@csrf<button class="text-emerald-600 hover:underline text-xs font-medium">Terminer</button></form>
+                                <form method="POST" action="{{ route('production.operations.finish', $op) }}" class="inline">@csrf<button class="text-emerald-600 hover:underline text-[12px] font-medium">Terminer</button></form>
                                 @endif
                             @endif
                         </td>
@@ -996,30 +996,30 @@
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white flex items-center justify-between">
             <h2 class="text-[13px] font-bold text-gray-900">Main-d'œuvre (pointage)</h2>
-            <span class="text-sm text-gray-500 tabular-nums">{{ number_format($moHours,2,',',' ') }} h · {{ number_format($moCost,0,',',' ') }} F</span>
+            <span class="text-[13px] text-gray-500 tabular-nums">{{ number_format($moHours,2,',',' ') }} h · {{ number_format($moCost,0,',',' ') }} F</span>
         </div>
         @can('production.update')
         @if($moAllowed)
         <form method="POST" action="{{ route('production.orders.time', $order) }}" class="px-3 py-1.5 bg-gray-50/60 border-b border-gray-100 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
             @csrf
             <div class="md:col-span-2">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Opérateur</label>
-                <select name="employee_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Opérateur</label>
+                <select name="employee_id" class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px]">
                     <option value="">—</option>
                     @foreach($employees as $e)<option value="{{ $e->id }}">{{ $e->full_name }}</option>@endforeach
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Heures</label>
-                <input type="number" name="hours" step="0.25" min="0.25" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Heures</label>
+                <input type="number" name="hours" step="0.25" min="0.25" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Coût horaire (F)</label>
-                <input type="number" name="hourly_cost" step="1" min="0" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-sm text-right font-mono">
+                <label class="block text-[12px] font-medium text-gray-600 mb-1">Coût horaire (F)</label>
+                <input type="number" name="hourly_cost" step="1" min="0" required class="w-full border border-gray-300 rounded-[4px] px-2 py-1.5 text-[13px] text-right font-mono">
             </div>
             <div class="flex items-center gap-2">
-                <label class="inline-flex items-center gap-1.5 text-xs text-gray-700"><input type="checkbox" name="is_overtime" value="1" class="rounded border-gray-300 text-emerald-700"> H. sup.</label>
-                <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Pointer</button>
+                <label class="inline-flex items-center gap-1.5 text-[12px] text-gray-700"><input type="checkbox" name="is_overtime" value="1" class="rounded border-gray-300 text-emerald-700"> H. sup.</label>
+                <button class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Pointer</button>
             </div>
         </form>
         @endif
@@ -1035,8 +1035,8 @@
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($t->hours,2,',',' ') }}</td>
                         <td class="text-right tabular-nums text-gray-600">{{ number_format($t->hourly_cost,0,',',' ') }}</td>
                         <td class="text-right tabular-nums font-semibold text-gray-900">{{ number_format($t->labor_cost,0,',',' ') }} F</td>
-                        <td>@if($t->is_overtime)<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">H. sup.</span>@else<span class="text-gray-400 text-xs">Normal</span>@endif</td>
-                        <td class="text-right">@can('production.update')<form method="POST" action="{{ route('production.time-logs.destroy', $t) }}" data-confirm="Supprimer ce pointage ?">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-xs">✕</button></form>@endcan</td>
+                        <td>@if($t->is_overtime)<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] bg-amber-100 text-amber-700">H. sup.</span>@else<span class="text-gray-400 text-[12px]">Normal</span>@endif</td>
+                        <td class="text-right">@can('production.update')<form method="POST" action="{{ route('production.time-logs.destroy', $t) }}" data-confirm="Supprimer ce pointage ?">@csrf @method('DELETE')<button class="text-gray-400 hover:text-red-600 text-[12px]">✕</button></form>@endcan</td>
                     </tr>
                     @empty
                     <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Aucun pointage. Le coût MO utilisera l'estimation nomenclature.</td></tr>
@@ -1067,12 +1067,12 @@
 {{-- Bandeau rendement --}}
 <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-3">
     @php $trCard = 'bg-white rounded-[4px] border border-gray-300 px-3 py-2'; @endphp
-    <div class="{{ $trCard }}"><p class="text-[10px] text-gray-500 uppercase tracking-wide">Matière consommée</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($trConsumed, 2, ',', ' ') }} kg</p></div>
-    <div class="{{ $trCard }}"><p class="text-[10px] text-gray-500 uppercase tracking-wide">Produit conforme</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($metrics['output_meters'], 2, ',', ' ') }} m</p></div>
-    <div class="{{ $trCard }}"><p class="text-[10px] text-emerald-600 uppercase tracking-wide">Chute réutilisable</p><p class="text-[15px] font-bold text-emerald-700 tabular-nums">{{ number_format($trReusable, 2, ',', ' ') }} kg</p></div>
-    <div class="{{ $trCard }}"><p class="text-[10px] text-red-600 uppercase tracking-wide">Rebut</p><p class="text-[15px] font-bold text-red-700 tabular-nums">{{ number_format($trRebut, 2, ',', ' ') }} kg</p></div>
-    <div class="{{ $trCard }}"><p class="text-[10px] text-gray-500 uppercase tracking-wide">Valeur pertes</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($metrics['waste_value'], 0, ',', ' ') }} F</p></div>
-    <div class="{{ $trCard }} {{ ($metrics['yield'] ?? 0) >= 90 ? 'ring-1 ring-emerald-300' : '' }}"><p class="text-[10px] text-emerald-600 uppercase tracking-wide">Rendement matière</p><p class="text-[15px] font-bold text-emerald-800 tabular-nums">{{ $metrics['yield'] !== null ? number_format($metrics['yield'], 1, ',', ' ').' %' : '—' }}</p></div>
+    <div class="{{ $trCard }}"><p class="text-[11px] text-gray-500 uppercase tracking-wide">Matière consommée</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($trConsumed, 2, ',', ' ') }} kg</p></div>
+    <div class="{{ $trCard }}"><p class="text-[11px] text-gray-500 uppercase tracking-wide">Produit conforme</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($metrics['output_meters'], 2, ',', ' ') }} m</p></div>
+    <div class="{{ $trCard }}"><p class="text-[11px] text-emerald-600 uppercase tracking-wide">Chute réutilisable</p><p class="text-[15px] font-bold text-emerald-700 tabular-nums">{{ number_format($trReusable, 2, ',', ' ') }} kg</p></div>
+    <div class="{{ $trCard }}"><p class="text-[11px] text-red-600 uppercase tracking-wide">Rebut</p><p class="text-[15px] font-bold text-red-700 tabular-nums">{{ number_format($trRebut, 2, ',', ' ') }} kg</p></div>
+    <div class="{{ $trCard }}"><p class="text-[11px] text-gray-500 uppercase tracking-wide">Valeur pertes</p><p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ number_format($metrics['waste_value'], 0, ',', ' ') }} F</p></div>
+    <div class="{{ $trCard }} {{ ($metrics['yield'] ?? 0) >= 90 ? 'ring-1 ring-emerald-300' : '' }}"><p class="text-[11px] text-emerald-600 uppercase tracking-wide">Rendement matière</p><p class="text-[15px] font-bold text-emerald-800 tabular-nums">{{ $metrics['yield'] !== null ? number_format($metrics['yield'], 1, ',', ' ').' %' : '—' }}</p></div>
 </div>
 
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-3">
@@ -1097,7 +1097,7 @@
                         <tr>
                             <td>
                                 <span class="font-mono text-emerald-700">{{ $coil->reference ?? '—' }}</span>
-                                @if($coil?->lot_number)<span class="block text-[10px] text-gray-500">Lot {{ $coil->lot_number }}</span>@endif
+                                @if($coil?->lot_number)<span class="block text-[11px] text-gray-500">Lot {{ $coil->lot_number }}</span>@endif
                             </td>
                             <td class="text-gray-600 text-[11px]">
                                 {{ collect([$coil?->color, $coil?->nuance, $coil?->thickness ? $coil->thickness.' mm' : null, $coil?->width ? $coil->width.' mm' : null])->filter()->implode(' · ') ?: '—' }}
@@ -1106,7 +1106,7 @@
                             <td class="text-right tabular-nums {{ (float)($coil->remaining_weight ?? 0) > 0 ? 'text-emerald-700' : 'text-gray-400' }}">{{ $coil ? number_format((float) $coil->remaining_weight, 2, ',', ' ').' kg' : '—' }}</td>
                             <td class="text-gray-700 text-[11px]">
                                 {{ $coil?->supplier?->name ?? '—' }}
-                                @if($coil?->supplier_reference)<span class="block text-[10px] text-gray-400">Réf. {{ $coil->supplier_reference }}</span>@endif
+                                @if($coil?->supplier_reference)<span class="block text-[11px] text-gray-400">Réf. {{ $coil->supplier_reference }}</span>@endif
                             </td>
                         </tr>
                     @empty
@@ -1131,7 +1131,7 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                         @foreach(['thickness_ok' => 'Épaisseur', 'length_ok' => 'Longueur', 'color_ok' => 'Couleur', 'visual_ok' => 'Visuel'] as $f => $lbl)
                         <div class="text-center border border-gray-100 rounded-[3px] py-1.5">
-                            <p class="text-[10px] text-gray-500 uppercase">{{ $lbl }}</p>
+                            <p class="text-[11px] text-gray-500 uppercase">{{ $lbl }}</p>
                             <p class="text-[13px] font-bold {{ $trQc->$f ? 'text-emerald-600' : 'text-red-600' }}">{{ $trQc->$f ? '✓' : '✕' }}</p>
                         </div>
                         @endforeach
@@ -1159,7 +1159,7 @@
                         @forelse($order->wastes as $w)
                         <tr>
                             <td>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[10px] font-semibold {{ $w->type === 'reutilisable' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">{{ $w->type === 'reutilisable' ? 'Réutilisable' : ($w->type === 'rebut' ? 'Rebut' : 'Non réutilisable') }}</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-semibold {{ $w->type === 'reutilisable' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">{{ $w->type === 'reutilisable' ? 'Réutilisable' : ($w->type === 'rebut' ? 'Rebut' : 'Non réutilisable') }}</span>
                             </td>
                             <td class="text-right tabular-nums">{{ number_format((float) $w->weight, 2, ',', ' ') }} kg</td>
                             <td class="text-right tabular-nums text-gray-600">{{ number_format((float) $w->value, 0, ',', ' ') }} F</td>
@@ -1192,7 +1192,7 @@
     <div class="flex flex-wrap items-center gap-1 text-[12px]">
         @foreach($trChain as $i => $node)
             <div class="inline-flex flex-col px-2.5 py-1 rounded-[4px] bg-[#eef5f0] border border-emerald-100">
-                <span class="text-[9px] uppercase tracking-wide text-emerald-700">{{ $node[0] }}</span>
+                <span class="text-[11px] uppercase tracking-wide text-emerald-700">{{ $node[0] }}</span>
                 <span class="font-medium text-gray-900">{{ $node[1] }}</span>
             </div>
             @if(!$loop->last)<span class="text-gray-300">→</span>@endif
@@ -1208,7 +1208,7 @@
             @can('production.update')
             @if(!in_array($order->status, ['brouillon','annule']))
             <form method="POST" action="{{ route('production.orders.batches', $order) }}">@csrf
-                <button class="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
+                <button class="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Nouveau lot
                 </button>
@@ -1222,13 +1222,13 @@
                 <tbody>
                     @forelse($order->batches as $b)
                     <tr>
-                        <td class="font-mono text-xs text-emerald-700">{{ $b->batch_number }}</td>
+                        <td class="font-mono text-[12px] text-emerald-700">{{ $b->batch_number }}</td>
                         <td class="text-right tabular-nums text-gray-900">{{ number_format($b->quantity,0,',',' ') }}</td>
                         <td><span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium {{ $b->status==='cloture' ? 'bg-gray-100 text-gray-600' : ($b->status==='conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700') }}">{{ $b->statusLabel() }}</span></td>
                         <td class="text-gray-600">{{ optional($b->produced_at)->format('d/m/Y') ?? '—' }}</td>
                         <td class="text-right">
                             @if(in_array($b->status, ['en_cours','conforme'], true) && auth()->user()->can('production.update'))
-                            <form method="POST" action="{{ route('production.batches.close', $b) }}">@csrf<button class="text-gray-500 hover:underline text-xs">Clôturer</button></form>
+                            <form method="POST" action="{{ route('production.batches.close', $b) }}">@csrf<button class="text-gray-500 hover:underline text-[12px]">Clôturer</button></form>
                             @endif
                         </td>
                     </tr>
@@ -1253,7 +1253,7 @@
             @can('production.update')
             @if($order->status === 'termine' && $order->product_id && $activeRes->isEmpty())
             <form method="POST" action="{{ route('production.orders.reserve', $order) }}">@csrf
-                <button class="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">
+                <button class="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     Réserver pour le client
                 </button>
@@ -1278,7 +1278,7 @@
                             @can('production.update')
                             @if($r->status === 'reserved')
                             <form method="POST" action="{{ route('production.reservations.release', $r) }}" data-confirm="Libérer cette réservation ?">@csrf
-                                <button class="text-gray-400 hover:text-red-600 text-xs">Libérer</button>
+                                <button class="text-gray-400 hover:text-red-600 text-[12px]">Libérer</button>
                             </form>
                             @endif
                             @endcan
@@ -1304,7 +1304,7 @@
         <div class="flex justify-end">
             <form method="POST" action="{{ route('production.orders.destroy', $order) }}" data-confirm="Supprimer définitivement cet OF en brouillon ?">
                 @csrf @method('DELETE')
-                <button class="text-red-600 hover:underline text-sm">Supprimer cet OF</button>
+                <button class="text-red-600 hover:underline text-[13px]">Supprimer cet OF</button>
             </form>
         </div>
         @endcan
@@ -1316,7 +1316,7 @@
     {{-- ══ [X3 Lancement] Synthèse lancement ══ --}}
     <div x-show="tab === 'lancement'" x-cloak class="bg-white rounded-[4px] border border-gray-300 p-4">
         <h2 class="text-[13px] font-bold text-gray-900 mb-3">Synthèse du lancement</h2>
-        <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-[12.5px]">
+        <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-[12px]">
             <div><dt class="text-[11px] font-bold text-gray-500">Lancé le</dt><dd class="tabular-nums">{{ optional($order->launched_at)->format('d/m/Y') ?? '—' }}{{ $order->heure_lancement ? ' ' . substr($order->heure_lancement, 0, 5) : '' }}</dd></div>
             <div><dt class="text-[11px] font-bold text-gray-500">Mode lancement</dt><dd>{{ ucfirst($order->mode_lancement ?? 'manuel') }}</dd></div>
             <div><dt class="text-[11px] font-bold text-gray-500">Équipe prévue</dt><dd>{{ $order->equipe_prevue ?? '—' }} {{ $order->nb_operateurs ? '(' . $order->nb_operateurs . ' op.)' : '' }}</dd></div>
@@ -1358,7 +1358,7 @@
         <div class="px-3 py-1.5 border-b border-gray-200 bg-gradient-to-b from-gray-50 to-white"><h2 class="text-[13px] font-bold text-gray-900">Documents / pièces jointes</h2></div>
         <div class="p-4">
             @if($order->attachments && $order->attachments->isNotEmpty())
-            <table class="w-full text-[12.5px] border border-gray-200">
+            <table class="w-full text-[12px] border border-gray-200">
                 <thead><tr class="bg-[#3b4248] text-white text-[11px] font-semibold uppercase">
                     <th class="text-left px-2 py-1.5 w-10">#</th>
                     <th class="text-left px-2 py-1.5">Fichier</th>
@@ -1385,7 +1385,7 @@
     </div>{{-- /colonne principale --}}
 
     {{-- ══ Panneau d'actions droit [X3] ══ --}}
-    <aside class="mb-3 lg:mb-0 bg-white rounded-[4px] border border-gray-300 p-2 lg:sticky lg:top-20 space-y-0.5 text-[12.5px]">
+    <aside class="mb-3 lg:mb-0 bg-white rounded-[4px] border border-gray-300 p-2 lg:sticky lg:top-20 space-y-0.5 text-[12px]">
         <a href="{{ route('production.orders.index') }}" class="{{ $sideLn }}">⎋ Quitter la page</a>
         @can('production.create')<a href="{{ route('production.orders.create') }}" class="{{ $sideLn }}">＋ Nouveau</a>@endcan
         @if($order->isEditable())@can('production.create')<a href="{{ route('production.orders.edit', $order) }}" class="{{ $sideLn }}">✎ Modifier</a>@endcan @endif
@@ -1410,7 +1410,7 @@
                 <button class="{{ $sideLn }} text-emerald-700 font-semibold">✔ Valider (Chef Atelier)</button>
             </form>
             @else
-            <p class="px-3 py-1.5 text-[11.5px] text-gray-400 italic">En attente validation Chef Atelier</p>
+            <p class="px-3 py-1.5 text-[11px] text-gray-400 italic">En attente validation Chef Atelier</p>
             @endcan
         @elseif($order->status === 'attente_responsable')
             @can('production.validate_responsable')
@@ -1418,7 +1418,7 @@
                 <button class="{{ $sideLn }} text-emerald-700 font-semibold">✔ Valider (Resp. Production)</button>
             </form>
             @else
-            <p class="px-3 py-1.5 text-[11.5px] text-gray-400 italic">En attente validation Resp. Production</p>
+            <p class="px-3 py-1.5 text-[11px] text-gray-400 italic">En attente validation Resp. Production</p>
             @endcan
         @elseif($order->status === 'matiere_allouee')
             @can('production.launch')
@@ -1434,7 +1434,7 @@
             @can('production.validate')
             @if((float) $order->quantity_produced <= 0)
                 {{-- Rien de déclaré : la clôture serait refusée par la garde — on guide vers la déclaration --}}
-                <p class="px-3 py-1.5 text-[11.5px] text-amber-700">Aucune production déclarée — clôture impossible. Déclarez la sortie (onglet <button type="button" @click="tab = 'suivi'" class="underline font-semibold">Suivi</button>) puis faites-la viser.</p>
+                <p class="px-3 py-1.5 text-[11px] text-amber-700">Aucune production déclarée — clôture impossible. Déclarez la sortie (onglet <button type="button" @click="tab = 'suivi'" class="underline font-semibold">Suivi</button>) puis faites-la viser.</p>
             @else
             @if($order->status === 'en_cours')
             <form method="POST" action="{{ route('production.orders.partial', $order) }}">@csrf
@@ -1485,12 +1485,12 @@
             <form method="POST" action="{{ route('production.orders.cancel', $order) }}" class="space-y-3">
                 @csrf
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Motif (facultatif)</label>
-                    <textarea name="reason" rows="3" maxlength="500" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm resize-none focus:ring-1 focus:ring-red-300" placeholder="Raison de l'annulation…"></textarea>
+                    <label class="block text-[13px] font-medium text-gray-700 mb-1">Motif (facultatif)</label>
+                    <textarea name="reason" rows="3" maxlength="500" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] resize-none focus:ring-1 focus:ring-red-300" placeholder="Raison de l'annulation…"></textarea>
                 </div>
                 <div class="flex justify-end gap-2">
-                    <button type="button" @click="cancelOpen = false" class="border border-gray-300 text-gray-700 text-sm px-3 py-1.5 rounded-[4px]">Retour</button>
-                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">Confirmer l'annulation</button>
+                    <button type="button" @click="cancelOpen = false" class="border border-gray-300 text-gray-700 text-[13px] px-3 py-1.5 rounded-[4px]">Retour</button>
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Confirmer l'annulation</button>
                 </div>
             </form>
         </div>
