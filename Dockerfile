@@ -29,9 +29,9 @@ WORKDIR /var/www/html
 # Copier les fichiers du projet
 COPY . .
 
-# Installer les dépendances PHP et Node
+# Installer les dépendances PHP et Node (avec --legacy-peer-deps pour les conflits Vite)
 RUN composer install --no-dev --optimize-autoloader --no-interaction
-RUN npm install && npm run build
+RUN npm install --legacy-peer-deps && npm run build
 
 # Configurer les permissions pour Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
