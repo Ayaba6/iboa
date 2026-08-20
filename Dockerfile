@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
     nginx \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# Installer Node.js et NPM (pour builder les assets Vite)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+# Installer Node.js 18 (plus stable avec les plugins Vite actuels)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
 # Nettoyer
@@ -29,9 +29,11 @@ WORKDIR /var/www/html
 # Copier les fichiers du projet
 COPY . .
 
-# Installer les dépendances PHP et Node (avec --legacy-peer-deps pour les conflits Vite)
+# Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
-RUN npm install --legacy-peer-deps && npm run build
+
+# Installer les dépendances Node et compiler les assets
+RUN npm install && npm run build
 
 # Configurer les permissions pour Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
@@ -39,5 +41,5 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # Exposer le port 80 pour Render
 EXPOSE 80
 
-# Script de démarrage simple (lance Nginx et PHP-FPM)
+# Script de démarrage
 CMD php artisan config:cache && php artisan route:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
