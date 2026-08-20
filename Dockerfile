@@ -32,8 +32,8 @@ COPY . .
 # Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Installer les dépendances Node et compiler les assets pour la production
-RUN npm install && npm run build
+# Installer les dépendances Node en contournant les conflits de peer dependencies et compiler les assets
+RUN npm install --legacy-peer-deps && npm run build
 
 # Configurer les permissions pour Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
