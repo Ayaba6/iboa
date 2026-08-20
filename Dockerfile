@@ -25,8 +25,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# Installer les dépendances PHP
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Augmener le timeout de Composer et installer les dépendances PHP proprement
+RUN composer config -g http-timeout 300 \
+    && composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
 # Installer les dépendances Node et compiler les assets Laravel
 RUN npm install --legacy-peer-deps && npm run build
