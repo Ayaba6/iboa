@@ -1,6 +1,6 @@
 FROM php:8.2-fpm
 
-# Installer les dépendances système et extensions PHP nécessaires
+# Installer uniquement les dépendances système, Nginx et unzip/git
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -11,13 +11,13 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libzip-dev \
     nginx \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+    && docker-php-ext-install pdo_mysql exif pcntl bcmath gd zip
 
-# Installer Node.js 20 (requis par les versions récentes de Vite)
+# Installer Node.js 20 proprement
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
 
-# Nettoyer
+# Nettoyer le cache apt pour alléger l'image
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Installer Composer
@@ -32,8 +32,8 @@ COPY . .
 # Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Installer les dépendances Node avec legacy-peer-deps et compiler les assets
-RUN npm install --legacy-peer-deps && npm run build
+# Installer les dépendances Node et compiler les assets pour la production
+RUN npm install && npm run build
 
 # Configurer les permissions pour Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
@@ -41,5 +41,5 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # Exposer le port 80 pour Render
 EXPOSE 80
 
-# Script de démarrage
+# Commande de démarrage
 CMD php artisan config:cache && php artisan route:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
