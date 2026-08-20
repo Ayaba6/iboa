@@ -1,14 +1,30 @@
 #!/bin/bash
 
-# Attendre que la base de données soit prête (optionnel mais recommandé)
-echo "Attente de la base de données..."
-# Ceci est une boucle simple qui vérifie la connexion avant de lancer les migrations
-until php -r "try { new PDO('pgsql:host=$DB_HOST;port=$DB_PORT;dbname=$DB_DATABASE', '$DB_USERNAME', '$DB_PASSWORD'); exit(0); } catch (Exception \$e) { exit(1); }"; do
-  echo "Base de données non disponible, réessai dans 2 secondes..."
-  sleep 2
+echo "Tentative de connexion à la base de données..."
+
+# Boucle propre avec affichage de l'erreur exacte
+until php -r "
+try {
+    \$host = getenv('DB_HOST');
+    \$port = getenv('DB_PORT');
+    \$db   = getenv('DB_DATABASE');
+    \$user = getenv('DB_USERNAME');
+    \$pass = getenv('DB_PASSWORD');
+
+    \$dsn = \"pgsql:host=\$host;port=\$port;dbname=\$db\";
+    \$pdo = new PDO(\$dsn, \$user, \$pass);
+    echo 'Connexion PDO réussie !';
+    exit(0);
+} catch (Exception \$e) {
+    echo 'Erreur : ' . \$e->getMessage();
+    exit(1);
+}
+"; do
+  echo " - En attente de la base de données... nouvel essai dans 3 secondes."
+  sleep 3
 done
 
-echo "Base de données disponible, lancement des migrations..."
+echo "Base de données connectée avec succès !"
 php artisan migrate --force
 
 echo "Configuration et routage..."
