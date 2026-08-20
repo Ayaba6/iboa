@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     nginx \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# Installer Node.js 18 (plus stable avec les plugins Vite actuels)
+# Installer Node.js 18
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
@@ -32,8 +32,8 @@ COPY . .
 # Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Installer les dépendances Node et compiler les assets
-RUN npm install && npm run build
+# Installer les dépendances Node avec legacy-peer-deps et compiler les assets
+RUN npm install --legacy-peer-deps && npm run build
 
 # Configurer les permissions pour Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
