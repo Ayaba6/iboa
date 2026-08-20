@@ -1,18 +1,39 @@
-# --- Étape 1 : Build des assets ---
-FROM node:20-alpine AS build-stage
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --legacy-peer-deps
+FROM php:8.2-fpm
+
+# Installer les dépendances système, Nginx et extensions PHP
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    libzip-dev \
+    nginx \
+    && docker-php-ext-install pdo_mysql exif pcntl bcmath gd zip
+
+# Installer Node.js 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Installer Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
 COPY . .
-RUN npm run build
 
-# --- Étape 2 : Serveur de production Nginx ---
-FROM nginx:alpine
-# Copier les fichiers buildés par Vite vers le dossier public de Nginx
-COPY --from=build-stage /app/dist /usr/share/nginx/html
+# Installer les dépendances PHP
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# (Optionnel) Copier une config Nginx personnalisée pour le routage SPA si nécessaire
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Installer les dépendances Node et compiler les assets Laravel
+RUN npm install --legacy-peer-deps && npm run build
+
+# Permissions Laravel
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+
+CMD php artisan config:cache && php artisan route:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT
