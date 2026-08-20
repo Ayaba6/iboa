@@ -82,9 +82,7 @@ class TriggerMtoProductionOnOrderConfirmed
                     'product_id'          => $product->id,
                     'bill_of_material_id' => $bom->id,
                     'quantity_requested'  => $quantite,
-                    'sheet_type'          => $bom->sheet_type,
-                    'thickness'           => $bom->thickness,
-                    'usable_width'        => $bom->usable_width,
+
                     'responsible_id'      => Auth::id(),
                     'notes'               => 'OF auto (MTO) depuis commande ' . $order->number,
                 ]);

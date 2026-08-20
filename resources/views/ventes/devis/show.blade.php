@@ -30,11 +30,11 @@
         <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div class="min-w-0">
                 <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-[17px] font-bold text-gray-900 font-mono">{{ $quote->number }}</h1>
+                    <h1 class="text-[20px] font-bold text-gray-900 font-mono">{{ $quote->number }}</h1>
                     <x-workflow.status-badge :status="$quote->status" :label="$quote->status_label" />
                 </div>
                 <p class="text-[11px] font-bold text-gray-500 mt-1.5">Client</p>
-                <p class="text-[14px] text-gray-800">{{ $quote->client?->name ?? '—' }}</p>
+                <p class="text-[13px] text-gray-800">{{ $quote->client?->name ?? '—' }}</p>
             </div>
 
             {{-- ════════════════════════════════════════════════════════════════
@@ -134,7 +134,7 @@
                 {{-- ─────── EN ATTENTE DE VALIDATION ─────────────────────────────────────────── --}}
                 @if($quote->status === 'en_attente_validation')
                     {{-- Badge info --}}
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[13px] text-yellow-700 bg-yellow-50 border border-yellow-200">
                         <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -168,7 +168,7 @@
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
                             <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4" @click.outside="open = false">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif de refus</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Expliquez le motif du refus (obligatoire)…" autofocus></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-emerald-500 focus:border-emerald-500" placeholder="Expliquez le motif du refus (obligatoire)…" autofocus></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $btnOutline }}">Annuler</button>
                                     <button type="submit" class="{{ $btnPrimary }} bg-emerald-700 hover:bg-emerald-800">Confirmer le refus</button>
@@ -193,7 +193,7 @@
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
                             <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4" @click.outside="open = false">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif d'annulation</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500" placeholder="Expliquez le motif de l'annulation (obligatoire)…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-emerald-500 focus:border-emerald-500" placeholder="Expliquez le motif de l'annulation (obligatoire)…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $btnOutline }}">Fermer</button>
                                     <button type="submit" class="{{ $btnPrimary }} bg-red-600 hover:bg-red-700">Confirmer l'annulation</button>
@@ -239,7 +239,7 @@
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
                             <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif d'annulation</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-[13px]" placeholder="Motif obligatoire…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $btnOutline }}">Fermer</button>
                                     <button type="submit" class="{{ $btnPrimary }} bg-red-600 hover:bg-red-700">Confirmer</button>
@@ -350,12 +350,12 @@
         {{-- Left: Info card --}}
         <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
             <h2 class="text-[13px] font-bold text-emerald-900 uppercase tracking-wide">Informations</h2>
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px]">
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Client</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Client</dt>
                     <dd class="mt-0.5 font-semibold text-gray-900">{{ $quote->client?->name ?? '—' }}</dd>
                     @if($quote->client?->trade_name)
-                    <dd class="text-gray-500 text-xs">{{ $quote->client->trade_name }}</dd>
+                    <dd class="text-gray-500 text-[12px]">{{ $quote->client->trade_name }}</dd>
                     @endif
                     @if($quote->client)
                     <dd class="mt-1">
@@ -364,36 +364,36 @@
                         @else
                             <span class="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[11px] font-medium bg-emerald-100 text-emerald-700">Assujetti TVA</span>
                         @endif
-                        @if($quote->client->tax_regime)<span class="ml-1 text-xs text-gray-400">{{ $quote->client->tax_regime }}</span>@endif
+                        @if($quote->client->tax_regime)<span class="ml-1 text-[12px] text-gray-400">{{ $quote->client->tax_regime }}</span>@endif
                     </dd>
                     @endif
                 </div>
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numéro</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Numéro</dt>
                     <dd class="mt-0.5 font-mono font-semibold text-gray-900">{{ $quote->number }}</dd>
                     @if($quote->reference)
-                    <dd class="text-gray-500 text-xs">Réf : {{ $quote->reference }}</dd>
+                    <dd class="text-gray-500 text-[12px]">Réf : {{ $quote->reference }}</dd>
                     @endif
                 </div>
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Date d'émission</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Date d'émission</dt>
                     <dd class="mt-0.5 text-gray-700">{{ $quote->issued_at?->format('d/m/Y') ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Date de validité</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Date de validité</dt>
                     <dd class="mt-0.5 {{ $quote->expires_at?->isPast() && !in_array($quote->status, ['accepte','annule']) ? 'text-red-600 font-medium' : 'text-gray-700' }}">
                         {{ $quote->expires_at?->format('d/m/Y') ?? '—' }}
                     </dd>
                 </div>
                 @if($quote->notes)
                 <div class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Notes</dt>
                     <dd class="mt-0.5 text-gray-700 whitespace-pre-wrap">{{ $quote->notes }}</dd>
                 </div>
                 @endif
                 @if($quote->convertedOrder)
                 <div class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Commande associée</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Commande associée</dt>
                     <dd class="mt-0.5">
                         <a href="{{ route('ventes.commandes.show', $quote->convertedOrder) }}"
                            class="text-blue-600 hover:text-blue-800 font-mono font-semibold">
@@ -408,23 +408,23 @@
         {{-- Right: Summary --}}
         <div class="bg-white rounded-[4px] border border-gray-300 p-5 space-y-3 h-fit">
             <h2 class="text-[13px] font-bold text-emerald-900 uppercase tracking-wide">Récapitulatif</h2>
-            <div class="flex justify-between text-sm text-gray-600">
+            <div class="flex justify-between text-[13px] text-gray-600">
                 <span>Sous-total HT</span>
                 <span class="font-medium tabular-nums">{{ number_format($quote->subtotal_ht, 0, ',', ' ') }} FCFA</span>
             </div>
-            <div class="flex justify-between text-sm text-gray-600">
+            <div class="flex justify-between text-[13px] text-gray-600">
                 <span>Total TVA</span>
                 <span class="font-medium tabular-nums">{{ number_format($quote->total_tax, 0, ',', ' ') }} FCFA</span>
             </div>
             @if($quote->global_discount_amount > 0)
-            <div class="flex justify-between text-sm text-gray-600">
+            <div class="flex justify-between text-[13px] text-gray-600">
                 <span>Remise globale</span>
                 <span class="font-medium tabular-nums text-orange-600">— {{ number_format($quote->global_discount_amount, 0, ',', ' ') }} FCFA</span>
             </div>
             @endif
             <div class="border-t border-gray-200 pt-3 flex justify-between">
-                <span class="text-base font-bold text-gray-900">Total TTC</span>
-                <span class="text-base font-bold text-emerald-800 tabular-nums">{{ number_format($quote->total_ttc, 0, ',', ' ') }} FCFA</span>
+                <span class="text-[13px] font-bold text-gray-900">Total TTC</span>
+                <span class="text-[13px] font-bold text-emerald-800 tabular-nums">{{ number_format($quote->total_ttc, 0, ',', ' ') }} FCFA</span>
             </div>
         </div>
     </div>
@@ -438,7 +438,7 @@
             <h2 class="text-[13px] font-bold text-emerald-900 uppercase tracking-wide">Lignes du devis</h2>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full divide-y divide-gray-200 text-sm">
+            <table class="w-full divide-y divide-gray-200 text-[13px]">
                 <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
                         <th class="px-4 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">#</th>
@@ -454,7 +454,7 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse($quote->items as $item)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-3 py-1.5 text-gray-400 text-xs">{{ $loop->iteration }}</td>
+                        <td class="px-3 py-1.5 text-gray-400 text-[12px]">{{ $loop->iteration }}</td>
                         <td class="px-3 py-1.5 text-gray-900">{{ $item->description }}</td>
                         <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
                         <td class="px-3 py-1.5 text-right text-gray-700 tabular-nums">{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
@@ -465,7 +465,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-10 text-center text-gray-400 text-sm">Aucune ligne.</td>
+                        <td colspan="8" class="px-4 py-10 text-center text-gray-400 text-[13px]">Aucune ligne.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -482,7 +482,7 @@
     {{-- ── Workflow : boutons d'action + historique de validation ─────────── --}}
     <div class="border border-gray-200 rounded-[4px] p-5">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <h2 class="text-[13px] font-semibold text-gray-700 flex items-center gap-2">
                 <svg class="size-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                 </svg>
@@ -493,7 +493,7 @@
 
         {{-- Alerte si refusé --}}
         @if($quote->rejection_reason)
-            <div class="mb-4 rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
+            <div class="mb-4 rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-[13px] text-orange-800">
                 <strong>Motif de refus :</strong> {{ $quote->rejection_reason }}
                 @if($quote->rejected_at)
                     <span class="text-orange-500 ml-1">({{ $quote->rejected_at->format('d/m/Y H:i') }})</span>

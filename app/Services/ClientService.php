@@ -104,7 +104,17 @@ class ClientService
         if (!$client) {
             return;
         }
-        if ($client->is_blocked) {
+        // [Gestion] Les DEUX drapeaux de blocage font foi.
+        //
+        // `is_blocked` et `blocage_commande` sont deux cases distinctes du
+        // formulaire client, et CreditDecisionService les ecrit toujours
+        // ensemble. Mais cette garde ne testait que `is_blocked` : un
+        // gestionnaire qui cochait « Blocage commande » croyait bloquer le
+        // client alors qu'aucun document n'etait refuse.
+        //
+        // Un drapeau de blocage qui n'a pas d'effet est pire qu'un drapeau
+        // absent : il donne une fausse assurance. Les deux bloquent desormais.
+        if ($client->is_blocked || $client->blocage_commande) {
             throw new \RuntimeException(
                 "Client {$client->name} bloque" . ($client->blocked_reason ? " : {$client->blocked_reason}" : '') .
                 " - aucun devis, commande ou facture ne peut etre cree."

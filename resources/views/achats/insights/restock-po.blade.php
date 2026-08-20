@@ -14,12 +14,12 @@
 
 <div class="space-y-3">
     <div>
-        <h1 class="text-[16px] font-bold text-gray-900">⚡ Générer bons de commande depuis réappro</h1>
-        <p class="text-sm text-gray-500">Sélectionnez les articles à commander. Un PO en brouillon sera créé par fournisseur.</p>
+        <h1 class="text-[15px] font-bold text-gray-900">⚡ Générer bons de commande depuis réappro</h1>
+        <p class="text-[13px] text-gray-500">Sélectionnez les articles à commander. Un PO en brouillon sera créé par fournisseur.</p>
     </div>
 
     @if($grouped->isEmpty())
-        <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] p-6 text-center text-emerald-700 text-sm">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-[4px] p-6 text-center text-emerald-700 text-[13px]">
             ✓ Aucun article ne nécessite de réapprovisionnement actuellement.
         </div>
     @else
@@ -36,16 +36,16 @@
                 <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
                     <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
                         <div>
-                            <h2 class="text-sm font-semibold text-gray-700">
+                            <h2 class="text-[13px] font-semibold text-gray-700">
                                 🏢 {{ $supplierName }}
                                 @if(!$hasSupplier)
-                                <span class="text-xs text-red-600 ml-2">(à attribuer manuellement)</span>
+                                <span class="text-[12px] text-red-600 ml-2">(à attribuer manuellement)</span>
                                 @endif
                             </h2>
-                            <p class="text-xs text-gray-500">{{ $items->count() }} article(s) en alerte</p>
+                            <p class="text-[12px] text-gray-500">{{ $items->count() }} article(s) en alerte</p>
                         </div>
                         @if($hasSupplier)
-                        <label class="text-xs text-gray-600 cursor-pointer flex items-center gap-1">
+                        <label class="text-[12px] text-gray-600 cursor-pointer flex items-center gap-1">
                             <input type="checkbox" @change="toggleAll('{{ $supplierId }}', $event.target.checked)"
                                    class="rounded border-gray-300 text-blue-600 focus:ring-emerald-500">
                             Tout sélectionner
@@ -53,13 +53,13 @@
                         @endif
                     </div>
                     @if(!$hasSupplier)
-                        <div class="px-5 py-3 text-xs text-red-700 bg-red-50">
+                        <div class="px-5 py-3 text-[12px] text-red-700 bg-red-50">
                             Ces articles n'ont pas de fournisseur par défaut.
                             <a href="{{ route('stocks.index') }}" class="underline">Affecter un fournisseur</a>
                             ou créer manuellement un PO.
                         </div>
                     @else
-                    <table class="w-full text-sm">
+                    <table class="w-full text-[13px]">
                         <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                             <tr>
                                 <th class="px-3 py-1.5 w-12"></th>
@@ -83,10 +83,10 @@
                                                class="rounded border-gray-300 text-blue-600">
                                     </td>
                                     <td class="px-3 py-1.5">
-                                        <span class="font-mono text-xs text-blue-700">{{ $item->reference }}</span>
-                                        <p class="text-sm">{{ $item->name }}</p>
+                                        <span class="font-mono text-[12px] text-blue-700">{{ $item->reference }}</span>
+                                        <p class="text-[13px]">{{ $item->name }}</p>
                                     </td>
-                                    <td class="px-3 py-1.5 text-right text-xs text-orange-700 tabular-nums">
+                                    <td class="px-3 py-1.5 text-right text-[12px] text-orange-700 tabular-nums">
                                         {{ number_format($item->available_qty, 0, ',', ' ') }} / {{ $item->reorder_point }}
                                     </td>
                                     <td class="px-3 py-1.5 text-right tabular-nums text-emerald-600">{{ number_format($item->suggested_qty, 0, ',', ' ') }}</td>
@@ -97,14 +97,14 @@
                                                min="1" step="1" inputmode="numeric"
                                                value="{{ (int) $item->suggested_qty }}"
                                                :disabled="!selected[`{{ $key }}`]"
-                                               class="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-right">
+                                               class="w-24 border border-gray-300 rounded px-2 py-1 text-[13px] text-right">
                                     </td>
                                     <td class="px-3 py-1.5 text-right">
                                         <input type="number" :name="`items[{{ $key }}][unit_price]`"
                                                min="0" step="0.01"
                                                value="{{ (int) ($item->last_purchase_price ?? $item->purchase_price ?? 0) }}"
                                                :disabled="!selected[`{{ $key }}`]"
-                                               class="w-28 border border-gray-300 rounded px-2 py-1 text-sm text-right">
+                                               class="w-28 border border-gray-300 rounded px-2 py-1 text-[13px] text-right">
                                     </td>
                                     <td class="px-3 py-1.5 text-right tabular-nums text-gray-700">
                                         {{ $fmt(($item->last_purchase_price ?? $item->purchase_price ?? 0) * $item->suggested_qty) }}
@@ -119,12 +119,12 @@
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
-            <a href="{{ route('stocks.dashboard.restock') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-5 py-1.5 rounded-[4px]">Annuler</a>
+            <a href="{{ route('stocks.dashboard.restock') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-[13px] font-medium px-5 py-1.5 rounded-[4px]">Annuler</a>
             <button type="submit" :disabled="Object.values(selected).filter(Boolean).length === 0"
                     :class="Object.values(selected).filter(Boolean).length === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800 text-white'"
-                    class="text-sm font-medium px-6 py-1.5 rounded-[4px]">
+                    class="text-[13px] font-medium px-6 py-1.5 rounded-[4px]">
                 Générer le(s) bon(s) de commande
-                <span x-show="Object.values(selected).filter(Boolean).length > 0" class="text-xs">
+                <span x-show="Object.values(selected).filter(Boolean).length > 0" class="text-[12px]">
                     (<span x-text="Object.values(selected).filter(Boolean).length"></span> articles)
                 </span>
             </button>

@@ -207,15 +207,19 @@ class QuoteService
 
     // ── Workflow transitions ──────────────────────────────────────────────────
 
-    /** brouillon → envoye */
-    public function send(Quote $quote): Quote
-    {
-        if ($quote->status !== 'brouillon') {
-            throw new \RuntimeException('Seul un devis en brouillon peut être marqué comme envoyé.');
-        }
-        $quote->update(['status' => 'envoye']);
-        return $quote->fresh();
-    }
+    /*
+     * [BUG-A3-SALES-ZERO-PRICE-026] `send()` a été retirée.
+     *
+     * Elle faisait passer un devis de « brouillon » à « envoye » sans aucun
+     * contrôle commercial : ni prix nul, ni prix plancher, ni stratégie
+     * d'approvisionnement. Aucun appelant de production ne l'utilisait — seuls
+     * six tests s'en servaient comme fixture — mais une méthode publique capable
+     * de court-circuiter `CommercialWorkflowService` reste une porte ouverte,
+     * qu'elle soit franchie ou non aujourd'hui.
+     *
+     * Le passage à un statut engageant relève désormais du seul
+     * `CommercialWorkflowService`, qui applique les gardes.
+     */
 
     /** envoye → accepte (validation client) */
     public function accept(Quote $quote): Quote
@@ -283,6 +287,41 @@ class QuoteService
     }
 
     /**
+     * Refuse un document portant une ligne dont le montant net est nul.
+     *
+     * [BUG-A3-SALES-ZERO-PRICE-026] La quote-part de remise globale entre dans
+     * le calcul : une remise de 100 % au niveau du document rend gratuites des
+     * lignes dont le prix unitaire est pourtant positif.
+     *
+     * @throws \RuntimeException
+     */
+    private function assertAucuneLigneGratuite(Quote $quote): void
+    {
+        $sousTotal = (float) ($quote->subtotal_ht ?? 0);
+        $ratioGlobal = $sousTotal > 0
+            ? (float) ($quote->global_discount_amount ?? 0) / $sousTotal
+            : 0.0;
+
+        foreach ($quote->items()->with('product')->get() as $ligne) {
+            $net = \App\Services\Sales\CommercialLinePriceRule::montantNetLigne(
+                (float) $ligne->unit_price,
+                (float) $ligne->quantity,
+                (float) ($ligne->discount_percent ?? 0),
+                $ratioGlobal,
+                $quote->currency_code,
+            );
+
+            if (\App\Services\Sales\CommercialLinePriceRule::estGratuit($net, $quote->currency_code)) {
+                throw new \RuntimeException(
+                    \App\Services\Sales\CommercialLinePriceRule::messageGratuite(
+                        $ligne->product?->name ?? $ligne->description
+                    )
+                );
+            }
+        }
+    }
+
+    /**
      * Convert this quote into a confirmed sales order.
      * Requires status = 'valide' (nouveau workflow interne) ou 'accepte' (ancien workflow client).
      */
@@ -304,6 +343,17 @@ class QuoteService
         // devis reste consultable et corrigeable, mais ne se convertit plus.
         $resolver = app(\App\Services\Sales\FulfillmentStrategyResolver::class);
         $resolver->assertLines($resolver->lignesDe($quote));
+
+        // [BUG-A3-SALES-ZERO-PRICE-026 — défense en profondeur] Même esprit pour
+        // le prix. Exiger le statut « validé » suffit tant que toutes les
+        // transitions passent par les gardes ; cela ne protège ni des données
+        // antérieures au lot, ni d'un import, ni d'une écriture directe, ni d'un
+        // chemin de transition qui viendrait à manquer demain.
+        //
+        // Le contrôle appelle la MÊME règle que la saisie et le workflow : une
+        // formule dupliquée finirait par diverger, et c'est la plus permissive
+        // qui ferait foi.
+        $this->assertAucuneLigneGratuite($quote);
 
         return DB::transaction(function () use ($quote) {
             $company = currentCompany();

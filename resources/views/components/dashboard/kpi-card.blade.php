@@ -52,15 +52,15 @@
             {{-- Label + Value --}}
             <div class="min-w-0 flex-1">
                 <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 truncate">{{ $label }}</p>
-                <p class="mt-2.5 text-3xl font-black text-gray-900 tabular-nums leading-none tracking-tight"
+                <p class="mt-2.5 text-[20px] font-black text-gray-900 tabular-nums leading-none tracking-tight"
                    @if($counter) x-text="formatted()" @else data-value="{{ number_format($value, 0, ',', ' ') }}" @endif>
                     @if(!$counter){{ number_format($value, 0, ',', ' ') }}@endif
                 </p>
                 @if($unit)
-                <p class="mt-1 text-xs font-medium text-gray-400">{{ $unit }}</p>
+                <p class="mt-1 text-[12px] font-medium text-gray-400">{{ $unit }}</p>
                 @endif
                 @if($sub)
-                <p class="mt-0.5 text-xs text-gray-400">{{ $sub }}</p>
+                <p class="mt-0.5 text-[12px] text-gray-400">{{ $sub }}</p>
                 @endif
             </div>
 

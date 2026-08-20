@@ -18,7 +18,7 @@
     $txa   = 'w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white resize-none focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $secH  = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
+    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-[13px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
 @endphp
 <div class="max-w-7xl"
      x-data="purchaseRequestForm()">
@@ -48,10 +48,12 @@
                 <section class="border border-gray-200 rounded-[4px]">
                     <div class="{{ $secH }}">Informations générales</div>
                     <div class="p-4 grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
+                        {{-- [UI — doublon retiré] Le numéro auto en lecture seule répétait le titre
+                             de la page. Son astérisque rouge était de plus dépourvu de sens sur un
+                             champ non saisissable. Le statut est conservé. --}}
                         <div class="sm:col-span-3">
-                            <label class="{{ $lbl }}">N° demande <span class="text-red-600">*</span></label>
-                            <input type="text" value="Auto à la création" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly>
-                            <span class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">● Brouillon</span>
+                            <label class="{{ $lbl }}">Statut</label>
+                            <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">● Brouillon</span>
                         </div>
                         <div class="sm:col-span-3"><label class="{{ $lbl }}">Demandeur</label><input type="text" value="{{ auth()->user()->name }}" class="{{ $inp }} bg-gray-50 text-gray-600" readonly></div>
                         <div class="sm:col-span-3"><label class="{{ $lbl }}">Département / Service <span class="text-red-600">*</span></label><input type="text" name="department" value="{{ old('department') }}" placeholder="Ex: Production, Comptabilité…" class="{{ $inp }}"></div>
@@ -70,7 +72,7 @@
                             <label class="{{ $lbl }}">Dépôt de destination</label>
                             <div class="relative"><select name="warehouse_id" class="{{ $lk }}"><option value="">—</option>@foreach($warehouses ?? [] as $w)<option value="{{ $w->id }}" @selected(old('warehouse_id')==$w->id)>{{ $w->code }} – {{ $w->name }}</option>@endforeach</select>{!! $caret !!}</div>
                         </div>
-                        <div class="sm:col-span-3"><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference') }}" class="{{ $inp }} font-mono" placeholder="PROJ-2026-0008"></div>
+                        <div class="sm:col-span-3"><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference') }}" class="{{ $inp }} font-mono" placeholder="Ex. : PROJ-2026-0008"></div>
                         <div class="sm:col-span-3"><label class="{{ $lbl }}">Justification / Objet <span class="text-red-600">*</span></label><input type="text" name="justification" value="{{ old('justification') }}" placeholder="Raison de la demande…" class="{{ $inp }}"></div>
 
                         <div class="sm:col-span-12"><label class="{{ $lbl }}">Notes</label><textarea name="notes" rows="2" class="{{ $txa }}" placeholder="Informations complémentaires…">{{ old('notes') }}</textarea></div>
@@ -87,7 +89,7 @@
                     </div>
                     <div class="grid grid-cols-1 xl:grid-cols-12">
                         <div class="xl:col-span-9 overflow-x-auto border-r border-gray-200 p-4 pb-0">
-                            <table class="w-full text-sm">
+                            <table class="w-full text-[13px]">
                                 <thead class="bg-[#eef5f0] border-b border-gray-300">
                                     <tr>
                                         <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-8">#</th>
@@ -102,7 +104,7 @@
                                 <tbody class="divide-y divide-gray-100">
                                     <template x-for="(line, index) in lines" :key="line.id">
                                         <tr class="hover:bg-gray-50">
-                                            <td class="px-2 py-2 text-gray-400 text-xs" x-text="index + 1"></td>
+                                            <td class="px-2 py-2 text-gray-400 text-[12px]" x-text="index + 1"></td>
                                             <td class="px-2 py-2">
                                                 <select :name="`items[${index}][product_id]`"
                                                         data-product-select
@@ -121,7 +123,7 @@
                                             </td>
                                             <td class="px-2 py-2"><input type="number" :name="`items[${index}][quantity]`" x-model="line.quantity" @input="calcLine(index)" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
                                             <td class="px-2 py-2"><input type="number" :name="`items[${index}][estimated_price]`" x-model="line.estimated_price" @input="calcLine(index)" min="0" step="1" class="{{ $tdIn }} text-right"></td>
-                                            <td class="px-2 py-2 text-right font-medium tabular-nums text-xs whitespace-nowrap" x-text="formatAmount(line.total)"></td>
+                                            <td class="px-2 py-2 text-right font-medium tabular-nums text-[12px] whitespace-nowrap" x-text="formatAmount(line.total)"></td>
                                             <td class="px-2 py-2"><input type="text" :name="`items[${index}][notes]`" x-model="line.notes" placeholder="Note..." class="{{ $tdIn }}"></td>
                                             <td class="px-2 py-2 text-center">
                                                 <button type="button" @click="removeLine(index)" class="text-gray-300 hover:text-red-500 transition-colors">
@@ -139,7 +141,7 @@
                             <div class="flex justify-between text-[13px] text-gray-600"><span x-text="lines.length + ' article(s)'"></span></div>
                             <div class="border-t-2 border-emerald-200 pt-2.5">
                                 <p class="text-[12px] font-bold text-gray-700">Total estimé</p>
-                                <p class="text-[17px] font-bold text-emerald-700 tabular-nums" x-text="formatAmount(totalEstimated)"></p>
+                                <p class="text-[20px] font-bold text-emerald-700 tabular-nums" x-text="formatAmount(totalEstimated)"></p>
                             </div>
                         </div>
                     </div>

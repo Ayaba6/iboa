@@ -16,7 +16,7 @@
 
     {{-- Archive form — OUTSIDE la fiche pour éviter la collision _method --}}
     <form id="archiveClientForm" action="{{ route('clients.destroy', $client) }}" method="POST"
-          onsubmit="return confirm('Archiver ce client ?')" class="hidden">
+          data-confirm="Archiver {{ addslashes($client->displayName()) }} ?" class="hidden">
         @csrf @method('DELETE')
     </form>
 

@@ -19,7 +19,9 @@ class ControlPlanController extends Controller
     public function __construct()
     {
         $this->middleware('permission:production.view')->only(['index', 'show']);
-        $this->middleware('permission:production.update')->except(['index', 'show']);
+        // Définir un plan de contrôle est un acte QUALITÉ : `quality.manage` ouvre
+        // au même titre que `production.update`. Ajout par OU, rien n'est retiré.
+        $this->middleware('permission:production.update|quality.manage')->except(['index', 'show']);
     }
 
     public function index(Request $request): View

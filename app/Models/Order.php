@@ -297,6 +297,26 @@ class Order extends Model
      * exprimable proprement en SQL : il est appliqué par le contrôleur du tableau
      * via isFinanciallyEligibleForProduction() — même méthode que la gate OF.
      */
+    /**
+     * Commandes auxquelles un ordre de fabrication peut être RATTACHÉ.
+     *
+     * À ne pas confondre avec `eligibleForProduction()`, qui répond à une autre
+     * question : « laquelle puis-je LANCER maintenant ». Le lancement suppose en
+     * plus l'approbation production ou un bon de préparation, et la couverture
+     * financière ; le rattachement, non — un ordre se prépare en brouillon avant
+     * que ces feux verts n'arrivent.
+     *
+     * Ce qui est exigé ici tient donc au seul rattachement : la commande est
+     * encore ouverte, elle porte au moins un article fabriqué à la commande, et
+     * aucun ordre actif ne la vise déjà.
+     */
+    public function scopeAttachableToProduction($query)
+    {
+        return $query->whereIn('status', ['confirme', 'en_preparation'])
+            ->whereHas('items.product', fn ($q) => $q->where('production_mode', 'mto'))
+            ->whereDoesntHave('productionOrders', fn ($q) => $q->where('status', '!=', 'annule'));
+    }
+
     public function scopeEligibleForProduction($query)
     {
         return $query->whereIn('status', ['confirme', 'en_preparation'])

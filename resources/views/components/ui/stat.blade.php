@@ -44,22 +44,22 @@ $classes = 'card p-5 flex flex-col gap-3' . ($href ? ' card-interactive cursor-p
 @endif
     <div class="flex items-center justify-between">
         @if($icon)
-        <div class="w-10 h-10 rounded-xl {{ $c['bg'] }} {{ $c['text'] }} flex items-center justify-center text-xl ring-1 {{ $c['ring'] }}">
+        <div class="w-10 h-10 rounded-xl {{ $c['bg'] }} {{ $c['text'] }} flex items-center justify-center text-[20px] ring-1 {{ $c['ring'] }}">
             {{ $icon }}
         </div>
         @endif
         @if($trend)
-        <span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full {{ $trendPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">
+        <span class="ml-auto text-[12px] font-semibold px-2 py-0.5 rounded-full {{ $trendPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">
             {{ $trend }}
         </span>
         @endif
     </div>
     <div>
-        <p class="text-2xl font-bold text-gray-900 leading-tight tabular-nums">{{ $value }}</p>
+        <p class="text-[20px] font-bold text-gray-900 leading-tight tabular-nums">{{ $value }}</p>
         @if($sub)
-        <p class="text-xs text-gray-500 mt-0.5">{{ $sub }}</p>
+        <p class="text-[12px] text-gray-500 mt-0.5">{{ $sub }}</p>
         @endif
-        <p class="text-sm font-medium text-gray-600 mt-1">{{ $label }}</p>
+        <p class="text-[13px] font-medium text-gray-600 mt-1">{{ $label }}</p>
     </div>
     {{ $slot }}
 @if($href)

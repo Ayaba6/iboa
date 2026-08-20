@@ -50,7 +50,7 @@
                     <g x-html="icon(toast.type)"></g>
                 </svg>
                 {{-- Message --}}
-                <p class="flex-1 text-sm text-gray-700 leading-snug" x-text="toast.message"></p>
+                <p class="flex-1 text-[13px] text-gray-700 leading-snug" x-text="toast.message"></p>
                 {{-- Close --}}
                 <button @click="dismiss(toast.id)"
                         class="flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors -mt-0.5">

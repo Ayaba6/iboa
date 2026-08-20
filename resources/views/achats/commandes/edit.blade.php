@@ -15,7 +15,7 @@
 <div class="space-y-3">
 
     <div class="flex items-center justify-between">
-        <h1 class="text-[16px] font-bold text-gray-900">Modifier la commande <span class="font-mono text-amber-600">{{ $purchaseOrder->number }}</span></h1>
+        <h1 class="text-[15px] font-bold text-gray-900">Modifier la commande <span class="font-mono text-amber-600">{{ $purchaseOrder->number }}</span></h1>
     </div>
 
     {{-- [CONCURRENCE] Bandeau de verrou d'édition --}}

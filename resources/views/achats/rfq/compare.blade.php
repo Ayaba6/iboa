@@ -18,10 +18,10 @@
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">📊 Comparatif des cotations</h1>
-            <p class="text-sm text-gray-500">{{ $rfq->title }} · {{ $compare['quotes']->count() }} fournisseur(s) coté(s) sur {{ $compare['items']->count() }} ligne(s)</p>
+            <h1 class="text-[15px] font-bold text-gray-900">📊 Comparatif des cotations</h1>
+            <p class="text-[13px] text-gray-500">{{ $rfq->title }} · {{ $compare['quotes']->count() }} fournisseur(s) coté(s) sur {{ $compare['items']->count() }} ligne(s)</p>
         </div>
-        <a href="{{ route('achats.rfq.show', $rfq) }}" class="border border-gray-300 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-[4px]">← Retour à la RFQ</a>
+        <a href="{{ route('achats.rfq.show', $rfq) }}" class="border border-gray-300 text-gray-700 text-[13px] font-medium px-3 py-1.5 rounded-[4px]">← Retour à la RFQ</a>
     </div>
 
     @if(empty($compare['quotes']) || $compare['quotes']->isEmpty())
@@ -46,9 +46,9 @@
                     @endif
                 </div>
             </div>
-            <p class="mt-3 text-[19px] font-bold tabular-nums {{ $isMin ? 'text-emerald-700' : 'text-gray-900' }}">{{ $fmt($row['total_ttc']) }}</p>
-            <p class="text-xs text-gray-500">FCFA TTC · HT {{ $fmt($row['subtotal_ht']) }}</p>
-            <div class="mt-3 text-xs text-gray-600 space-y-0.5">
+            <p class="mt-3 text-[20px] font-bold tabular-nums {{ $isMin ? 'text-emerald-700' : 'text-gray-900' }}">{{ $fmt($row['total_ttc']) }}</p>
+            <p class="text-[12px] text-gray-500">FCFA TTC · HT {{ $fmt($row['subtotal_ht']) }}</p>
+            <div class="mt-3 text-[12px] text-gray-600 space-y-0.5">
                 <p>Délai : <strong>{{ $row['delivery_days'] ?? '—' }} j</strong></p>
                 <p>Validité : {{ $row['valid_until'] ? \Carbon\Carbon::parse($row['valid_until'])->format('d/m/Y') : '—' }}</p>
             </div>
@@ -57,7 +57,7 @@
                 <form action="{{ route('achats.rfq.award', [$rfq, $row['quote']->id]) }}" method="POST"
                       onsubmit="return confirm('Attribuer la RFQ à {{ addslashes($row['supplier_name']) }} ? Un PO en brouillon sera créé.')">
                     @csrf
-                    <button type="submit" class="mt-3 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-2.5 py-1.5 rounded-[4px]">
+                    <button type="submit" class="mt-3 w-full bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-2.5 py-1.5 rounded-[4px]">
                         🏆 Attribuer & générer PO
                     </button>
                 </form>
@@ -70,10 +70,10 @@
     {{-- Matrice détaillée par ligne --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-100">
-            <h2 class="text-sm font-semibold text-gray-700">Détail par ligne — meilleur prix en vert</h2>
+            <h2 class="text-[13px] font-semibold text-gray-700">Détail par ligne — meilleur prix en vert</h2>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-[13px]">
                 <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                     <tr>
                         <th class="px-3 py-1.5 text-left">Ligne</th>
@@ -88,9 +88,9 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-3 py-1.5">
                             @if($item->product)
-                                <span class="font-mono text-xs text-blue-700">{{ $item->product->reference }}</span><br>
+                                <span class="font-mono text-[12px] text-blue-700">{{ $item->product->reference }}</span><br>
                             @endif
-                            <span class="text-sm">{{ $item->description }}</span>
+                            <span class="text-[13px]">{{ $item->description }}</span>
                         </td>
                         <td class="px-3 py-1.5 text-right tabular-nums text-gray-700">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
                         @foreach($compare['quotes'] as $q)
@@ -101,7 +101,7 @@
                             <td class="px-3 py-1.5 text-right tabular-nums {{ $isMin ? 'bg-emerald-50 text-emerald-800 font-semibold' : '' }}">
                                 @if($qi)
                                     {{ $fmt($qi->unit_price) }}
-                                    <p class="text-xs {{ $isMin ? 'text-emerald-600' : 'text-gray-500' }}">HT {{ $fmt($qi->line_total_ht) }}</p>
+                                    <p class="text-[12px] {{ $isMin ? 'text-emerald-600' : 'text-gray-500' }}">HT {{ $fmt($qi->line_total_ht) }}</p>
                                 @else
                                     <span class="text-gray-300">—</span>
                                 @endif
@@ -112,7 +112,7 @@
                 </tbody>
                 <tfoot class="border-t-2 border-gray-200 bg-gray-50 font-bold">
                     <tr>
-                        <td class="px-3 py-1.5 text-right text-gray-500 text-xs uppercase" colspan="2">Total TTC</td>
+                        <td class="px-3 py-1.5 text-right text-gray-500 text-[12px] uppercase" colspan="2">Total TTC</td>
                         @foreach($compare['quotes'] as $q)
                         @php $isMinTotal = $compare['summary'][0]['quote']->id === $q->id; @endphp
                         <td class="px-3 py-1.5 text-right tabular-nums {{ $isMinTotal ? 'text-emerald-700' : 'text-gray-900' }}">{{ $fmt($q->total_ttc) }}</td>

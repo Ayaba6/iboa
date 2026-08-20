@@ -20,10 +20,10 @@
     <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
         <div>
             @if($title)
-            <h3 class="text-sm font-semibold text-gray-800">{{ $title }}</h3>
+            <h3 class="text-[13px] font-semibold text-gray-800">{{ $title }}</h3>
             @endif
             @if($subtitle)
-            <p class="text-xs text-gray-500 mt-0.5">{{ $subtitle }}</p>
+            <p class="text-[12px] text-gray-500 mt-0.5">{{ $subtitle }}</p>
             @endif
         </div>
         @if($hasHeader)

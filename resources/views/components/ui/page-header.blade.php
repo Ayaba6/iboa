@@ -33,12 +33,12 @@
         <div class="min-w-0">
             <div class="flex items-center gap-2 mb-0.5">
                 @if($icon)
-                <span class="text-2xl leading-none">{{ $icon }}</span>
+                <span class="text-[20px] leading-none">{{ $icon }}</span>
                 @endif
-                <h1 class="text-2xl font-bold text-gray-900 leading-tight truncate">{{ $title }}</h1>
+                <h1 class="text-[20px] font-bold text-gray-900 leading-tight truncate">{{ $title }}</h1>
             </div>
             @if($subtitle)
-            <p class="text-sm text-gray-500 mt-0.5">{{ $subtitle }}</p>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $subtitle }}</p>
             @endif
             @isset($meta)
             <div class="flex items-center gap-2 mt-2 flex-wrap">{{ $meta }}</div>

@@ -20,8 +20,8 @@
     {{-- Bandeau SAGE --}}
     <div class="bg-gradient-to-b from-[#eef5f0] to-white border border-gray-300 rounded-[4px] px-3 py-1.5 flex items-center justify-between">
         <div>
-            <h1 class="text-[17px] font-bold text-emerald-900">Contrats commerciaux</h1>
-            <p class="text-[11.5px] text-gray-500">{{ $contracts->total() }} contrat(s) — engagements pluriannuels vente / achat</p>
+            <h1 class="text-[20px] font-bold text-emerald-900">Contrats commerciaux</h1>
+            <p class="text-[11px] text-gray-500">{{ $contracts->total() }} contrat(s) — engagements pluriannuels vente / achat</p>
         </div>
         <a href="{{ route('ventes.contrats.create') }}"
            class="text-[13px] font-semibold text-white bg-emerald-700 hover:bg-emerald-800 px-4 py-1.5 rounded-full transition-colors">+ Nouveau contrat</a>
@@ -36,7 +36,7 @@
 
     {{-- Filtres --}}
     <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-3 flex flex-wrap items-center gap-2">
-        <select name="status" class="h-8 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white">
+        <select name="status" class="h-8 py-0 px-2 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white">
             <option value="">— Tous statuts —</option>
             @foreach(['brouillon' => 'Brouillon', 'actif' => 'Actif', 'suspendu' => 'Suspendu', 'termine' => 'Terminé', 'annule' => 'Annulé'] as $val => $label)
             <option value="{{ $val }}" @selected(request('status') === $val)>{{ $label }}</option>
@@ -52,7 +52,7 @@
 
     {{-- Table --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <table class="w-full text-[12.5px]">
+        <table class="w-full text-[12px]">
             <thead><tr class="bg-[#eef5f0] border-b border-gray-300">
                 <th class="{{ $th }} text-left">N° contrat</th>
                 <th class="{{ $th }} text-left">Description</th>
@@ -69,7 +69,7 @@
                 <tr class="border-b border-gray-100 last:border-0 odd:bg-white even:bg-gray-50/40 hover:bg-emerald-50/50">
                     <td class="px-3 py-1.5">
                         <a href="{{ route('ventes.contrats.show', $ct) }}" class="font-mono font-semibold text-emerald-800 hover:underline">{{ $ct->number }}</a>
-                        @if($ct->is_framework)<span class="ml-1 inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 align-middle">cadre</span>@endif
+                        @if($ct->is_framework)<span class="ml-1 inline-flex px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700 align-middle">cadre</span>@endif
                     </td>
                     <td class="px-3 py-1.5 text-gray-700 truncate max-w-[240px]">{{ $ct->description }}</td>
                     <td class="px-3 py-1.5 text-gray-600">{{ $ct->client?->name ?? $ct->supplier?->name ?? '—' }}</td>

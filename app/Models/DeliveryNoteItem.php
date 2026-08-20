@@ -13,6 +13,10 @@ class DeliveryNoteItem extends Model
     protected $fillable = [
         'delivery_note_id',
         'order_item_id',
+        // [Ventes §4.3] Ligne de préparation validée dont ce BL provient.
+        // NULL = aucune préparation (flux direct ou BL historique), jamais
+        // « préparation inconnue ».
+        'sales_picking_item_id',
         'product_id',
         'description',
         'unit_id',
@@ -43,9 +47,20 @@ class DeliveryNoteItem extends Model
         return $this->belongsTo(DeliveryNote::class);
     }
 
+    /**
+     * [BUG-A3-SALES-LINE-IMMUTABLE-012] `withTrashed()` VOLONTAIRE.
+     *
+     * Ce document est historique : il atteste ce qui a été préparé, livré ou
+     * facturé. Si la ligne de commande d'origine est retirée par la suite,
+     * Eloquent masquerait l'enregistrement et la relation rendrait `null` —
+     * une clé étrangère intacte en base, mais un lien invisible dans le code.
+     *
+     * Ne PAS reproduire ce `withTrashed()` sur les relations qui calculent la
+     * commande active : celles-là doivent exclure les lignes retirées.
+     */
     public function orderItem(): BelongsTo
     {
-        return $this->belongsTo(OrderItem::class);
+        return $this->belongsTo(OrderItem::class)->withTrashed();
     }
 
     public function product(): BelongsTo

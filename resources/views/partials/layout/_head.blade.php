@@ -46,9 +46,15 @@
 {{-- [Typo globale] Inter servie en local via @fontsource (bundlée app.css) — CDN bunny.net supprimé --}}
 @vite(['resources/css/app.css', 'resources/css/erp-theme.css', 'resources/js/app.js'])
 
-{{-- DataTables --}}
-<link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.tailwindcss.min.css">
-{{-- buttons.tailwindcss.min.css n'existe pas sur le CDN v3.0.2 — le style est géré en bas de ce fichier --}}
+{{-- [Sécurité] jQuery et DataTables ne sont plus chargés depuis un CDN.
+     Ils sont bundlés par Vite (voir resources/js/app.js), donc servis par le même
+     hôte que l'application et figés dans package-lock.json. Les balises retirées
+     n'avaient aucun attribut `integrity` : sans SRI, un CDN compromis exécutait du
+     JavaScript arbitraire dans une application qui manipule plafonds de crédit,
+     encaissements et factures. Elles créaient en outre une dépendance à Internet
+     sur un ERP servi en réseau local.
+     L'habillage DataTables est fourni par _layout-styles.blade.php, qui cible les
+     classes natives de DataTables 2 — l'intégration Tailwind du CDN était redondante. --}}
 
 {{-- [FIX BUG-009] Masque les flèches spinner des champs number : dans les tableaux
      de lignes serrés (devis/commande/facture) elles masquaient les chiffres. --}}
@@ -68,14 +74,6 @@
     window.fcfa = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n) + ' FCFA';
 </script>
 
-{{-- jQuery + DataTables : chargés une seule fois grâce à data-turbo-eval="false" --}}
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" data-turbo-eval="false"></script>
-<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js" data-turbo-eval="false"></script>
-<script src="https://cdn.datatables.net/2.0.8/js/dataTables.tailwindcss.min.js" data-turbo-eval="false"></script>
-<script src="https://cdn.datatables.net/buttons/3.0.2/js/dataTables.buttons.min.js" data-turbo-eval="false"></script>
-{{-- buttons.tailwindcss.min.js n'existe pas sur le CDN v3.0.2 — le rendu est géré dans initDataTables (app.js) --}}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" data-turbo-eval="false"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" data-turbo-eval="false"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" data-turbo-eval="false"></script>
-<script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.html5.min.js" data-turbo-eval="false"></script>
-<script src="https://cdn.datatables.net/buttons/3.0.2/js/buttons.print.min.js" data-turbo-eval="false"></script>
+{{-- jQuery et DataTables sont importés par resources/js/app.js (bundle Vite ci-dessus).
+     Les extensions d'export client (buttons, jszip, pdfmake) ont été retirées : elles
+     n'étaient utilisées par aucune vue, et l'export est rendu côté serveur. --}}

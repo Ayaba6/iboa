@@ -109,6 +109,79 @@ class DeliveryNoteService
     }
 
     /**
+     * [Ventes §4.3] Crée un bon de livraison depuis un bon de préparation VALIDÉ.
+     *
+     * Les quantités proviennent de `qty_validated` — ce qui a été réellement
+     * prélevé, contrôlé puis validé — et jamais de la commande. Chaque ligne
+     * porte `sales_picking_item_id`, ce qui rend l'invariant « livré ≤ préparé
+     * validé » vérifiable a posteriori par `a3:audit-pickings`.
+     *
+     * Le lot d'origine est repris de l'allocation quand elle est unique : une
+     * ligne préparée sur plusieurs lots ne peut pas être résumée à un seul, et
+     * on préfère ne rien affirmer plutôt qu'en choisir un arbitrairement.
+     */
+    public function createFromPicking(\App\Models\SalesPicking $picking): DeliveryNote
+    {
+        $pickingService = app(\App\Services\Sales\SalesPickingService::class);
+        $lines = $pickingService->deliverableLines($picking);
+
+        return DB::transaction(function () use ($picking, $lines, $pickingService) {
+            $company = currentCompany();
+            $order = $picking->order;
+
+            $dn = DeliveryNote::create([
+                'company_id' => $company->id,
+                'client_id' => $order->client_id,
+                'order_id' => $order->id,
+                'number' => $this->sequenceService->nextNumber($company, 'bon_livraison'),
+                'issued_at' => now()->toDateString(),
+                'status' => 'brouillon',
+                'warehouse_id' => $picking->warehouse_id ?? $order->delivery_warehouse_id,
+                'delivery_address' => $order->delivery_address,
+                'currency_code' => $order->currency_code,
+                'created_by' => Auth::id(),
+            ]);
+
+            $totalQty = 0;
+            foreach ($lines as $i => $line) {
+                /** @var \App\Models\SalesPickingItem $item */
+                $item = $line['item'];
+                $qty = $line['quantity'];
+
+                // Garde explicite : refuse le dépassement au moment de l'écriture,
+                // sans attendre que l'audit le constate après coup.
+                $pickingService->assertDeliverable($item, $qty);
+
+                $activeAllocations = $item->allocations
+                    ->where('status', '!=', \App\Models\SalesPickingAllocation::STATUS_ANNULEE);
+                $singleLot = $activeAllocations->count() === 1
+                    ? $activeAllocations->first()->stock_lot_id
+                    : null;
+
+                $orderItem = $item->orderItem;
+                $dn->items()->create([
+                    'order_item_id' => $item->order_item_id,
+                    'sales_picking_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'description' => $orderItem->description ?? '',
+                    'unit_id' => $item->unit_id,
+                    'quantity' => $qty,
+                    'nb_toles' => $orderItem->nb_toles ?? null,
+                    'metrage_par_tole' => $orderItem->metrage_par_tole ?? null,
+                    'unit_price' => $orderItem->unit_price ?? 0,
+                    'stock_lot_id' => $singleLot,
+                    'sort_order' => $i,
+                ]);
+                $totalQty += $qty;
+            }
+
+            $dn->update(['total_quantity' => $totalQty]);
+
+            return $dn->fresh('items');
+        });
+    }
+
+    /**
      * Validate a delivery note: status -> valide, create stock-out movements,
      * update delivered_quantity on order items, and advance the order status.
      */

@@ -81,7 +81,20 @@ class CategoryDefaultsService
         return $input;
     }
 
-    private function natureToTypeArticle(string $nature): string
+    /**
+     * Nature de la catégorie (9 valeurs, fine) → type d'article (5 valeurs, flux).
+     *
+     * PUBLIQUE et STATIQUE parce qu'un second appelant en a besoin : la garde
+     * posée sur le modèle Product, qui rattrape les créations ne passant pas par
+     * ProductService (seeders, fabriques, imports). Recopier cette correspondance
+     * ailleurs serait rejouer exactement la dérive qui a laissé les statuts
+     * fournisseurs au féminin mettre deux indicateurs à zéro.
+     *
+     * Les sous-produits, chutes et rebuts deviennent « produit fini » : ils
+     * entrent en stock comme une sortie valorisable. Ce n'est pas une
+     * approximation, c'est leur classification de FLUX.
+     */
+    public static function natureToTypeArticle(string $nature): string
     {
         return match ($nature) {
             'matiere_premiere'          => 'matiere_premiere',

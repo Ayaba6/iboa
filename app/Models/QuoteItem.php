@@ -14,9 +14,21 @@ class QuoteItem extends Model
         'product_id',
         'description',
         'unit_id',
+        // [Ventes] Coût FIGÉ à la saisie — le CUMP de l'article bouge à chaque
+        // réception, une marge recalculée plus tard ne serait pas celle que le
+        // commercial a vue en négociant.
+        'unit_cost',
         'quantity',
         'nb_toles',
         'metrage_par_tole',
+        // [BUG-A3-MTO-TECH-010] Caractéristiques techniques DEMANDÉES par le
+        // client. Elles ne vivaient que sur l'ordre de fabrication, où elles
+        // étaient héritées de la nomenclature — donc de ce que l'atelier sait
+        // faire, pas de ce que le client a commandé. Deux commandes du même
+        // article en deux couleurs étaient indistinguables au niveau vente.
+        'sheet_type', 'color', 'couleur_ral', 'revetement', 'profil', 'nb_ondes',
+        'thickness', 'usable_width', 'largeur_totale',
+        'tolerance_longueur', 'tolerance_epaisseur',
         'unit_price',
         'discount_percent',
         'tax_rate_id',

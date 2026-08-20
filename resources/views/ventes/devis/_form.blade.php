@@ -82,11 +82,11 @@ window._quoteFormData = {
                 </div>
                 <div>
                     <label class="{{ $lbl }}">Adresse de livraison</label>
-                    <textarea name="delivery_address" rows="2" class="{{ $txa }}" placeholder="Chantier – Kossodo&#10;Ouagadougou&#10;Burkina Faso">{{ old('delivery_address', $q?->delivery_address) }}</textarea>
+                    <textarea name="delivery_address" rows="2" class="{{ $txa }}" placeholder="Ex. : Chantier – Kossodo&#10;Ouagadougou&#10;Burkina Faso">{{ old('delivery_address', $q?->delivery_address) }}</textarea>
                 </div>
                 <div>
                     <label class="{{ $lbl }}">Devise <span class="text-red-600">*</span></label>
-                    <div class="relative"><select name="currency_code" class="{{ $lk }}">
+                    <div class="relative"><select name="currency_code" x-model="currencyCode" @change="if (currencyCode === 'XOF') exchangeRate = 1" class="{{ $lk }}">
                         @foreach(['XOF'=>'XOF – Franc CFA','EUR'=>'Euro (EUR)','USD'=>'Dollar (USD)'] as $cc=>$cl)<option value="{{ $cc }}" {{ old('currency_code', $q?->currency_code ?? 'XOF') === $cc ? 'selected' : '' }}>{{ $cl }}</option>@endforeach
                     </select>{!! $caret !!}</div>
                 </div>
@@ -98,22 +98,26 @@ window._quoteFormData = {
 
             {{-- Colonne 2 : document --}}
             <div class="sm:col-span-3 space-y-3">
+                {{-- [UI — doublons retirés] Deux champs en lecture seule supprimés :
+                     • « Type de document = Devis » répétait le titre « Devis : Création » ;
+                     • « N° devis » répétait ce même titre (qui porte le numéro en
+                       modification) ET la barre d'état basse (« Document : … »).
+                       Le numéro figurait donc TROIS fois sur un écran de saisie.
+                     Le statut, lui, n'était affiché qu'ici : il est conservé. --}}
                 <div>
-                    <label class="{{ $lbl }}">Type de document <span class="text-red-600">*</span></label>
-                    <input type="text" value="Devis" class="{{ $inp }} bg-gray-50 text-gray-600" readonly>
-                </div>
-                <div>
-                    <label class="{{ $lbl }}">N° devis <span class="text-red-600">*</span></label>
-                    <input type="text" value="{{ $q?->number ?: 'Auto à la création' }}" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly>
-                    <span class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full {{ ($q?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600' }}">● {{ ucfirst($q?->status ?? 'Brouillon') }}</span>
+                    <label class="{{ $lbl }}">Statut</label>
+                    <span class="inline-flex items-center gap-1 h-8 text-[12px] font-semibold px-2.5 rounded-[3px] {{ ($q?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600 border border-gray-200' }}">● {{ ucfirst($q?->status ?? 'Brouillon') }}</span>
                 </div>
                 <div><label class="{{ $lbl }}">Date du devis <span class="text-red-600">*</span></label><input type="date" name="issued_at" required value="{{ old('issued_at', $q?->issued_at?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" class="{{ $inp }}"></div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="{{ $lbl }} flex items-center gap-1.5">Date de validité <span class="text-red-600">*</span>
-                            <span x-show="validityLabel" x-text="validityLabel?.text" :class="validityLabel?.cls" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium"></span>
-                        </label>
-                        <input type="date" name="expires_at" x-model="expires_at" value="{{ old('expires_at', $q?->expires_at?->format('Y-m-d')) }}" class="{{ $inp }}">
+                        {{-- [UI] Le badge « Dans 89j » était DANS le <label> : il allongeait
+                             la ligne, forçait le libellé à passer sur deux lignes et
+                             désalignait la sous-grille par rapport à « Durée de validité ».
+                             Il est désormais sous le champ, là où il commente une valeur. --}}
+                        <label class="{{ $lbl }}">Date de validité <span class="text-red-600">*</span></label>
+                        <input type="date" name="expires_at" required x-model="expires_at" value="{{ old('expires_at', $q?->expires_at?->format('Y-m-d')) }}" class="{{ $inp }}">
+                        <span x-show="validityLabel" x-text="validityLabel?.text" :class="validityLabel?.cls" class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium"></span>
                     </div>
                     <div>
                         <label class="{{ $lbl }}">Durée de validité</label>
@@ -139,16 +143,16 @@ window._quoteFormData = {
                         <button type="button" @click="applyTaxToAll()" x-show="!taxExempt" class="text-[11px] font-semibold text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-2 h-8 rounded-[3px] whitespace-nowrap">Appliquer</button>
                     </div>
                 </div>
-                <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $q?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="PROJ-2026-0008 – Construction Hangar"></div>
+                <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $q?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="Ex. : PROJ-2026-0008 – Construction Hangar"></div>
             </div>
 
             {{-- Colonne 3 : prix / paiement --}}
             <div class="sm:col-span-3 space-y-3">
                 <div>
                     <label class="{{ $lbl }}">Entrepôt / Dépôt <span class="text-red-600">*</span></label>
-                    <div class="relative"><select name="warehouse_id" class="{{ $lk }}"><option value="">—</option>@foreach($warehouses ?? [] as $w)<option value="{{ $w->id }}" @selected(old('warehouse_id', $q?->warehouse_id)==$w->id)>{{ $w->code }} – {{ $w->name }}</option>@endforeach</select>{!! $caret !!}</div>
+                    <div class="relative"><select name="warehouse_id" required class="{{ $lk }}"><option value="">— Sélectionner —</option>@foreach($warehouses ?? [] as $w)<option value="{{ $w->id }}" @selected(old('warehouse_id', $q?->warehouse_id)==$w->id)>{{ $w->code }} – {{ $w->name }}</option>@endforeach</select>{!! $caret !!}</div>
                 </div>
-                <div><label class="{{ $lbl }}">Liste de prix <span class="text-red-600">*</span></label><input type="text" name="price_list" maxlength="60" value="{{ old('price_list', $q?->price_list ?? 'Tarif standard 2026') }}" class="{{ $inp }}"></div>
+                <div><label class="{{ $lbl }}">Liste de prix <span class="text-red-600">*</span></label><input type="text" name="price_list" required maxlength="60" value="{{ old('price_list', $q?->price_list ?? 'Tarif standard 2026') }}" class="{{ $inp }}"></div>
                 <div>
                     <label class="{{ $lbl }}">Remise globale (%)</label>
                     <input type="number" min="0" max="100" step="0.5" x-model.number="global_discount_percent" class="{{ $inpR }}">
@@ -172,21 +176,31 @@ window._quoteFormData = {
                         <option value="mobile_money" @selected($pmm==='mobile_money')>Mobile money</option>
                     </select>{!! $caret !!}</div>
                 </div>
-                <div><label class="{{ $lbl }}">Représentant fiscal</label><input type="text" name="fiscal_representative" maxlength="100" value="{{ old('fiscal_representative', $q?->fiscal_representative) }}" class="{{ $inp }}" placeholder="OA METAL INDUSTRIE"></div>
+                <div><label class="{{ $lbl }}">Représentant fiscal</label><input type="text" name="fiscal_representative" maxlength="100" value="{{ old('fiscal_representative', $q?->fiscal_representative) }}" class="{{ $inp }}" placeholder="Ex. : OA METAL INDUSTRIE"></div>
             </div>
 
             {{-- Colonne 4 : fiscal / divers --}}
             <div class="sm:col-span-3 space-y-3">
-                <div>
-                    <label class="{{ $lbl }}">Taux de change</label>
-                    <div class="flex gap-1">
-                        <input type="number" step="0.000001" min="0" name="exchange_rate" value="{{ old('exchange_rate', $q?->exchange_rate ?? 1) }}" class="{{ $inpR }}">
-                        <input type="text" value="XOF" class="{{ $inp }} w-16 font-mono bg-gray-50 text-gray-500" readonly>
-                    </div>
+                {{-- [UI — doublon retiré] Le champ « XOF » en lecture seule accolé au
+                     taux de change répétait « Devise » de la colonne 1, et affichait
+                     XOF en dur même après le choix d'une autre devise.
+                     Le taux lui-même n'a de sens QUE pour une devise étrangère : en
+                     XOF il vaut invariablement 1. Il n'apparaît donc plus qu'en devise
+                     étrangère, et le code de la devise choisie est repris dans le
+                     libellé — une seule source, celle du champ « Devise ». --}}
+                {{-- UN SEUL champ `exchange_rate`. Un `x-show` faux applique
+                     `display:none` mais laisse le champ dans le formulaire : il est
+                     donc toujours soumis, et en XOF il vaut 1. Deux champs de même
+                     nom auraient fait gagner le dernier au détriment du premier. --}}
+                <div x-show="currencyCode !== 'XOF'" x-cloak>
+                    <label class="{{ $lbl }}">Taux de change <span class="font-normal text-gray-500" x-text="'(1 ' + currencyCode + ' = ? XOF)'"></span></label>
+                    <input type="number" step="0.000001" min="0" name="exchange_rate" x-model.number="exchangeRate" class="{{ $inpR }}">
                 </div>
                 <div class="grid grid-cols-2 gap-2 items-end">
                     <div>
-                        <label class="{{ $lbl }}">Prix / Devise</label>
+                        {{-- [UI] Renommé : ce sélecteur ne porte QUE le mode de prix. « Devise » dans
+                             son libellé était une troisième mention de la devise. --}}
+                        <label class="{{ $lbl }}">Mode de prix</label>
                         @php $pm = old('price_mode', $q?->price_mode ?? 'ttc'); @endphp
                         <div class="relative"><select name="price_mode" x-model="priceMode" @change="onPriceModeChange()" class="{{ $lk }}">
                             <option value="ttc">TTC</option>
@@ -200,16 +214,17 @@ window._quoteFormData = {
                         <span class="text-[11.5px] font-semibold text-gray-700">Prix nets</span>
                     </label>
                 </div>
-                <div><label class="{{ $lbl }}">Régime fiscal</label><input type="text" name="fiscal_regime" maxlength="40" value="{{ old('fiscal_regime', $q?->fiscal_regime) }}" class="{{ $inp }}" placeholder="Régime réel normal"></div>
-                <div>
-                    <label class="{{ $lbl }}">Taxes</label>
-                    @php $dtl = old('default_tax_label', $q?->default_tax_label ?? 'TVA 18%'); @endphp
-                    <div class="relative"><select name="default_tax_label" class="{{ $lk }}">
-                        <option value="TVA 18%" @selected($dtl==='TVA 18%')>TVA 18%</option>
-                        <option value="Exonéré" @selected($dtl==='Exonéré')>Exonéré</option>
-                    </select>{!! $caret !!}</div>
-                </div>
-                <div><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="2" class="{{ $txa }}" placeholder="Merci de votre confiance.">{{ old('notes', $q?->notes) }}</textarea></div>
+                <div><label class="{{ $lbl }}">Régime fiscal</label><input type="text" name="fiscal_regime" maxlength="40" value="{{ old('fiscal_regime', $q?->fiscal_regime) }}" class="{{ $inp }}" placeholder="Ex. : Régime réel normal"></div>
+                {{-- [UI — doublon retiré] Le champ « Taxes » (`default_tax_label`) est
+                     supprimé. C'était un LIBELLÉ libre, stocké, validé, `fillable` —
+                     et jamais lu par aucune logique métier ni affiché sur aucune fiche
+                     ou PDF. Il doublonnait « TVA par défaut », seul champ qui pilote
+                     réellement la TVA des lignes, et pouvait le CONTREDIRE : « Taxes =
+                     Exonéré » avec « TVA par défaut = 18 % » produisait un devis
+                     étiqueté exonéré portant des lignes taxées.
+                     La valeur est désormais DÉRIVÉE de l'état réel dans QuoteService,
+                     pour que la colonne reste cohérente sans être contredictible. --}}
+                <div><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="2" class="{{ $txa }}" placeholder="Ex. : Merci de votre confiance.">{{ old('notes', $q?->notes) }}</textarea></div>
             </div>
         </div>
     </section>
@@ -238,6 +253,11 @@ window._quoteFormData = {
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Nombre de tôles (tôle bac) — laisser vide pour un article standard">Nb tôles</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Longueur unitaire en mètres">Long. m</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Métrage total = nb tôles × longueur (auto)">Qté / ml</th>
+                            {{-- [Ventes] Colonne « Unité » : elle n'existait pas, et `unit_id`
+                                 restait donc NULL sur 100 % des lignes. En métallurgie,
+                                 « quantité 50 » ne veut rien dire — une tôle bac se vend à la
+                                 pièce ou au mètre linéaire, un fer à béton au kilo ou à la tonne. --}}
+                            <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-20" title="Unité de vente — héritée de l'article, modifiable">Unité</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">P.U. HT</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-14">Rem. %</th>
                             <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Net HT</th>
@@ -262,9 +282,33 @@ window._quoteFormData = {
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][metrage_par_tole]'" x-model.number="item.metrage_par_tole" @input="syncSheet(item)" min="0" step="0.01" placeholder="—" class="{{ $tdIn }} min-w-[40px] text-right"></td>
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" :readonly="isSheet(item)" :class="isSheet(item) ? 'bg-gray-100 text-gray-500' : ''" min="0.01" step="0.01" inputmode="decimal" class="{{ $tdIn }} min-w-[40px] text-right"></td>
                                 <td class="px-2 py-1">
+                                    <div class="relative">
+                                        <select :name="'items[' + index + '][unit_id]'" x-model.number="item.unit_id" class="{{ $lk }} !h-8 min-w-[64px] text-[12px]">
+                                            <option value="">—</option>
+                                            @foreach($units ?? [] as $unit)
+                                                <option value="{{ $unit->id }}">{{ $unit->abbreviation ?: $unit->name }}</option>
+                                            @endforeach
+                                        </select>{!! $caret !!}
+                                    </div>
+                                </td>
+                                <td class="px-2 py-1">
                                     <input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right">
-                                    {{-- [CDC Tarifaire] Alerte plafond indicative (non bloquante). --}}
-                                    <span x-show="item._above_ceiling" x-cloak class="block text-[10px] text-amber-600 font-semibold mt-0.5 whitespace-nowrap" :title="'Prix plafond conseillé : ' + formatNum(item._ceiling) + ' F'">⚠ &gt; plafond</span>
+{{-- [BUG-A3-SALES-ZERO-PRICE-026] « Prix à saisir » n'est pas « sous le
+                                         plancher ». L'écran affichait 0 sans rien dire quand l'article
+                                         n'avait aucun tarif : le prix paraissait donné, il était
+                                         seulement absent. Le badge plancher passe au second plan — sous
+                                         un prix qui n'existe pas encore, il n'y a rien à déroger. --}}
+                                    <span x-show="item._manual_price" x-cloak class="block text-[11px] text-orange-600 font-bold mt-0.5 whitespace-nowrap"
+                                          title="Aucun tarif n'est défini pour cet article : saisissez le prix. Une ligne à 0 sera refusée.">✎ prix à saisir</span>
+                                    {{-- [CDC Tarifaire] Plancher STRICT : le dépassement vers le bas
+                                         était calculé (`_below_floor`, renvoyé par SalesPricingService)
+                                         puis jamais affiché. Seul le plafond — pourtant simple conseil —
+                                         était signalé. Or c'est le plancher qui détruit la marge et
+                                         exige une dérogation tracée (`sales_below_floor.request`). --}}
+                                    <span x-show="item._below_floor && !item._manual_price" x-cloak class="block text-[11px] text-red-600 font-bold mt-0.5 whitespace-nowrap"
+                                          :title="'Prix plancher : ' + formatNum(item._floor) + ' F — une vente en dessous exige une dérogation motivée.'">⛔ &lt; plancher</span>
+                                    {{-- Alerte plafond indicative (non bloquante). --}}
+                                    <span x-show="item._above_ceiling && !item._below_floor" x-cloak class="block text-[11px] text-amber-600 font-semibold mt-0.5 whitespace-nowrap" :title="'Prix plafond conseillé : ' + formatNum(item._ceiling) + ' F'">⚠ &gt; plafond</span>
                                 </td>
                                 <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
                                 <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
@@ -336,7 +380,13 @@ window._quoteFormData = {
                 <p class="text-[13px] font-mono text-gray-700 truncate h-8 flex items-center" x-text="activeStock.reference || '—'"></p>
             </div>
             <div>
-                <label class="{{ $lbl }}">Stock à terme</label>
+                {{-- « Stock disponible » et non « à terme » : ce chiffre vaut
+                     réel − réservé, c'est-à-dire ce qui reste engageable MAINTENANT.
+                     La liste des articles emploie « Stock à terme » pour une tout
+                     autre grandeur — actuel + réceptions attendues − livraisons
+                     attendues. Deux notions sous un même mot, sur deux écrans du
+                     même ERP : celle d'ici est la disponibilité. --}}
+                <label class="{{ $lbl }}">Stock disponible</label>
                 <p class="text-[13px] font-mono tabular-nums font-semibold h-8 flex items-center px-2 rounded-[3px]"
                    :class="activeStock.product ? (activeStock.terme < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-900') : 'text-gray-400'"
                    x-text="activeStock.product ? formatNum(activeStock.terme) : '—'"></p>
@@ -346,6 +396,51 @@ window._quoteFormData = {
                 <p class="text-[13px] font-mono tabular-nums font-semibold text-gray-900 h-8 flex items-center" x-text="formatNum(subtotalHt) + ' XOF'"></p>
             </div>
         </div>
+
+        {{-- [Ventes] La MARGE, absente de la section qui en portait le nom.
+             Cause : `unit_cost` n'existait que sur `invoice_items`, donc le coût
+             n'apparaissait qu'à la facture — après la décision commerciale. La
+             colonne existe désormais aussi sur les lignes de devis et de commande,
+             figée à la saisie (le CUMP bouge à chaque réception : une marge
+             recalculée plus tard ne serait pas celle vue en négociant).
+
+             Réservé à `sales.view_margin`, comme `production.cost.view` ailleurs. --}}
+        @can('sales.view_margin')
+        <div class="px-4 pb-4 pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-5 gap-x-5 gap-y-3">
+            <div>
+                <label class="{{ $lbl }}">Coût ligne active</label>
+                <p class="text-[13px] font-mono tabular-nums h-8 flex items-center"
+                   :class="activeLineCost !== null ? 'text-gray-800' : 'text-gray-400'"
+                   x-text="activeLineCost !== null ? formatNum(activeLineCost) + ' XOF' : '—'"></p>
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Coût total</label>
+                <p class="text-[13px] font-mono tabular-nums h-8 flex items-center"
+                   :class="totalCost !== null ? 'text-gray-800' : 'text-gray-400'"
+                   x-text="totalCost !== null ? formatNum(totalCost) + ' XOF' : '—'"></p>
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Marge brute</label>
+                <p class="text-[13px] font-mono tabular-nums font-semibold h-8 flex items-center px-2 rounded-[3px]"
+                   :class="totalMargin === null ? 'text-gray-400' : (totalMargin < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-900')"
+                   x-text="totalMargin !== null ? formatNum(totalMargin) + ' XOF' : '—'"></p>
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Taux de marge</label>
+                <p class="text-[13px] font-mono tabular-nums font-semibold h-8 flex items-center px-2 rounded-[3px]"
+                   :class="marginRate === null ? 'text-gray-400' : (marginRate < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-900')"
+                   x-text="marginRate !== null ? formatNum(marginRate) + ' %' : '—'"></p>
+            </div>
+            <div>
+                <label class="{{ $lbl }}">Lignes sans coût</label>
+                {{-- Un « — » sur la marge peut venir d'un coût manquant : on le dit,
+                     plutôt que de laisser croire à une marge nulle. --}}
+                <p class="text-[13px] font-mono tabular-nums h-8 flex items-center"
+                   :class="linesWithoutCost > 0 ? 'text-amber-700 font-semibold' : 'text-gray-400'"
+                   x-text="linesWithoutCost > 0 ? linesWithoutCost + ' à vérifier' : 'aucune'"></p>
+            </div>
+        </div>
+        @endcan
     </section>
 </div>
 
@@ -384,7 +479,7 @@ window._quoteFormData = {
                 </select>{!! $caret !!}</div>
             </div>
             <div class="sm:col-span-2"><label class="{{ $lbl }}">Bon de livraison souhaité le</label><input type="date" name="desired_delivery_date" value="{{ old('desired_delivery_date', optional($q?->desired_delivery_date)->format('Y-m-d')) }}" class="{{ $inp }}"></div>
-            <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $q?->delivery_location) }}" class="{{ $inp }}" placeholder="Chantier – Kossodo"></div>
+            <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $q?->delivery_location) }}" class="{{ $inp }}" placeholder="Ex. : Chantier – Kossodo"></div>
             <div class="sm:col-span-2">
                 <label class="{{ $lbl }}">Incoterm</label>
                 @php $it = old('incoterm', $q?->incoterm ?? 'EXW'); @endphp
@@ -431,7 +526,7 @@ window._quoteFormData = {
         </div>
         <div class="px-4 pb-3">
             <label class="{{ $lbl }}">Mention pied de page (PDF)</label>
-            <textarea name="footer_note" rows="2" class="{{ $txa }}" placeholder="Merci de votre confiance.">{{ old('footer_note', $q?->footer_note) }}</textarea>
+            <textarea name="footer_note" rows="2" class="{{ $txa }}" placeholder="Ex. : Merci de votre confiance.">{{ old('footer_note', $q?->footer_note) }}</textarea>
         </div>
     </section>
 </div>
@@ -466,11 +561,33 @@ function quoteForm() {
 
     let nextKey = 1;
 
+    /**
+     * [Ventes] Cout unitaire d'un article, MEME ordre de priorite que
+     * SalesLineDefaultsService::resolveUnitCost() cote serveur : CUMP, puis cout
+     * standard, puis dernier prix d'achat, puis prix d'achat de reference.
+     *
+     * Un zero n'est jamais retenu : il afficherait une marge de 100 % et masquerait
+     * justement le cas a surveiller, un article sans cout renseigne. On renvoie null,
+     * et l'ecran affiche « — » plutot qu'une marge fausse.
+     *
+     * Renvoie null aussi lorsque l'utilisateur n'a pas `sales.view_margin` : les
+     * colonnes de cout ne sont alors pas serialisees dans la page.
+     */
+    function resolveCost(p) {
+        for (const attr of ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']) {
+            const v = parseFloat(p?.[attr] ?? 0);
+            if (v > 0) return Math.round(v * 100) / 100;
+        }
+        return null;
+    }
+
     function mapItem(i) {
         return {
             _key:             nextKey++,
             product_id:       i.product_id        ?? '',
             description:      i.description       ?? '',
+            unit_id:          i.unit_id           ?? '',
+            unit_cost:        i.unit_cost != null ? parseFloat(i.unit_cost) : null,
             quantity:         parseFloat(i.quantity) || 1,
             // [§5 TÔLE BAC] saisie nombre de tôles × longueur unitaire → métrage
             nb_toles:         parseFloat(i.nb_toles) || 0,
@@ -500,6 +617,9 @@ function quoteForm() {
         items:                   initialItems,
         activeIndex:             0,
         client_id:               String(selectedClientId || ''),
+        // [UI] Devise réactive : le taux de change ne s'affiche qu'en devise étrangère.
+        currencyCode:            @js(old('currency_code', $quote?->currency_code ?? 'XOF')),
+        exchangeRate:            {{ (float) old('exchange_rate', $quote?->exchange_rate ?? 1) }},
         expires_at:              '{{ old('expires_at', $quote?->expires_at?->format('Y-m-d') ?? now()->addDays(30)->format('Y-m-d')) }}',
         global_discount_percent: initialPct,
         products,
@@ -597,7 +717,7 @@ function quoteForm() {
             return (parseFloat(item.nb_toles) || 0) > 0 && (parseFloat(item.metrage_par_tole) || 0) > 0;
         },
         addItem() {
-            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, nb_toles: 0, metrage_par_tole: 0, unit_price: 0, discount_percent: 0, tax_rate_value: this.taxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
+            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, nb_toles: 0, metrage_par_tole: 0, unit_id: '', unit_cost: null, unit_price: 0, discount_percent: 0, tax_rate_value: this.taxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
         },
         removeItem(index) { if (this.items.length > 1) this.items.splice(index, 1); },
         duplicateItem(index) {
@@ -625,6 +745,43 @@ function quoteForm() {
                 }));
             } finally { this.importing = false; }
         },
+        // ── [Ventes] Marge ─────────────────────────────────────────────────
+        // Le cout est celui FIGE sur la ligne (`unit_cost`), jamais relu a la
+        // volee : sinon la marge changerait a chaque reception qui deplace le CUMP.
+        //
+        // Une ligne sans cout n'est PAS comptee comme un cout nul — cela
+        // afficherait 100 % de marge et masquerait justement le probleme. Elle est
+        // exclue du calcul et signalee par `linesWithoutCost`.
+        get costedItems() {
+            return this.items.filter(i => i.unit_cost != null && parseFloat(i.unit_cost) > 0);
+        },
+        get linesWithoutCost() {
+            return this.items.filter(i => (i.product_id || i.description?.trim()) && (i.unit_cost == null || parseFloat(i.unit_cost) <= 0)).length;
+        },
+        get activeLineCost() {
+            const item = this.items[this.activeIndex];
+            if (!item || item.unit_cost == null) return null;
+            const cost = parseFloat(item.unit_cost) * (parseFloat(item.quantity) || 0);
+            return Number.isFinite(cost) ? cost : null;
+        },
+        get totalCost() {
+            if (!this.costedItems.length) return null;
+            return this.costedItems.reduce((sum, i) => sum + parseFloat(i.unit_cost) * (parseFloat(i.quantity) || 0), 0);
+        },
+        get totalMargin() {
+            if (this.totalCost === null) return null;
+            // Chiffre d'affaires des SEULES lignes valorisees, pour comparer des
+            // perimetres identiques : additionner tout le HT face a un cout partiel
+            // gonflerait artificiellement la marge.
+            const revenue = this.costedItems.reduce((sum, i) => sum + this.lineHt(i), 0);
+            return revenue - this.totalCost;
+        },
+        get marginRate() {
+            if (this.totalMargin === null) return null;
+            const revenue = this.costedItems.reduce((sum, i) => sum + this.lineHt(i), 0);
+            if (revenue <= 0) return null;
+            return Math.round((this.totalMargin / revenue) * 1000) / 10;
+        },
         get isClientTaxExempt() {
             if (!this.client_id) return false;
             return !!(clientExemptions || {})[this.client_id];
@@ -635,6 +792,12 @@ function quoteForm() {
                 if (!this.items[index].description.trim()) this.items[index].description = p.name;
                 this.items[index].unit_price = parseFloat(p.sale_price) || 0;
                 this.items[index].tax_rate_value = this.taxExempt ? 0 : (p.tax_rate?.rate != null ? parseFloat(p.tax_rate.rate) : (this.defaultTaxRate ?? dtr));
+                // [Ventes] Unite heritee de l'article : unite de VENTE d'abord, unite
+                // de gestion ensuite. Un article gere au kilo peut se vendre a la barre.
+                this.items[index].unit_id = p.sale_unit_id ?? p.unit_id ?? '';
+                // [Ventes] Cout figé pour la marge. Absent si l'utilisateur n'a pas
+                // `sales.view_margin` : le serveur ne serialise alors aucun cout.
+                this.items[index].unit_cost = resolveCost(p);
                 this.fetchAdvisedPrice(index);
             }
         },
@@ -670,8 +833,12 @@ function quoteForm() {
                     this.items[index]._advised = d.source !== 'prix de base' ? d.source : null;
                 }
                 this.items[index]._below_floor = !!d.below_floor;
+                this.items[index]._manual_price = !!d.requires_manual_price;
+                this.items[index]._floor = d.floor || 0;
                 this.items[index]._above_ceiling = !!d.above_ceiling;
                 this.items[index]._ceiling = d.ceiling || 0;
+                // L'unité tarifaire prime : un tarif défini à la barre impose la barre.
+                if (d.unit_id) this.items[index].unit_id = d.unit_id;
             } catch (e) { /* reseau indisponible : prix de base conserve */ }
         },
         onClientChange() {

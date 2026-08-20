@@ -37,7 +37,9 @@
     {{-- Filter --}}
     <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="flex gap-3">
-            <select name="client_id" class="h-8 border border-gray-300 rounded-[4px] px-2 text-[12.5px] focus:ring-1 focus:ring-emerald-500 w-72">
+            {{-- `py-0` obligatoire avec `h-8` : @tailwindcss/forms impose sinon
+                 un padding vertical qui écrase la hauteur du <select>. --}}
+            <select name="client_id" class="h-8 py-0 border border-gray-300 rounded-[4px] px-2 text-[12.5px] focus:ring-1 focus:ring-emerald-500 w-72">
                 <option value="">Tous les clients</option>
                 @foreach($clients as $c)
                     <option value="{{ $c->id }}" {{ $clientId == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>

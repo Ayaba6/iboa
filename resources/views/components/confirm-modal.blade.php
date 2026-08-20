@@ -98,11 +98,11 @@
             </div>
 
             {{-- Title --}}
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2"
+            <h3 class="text-[15px] font-semibold text-gray-900 dark:text-white text-center mb-2"
                 x-text="title"></h3>
 
             {{-- Message --}}
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center leading-relaxed"
+            <p class="text-[13px] text-gray-500 dark:text-gray-400 text-center leading-relaxed"
                x-text="message"></p>
         </div>
 
@@ -110,13 +110,13 @@
         <div class="flex gap-3 px-6 pb-6">
             <button type="button"
                     @click="doCancel()"
-                    class="flex-1 px-4 py-2.5 rounded-[4px] border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    class="flex-1 px-4 py-2.5 rounded-[4px] border border-gray-300 dark:border-gray-600 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300">
                 Annuler
             </button>
             <button type="button"
                     @click="doConfirm()"
                     x-ref="confirmBtn"
-                    class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                    class="flex-1 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
                     :class="isDanger
                         ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
                         : 'bg-amber-500 hover:bg-amber-600 focus:ring-amber-400'"
@@ -133,7 +133,7 @@
     <div class="flex flex-col items-center gap-4 animate-pulse-slow">
         <div class="w-12 h-12 rounded-full border-4 border-emerald-200 border-t-indigo-600 animate-spin"></div>
         <p id="erp-loading-text"
-           class="text-sm font-medium text-gray-700 dark:text-gray-300 tracking-wide">
+           class="text-[13px] font-medium text-gray-700 dark:text-gray-300 tracking-wide">
             Génération en cours…
         </p>
     </div>

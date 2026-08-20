@@ -19,7 +19,7 @@
             </button>
 
             {{-- Breadcrumb --}}
-            <nav class="hidden sm:flex items-center gap-1 text-[12.5px] text-gray-400 min-w-0">
+            <nav class="hidden sm:flex items-center gap-1 text-[12px] text-gray-400 min-w-0">
                 @yield('breadcrumb')
             </nav>
 
@@ -50,7 +50,7 @@
                                placeholder="Rechercher une fonction ou un document…"
                                autocomplete="off" spellcheck="false"
                                class="flex-1 bg-transparent border-none outline-none focus:ring-0 text-[12px] text-gray-800 placeholder-gray-400 p-0">
-                        <kbd class="flex-shrink-0 hidden lg:inline-flex items-center text-[10px] font-semibold bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-400 shadow-sm">Ctrl K</kbd>
+                        <kbd class="flex-shrink-0 hidden lg:inline-flex items-center text-[11px] font-semibold bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-400 shadow-sm">Ctrl K</kbd>
                     </div>
 
                     {{-- Dropdown résultats façon SAGE X3 --}}
@@ -65,7 +65,7 @@
                             {{-- Fonctions (navigation) --}}
                             <template x-if="matchedFunctions.length > 0">
                                 <div class="py-1.5">
-                                    <p class="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fonctions</p>
+                                    <p class="px-4 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Fonctions</p>
                                     <template x-for="fn in matchedFunctions" :key="fn.url">
                                         <a :href="fn.url" @click="close()" @mouseenter="setActive(fn)"
                                            :class="isActive(fn) ? 'bg-[#eef5f0]' : 'hover:bg-gray-50'"
@@ -83,7 +83,7 @@
                             {{-- Données groupées par catégorie --}}
                             <template x-for="(items, type) in grouped" :key="type">
                                 <div class="py-1.5 border-t border-gray-100">
-                                    <p class="px-4 py-1 text-[10px] font-bold text-emerald-800 uppercase tracking-widest" x-text="type"></p>
+                                    <p class="px-4 py-1 text-[11px] font-bold text-emerald-800 uppercase tracking-widest" x-text="type"></p>
                                     <template x-for="item in items" :key="item.url + item.label">
                                         <a :href="item.url" @click="close()" @mouseenter="setActive(item)"
                                            :class="isActive(item) ? 'bg-[#eef5f0]' : 'hover:bg-gray-50'"
@@ -94,7 +94,7 @@
                                             </span>
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-[13px] font-semibold text-gray-900 truncate" x-text="item.label"></p>
-                                                <p class="text-[11.5px] text-gray-500 truncate" x-text="item.sublabel || ''"></p>
+                                                <p class="text-[11px] text-gray-500 truncate" x-text="item.sublabel || ''"></p>
                                             </div>
                                         </a>
                                     </template>
@@ -109,7 +109,7 @@
                             </template>
                         </div>
 
-                        <div class="flex items-center gap-4 px-4 py-2 border-t border-gray-100 bg-gray-50/70 text-[10px] text-gray-400">
+                        <div class="flex items-center gap-4 px-4 py-2 border-t border-gray-100 bg-gray-50/70 text-[11px] text-gray-400">
                             <span><kbd class="bg-white border border-gray-200 rounded px-1 py-0.5 font-semibold">↑↓</kbd> Naviguer</span>
                             <span><kbd class="bg-white border border-gray-200 rounded px-1 py-0.5 font-semibold">↵</kbd> Ouvrir</span>
                             <span><kbd class="bg-white border border-gray-200 rounded px-1 py-0.5 font-semibold">Échap</kbd> Fermer</span>
@@ -155,22 +155,22 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
                         <span x-show="unread > 0" x-text="unread > 9 ? '9+' : unread"
-                              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none"></span>
+                              class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none"></span>
                     </button>
                     {{-- Dropdown --}}
                     <div x-show="open"
                          x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100"
                          class="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
                         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                            <span class="text-sm font-bold text-gray-900">Validations</span>
+                            <span class="text-[13px] font-bold text-gray-900">Validations</span>
                             <div class="flex items-center gap-3">
-                                <a href="{{ route('validations.index') }}" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Mes validations</a>
-                                <a href="{{ route('notifications.index') }}" class="text-xs text-gray-400 hover:text-gray-600 font-medium" title="Historique complet des notifications">Historique</a>
+                                <a href="{{ route('validations.index') }}" class="text-[12px] text-indigo-600 hover:text-indigo-800 font-medium">Mes validations</a>
+                                <a href="{{ route('notifications.index') }}" class="text-[12px] text-gray-400 hover:text-gray-600 font-medium" title="Historique complet des notifications">Historique</a>
                             </div>
                         </div>
                         <div class="max-h-72 overflow-y-auto divide-y divide-gray-50">
                             <template x-if="items.length === 0">
-                                <div class="py-8 text-center text-sm text-gray-400">Aucune validation en attente</div>
+                                <div class="py-8 text-center text-[13px] text-gray-400">Aucune validation en attente</div>
                             </template>
                             <template x-for="n in items" :key="n.id">
                                 {{-- [CDC §Workflow] Lien DIRECT vers le document à valider — la
@@ -178,7 +178,7 @@
                                 <a :href="n.url || '#'"
                                    class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                                    :class="n.read ? '' : 'bg-indigo-50/40'">
-                                    <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs"
+                                    <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-[12px]"
                                          :class="{
                                              'bg-red-100 text-red-600': n.color==='red',
                                              'bg-orange-100 text-orange-600': n.color==='orange',
@@ -190,9 +190,9 @@
                                         </svg>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-xs font-semibold text-gray-900 truncate" x-text="n.title"></p>
-                                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-snug" x-text="n.message"></p>
-                                        <p class="text-[10px] text-gray-400 mt-1" x-text="n.created_at"></p>
+                                        <p class="text-[12px] font-semibold text-gray-900 truncate" x-text="n.title"></p>
+                                        <p class="text-[12px] text-gray-500 mt-0.5 line-clamp-2 leading-snug" x-text="n.message"></p>
+                                        <p class="text-[11px] text-gray-400 mt-1" x-text="n.created_at"></p>
                                     </div>
                                     <span x-show="!n.read" class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 mt-1.5"></span>
                                 </a>
@@ -202,7 +202,7 @@
                              attente reste affichée tant que le document n'est pas traité. --}}
                         <div class="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
                             <a href="{{ route('validations.index') }}"
-                               class="block text-xs text-indigo-600 hover:text-indigo-800 font-medium w-full text-center transition-colors">
+                               class="block text-[12px] text-indigo-600 hover:text-indigo-800 font-medium w-full text-center transition-colors">
                                 Voir toutes mes validations →
                             </a>
                         </div>
@@ -227,11 +227,11 @@
                             class="flex items-center gap-2 rounded-xl px-2 py-1 hover:bg-white/10 transition-colors focus:outline-none">
                         <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
                              style="background:linear-gradient(135deg,#6366F1,#8B5CF6);box-shadow:0 0 0 2px rgba(99,102,241,.2),0 2px 8px rgba(99,102,241,.3);">
-                            <span class="text-[10px] font-bold text-white">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                            <span class="text-[11px] font-bold text-white">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
                         </div>
                         <div class="hidden lg:block text-left">
-                            <p class="text-[11.5px] font-semibold text-white leading-tight">{{ auth()->user()->name }}</p>
-                            <p class="text-[10px] text-gray-400 leading-tight">{{ auth()->user()->getRoleNames()->first() ?? 'Utilisateur' }}</p>
+                            <p class="text-[11px] font-semibold text-white leading-tight">{{ auth()->user()->name }}</p>
+                            <p class="text-[11px] text-gray-400 leading-tight">{{ auth()->user()->getRoleNames()->first() ?? 'Utilisateur' }}</p>
                         </div>
                         <svg class="hidden lg:block w-3.5 h-3.5 text-gray-400 transition-transform duration-150" :class="open ? 'rotate-180' : ''"
                              fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,25 +254,25 @@
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
                                      style="background:linear-gradient(135deg,#6366F1,#8B5CF6);">
-                                    <span class="text-sm font-bold text-white">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                                    <span class="text-[13px] font-bold text-white">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-sm font-semibold text-gray-900 truncate">{{ auth()->user()->name }}</p>
-                                    <p class="text-xs text-gray-400 truncate">{{ auth()->user()->getRoleNames()->first() ?? 'Utilisateur' }}</p>
+                                    <p class="text-[13px] font-semibold text-gray-900 truncate">{{ auth()->user()->name }}</p>
+                                    <p class="text-[12px] text-gray-400 truncate">{{ auth()->user()->getRoleNames()->first() ?? 'Utilisateur' }}</p>
                                 </div>
                             </div>
                         </div>
                         {{-- Mon profil --}}
                         <div class="p-2">
                             <a href="{{ route('profile.edit') }}"
-                               class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                               class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                                 <svg class="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                 </svg>
                                 Mon profil
                             </a>
                             <a href="{{ route('profile.edit') }}#password"
-                               class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                               class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                                 <svg class="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                                 </svg>
@@ -284,7 +284,7 @@
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit"
-                                        class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                                        class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-red-600 hover:bg-red-50 transition-colors">
                                     <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                                     </svg>
@@ -337,14 +337,14 @@
                        placeholder="Rechercher…"
                        x-ref="mobileInput"
                        x-effect="ms && $nextTick(() => $refs.mobileInput?.focus())"
-                       class="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:bg-white transition-all"
+                       class="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:bg-white transition-all"
                        style="font-size:16px;">
                 {{-- Résultats --}}
                 <div x-show="open" class="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-72 overflow-y-auto">
                     <template x-for="item in results" :key="item.url + item.label">
                         <a :href="item.url" @click="ms = false; open = false"
                            class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
-                            <span class="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
+                            <span class="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-bold"
                                   :class="{
                                       'bg-blue-100 text-blue-700': item.color==='blue',
                                       'bg-orange-100 text-orange-700': item.color==='orange',
@@ -355,8 +355,8 @@
                                   }"
                                   x-text="item.type.charAt(0)"></span>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900 truncate" x-text="item.label"></p>
-                                <p class="text-xs text-gray-500 truncate" x-text="item.sublabel || item.type"></p>
+                                <p class="text-[13px] font-medium text-gray-900 truncate" x-text="item.label"></p>
+                                <p class="text-[12px] text-gray-500 truncate" x-text="item.sublabel || item.type"></p>
                             </div>
                         </a>
                     </template>

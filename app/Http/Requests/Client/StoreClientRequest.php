@@ -71,7 +71,6 @@ class StoreClientRequest extends FormRequest
             'canal'                => 'nullable|string|max:60',
             'zone_commerciale'     => 'nullable|string|max:60',
             'famille_tarifaire'    => 'nullable|string|max:60',
-            'encours_autorise'     => 'nullable|numeric|min:0',
             'compte_collectif'     => 'nullable|string|max:30',
             'tax_rate_id'          => 'nullable|exists:tax_rates,id',
             'depot_livraison_id'   => 'nullable|exists:warehouses,id',
@@ -88,7 +87,6 @@ class StoreClientRequest extends FormRequest
             'swift'                => 'nullable|string|max:20',
             // [Parité Sage X3] Juridique / fiscal
             'forme_juridique'      => 'nullable|string|max:60',
-            'regime_imposition'    => 'nullable|string|max:80',
             'no_agrement'          => 'nullable|string|max:60',
             // [Parité Sage X3] Risque crédit
             'code_risque'          => 'nullable|string|max:30',

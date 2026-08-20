@@ -38,7 +38,7 @@
         {{-- ── Bannière de validation — affichée si le formulaire est resoumis avec erreurs ── --}}
         @if($errors->any())
         <div id="erp-validation-errors"
-             class="mx-4 lg:mx-6 mt-4 rounded-[4px] border border-red-200 bg-red-50 text-sm shadow-sm animate-fade-in-down"
+             class="mx-4 lg:mx-6 mt-4 rounded-[4px] border border-red-200 bg-red-50 text-[13px] shadow-sm animate-fade-in-down"
              role="alert" aria-live="polite">
             <div class="flex items-start gap-3 p-4">
                 {{-- Icône --}}
@@ -93,7 +93,7 @@
 
             {{-- Pied de page --}}
             <footer class="flex-shrink-0 border-t border-gray-100 bg-white px-4 lg:px-6 py-3">
-                <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-[12px] text-gray-400">
                     <span>© {{ date('Y') }} <strong class="text-gray-500">A3 ERP</strong> · Tous droits réservés</span>
                     <a href="https://wa.me/22670037622" target="_blank" rel="noopener"
                        class="inline-flex items-center gap-1.5 text-green-600 hover:text-green-700 font-medium transition-colors">

@@ -46,7 +46,7 @@
             </button>
             {{-- Initiales (sidebar réduite) --}}
             <a href="{{ route('dashboard') }}" x-show="$store.sidebar.collapsed" style="display:none"
-               class="w-9 h-9 rounded-md bg-white/15 text-white flex items-center justify-center text-xs font-black flex-shrink-0">
+               class="w-9 h-9 rounded-md bg-white/15 text-white flex items-center justify-center text-[12px] font-black flex-shrink-0">
                 {{ strtoupper(substr($sbCompany->name ?? 'ER', 0, 2)) }}
             </a>
             <button @click="$store.sidebar.collapsed = !$store.sidebar.collapsed"
@@ -65,14 +65,14 @@
                  x-transition:enter-end="opacity-100 translate-y-0 scale-100"
                  class="absolute left-2 right-2 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden py-1"
                  style="display:none">
-                <p class="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Changer de société</p>
+                <p class="px-3 py-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Changer de société</p>
                 @foreach($sbCompanies as $co)
                 <form method="POST" action="{{ route('company.switch', $co) }}">
                     @csrf
                     <button type="submit"
                             class="w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#eef5f0] transition-colors text-left
                                    {{ $co->id === $sbCompany->id ? 'text-emerald-800 font-semibold bg-[#eef5f0]' : 'text-gray-700' }}">
-                        <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0
+                        <span class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0
                                      {{ $co->id === $sbCompany->id ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500' }}">
                             {{ strtoupper(substr($co->name, 0, 1)) }}
                         </span>
@@ -107,7 +107,7 @@ request()->routeIs('achats.*')                                                  
 
             {{-- ── Dashboard ────────────────────────────── --}}
             <a href="{{ route('dashboard') }}"
-               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                       {{ request()->routeIs('dashboard') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                 @if(request()->routeIs('dashboard'))
                 <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>
@@ -119,7 +119,7 @@ request()->routeIs('achats.*')                                                  
                 <span x-show="!$store.sidebar.collapsed" x-transition:enter="transition-opacity duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="truncate">
                     Tableau de bord
                 </span>
-                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                     Tableau de bord
                     <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                 </div>
@@ -127,7 +127,7 @@ request()->routeIs('achats.*')                                                  
 
             {{-- ── Mes validations ─────────────────────── --}}
             <a href="{{ route('validations.index') }}"
-               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                       {{ request()->routeIs('validations.index') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                 @if(request()->routeIs('validations.index'))
                 <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>
@@ -147,9 +147,9 @@ request()->routeIs('achats.*')                                                  
                 @endphp
                 @if($__pendingBadge > 0)
                 <span x-show="!$store.sidebar.collapsed"
-                      class="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-emerald-600 text-white text-[10.5px] font-bold">{{ $__pendingBadge }}</span>
+                      class="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold">{{ $__pendingBadge }}</span>
                 @endif
-                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                     Mes validations
                     <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                 </div>
@@ -157,26 +157,26 @@ request()->routeIs('achats.*')                                                  
 
             @can('direction.view')
             <a href="{{ route('direction.dashboard') }}"
-               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                       {{ request()->routeIs('direction.dashboard') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                 @if(request()->routeIs('direction.dashboard'))<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                 <svg class="w-[18px] h-[18px] flex-shrink-0 {{ request()->routeIs('direction.dashboard') ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
                 <span x-show="!$store.sidebar.collapsed" class="truncate">Direction</span>
-                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">Direction<div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div></div>
+                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">Direction<div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div></div>
             </a>
 
             {{-- Chaîne de Valeur Intégrée (§3 CDC) --}}
             <a href="{{ route('chaine-valeur') }}"
-               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+               class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                       {{ request()->routeIs('chaine-valeur') ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                 @if(request()->routeIs('chaine-valeur'))<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                 <svg class="w-[18px] h-[18px] flex-shrink-0 {{ request()->routeIs('chaine-valeur') ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
                 </svg>
                 <span x-show="!$store.sidebar.collapsed" class="truncate">Chaîne de Valeur</span>
-                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">Chaîne de Valeur<div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div></div>
+                <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">Chaîne de Valeur<div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div></div>
             </a>
             @endcan
 
@@ -199,7 +199,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'ventes'; $gActive = request()->routeIs('ventes.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <div class="w-[18px] h-[18px] flex-shrink-0 flex items-center justify-center">
@@ -213,7 +213,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Ventes <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -233,7 +233,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -250,7 +250,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'achats'; $gActive = request()->routeIs('achats.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +262,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Achats <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -279,7 +279,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -295,7 +295,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'gestion'; $gActive = request()->routeIs('clients*','suppliers*','products*','brands*','product-families*','promotions*','product-price-tiers*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -307,7 +307,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Gestion <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -328,7 +328,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -345,7 +345,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'stocks'; $gActive = request()->routeIs('stocks.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,7 +357,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Stocks <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -380,7 +380,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs(...explode(',', $match)); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -396,7 +396,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'production'; $gActive = request()->routeIs('production.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -408,7 +408,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Production <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -416,53 +416,91 @@ request()->routeIs('achats.*')                                                  
                      x-transition:enter="transition-all duration-200 ease-out" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                      x-transition:leave="transition-all duration-150 ease-in"  x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1">
                     <div class="ml-4 pl-3 border-l border-white/10 space-y-0.5 py-1">
-                        @php $puser = auth()->user(); @endphp
+                        @php
+                            $puser = auth()->user();
+                            // Les entrées de rapport pointent TOUTES la même route, avec un type
+                            // en paramètre : sans ce discriminant, les six s'allumeraient ensemble.
+                            $isActive = function ($match) {
+                                if ($match === null) { return false; }
+                                if (! str_contains($match, '#')) { return request()->routeIs($match); }
+                                [$r, $type] = explode('#', $match, 2);
+                                return request()->routeIs($r) && request()->input('type', 'production') === $type;
+                            };
+                        @endphp
                         @foreach(array_filter([
-                            /* Suivi OF : tous les porteurs de production.view (dont commercial §13.10) */
-                            [route('production.dashboard'),      'Tableau de bord',       'production.dashboard'],
-                            [route('production.orders.eligible'), 'Commandes à produire', 'production.orders.eligible'],
-                            [route('production.orders.mts'),      'Planification MTS',    'production.orders.mts'],
-                            [route('production.orders.index'),   'Ordres de fabrication', 'production.orders*'],
-                            [route('production.trackings.index'), 'Suivi de fabrication', 'production.trackings*'],
-                            /* Bobines : plus de sous-menu dédié — rattachées à la fiche article
-                               (section « Bobines / lots matière », onglet Stock). Routes conservées
-                               pour la traçabilité (réceptions, consommations OF). */
-                            /* Référentiels (coûts standards inclus) : gestionnaires production seulement */
-                            $puser->can('production.create') ? [route('production.bom.index'),          'Nomenclatures',      'production.bom*'] : null,
-                            $puser->can('production.create') ? [route('production.routings.index'),     'Gammes',             'production.routings*'] : null,
-                            $puser->can('production.create') ? [route('production.machines.index'),     'Machines',           'production.machines*'] : null,
+                            [route('production.dashboard'), 'Tableau de bord', 'production.dashboard'],
+
+                            [null, 'Planification', null],
+                            [route('production.orders.eligible'), 'Commandes à produire — MTO', 'production.orders.eligible'],
+                            [route('production.orders.mts'), 'Planification MTS', 'production.orders.mts'],
+                            $puser->can('production.update') ? [route('production.planning'), 'Plan de charge', 'production.planning'] : null,
+                            /* Le plan de charge MESURE une capacité agrégée ; l'ordonnancement
+                               PLACE les ordres dans le temps. Proches, jamais redondants. */
+                            $puser->can('production.update') ? [route('production.schedule'), 'Ordonnancement', 'production.schedule*'] : null,
+
+                            [null, 'Fabrication', null],
+                            [route('production.orders.index'), 'Ordres de fabrication', 'production.orders*'],
+                            [route('production.trackings.index'), 'Suivi de production', 'production.trackings*'],
+                            $puser->can('production.update') ? [route('production.downtimes'), "Temps d'arrêt", 'production.downtimes'] : null,
+                            $puser->can('production.update') ? [route('production.cutting'), 'Optimisation de découpe', 'production.cutting'] : null,
+
+                            [null, 'Données techniques', null],
+                            $puser->can('production.create') ? [route('production.bom.index'), 'Nomenclatures', 'production.bom*'] : null,
+                            $puser->can('production.create') ? [route('production.routings.index'), 'Gammes opératoires', 'production.routings*'] : null,
+                            /* « Machines » et « Équipements » désignaient la même chose : une
+                               machine EST un équipement. Un seul intitulé, route inchangée. */
+                            $puser->can('production.create') ? [route('production.machines.index'), 'Équipements de production', 'production.machines*'] : null,
                             $puser->can('production.create') ? [route('production.work-centers.index'), 'Centres de travail', 'production.work-centers*'] : null,
-                            $puser->can('production.create') ? [route('production.lines.index'),        'Lignes',             'production.lines*'] : null,
-                            /* Maintenance : profils maintenance */
-                            $puser->can('maintenance.view') ? [route('production.maintenance.index'), 'Maintenance', 'production.maintenance*'] : null,
-                            /* Pilotage : chef production / directeur usine */
-                            $puser->can('production.update') ? [route('production.planning'), 'Plan de charge',       'production.planning'] : null,
-                            $puser->can('production.update') ? [route('production.downtimes'), 'Temps d\'arrêt',       'production.downtimes'] : null,
-                            $puser->can('production.update') ? [route('production.cutting'),  'Optimisation découpe', 'production.cutting'] : null,
-                            /* Qualité : profils qualité */
-                            $puser->can('quality.view') ? [route('qualite.dashboard'),              'Indicateurs qualité', 'qualite.dashboard'] : null,
-                            $puser->can('quality.view') ? [route('qualite.control-plans.index'),    'Plans de contrôle', 'qualite.control-plans*'] : null,
-                            $puser->can('quality.view') ? [route('qualite.inspections.index'),      'Contrôles qualité', 'qualite.inspections*'] : null,
-                            $puser->can('quality.view') ? [route('qualite.non-conformities.index'), 'Non-conformités',   'qualite.non-conformities*'] : null,
-                            $puser->can('quality.view') ? [route('qualite.corrective-actions.index'), 'Actions correctives', 'qualite.corrective-actions*'] : null,
-                            $puser->can('quality.view') ? [route('qualite.releases.index'),         'Libération qualité', 'qualite.releases*'] : null,
-                            $puser->can('quality.view') ? [route('qualite.certificats.index'),      'Certificats qualité', 'qualite.certificats*'] : null,
-                            $puser->can('production.update') ? [route('production.mrp'), 'Réappro (MRP)', 'production.mrp'] : null,
-                            // [MRP] Le calcul des besoins ne proposait que des ACHATS ; les
-                            // articles fabriqués pour le stock n'avaient aucune proposition.
-                            // `production.update` et non `view` : tout le groupe de routes MRP
-                            // l'exige déjà, annoncer le lien plus bas afficherait un 403.
-                            $puser->can('production.update') ? [route('production.mrp.of'), 'Propositions d\'OF', 'production.mrp.of'] : null,
-                            $puser->can('production.cost.view') ? [route('production.treasury'), 'Prévision trésorerie', 'production.treasury'] : null,
-                            $puser->can('production.report.view') ? [route('production.reports'), 'Rapports', 'production.reports'] : null,
+                            $puser->can('production.create') ? [route('production.lines.index'), 'Lignes de production', 'production.lines*'] : null,
+
+                            [null, 'Maintenance', null],
+                            /* Écran existant, atteignable jusqu'ici par un seul bouton de l'écran
+                               Interventions. La maintenance préventive EST ce planning. */
+                            $puser->can('maintenance.view') ? [route('production.maintenance-plans.index'), 'Planning de maintenance', 'production.maintenance-plans*'] : null,
+                            /* Une maintenance corrective est une INTERVENTION : c'est son type qui
+                               distingue préventif et correctif, pas deux entrées de menu. */
+                            $puser->can('maintenance.view') ? [route('production.maintenance.index'), 'Interventions', 'production.maintenance.*'] : null,
+
+                            [null, 'Qualité', null],
+                            /* « Indicateurs qualité » était le tableau de bord qualité sous un
+                               autre nom : deux intitulés pour un seul écran. */
+                            $puser->can('quality.view') ? [route('qualite.dashboard'), 'Tableau de bord qualité', 'qualite.dashboard'] : null,
+                            $puser->can('quality.view') ? [route('qualite.control-plans.index'), 'Plans de contrôle', 'qualite.control-plans*'] : null,
+                            $puser->can('quality.view') ? [route('qualite.inspections.index'), 'Contrôles qualité', 'qualite.inspections*'] : null,
+                            $puser->can('quality.view') ? [route('qualite.non-conformities.index'), 'Non-conformités', 'qualite.non-conformities*'] : null,
+                            $puser->can('quality.view') ? [route('qualite.corrective-actions.index'), 'Actions correctives et préventives', 'qualite.corrective-actions*'] : null,
+                            $puser->can('quality.view') ? [route('qualite.releases.index'), 'Libération qualité', 'qualite.releases*'] : null,
+                            $puser->can('quality.view') ? [route('qualite.certificats.index'), 'Certificats qualité', 'qualite.certificats*'] : null,
+
+                            [null, 'MRP', null],
+                            /* Besoins matière et alertes de réapprovisionnement sont des VUES de
+                               ce même calcul, pas des écrans distincts. */
+                            $puser->can('production.update') ? [route('production.mrp'), 'Calcul des besoins', 'production.mrp'] : null,
+                            $puser->can('production.update') ? [route('production.mrp.of'), "Propositions d'OF", 'production.mrp.of'] : null,
+                            $puser->can('production.update') ? [route('production.mrp.transfers'), 'Propositions de transfert', 'production.mrp.transfers'] : null,
+
+                            [null, 'Rapports et analyses', null],
+                            $puser->can('production.report.view') ? [route('production.reports', ['type' => 'production']), 'Production', 'production.reports#production'] : null,
+                            $puser->can('production.report.view') ? [route('production.reports', ['type' => 'couts']), 'Coûts de production', 'production.reports#couts'] : null,
+                            $puser->can('production.report.view') ? [route('production.reports', ['type' => 'respect_programme']), 'Analyse des écarts', 'production.reports#respect_programme'] : null,
+                            $puser->can('production.report.view') ? [route('production.reports', ['type' => 'rendement']), 'Rendement matière', 'production.reports#rendement'] : null,
+                            $puser->can('production.report.view') ? [route('production.reports', ['type' => 'machine']), 'Performance des équipements', 'production.reports#machine'] : null,
+                            $puser->can('production.report.view') ? [route('production.reports', ['type' => 'operateur']), 'Productivité', 'production.reports#operateur'] : null,
+                            /* Écran jusqu'ici injoignable : articles fabricables sans nomenclature
+                               active, donc non lançables et absents des propositions d'OF. */
+                            $puser->can('production.report.view') ? [route('production.articles-sans-nomenclature'), 'Articles sans nomenclature', 'production.articles-sans-nomenclature'] : null,
                         ]) as [$href, $label, $match])
-                        @php $sub = request()->routeIs($match); @endphp
+                        @if($href === null)
+                            <div class="px-3 pt-2 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 select-none">{{ $label }}</div>
+                        @else
+                        @php $sub = $isActive($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
                         </a>
+                        @endif
                         @endforeach
                     </div>
                 </div>
@@ -474,7 +512,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'analytique'; $gActive = request()->routeIs('reports.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -486,7 +524,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Analytique <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -512,7 +550,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -530,7 +568,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'tresorerie'; $gActive = request()->routeIs('tresorerie.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -542,7 +580,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Trésorerie <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -581,6 +619,11 @@ request()->routeIs('achats.*')                                                  
                             // ── Prévisions & Budget ──
                             auth()->user()->can('payments.view')      ? [null, 'Prévisions & Budget', null] : null,
                             auth()->user()->can('payments.view')      ? [route('tresorerie.previsions.index'),    'Prévisions',         'tresorerie.previsions*']     : null,
+                            /* Déplacée depuis le menu Production : une prévision de trésorerie
+                               relève du module Trésorerie, quelle que soit son origine. La route
+                               et sa permission (`production.cost.view`) sont inchangées — seul
+                               l'endroit où on la trouve change. */
+                            auth()->user()->can('production.cost.view') ? [route('production.treasury'), 'Prévision production', 'production.treasury'] : null,
                             auth()->user()->can('payments.view')      ? [route('tresorerie.simulations.index'),   'Simulations',        'tresorerie.simulations*']    : null,
                             auth()->user()->can('payments.view')      ? [route('tresorerie.budgets.index'),       'Budgets trésorerie', 'tresorerie.budgets*']        : null,
 
@@ -597,11 +640,11 @@ request()->routeIs('achats.*')                                                  
                             auth()->user()->can('audit.view')         ? [route('audit.index'),                    'Journal des actions', 'audit.index']               : null,
                         ]) as [$href, $label, $match])
                         @if($href === null)
-                            <div class="px-3 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 select-none">{{ $label }}</div>
+                            <div class="px-3 pt-2 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 select-none">{{ $label }}</div>
                         @else
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -618,7 +661,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'comptabilite'; $gActive = request()->routeIs('comptabilite.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -630,7 +673,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Comptabilité <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -662,7 +705,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -678,7 +721,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'rh'; $gActive = request()->routeIs('rh.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -690,7 +733,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         RH / Paie <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -700,7 +743,7 @@ request()->routeIs('achats.*')                                                  
                     <div class="ml-4 pl-3 border-l border-white/10 space-y-0.5 py-1">
                         {{-- ── Gestion des salariés ── --}}
                         <div class="px-3 pt-2 pb-0.5">
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Salariés</span>
+                            <span class="text-[11px] font-bold uppercase tracking-widest text-gray-400">Salariés</span>
                         </div>
                         @php $rhUser = auth()->user(); @endphp
                         {{-- Chaque item RH est conditionné par la même permission que sa route --}}
@@ -722,7 +765,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -732,7 +775,7 @@ request()->routeIs('achats.*')                                                  
                         {{-- ── Traitement de la paie ── --}}
                         @if($rhUser->canAny(['rh.payroll.view', 'rh.loans.view']))
                         <div class="px-3 pt-3 pb-0.5">
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Paie</span>
+                            <span class="text-[11px] font-bold uppercase tracking-widest text-gray-400">Paie</span>
                         </div>
                         @endif
                         @foreach(array_filter([
@@ -745,7 +788,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -755,7 +798,7 @@ request()->routeIs('achats.*')                                                  
                         {{-- ── Configuration ── --}}
                         @if($rhUser->can('rh.settings'))
                         <div class="px-3 pt-3 pb-0.5">
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Configuration</span>
+                            <span class="text-[11px] font-bold uppercase tracking-widest text-gray-400">Configuration</span>
                         </div>
                         @endif
                         @foreach($rhUser->can('rh.settings') ? [
@@ -773,7 +816,7 @@ request()->routeIs('achats.*')                                                  
                         ] : [] as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -783,7 +826,7 @@ request()->routeIs('achats.*')                                                  
                         {{-- ── États & comptabilité ── --}}
                         @if($rhUser->can('rh.payroll.view'))
                         <div class="px-3 pt-3 pb-0.5">
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Éditions</span>
+                            <span class="text-[11px] font-bold uppercase tracking-widest text-gray-400">Éditions</span>
                         </div>
                         @endif
                         @foreach(array_filter([
@@ -792,7 +835,7 @@ request()->routeIs('achats.*')                                                  
                         ]) as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -809,7 +852,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'crm'; $gActive = request()->routeIs('crm.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -821,7 +864,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         CRM <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -837,7 +880,7 @@ request()->routeIs('achats.*')                                                  
                         ] as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -854,7 +897,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'integrations'; $gActive = request()->routeIs('integrations.*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -866,7 +909,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Intégrations <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -886,7 +929,7 @@ request()->routeIs('achats.*')                                                  
                         @foreach($intLinks as [$href, $label, $match])
                         @php $sub = request()->routeIs($match); @endphp
                         <a href="{{ $href }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             {{ $label }}
@@ -903,7 +946,7 @@ request()->routeIs('achats.*')                                                  
             @php $gId = 'parametres'; $gActive = request()->routeIs('users*','roles*','audit*','company*','units*','settings.*','payment-terms*','sequences*'); @endphp
             <div class="space-y-0.5">
                 <button type="button" @click="open = open === '{{ $gId }}' ? null : '{{ $gId }}'"
-                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150
+                        class="group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150
                                {{ $gActive ? 'bg-white/10 text-white' : 'text-gray-200 hover:bg-white/10 hover:text-white' }}">
                     @if($gActive)<span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full"></span>@endif
                     <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $gActive ? 'text-white' : 'text-gray-400 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -915,7 +958,7 @@ request()->routeIs('achats.*')                                                  
                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
-                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                    <div x-show="$store.sidebar.collapsed" class="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-[12px] font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
                         Paramètres <div class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
                     </div>
                 </button>
@@ -926,7 +969,7 @@ request()->routeIs('achats.*')                                                  
                         @can('users.manage')
                         @php $sub = request()->routeIs('users*'); @endphp
                         <a href="{{ route('users.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Utilisateurs
@@ -935,7 +978,7 @@ request()->routeIs('achats.*')                                                  
                         @can('roles.manage')
                         @php $sub = request()->routeIs('roles*'); @endphp
                         <a href="{{ route('roles.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Rôles & Permissions
@@ -944,7 +987,7 @@ request()->routeIs('achats.*')                                                  
                         @can('audit.view')
                         @php $sub = request()->routeIs('audit*'); @endphp
                         <a href="{{ route('audit.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Journal d'activité
@@ -953,14 +996,14 @@ request()->routeIs('achats.*')                                                  
                         @can('settings.manage')
                         @php $sub = request()->routeIs('company*'); @endphp
                         <a href="{{ route('company.edit') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Société
                         </a>
                         @php $sub = request()->routeIs('pilotage.alertes*'); @endphp
                         <a href="{{ route('pilotage.alertes.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Alertes par seuil
@@ -968,7 +1011,7 @@ request()->routeIs('achats.*')                                                  
                         @endcan
                         @php $sub = request()->routeIs('units*'); @endphp
                         <a href="{{ route('units.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Unités de mesure
@@ -976,42 +1019,42 @@ request()->routeIs('achats.*')                                                  
                         @can('settings.manage')
                         @php $sub = request()->routeIs('settings.fiscal-years*'); @endphp
                         <a href="{{ route('settings.fiscal-years.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Exercices fiscaux
                         </a>
                         @php $sub = request()->routeIs('settings.currencies*'); @endphp
                         <a href="{{ route('settings.currencies.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Devises
                         </a>
                         @php $sub = request()->routeIs('settings.tax-rates*'); @endphp
                         <a href="{{ route('settings.tax-rates.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Taux de TVA
                         </a>
                         @php $sub = request()->routeIs('settings.payment-terms*'); @endphp
                         <a href="{{ route('settings.payment-terms.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Conditions de paiement
                         </a>
                         @php $sub = request()->routeIs('settings.sales*'); @endphp
                         <a href="{{ route('settings.sales.hub') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-gray-300"></span>
                             Paramétrage Vente
                         </a>
                         @php $sub = request()->routeIs('settings.sequences*'); @endphp
                         <a href="{{ route('settings.sequences.index') }}"
-                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-100
+                           class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-100
                                   {{ $sub ? 'bg-[#00A651]/20 text-emerald-300 font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/10' }}">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 {{ $sub ? 'bg-emerald-400' : 'bg-white/25' }}"></span>
                             Numérotation
@@ -1032,12 +1075,12 @@ request()->routeIs('achats.*')                                                  
              class="flex-shrink-0 px-3 pb-3"
              style="border-top:1px solid rgba(255,255,255,.08);">
             <button @click="$dispatch('open-palette')"
-                    class="w-full mt-2 flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-all group">
+                    class="w-full mt-2 flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] text-gray-400 hover:text-white hover:bg-white/10 transition-all group">
                 <svg class="w-3.5 h-3.5 flex-shrink-0 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
                 </svg>
                 <span class="flex-1 text-left">Recherche rapide</span>
-                <kbd class="text-[9px] font-bold bg-white/10 border border-white/15 rounded text-gray-300 px-1.5 py-0.5">Ctrl K</kbd>
+                <kbd class="text-[11px] font-bold bg-white/10 border border-white/15 rounded text-gray-300 px-1.5 py-0.5">Ctrl K</kbd>
             </button>
         </div>
 

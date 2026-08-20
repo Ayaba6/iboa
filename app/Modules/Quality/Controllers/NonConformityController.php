@@ -15,7 +15,9 @@ class NonConformityController extends Controller
     public function __construct()
     {
         $this->middleware('permission:production.view')->only(['index']);
-        $this->middleware('permission:production.update')->except(['index']);
+        // Ouvrir et traiter une non-conformité est un acte QUALITÉ : `quality.manage`
+        // ouvre au même titre que `production.update`. Ajout par OU, rien n'est retiré.
+        $this->middleware('permission:production.update|quality.manage')->except(['index']);
     }
 
     public function index(Request $request): View

@@ -16,28 +16,28 @@
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total TTC filtré</p>
-            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[11px] text-gray-500">Total TTC filtré</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-[11px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Montant accepté</p>
-            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $fmt($summary['total_accepted']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[11px] text-gray-500">Montant accepté</p>
+            <p class="text-[15px] font-bold text-emerald-600 tabular-nums">{{ $fmt($summary['total_accepted']) }} <span class="text-[11px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">En attente</p>
-            <p class="text-[16px] font-bold text-blue-600 tabular-nums">{{ $summary['count_pending'] }} <span class="text-xs font-normal text-gray-400">devis</span></p>
+            <p class="text-[11px] text-gray-500">En attente</p>
+            <p class="text-[15px] font-bold text-blue-600 tabular-nums">{{ $summary['count_pending'] }} <span class="text-[11px] font-normal text-gray-400">devis</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Expirés</p>
-            <p class="text-[16px] font-bold {{ $summary['count_expired'] > 0 ? 'text-orange-600' : 'text-gray-900' }} tabular-nums">{{ $summary['count_expired'] }} <span class="text-xs font-normal text-gray-400">devis</span></p>
+            <p class="text-[11px] text-gray-500">Expirés</p>
+            <p class="text-[15px] font-bold {{ $summary['count_expired'] > 0 ? 'text-orange-600' : 'text-gray-900' }} tabular-nums">{{ $summary['count_expired'] }} <span class="text-[11px] font-normal text-gray-400">devis</span></p>
         </div>
     </div>
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Devis</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $quotes->total() }} devis</p>
+            <h1 class="text-[20px] font-bold text-gray-900 leading-tight">Devis</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $quotes->total() }} devis</p>
         </div>
         <div class="flex items-center gap-2 self-start">
             <a href="{{ route('ventes.devis.export', array_filter([
@@ -46,7 +46,7 @@
                     'date_from' => $filters['date_from'] ?? null,
                     'date_to'   => $filters['date_to']   ?? null,
                 ])) }}"
-               class="inline-flex items-center gap-2 px-3 py-1.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm font-medium rounded-[4px] transition-colors"
+               class="inline-flex items-center gap-2 px-3 py-1.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-[13px] font-medium rounded-[4px] transition-colors"
                data-loading data-loading-text="Export Excel en cours…">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -70,12 +70,12 @@
             <div>
             <label class="{{ $lblX }}">Rechercher</label>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, client…"
-                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                   class="w-full h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
             </div>
 
             <div>
             <label class="{{ $lblX }}">Statut</label>
-            <select name="status" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            <select name="status" class="w-full h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon"             {{ ($filters['status'] ?? '') === 'brouillon'             ? 'selected' : '' }}>Brouillon</option>
                 <option value="en_attente_validation" {{ ($filters['status'] ?? '') === 'en_attente_validation' ? 'selected' : '' }}>⏳ En attente de validation</option>
@@ -90,23 +90,23 @@
             <div>
             <label class="{{ $lblX }}">Période du</label>
             <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}"
-                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                   class="w-full h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
             </div>
 
             <div>
             <label class="{{ $lblX }}">au</label>
             <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}"
-                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                   class="w-full h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
             </div>
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search','status','client_id','date_from','date_to']))
                 <a href="{{ route('ventes.devis.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px] transition-colors">
                     ✕
                 </a>
                 @endif
@@ -117,7 +117,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono, montants HT/TTC --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="tbl-scroll">
-            <table class="w-full text-[12.5px] border-collapse">
+            <table class="w-full text-[12px] border-collapse">
                 <thead>
                     <tr class="bg-[#3b4248] text-white text-[11px]">
                         <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-32">N° devis</th>
@@ -208,7 +208,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-16 text-center text-gray-400 text-sm">
+                        <td colspan="8" class="px-4 py-16 text-center text-gray-400 text-[13px]">
                             Aucun devis trouvé.
                         </td>
                     </tr>
@@ -216,7 +216,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
             <span>{{ $quotes->total() }} devis · Total TTC filtré : <b class="text-emerald-700 tabular-nums">{{ $fmt($summary['total_ttc']) }} FCFA</b></span>
             @if($quotes->hasPages())<div>{{ $quotes->appends($filters)->links() }}</div>@endif
         </div>

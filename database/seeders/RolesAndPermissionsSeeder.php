@@ -33,6 +33,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.validate', 'orders.reopen',
             'orders.edit_validated', // [CDC §13.1] modifier une commande déjà validée (prix verrouillés pour les autres)
             'bon_preparations.view', 'bon_preparations.update',
+            // [Ventes §14] Contrôle et validation SÉPARÉS de la préparation :
+            // préparateur ≠ contrôleur ≠ validateur sur une sortie de stock
+            // valorisée. Trois permissions distinctes, pas une seule « update ».
+            'bon_preparations.control', 'bon_preparations.validate',
+            // [Ventes §17] Annuler un bon n'est pas le faire avancer : permission
+            // distincte de `update`, volontairement refusée au magasinier, qui ne
+            // doit pas pouvoir écarter le document autorisant sa propre sortie.
+            'bon_preparations.cancel',
+            // [Ventes] Voir le coût de revient et la marge sur devis et commandes.
+            // Meme logique que `production.cost.view` et `coils.split.view_cost` :
+            // un prix de revient ne se diffuse pas a tout utilisateur habilite a
+            // saisir un devis. Sans ce droit, le cout n'est meme pas serialise
+            // dans la page.
+            'sales.view_margin',
             'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.delete', 'invoices.validate', 'invoices.send',
             'deliveries.view', 'deliveries.create', 'deliveries.edit', 'deliveries.validate',
             'credit_notes.view', 'credit_notes.create', 'credit_notes.edit',
@@ -364,6 +378,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.view', 'orders.create', 'orders.edit', 'orders.delete', 'orders.validate', 'orders.reopen',
             'orders.edit_validated', // [CDC §13.1] seul un responsable peut retoucher une commande validée
             'bon_preparations.view', // [CDC §BP] suivi des bons de préparation
+            'bon_preparations.cancel', // [Ventes §17] écarter un bon devenu caduc sur SA commande
+            'sales.view_margin',       // [Ventes] négocie les prix : doit voir la marge
             'invoices.view', 'invoices.create', 'invoices.send',
             'deliveries.view', 'deliveries.create',
             'credit_notes.view', 'credit_notes.create',
@@ -382,6 +398,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'supplier_returns.view', 'supplier_returns.create', 'supplier_returns.validate',
             'purchase_orders.view', 'deliveries.view', 'orders.view', 'invoices.view',
             'production.view', 'reports.view',
+            // [Ventes §14] Le responsable stock CONTRÔLE et VALIDE les préparations
+            // exécutées par le magasinier. Il ne reçoit volontairement pas
+            // `bon_preparations.update` : il ne prépare pas ce qu'il contrôle.
+            'bon_preparations.view', 'bon_preparations.control', 'bon_preparations.validate',
+            'bon_preparations.cancel', // [Ventes §17] écarter un bon caduc, sans jamais le préparer
         ]);
 
         // Caissier — paiements clients + trésorerie courante

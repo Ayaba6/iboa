@@ -13,7 +13,7 @@
 <div class="space-y-3">
 
     <div class="flex items-center justify-between">
-        <h1 class="text-[16px] font-bold text-gray-900">Nouvelle commande fournisseur</h1>
+        <h1 class="text-[15px] font-bold text-gray-900">Nouvelle commande fournisseur</h1>
     </div>
 
     {{-- [FIX persistance intermittente] Soumission native (voir edit.blade.php). --}}

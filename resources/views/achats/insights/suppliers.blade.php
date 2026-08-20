@@ -24,13 +24,13 @@
 <div class="space-y-3">
     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">📊 Évaluation fournisseurs</h1>
-            <p class="text-sm text-gray-500">Scorecard sur les {{ $months }} derniers mois — service, délais, retours, volume.</p>
+            <h1 class="text-[15px] font-bold text-gray-900">📊 Évaluation fournisseurs</h1>
+            <p class="text-[13px] text-gray-500">Scorecard sur les {{ $months }} derniers mois — service, délais, retours, volume.</p>
         </div>
         <form method="GET" class="flex items-end gap-2">
             <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Période (mois)</label>
-                <select name="months" onchange="this.form.submit()" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm">
+                <label class="block text-[12px] font-medium text-gray-700 mb-1">Période (mois)</label>
+                <select name="months" onchange="this.form.submit()" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px]">
                     @foreach([3, 6, 12, 24, 36] as $m)
                     <option value="{{ $m }}" {{ $months==$m?'selected':'' }}>{{ $m }}</option>
                     @endforeach
@@ -39,9 +39,9 @@
         </form>
     </div>
 
-    <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4 text-sm text-blue-800">
+    <div class="bg-blue-50 border border-blue-200 rounded-[4px] p-4 text-[13px] text-blue-800">
         <p class="font-medium mb-1">💡 Méthodologie de notation</p>
-        <ul class="list-disc list-inside text-blue-700 text-xs space-y-0.5">
+        <ul class="list-disc list-inside text-blue-700 text-[12px] space-y-0.5">
             <li><strong>Taux de service (50%)</strong> = qté reçue / qté commandée. Mesure la fiabilité de livraison.</li>
             <li><strong>Respect des délais (30%)</strong> = écart entre délai réel et délai promis. ≤ 0 j = parfait.</li>
             <li><strong>Taux de retour (20%)</strong> = montant des retours / montant commandé. Mesure la qualité.</li>
@@ -50,12 +50,12 @@
     </div>
 
     @if($scorecards->isEmpty())
-        <div class="bg-gray-50 border border-gray-300 rounded-[4px] p-8 text-center text-gray-500 text-sm">
+        <div class="bg-gray-50 border border-gray-300 rounded-[4px] p-8 text-center text-gray-500 text-[13px]">
             Aucune donnée d'achat sur les {{ $months }} derniers mois.
         </div>
     @else
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
-        <table class="w-full text-sm">
+        <table class="w-full text-[13px]">
             <thead class="bg-[#eef5f0] border-b border-gray-300 text-[11px] uppercase tracking-wide font-bold text-emerald-900">
                 <tr>
                     <th class="px-3 py-1.5 text-left">Fournisseur</th>
@@ -74,8 +74,8 @@
                 @php $g = $gradeColors[$s->grade ?? 'C']; @endphp
                 <tr class="hover:bg-gray-50">
                     <td class="px-3 py-1.5">
-                        <p class="text-sm font-medium text-gray-900">{{ $s->name }}</p>
-                        <p class="text-xs text-gray-400 font-mono">{{ $s->code }}</p>
+                        <p class="text-[13px] font-medium text-gray-900">{{ $s->name }}</p>
+                        <p class="text-[12px] text-gray-400 font-mono">{{ $s->code }}</p>
                     </td>
                     <td class="px-3 py-1.5 text-right tabular-nums font-medium">{{ $fmt($s->po_volume ?? 0) }}</td>
                     <td class="px-3 py-1.5 text-right tabular-nums text-gray-600">{{ $s->po_count ?? 0 }}</td>
@@ -88,7 +88,7 @@
                             <span class="text-gray-400">—</span>
                         @endif
                     </td>
-                    <td class="px-3 py-1.5 text-right text-xs">
+                    <td class="px-3 py-1.5 text-right text-[12px]">
                         @if($s->avg_real_delay !== null)
                             <span class="text-gray-700">{{ round($s->avg_real_delay, 1) }} j</span>
                             @if($s->delay_gap !== null)
@@ -114,12 +114,12 @@
                     <td class="px-3 py-1.5 text-right tabular-nums {{ ($s->outstanding ?? 0) > 0 ? 'text-orange-700 font-medium' : 'text-gray-400' }}">
                         {{ $fmt($s->outstanding ?? 0) }}
                         @if($s->overdue_count > 0)
-                            <p class="text-xs text-red-600">⚠ {{ $s->overdue_count }} en retard</p>
+                            <p class="text-[12px] text-red-600">⚠ {{ $s->overdue_count }} en retard</p>
                         @endif
                     </td>
                     <td class="px-3 py-1.5 text-right tabular-nums font-semibold {{ $g['text'] }}">{{ $s->score }}</td>
                     <td class="px-3 py-1.5 text-center">
-                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full {{ $g['bg'] }} {{ $g['text'] }} text-sm font-bold">{{ $s->grade }}</span>
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full {{ $g['bg'] }} {{ $g['text'] }} text-[13px] font-bold">{{ $s->grade }}</span>
                     </td>
                 </tr>
                 @endforeach

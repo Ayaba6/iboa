@@ -16,27 +16,27 @@
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total avoirs TTC</p>
-            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[12px] text-gray-500">Total avoirs TTC</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-[12px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Crédit restant</p>
-            <p class="text-[16px] font-bold text-purple-600 tabular-nums">{{ $fmt($summary['remaining_credit']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[12px] text-gray-500">Crédit restant</p>
+            <p class="text-[15px] font-bold text-purple-600 tabular-nums">{{ $fmt($summary['remaining_credit']) }} <span class="text-[12px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">En attente</p>
-            <p class="text-[16px] font-bold text-blue-600 tabular-nums">{{ $summary['count_pending'] }} <span class="text-xs font-normal text-gray-400">avoir(s)</span></p>
+            <p class="text-[12px] text-gray-500">En attente</p>
+            <p class="text-[15px] font-bold text-blue-600 tabular-nums">{{ $summary['count_pending'] }} <span class="text-[12px] font-normal text-gray-400">avoir(s)</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Utilisés</p>
-            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_used'] }} <span class="text-xs font-normal text-gray-400">avoir(s)</span></p>
+            <p class="text-[12px] text-gray-500">Utilisés</p>
+            <p class="text-[15px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_used'] }} <span class="text-[12px] font-normal text-gray-400">avoir(s)</span></p>
         </div>
     </div>
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Avoirs</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $creditNotes->total() }} avoir(s)</p>
+            <h1 class="text-[15px] font-bold text-gray-900">Avoirs</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $creditNotes->total() }} avoir(s)</p>
         </div>
     </div>
 
@@ -45,8 +45,8 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="N° avoir, client..."
-                   class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
-            <select name="status" class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
+                   class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
+            <select name="status" class="h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-purple-500 focus:border-purple-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon"             {{ ($filters['status'] ?? '') === 'brouillon'             ? 'selected' : '' }}>Brouillon</option>
                 <option value="en_attente_validation" {{ ($filters['status'] ?? '') === 'en_attente_validation' ? 'selected' : '' }}>⏳ En attente de validation</option>
@@ -55,9 +55,9 @@
                 <option value="annule"    {{ ($filters['status'] ?? '') === 'annule'    ? 'selected' : '' }}>Annulé</option>
             </select>
             <div class="flex gap-2">
-                <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">Filtrer</button>
+                <button type="submit" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">Filtrer</button>
                 @if(request()->hasAny(['search','status']))
-                <a href="{{ route('ventes.avoirs.index') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px]">✕</a>
+                <a href="{{ route('ventes.avoirs.index') }}" class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px]">✕</a>
                 @endif
             </div>
         </div>
@@ -66,7 +66,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono, crédit restant --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-[12.5px] border-collapse">
+            <table class="w-full text-[12px] border-collapse">
                 <thead>
                     <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
                         <th class="text-left font-bold px-3 py-1.5 uppercase tracking-wide w-32">N° avoir</th>
@@ -113,12 +113,12 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="px-4 py-16 text-center text-gray-400 text-sm">Aucun avoir trouvé.</td></tr>
+                    <tr><td colspan="8" class="px-4 py-16 text-center text-gray-400 text-[13px]">Aucun avoir trouvé.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
             <span>{{ $creditNotes->total() }} avoir(s) · Total TTC : <b class="text-purple-700 tabular-nums">{{ $fmt($summary['total_ttc']) }} FCFA</b> · Crédit restant : <b class="text-orange-600 tabular-nums">{{ $fmt($summary['remaining_credit']) }} FCFA</b></span>
             @if($creditNotes->hasPages())<div>{{ $creditNotes->appends($filters)->links() }}</div>@endif
         </div>

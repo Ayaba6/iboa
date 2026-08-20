@@ -14,28 +14,28 @@
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total TTC filtré</p>
-            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[12px] text-gray-500">Total TTC filtré</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-[12px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Reste à payer</p>
-            <p class="text-[16px] font-bold text-orange-600 tabular-nums">{{ $fmt($summary['total_remaining']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[12px] text-gray-500">Reste à payer</p>
+            <p class="text-[15px] font-bold text-orange-600 tabular-nums">{{ $fmt($summary['total_remaining']) }} <span class="text-[12px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">En retard</p>
-            <p class="text-[16px] font-bold {{ $summary['count_overdue'] > 0 ? 'text-red-600' : 'text-gray-900' }} tabular-nums">{{ $summary['count_overdue'] }} <span class="text-xs font-normal text-gray-400">facture(s)</span></p>
+            <p class="text-[12px] text-gray-500">En retard</p>
+            <p class="text-[15px] font-bold {{ $summary['count_overdue'] > 0 ? 'text-red-600' : 'text-gray-900' }} tabular-nums">{{ $summary['count_overdue'] }} <span class="text-[12px] font-normal text-gray-400">facture(s)</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Payées</p>
-            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_paid'] }} <span class="text-xs font-normal text-gray-400">facture(s)</span></p>
+            <p class="text-[12px] text-gray-500">Payées</p>
+            <p class="text-[15px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_paid'] }} <span class="text-[12px] font-normal text-gray-400">facture(s)</span></p>
         </div>
     </div>
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Factures fournisseurs</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $invoices->total() }} facture(s)</p>
+            <h1 class="text-[15px] font-bold text-gray-900">Factures fournisseurs</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $invoices->total() }} facture(s)</p>
         </div>
         <a href="{{ route('achats.factures-fournisseurs.create') }}"
            class="bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-semibold px-3 py-1.5 rounded-[4px] flex items-center gap-2 self-start transition-colors">
@@ -50,9 +50,9 @@
     <form method="GET" data-autosubmit class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, fournisseur..."
-                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
 
-            <select name="supplier_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+            <select name="supplier_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Tous les fournisseurs</option>
                 @foreach($suppliers as $supplier)
                     <option value="{{ $supplier->id }}" {{ ($filters['supplier_id'] ?? '') == $supplier->id ? 'selected' : '' }}>
@@ -61,7 +61,7 @@
                 @endforeach
             </select>
 
-            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Tous les statuts</option>
                 <option value="recue"               {{ ($filters['status'] ?? '') === 'recue'               ? 'selected' : '' }}>Reçue</option>
                 <option value="validee"             {{ ($filters['status'] ?? '') === 'validee'             ? 'selected' : '' }}>Validée</option>
@@ -71,7 +71,7 @@
                 <option value="annulee"             {{ ($filters['status'] ?? '') === 'annulee'             ? 'selected' : '' }}>Annulée</option>
             </select>
 
-            <label class="flex items-center gap-2 border border-gray-300 rounded-[4px] px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
+            <label class="flex items-center gap-2 border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] cursor-pointer hover:bg-gray-50">
                 <input type="checkbox" name="overdue" value="1" {{ !empty($filters['overdue']) ? 'checked' : '' }}
                        class="rounded border-gray-300 text-amber-600 focus:ring-amber-500">
                 <span class="text-gray-700">En retard</span>
@@ -79,12 +79,12 @@
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
+                        class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search', 'supplier_id', 'status', 'overdue']))
                 <a href="{{ route('achats.factures-fournisseurs.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px] transition-colors">
                     ✕
                 </a>
                 @endif
@@ -95,7 +95,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono, montants HT/TTC/reste --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-[12.5px] border-collapse">
+            <table class="w-full text-[12px] border-collapse">
                 <thead>
                     <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
                         <th class="text-left font-bold px-3 py-2 uppercase tracking-wide w-36">N° facture</th>
@@ -135,7 +135,7 @@
                         <td class="px-3 py-1.5 text-gray-600 hidden md:table-cell whitespace-nowrap">{{ $invoice->received_at?->format('d/m/Y') ?? '—' }}</td>
                         <td class="px-3 py-1.5 hidden lg:table-cell whitespace-nowrap">
                             <span class="{{ $isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600' }}">{{ $invoice->due_at?->format('d/m/Y') ?? '—' }}</span>
-                            @if($isOverdue)<span class="ml-1 inline-flex px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold bg-red-100 text-red-700">RETARD</span>@endif
+                            @if($isOverdue)<span class="ml-1 inline-flex px-1.5 py-0.5 rounded-[3px] text-[11px] font-bold bg-red-100 text-red-700">RETARD</span>@endif
                         </td>
                         <td class="px-3 py-1.5 text-right tabular-nums text-gray-700 hidden lg:table-cell whitespace-nowrap">{{ number_format($invoice->subtotal_ht, 0, ',', ' ') }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">{{ number_format($invoice->total_ttc, 0, ',', ' ') }}</td>
@@ -192,13 +192,13 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9" class="px-4 py-16 text-center text-gray-400 text-sm">Aucun résultat.</td>
+                        <td colspan="9" class="px-4 py-16 text-center text-gray-400 text-[13px]">Aucun résultat.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
             <span>{{ $invoices->total() }} facture(s) · Total TTC filtré : <b class="text-emerald-700 tabular-nums">{{ $fmt($summary['total_ttc']) }} FCFA</b> · Reste à payer : <b class="text-orange-600 tabular-nums">{{ $fmt($summary['total_remaining']) }} FCFA</b></span>
             @if($invoices->hasPages())<div>{{ $invoices->appends($filters)->links() }}</div>@endif
         </div>

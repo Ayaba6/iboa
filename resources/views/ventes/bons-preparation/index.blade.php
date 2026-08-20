@@ -1,12 +1,12 @@
 @extends('layouts.erp')
-@section('title', 'Bons de préparation')
+@section('title', 'Bons de chargement')
 
 @section('breadcrumb')
     <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Accueil</a>
     <span class="mx-1">/</span>
     <a href="{{ route('ventes.commandes.index') }}" class="hover:text-gray-700">Ventes</a>
     <span class="mx-1">/</span>
-    <span class="text-gray-900 font-medium">Bons de préparation</span>
+    <span class="text-gray-900 font-medium">Bons de chargement</span>
 @endsection
 
 @section('content')
@@ -17,28 +17,43 @@
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total BP</p>
-            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
+            <p class="text-[12px] text-gray-500">Total BP</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">En attente</p>
-            <p class="text-[16px] font-bold text-amber-600 tabular-nums">{{ $summary['en_attente'] }}</p>
+            <p class="text-[12px] text-gray-500">En attente</p>
+            <p class="text-[15px] font-bold text-amber-600 tabular-nums">{{ $summary['en_attente'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">En cours</p>
-            <p class="text-[16px] font-bold text-blue-600 tabular-nums">{{ $summary['en_cours'] }}</p>
+            <p class="text-[12px] text-gray-500">En cours</p>
+            <p class="text-[15px] font-bold text-blue-600 tabular-nums">{{ $summary['en_cours'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Chargés</p>
-            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $summary['charge'] }}</p>
+            <p class="text-[12px] text-gray-500">Chargés</p>
+            <p class="text-[15px] font-bold text-emerald-600 tabular-nums">{{ $summary['charge'] }}</p>
         </div>
     </div>
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Bons de préparation</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $bps->total() }} bon(s)</p>
+            {{-- [Ventes §4.3] Ces documents sont des bons de CHARGEMENT, pas des
+                 bons de préparation quantifiés. Ils n'ont aucune ligne : ils
+                 attestent qu'une commande a été chargée, sans dire quoi, en
+                 quelle quantité ni depuis quel lot.
+                 Conserver l'intitulé « Bons de préparation » les rendait
+                 indistinguables du nouveau module quantifié — deux écrans, deux
+                 modèles de données, un seul nom. --}}
+            <h1 class="text-[20px] font-bold text-gray-900 leading-tight">Bons de chargement</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">
+                {{ $bps->total() }} bon(s) · documents historiques sans lignes quantifiées
+            </p>
+            @can('bon_preparations.view')
+            <p class="text-[12px] text-gray-400 mt-1">
+                Les préparations quantifiées (lignes, allocations lot/bobine, contrôle) sont dans
+                <a href="{{ route('ventes.preparations.index') }}" class="text-emerald-700 hover:underline font-medium">Préparations</a>.
+            </p>
+            @endcan
         </div>
     </div>
 
@@ -50,12 +65,12 @@
             <label class="{{ $lblX }}">Rechercher</label>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="N° BP ou commande…"
-                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                   class="w-full h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
             </div>
 
             <div>
             <label class="{{ $lblX }}">Statut</label>
-            <select name="status" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            <select name="status" class="w-full h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 @foreach(['en_attente' => 'En attente', 'en_cours' => 'En cours', 'charge' => 'Chargé', 'annule' => 'Annulé'] as $v => $l)
                     <option value="{{ $v }}" {{ ($filters['status'] ?? '') === $v ? 'selected' : '' }}>{{ $l }}</option>
@@ -65,7 +80,7 @@
 
             <div>
             <label class="{{ $lblX }}">Mode de règlement</label>
-            <select name="payment_mode" class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            <select name="payment_mode" class="w-full h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les modes</option>
                 <option value="cash"   {{ ($filters['payment_mode'] ?? '') === 'cash'   ? 'selected' : '' }}>Comptant</option>
                 <option value="credit" {{ ($filters['payment_mode'] ?? '') === 'credit' ? 'selected' : '' }}>Crédit</option>
@@ -74,12 +89,12 @@
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search', 'status', 'payment_mode']))
                 <a href="{{ route('ventes.bons-preparation.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px] transition-colors">
                     ✕
                 </a>
                 @endif
@@ -90,7 +105,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono, workflow chargement --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-[12.5px] border-collapse">
+            <table class="w-full text-[12px] border-collapse">
                 <thead>
                     <tr class="bg-[#3b4248] text-white text-[11px]">
                         <th class="text-left font-semibold px-3 py-1.5 uppercase tracking-wide whitespace-nowrap w-32">N° BP</th>
@@ -117,7 +132,7 @@
                         </td>
                         <td class="px-3 py-1.5 font-medium text-gray-900">{{ $bp->order?->client?->displayName() ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-center hidden lg:table-cell">
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[10.5px] font-bold
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[11px] font-bold
                                 {{ $bp->payment_mode === 'cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700' }}">
                                 {{ $bp->payment_mode_label }}
                             </span>
@@ -190,11 +205,11 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                                 </svg>
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Aucun bon de préparation trouvé</p>
+                                    <p class="text-[13px] font-medium text-gray-600">Aucun bon de préparation trouvé</p>
                                     @if(request()->hasAny(['search', 'status', 'payment_mode']))
-                                        <a href="{{ route('ventes.bons-preparation.index') }}" class="text-sm text-emerald-600 hover:text-emerald-700 mt-1 inline-block">Effacer les filtres</a>
+                                        <a href="{{ route('ventes.bons-preparation.index') }}" class="text-[13px] text-emerald-600 hover:text-emerald-700 mt-1 inline-block">Effacer les filtres</a>
                                     @else
-                                        <p class="text-xs text-gray-400 mt-1">Les BP sont générés automatiquement à la validation des commandes.</p>
+                                        <p class="text-[12px] text-gray-400 mt-1">Les BP sont générés automatiquement à la validation des commandes.</p>
                                     @endif
                                 </div>
                             </div>
@@ -205,7 +220,7 @@
             </table>
         </div>
 
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
             <span>{{ $bps->total() }} bon(s) de préparation</span>
             @if($bps->hasPages())<div>{{ $bps->appends($filters)->links() }}</div>@endif
         </div>

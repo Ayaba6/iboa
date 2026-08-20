@@ -51,10 +51,10 @@
                    @keydown.arrow-up.prevent="moveUp()"
                    @keydown.enter.prevent="selectActive()"
                    placeholder="Rechercher ou accéder à…"
-                   class="flex-1 text-sm text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 font-medium"
+                   class="flex-1 text-[13px] text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 font-medium"
                    autocomplete="off"
                    spellcheck="false">
-            <kbd class="flex-shrink-0 text-[10px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">Échap</kbd>
+            <kbd class="flex-shrink-0 text-[11px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">Échap</kbd>
         </div>
 
         {{-- Results --}}
@@ -63,22 +63,22 @@
             {{-- Search results --}}
             <template x-if="query.length >= 2 && results.length > 0">
                 <div class="py-2">
-                    <p class="px-4 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Résultats</p>
+                    <p class="px-4 py-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Résultats</p>
                     <template x-for="(item, i) in results" :key="item.url + item.label">
                         <a :href="item.url"
                            @click="close()"
                            @mouseenter="activeIndex = i"
                            :class="activeIndex === i ? 'bg-[#eef5f0]' : 'hover:bg-gray-50'"
                            class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors">
-                            <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                            <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-bold"
                                   :style="colorStyle(item.color)">
                                 <span x-text="item.type.charAt(0).toUpperCase()"></span>
                             </span>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-gray-900 truncate" x-text="item.label"></p>
-                                <p class="text-xs text-gray-500 truncate" x-text="item.sublabel || item.type"></p>
+                                <p class="text-[13px] font-semibold text-gray-900 truncate" x-text="item.label"></p>
+                                <p class="text-[12px] text-gray-500 truncate" x-text="item.sublabel || item.type"></p>
                             </div>
-                            <span class="flex-shrink-0 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full" x-text="item.type"></span>
+                            <span class="flex-shrink-0 text-[12px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full" x-text="item.type"></span>
                         </a>
                     </template>
                 </div>
@@ -87,7 +87,7 @@
             {{-- No results --}}
             <template x-if="query.length >= 2 && !loading && results.length === 0">
                 <div class="py-12 text-center">
-                    <p class="text-sm text-gray-500">Aucun résultat pour « <span class="font-semibold" x-text="query"></span> »</p>
+                    <p class="text-[13px] text-gray-500">Aucun résultat pour « <span class="font-semibold" x-text="query"></span> »</p>
                 </div>
             </template>
 
@@ -96,20 +96,20 @@
                 <div>
                     {{-- Quick Actions --}}
                     <div class="py-2">
-                        <p class="px-4 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Actions rapides</p>
+                        <p class="px-4 py-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Actions rapides</p>
                         <template x-for="(action, i) in quickActions" :key="action.url">
                             <a :href="action.url"
                                @click="close()"
                                @mouseenter="activeIndex = i"
                                :class="activeIndex === i ? 'bg-[#eef5f0]' : 'hover:bg-gray-50'"
                                class="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors">
-                                <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                                <span class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[13px]"
                                       :style="colorStyle(action.color)">
                                     <span x-text="action.icon"></span>
                                 </span>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-gray-900 truncate" x-text="action.label"></p>
-                                    <p class="text-xs text-gray-500 truncate" x-text="action.section"></p>
+                                    <p class="text-[13px] font-semibold text-gray-900 truncate" x-text="action.label"></p>
+                                    <p class="text-[12px] text-gray-500 truncate" x-text="action.section"></p>
                                 </div>
                                 <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -123,7 +123,7 @@
         </div>
 
         {{-- Footer --}}
-        <div class="flex items-center gap-4 px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 text-[10px] text-gray-400">
+        <div class="flex items-center gap-4 px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 text-[11px] text-gray-400">
             <span class="flex items-center gap-1"><kbd class="bg-white border border-gray-200 rounded px-1 py-0.5 font-semibold">↑↓</kbd> Naviguer</span>
             <span class="flex items-center gap-1"><kbd class="bg-white border border-gray-200 rounded px-1 py-0.5 font-semibold">↵</kbd> Ouvrir</span>
             <span class="flex items-center gap-1"><kbd class="bg-white border border-gray-200 rounded px-1 py-0.5 font-semibold">Échap</kbd> Fermer</span>

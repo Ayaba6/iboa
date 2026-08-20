@@ -64,134 +64,16 @@ window.whenApexReady = (cb) => window.__pendingApex.push(cb);
 // ═══════════════════════════════════════════════════════════════════════════════
 window.__turboCleanups = [];
 
-// ── DataTables : config française ────────────────────────────────────────────
-const dtFr = {
-    processing:     'Traitement en cours…',
-    search:         'Rechercher :',
-    lengthMenu:     'Afficher _MENU_ éléments',
-    info:           'Affichage de _START_ à _END_ sur _TOTAL_ éléments',
-    infoEmpty:      'Affichage de 0 à 0 sur 0 élément',
-    infoFiltered:   '(filtré depuis _MAX_ éléments au total)',
-    infoPostFix:    '',
-    loadingRecords: 'Chargement en cours…',
-    zeroRecords:    'Aucun élément à afficher',
-    emptyTable:     'Aucune donnée disponible',
-    paginate: { first:'Premier', previous:'Précédent', next:'Suivant', last:'Dernier' },
-    aria: {
-        sortAscending:  ' : activer pour trier la colonne par ordre croissant',
-        sortDescending: ' : activer pour trier la colonne par ordre décroissant',
-    },
-    buttons: {
-        copy:'Copier', csv:'CSV', excel:'Excel', pdf:'PDF', print:'Imprimer',
-        colvis:'Colonnes', copyTitle:'Copié dans le presse-papier',
-        copySuccess: { 1:'1 ligne copiée', _:'%d lignes copiées' },
-    },
-};
-
-// ── DataTables : filtres dynamiques par colonne ──────────────────────────────
-// [CDC Ventes] Ajoute une 2e ligne d'en-tête avec un champ de filtre par colonne
-// (colonnes marquées data-sortable). Recherche client-side via l'API column().search().
-// Ne pas activer sur les tables serveur-paginées (le filtre ne verrait que la page courante).
-function dtAddColumnFilters(el, dt) {
-    const thead = el.tHead;
-    if (!thead || thead.querySelector('.dt-filter-row')) return;
-    const headRow = thead.rows[0];
-    const fr = document.createElement('tr');
-    fr.className = 'dt-filter-row';
-    dt.columns().every(function (i) {
-        const col  = this;
-        const th   = headRow.cells[i];
-        const cell = document.createElement('th');
-        cell.className = 'px-2 py-1 bg-white/80 align-top';
-        if (th && th.hasAttribute('data-sortable')) {
-            const inp = document.createElement('input');
-            inp.type = 'text';
-            inp.placeholder = 'Filtrer…';
-            inp.className = 'w-full min-w-[60px] text-[11px] font-normal normal-case px-1.5 py-0.5 border border-gray-300 rounded-[3px] focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-400';
-            inp.addEventListener('input', function () {
-                if (col.search() !== this.value) col.search(this.value).draw();
-            });
-            // Ne pas déclencher le tri de la colonne en cliquant dans le champ
-            ['click', 'keydown', 'keyup', 'mousedown'].forEach(evt =>
-                inp.addEventListener(evt, e => e.stopPropagation()));
-            cell.appendChild(inp);
-        }
-        fr.appendChild(cell);
-    });
-    thead.appendChild(fr);
-}
-
-// ── DataTables : initialisation (appelée sur turbo:load) ─────────────────────
-window.initDataTables = function () {
-    if (typeof $ === 'undefined' || !$.fn.DataTable) return;
-
-    document.querySelectorAll('table[data-dt="simple"]').forEach(function (el) {
-        if ($.fn.DataTable.isDataTable(el)) return;
-        $(el).DataTable({
-            language:      dtFr,
-            paging:        false,
-            searching:     true,   // requis pour le filtre par colonne (aucune barre globale via dom)
-            info:          false,
-            ordering:      true,
-            orderCellsTop: true,   // le tri porte sur la 1re ligne d'en-tête, les filtres sur la 2e
-            dom:           'rt',
-            columnDefs:    [{ orderable: false, targets: '_all' }],
-        });
-        const dt = $(el).DataTable();
-        dt.columns().every(function (i) {
-            const th = el.querySelectorAll('thead th')[i];
-            if (!th || !th.hasAttribute('data-sortable')) this.orderable(false);
-        });
-        // Filtres par colonne : opt-in via data-col-filter (à réserver aux tables chargées
-        // en entier — pas de pagination serveur, sinon le filtre ne verrait que la page courante).
-        if (el.hasAttribute("data-col-filter")) dtAddColumnFilters(el, dt);
-    });
-
-    document.querySelectorAll('table[data-dt="full"]').forEach(function (el) {
-        if ($.fn.DataTable.isDataTable(el)) return;
-        $(el).DataTable({
-            language:      dtFr,
-            pageLength:    25,
-            lengthMenu:    [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Tous']],
-            ordering:      true,
-            orderCellsTop: true,   // tri sur 1re ligne d'en-tête, filtres colonne sur 2e
-            dom:           'Bfrtip',
-            buttons: [
-                {
-                    extend:    'excelHtml5',
-                    text:      '<svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>Excel',
-                    className: 'dt-btn-excel',
-                    title:     () => document.title.split('—')[0].trim(),
-                },
-                {
-                    extend:    'pdfHtml5',
-                    text:      '<svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>PDF',
-                    className: 'dt-btn-pdf',
-                    title:     () => document.title.split('—')[0].trim(),
-                    orientation: 'landscape',
-                    pageSize:    'A4',
-                },
-                {
-                    extend:    'print',
-                    text:      '<svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Imprimer',
-                    className: 'dt-btn-print',
-                    title:     () => document.title.split('—')[0].trim(),
-                },
-            ],
-        });
-        // Filtres par colonne : opt-in via data-col-filter (à réserver aux tables chargées
-        // en entier — pas de pagination serveur, sinon le filtre ne verrait que la page courante).
-        if (el.hasAttribute("data-col-filter")) dtAddColumnFilters(el, $(el).DataTable());
-    });
-};
-
 // ── Turbo : nettoyage avant mise en cache ─────────────────────────────────────
 // Enregistré UNE SEULE FOIS ici → pas de listener stacking
 document.addEventListener('turbo:before-cache', function () {
-    // Détruire les instances DataTables
-    if (typeof $ !== 'undefined' && $.fn.DataTable) {
+    // Détruire les instances DataTables. jQuery n'est plus importé ici : il vient
+    // de resources/js/datatables.js, chargé uniquement par les vues à tableau.
+    // Sur toutes les autres pages, `window.jQuery` est absent et ce bloc est ignoré.
+    const jq = window.jQuery;
+    if (jq && jq.fn.DataTable) {
         document.querySelectorAll('table[data-dt]').forEach(function (el) {
-            if ($.fn.DataTable.isDataTable(el)) $(el).DataTable().destroy();
+            if (jq.fn.DataTable.isDataTable(el)) jq(el).DataTable().destroy();
         });
     }
     // Exécuter tous les cleanups de page (charts ApexCharts, etc.)
@@ -201,7 +83,8 @@ document.addEventListener('turbo:before-cache', function () {
 
 // ── Turbo : init au chargement de chaque page ─────────────────────────────────
 document.addEventListener('turbo:load', function () {
-    window.initDataTables();
+    // Défini par resources/js/datatables.js, absent sur les pages sans tableau.
+    window.initDataTables?.();
 
     // ── Scroll horizontal auto pour les tables simples (non-DataTables) ──────
     document.querySelectorAll('table:not(.dataTable)').forEach(function (tbl) {

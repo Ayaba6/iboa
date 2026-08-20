@@ -21,7 +21,7 @@
          x-transition:enter-end="opacity-100 scale-100">
 
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 class="text-sm font-bold text-gray-900">Raccourcis clavier</h3>
+            <h3 class="text-[13px] font-bold text-gray-900">Raccourcis clavier</h3>
             <button @click="open = false" class="text-gray-400 hover:text-gray-600 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -45,19 +45,19 @@
             ] as [$key, $label])
                 @if($label === null)
                     <div class="col-span-2 pt-2 pb-0.5">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">{{ $key }}</p>
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400">{{ $key }}</p>
                     </div>
                 @else
                     <div class="flex items-center justify-between py-1">
-                        <kbd class="text-xs font-semibold bg-gray-100 border border-gray-200 rounded px-2 py-0.5 shadow-sm">{{ $key }}</kbd>
-                        <span class="text-xs text-gray-600 text-right ml-4">{{ $label }}</span>
+                        <kbd class="text-[12px] font-semibold bg-gray-100 border border-gray-200 rounded px-2 py-0.5 shadow-sm">{{ $key }}</kbd>
+                        <span class="text-[12px] text-gray-600 text-right ml-4">{{ $label }}</span>
                     </div>
                 @endif
             @endforeach
         </div>
 
         <div class="px-5 py-3 border-t border-gray-100 bg-gray-50/60 text-center">
-            <p class="text-xs text-gray-400">Appuyez sur <kbd class="bg-white border border-gray-200 rounded px-1.5 py-0.5 font-semibold">?</kbd> pour afficher / masquer</p>
+            <p class="text-[12px] text-gray-400">Appuyez sur <kbd class="bg-white border border-gray-200 rounded px-1.5 py-0.5 font-semibold">?</kbd> pour afficher / masquer</p>
         </div>
     </div>
 </div>

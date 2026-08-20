@@ -27,6 +27,114 @@ class StockInsightsService
     public const EXPIRY_WINDOW_DEFAULT = 30;
 
     /**
+     * Dépôts hors du calcul de rupture.
+     *
+     * Une quarantaine vide est l'état SAIN : on y range ce qui attend un contrôle,
+     * pas ce qu'on vend. Compter son vide comme une rupture transforme un signal
+     * d'alerte en bruit permanent. Même raisonnement pour rebuts et chutes, qui
+     * n'ont ni seuil ni vocation à être réapprovisionnés.
+     */
+    public const DEPOTS_HORS_RUPTURE = ['quarantaine', 'rebuts', 'chutes'];
+
+    /**
+     * Base commune à tous les indicateurs de disponibilité.
+     *
+     * Part de `products` et NON de `product_stocks` : un article sans ligne de
+     * stock n'est pas un article sans problème, c'est un article à zéro. Le
+     * partir de la table des stocks rendait invisibles ceux qui n'en ont
+     * jamais eu — précisément ceux qu'un écran de réapprovisionnement existe
+     * pour montrer.
+     */
+    public function disponibiliteQuery()
+    {
+        return DB::table('products as p')
+            ->leftJoin('product_stocks as ps', function ($j) {
+                $j->on('ps.product_id', '=', 'p.id')
+                    ->whereNotIn('ps.warehouse_id', function ($q) {
+                        $q->select('id')->from('warehouses')
+                            ->whereIn('type', self::DEPOTS_HORS_RUPTURE);
+                    });
+            })
+            ->where('p.is_active', 1)
+            ->whereNull('p.deleted_at')
+            ->where('p.is_stockable', 1)
+            ->groupBy('p.id')
+            ->select(
+                'p.id', 'p.code_article', 'p.name',
+                'p.stock_min', 'p.stock_max', 'p.reorder_point',
+                DB::raw('COALESCE(SUM(ps.quantity), 0) - COALESCE(SUM(ps.reserved_quantity), 0) AS dispo')
+            );
+    }
+
+    /**
+     * Articles en rupture : disponible ≤ 0 SUR UN ARTICLE QU'ON TIENT EN STOCK.
+     *
+     * Compte des ARTICLES, jamais des lignes de stock : un même article présent
+     * sur trois dépôts est un article en rupture, pas trois.
+     *
+     * La politique de stock — un minimum ou un point de commande — est ce qui
+     * distingue une rupture d'une simple absence. Un sous-produit alimenté par
+     * les seules déclarations de production est à zéro par nature ; le déclarer
+     * en rupture noierait les vraies alertes sous des articles dont le zéro est
+     * l'état normal. Même règle que le calcul des besoins, qui classe « non
+     * paramétré » tout article sans cible ni seuil.
+     *
+     * Les articles stockables sans politique restent visibles par
+     * {@see self::sansPolitiqueStockQuery()} : ils relèvent d'un défaut de
+     * paramétrage, pas d'une alerte d'exploitation.
+     */
+    public function ruptureQuery()
+    {
+        return $this->disponibiliteQuery()
+            ->havingRaw('dispo <= 0 AND (p.stock_min > 0 OR p.reorder_point > 0)');
+    }
+
+    /** Articles stockables dépourvus de toute politique de stock. */
+    public function sansPolitiqueStockQuery()
+    {
+        return $this->disponibiliteQuery()
+            ->havingRaw('COALESCE(p.stock_min, 0) = 0 AND COALESCE(p.reorder_point, 0) = 0');
+    }
+
+    /**
+     * Articles sous leur minimum, rupture EXCLUE.
+     *
+     * Un article à zéro est déjà compté en rupture ; le compter aussi ici le
+     * ferait apparaître deux fois dans un total censé partitionner la situation.
+     */
+    public function sousMinimumQuery()
+    {
+        return $this->disponibiliteQuery()
+            ->havingRaw('p.stock_min > 0 AND dispo > 0 AND dispo < p.stock_min');
+    }
+
+    /**
+     * Articles EN TENSION : sous leur minimum, rupture comprise.
+     *
+     * Les écrans stock séparent rupture et sous-minimum pour ne pas compter deux
+     * fois le même article dans un total. Un filtre de liste, lui, veut les deux :
+     * « montre-moi ce qui manque » n'exclut pas ce qui manque totalement.
+     */
+    public function enTensionQuery()
+    {
+        return $this->disponibiliteQuery()
+            ->havingRaw('p.stock_min > 0 AND dispo < p.stock_min');
+    }
+
+    /** Articles ayant atteint leur point de commande. */
+    public function pointDeCommandeQuery()
+    {
+        return $this->disponibiliteQuery()
+            ->havingRaw('p.reorder_point > 0 AND dispo <= p.reorder_point');
+    }
+
+    /** Compte les articles d'une requête agrégée (GROUP BY + HAVING). */
+    public function compter($query): int
+    {
+        return DB::query()->fromSub($query, 'x')->count();
+    }
+
+    /**
      * KPIs synthétiques pour la page d'accueil stock.
      */
     public function dashboardKpis(): array
@@ -42,27 +150,11 @@ class StockInsightsService
         // Compteurs
         $activeProducts = (int) Product::where('is_active', 1)->whereNull('deleted_at')->count();
 
-        $ruptureCount = (int) ProductStock::query()
-            ->whereHas('product', fn($q) => $q->where('is_active', 1))
-            ->whereRaw('(quantity - reserved_quantity) <= 0')
-            ->distinct('product_id')->count('product_id');
-
-        $belowMinCount = (int) DB::table('product_stocks as ps')
-            ->join('products as p', 'p.id', '=', 'ps.product_id')
-            ->where('p.is_active', 1)
-            ->whereNull('p.deleted_at')
-            ->where('p.stock_min', '>', 0)
-            ->whereRaw('(ps.quantity - ps.reserved_quantity) < p.stock_min')
-            ->whereRaw('(ps.quantity - ps.reserved_quantity) > 0')
-            ->distinct('ps.product_id')->count('ps.product_id');
-
-        $reorderCount = (int) DB::table('product_stocks as ps')
-            ->join('products as p', 'p.id', '=', 'ps.product_id')
-            ->where('p.is_active', 1)
-            ->whereNull('p.deleted_at')
-            ->where('p.reorder_point', '>', 0)
-            ->whereRaw('(ps.quantity - ps.reserved_quantity) <= p.reorder_point')
-            ->distinct('ps.product_id')->count('ps.product_id');
+        // Trois compteurs, une seule définition de la disponibilité — sinon deux
+        // écrans du même ERP répondent différemment à la même question.
+        $ruptureCount  = $this->compter($this->ruptureQuery());
+        $belowMinCount = $this->compter($this->sousMinimumQuery());
+        $reorderCount  = $this->compter($this->pointDeCommandeQuery());
 
         $dormantCount = $this->dormantProductsQuery(self::DORMANT_DAYS_DEFAULT)->count();
 
@@ -139,24 +231,52 @@ class StockInsightsService
      */
     public function restockAlertsQuery()
     {
-        return DB::table('product_stocks as ps')
-            ->join('products as p', 'p.id', '=', 'ps.product_id')
-            ->leftJoin('warehouses as w', 'w.id', '=', 'ps.warehouse_id')
+        // Une alerte par ARTICLE, pas par ligne de dépôt : on passe commande
+        // d'un article. Le même article en tension sur trois dépôts est une
+        // commande à passer, pas trois. Et le LEFT JOIN fait entrer les articles
+        // dépourvus de toute ligne de stock — les plus urgents de tous.
+        return DB::table('products as p')
+            ->leftJoin('product_stocks as ps', function ($j) {
+                $j->on('ps.product_id', '=', 'p.id')
+                    ->whereNotIn('ps.warehouse_id', function ($q) {
+                        $q->select('id')->from('warehouses')
+                            ->whereIn('type', self::DEPOTS_HORS_RUPTURE);
+                    });
+            })
+            ->leftJoin('warehouses as w', 'w.id', '=', 'p.main_warehouse_id')
             ->leftJoin('suppliers as s', 's.id', '=', 'p.default_supplier_id')
             ->where('p.is_active', 1)
             ->whereNull('p.deleted_at')
+            ->where('p.is_stockable', 1)
             ->where('p.reorder_point', '>', 0)
-            ->whereRaw('(ps.quantity - ps.reserved_quantity) <= p.reorder_point')
+            ->groupBy(
+                'p.id', 'p.reference', 'p.code_article', 'p.name', 'p.barcode',
+                'p.stock_min', 'p.stock_max', 'p.reorder_point',
+                'p.purchase_price', 'p.last_purchase_price',
+                'p.default_supplier_id', 's.name', 'p.main_warehouse_id', 'w.name'
+            )
+            ->havingRaw('(COALESCE(SUM(ps.quantity), 0) - COALESCE(SUM(ps.reserved_quantity), 0)) <= p.reorder_point')
             ->select(
-                'p.id', 'p.reference', 'p.name', 'p.barcode',
+                'p.id', 'p.reference', 'p.code_article', 'p.name', 'p.barcode',
                 'p.stock_min', 'p.stock_max', 'p.reorder_point',
                 'p.purchase_price', 'p.last_purchase_price',
                 'p.default_supplier_id', 's.name as supplier_name',
-                'ps.warehouse_id', 'w.name as warehouse_name',
-                'ps.quantity', 'ps.reserved_quantity',
-                DB::raw('(ps.quantity - ps.reserved_quantity) AS available_qty'),
-                // Suggestion qty à commander : max(stock_max - dispo, reorder_point + 1)
-                DB::raw('GREATEST(COALESCE(p.stock_max, 0) - (ps.quantity - ps.reserved_quantity), p.reorder_point + 1) AS suggested_qty')
+                // Le dépôt affiché est le dépôt PRINCIPAL de l'article : c'est là
+                // qu'on réceptionnera, et il reste défini même sans stock.
+                'p.main_warehouse_id as warehouse_id', 'w.name as warehouse_name',
+                DB::raw('COALESCE(SUM(ps.quantity), 0) AS quantity'),
+                DB::raw('COALESCE(SUM(ps.reserved_quantity), 0) AS reserved_quantity'),
+                DB::raw('COALESCE(SUM(ps.quantity), 0) - COALESCE(SUM(ps.reserved_quantity), 0) AS available_qty'),
+                // Suggestion à commander : combler jusqu'au maximum, et au pire
+                // franchir le point de commande.
+                // CASE plutôt que GREATEST : cette fonction n'existe pas en
+                // SQLite, moteur sur lequel tourne la moitié de la suite de tests.
+                DB::raw(
+                    'CASE WHEN (COALESCE(p.stock_max, 0) - (COALESCE(SUM(ps.quantity), 0) - COALESCE(SUM(ps.reserved_quantity), 0)))'
+                    .' > (p.reorder_point + 1)'
+                    .' THEN (COALESCE(p.stock_max, 0) - (COALESCE(SUM(ps.quantity), 0) - COALESCE(SUM(ps.reserved_quantity), 0)))'
+                    .' ELSE (p.reorder_point + 1) END AS suggested_qty'
+                )
             )
             ->orderBy('available_qty');
     }

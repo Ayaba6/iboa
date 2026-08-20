@@ -18,6 +18,63 @@ class PurchaseOrder extends Model
 
     protected $table = 'purchase_orders';
 
+    /**
+     * [Achats] Statuts de la commande fournisseur — source UNIQUE.
+     *
+     * Ces constantes existent parce que l'absence de référentiel a déjà coûté :
+     * `PurchaseInsightsService` filtrait sur « envoyee », « confirmee » et
+     * « partiellement_recue » — au FÉMININ — alors que l'énumération de la
+     * colonne est au MASCULIN. Aucune de ces valeurs ne pouvait correspondre à
+     * une ligne : les indicateurs « en-cours fournisseurs » et « à recevoir »
+     * affichaient zéro en permanence, sans jamais lever d'erreur.
+     *
+     * La confusion s'explique : `invoices`, `supplier_invoices` et `rfqs` ont
+     * bien des statuts au féminin (facture, demande de prix). Seule la commande
+     * fournisseur est au masculin. D'où un référentiel nommé, plutôt que des
+     * chaînes recopiées de mémoire d'un service à l'autre.
+     */
+    public const STATUS_BROUILLON          = 'brouillon';
+    public const STATUS_ENVOYE             = 'envoye';
+    public const STATUS_CONFIRME           = 'confirme';
+    public const STATUS_PARTIELLEMENT_RECU = 'partiellement_recu';
+    public const STATUS_RECU               = 'recu';
+    public const STATUS_FACTURE            = 'facture';
+    public const STATUS_ANNULE             = 'annule';
+
+    /** Commandes encore ouvertes : engagées ou en cours de préparation. */
+    public const STATUSES_OPEN = [
+        self::STATUS_BROUILLON,
+        self::STATUS_ENVOYE,
+        self::STATUS_CONFIRME,
+        self::STATUS_PARTIELLEMENT_RECU,
+    ];
+
+    /** Commandes dont de la marchandise reste à recevoir (le brouillon n'engage rien). */
+    public const STATUSES_AWAITING_RECEIPT = [
+        self::STATUS_ENVOYE,
+        self::STATUS_CONFIRME,
+        self::STATUS_PARTIELLEMENT_RECU,
+    ];
+
+    /** Commandes ayant donné lieu à une réception, totale ou partielle. */
+    public const STATUSES_RECEIVED = [
+        self::STATUS_ENVOYE,
+        self::STATUS_CONFIRME,
+        self::STATUS_PARTIELLEMENT_RECU,
+        self::STATUS_RECU,
+    ];
+
+    /** @var array<string,string> */
+    public const STATUS_LABELS = [
+        self::STATUS_BROUILLON          => 'Brouillon',
+        self::STATUS_ENVOYE             => 'Envoyée',
+        self::STATUS_CONFIRME           => 'Confirmée',
+        self::STATUS_PARTIELLEMENT_RECU => 'Partiellement reçue',
+        self::STATUS_RECU               => 'Reçue',
+        self::STATUS_FACTURE            => 'Facturée',
+        self::STATUS_ANNULE             => 'Annulée',
+    ];
+
     protected $fillable = [
         'company_id',
         'supplier_id',

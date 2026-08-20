@@ -102,7 +102,7 @@ it('unifie les réservations : OrderService::reserveStock crée une ligne et ne 
     expect(StockReservation::where('order_id', $order->id)->where('status', 'reserved')->sum('quantity'))->toEqual(3.0);
 
     // Annulation — libère tout, aucune réservation fantôme.
-    app(\App\Services\OrderService::class)->cancel($order->fresh());
+    app(\App\Services\OrderService::class)->cancel($order->fresh(), 'Annulation de test — remise du stock réservé.');
     expect((float) ProductStock::where('product_id', $product->id)->first()->reserved_quantity)->toEqual(0.0);
     expect(StockReservation::where('order_id', $order->id)->where('status', 'reserved')->count())->toBe(0);
 });

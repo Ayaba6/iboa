@@ -63,6 +63,15 @@
             'journal_entry_created'   => ['Écriture comptable',     'bg-sky-50 text-sky-700 border-sky-200'],
             'stock_movement'          => ['Mouvement de stock',     'bg-cyan-50 text-cyan-700 border-cyan-200'],
             'stock_movement_modified' => ['Mouvement modifié',      'bg-cyan-50 text-cyan-700 border-cyan-200'],
+            // [UI — doublon retiré] Ces quatre actions n'étaient nommées que dans la
+            // section « 7. Historique » de la fiche facture, laquelle affichait le MÊME
+            // journal que ce composant, avec la même requête. La section a été
+            // supprimée ; ses libellés sont repris ici pour ne rien perdre, et les
+            // onze fiches qui utilisent ce composant en profitent.
+            'sent'                    => ['Envoyée au client',      'bg-emerald-50 text-emerald-800 border-emerald-200'],
+            'cancelled'               => ['Annulation',             'bg-red-50 text-red-700 border-red-200'],
+            'partially_paid'          => ['Paiement partiel',       'bg-amber-50 text-amber-700 border-amber-200'],
+            'overdue'                 => ['Échéance dépassée',      'bg-orange-50 text-orange-700 border-orange-200'],
         ][$action] ?? [ucfirst(str_replace('_', ' ', $action)), 'bg-gray-50 text-gray-600 border-gray-200'];
     };
 
@@ -131,20 +140,20 @@
 
 <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
     <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <h2 class="text-[13px] font-semibold text-gray-700 flex items-center gap-2">
             <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             {{ $title }}
         </h2>
-        <span class="text-xs text-gray-400">{{ $logs->count() }} événement{{ $logs->count() > 1 ? 's' : '' }}</span>
+        <span class="text-[12px] text-gray-400">{{ $logs->count() }} événement{{ $logs->count() > 1 ? 's' : '' }}</span>
     </div>
 
     @if($logs->isEmpty())
-        <div class="p-6 text-center text-gray-400 text-sm">Aucune activité enregistrée.</div>
+        <div class="p-6 text-center text-gray-400 text-[13px]">Aucune activité enregistrée.</div>
     @else
     <div class="overflow-x-auto">
-        <table class="w-full divide-y divide-gray-200 text-sm">
+        <table class="w-full divide-y divide-gray-200 text-[13px]">
             <thead class="bg-[#eef5f0] border-b border-gray-300">
                 <tr>
                     <th class="px-3 py-2.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide whitespace-nowrap">Date / Heure</th>
@@ -165,13 +174,13 @@
                     @if($r['first'])
                     <td class="px-3 py-2.5 whitespace-nowrap align-top" rowspan="{{ $r['span'] }}">
                         <span class="text-gray-700 tabular-nums">{{ $r['log']->created_at?->format('d/m/Y H:i:s') }}</span>
-                        <span class="block text-xs text-gray-400">{{ $r['log']->created_at?->diffForHumans(short: true) }}</span>
+                        <span class="block text-[12px] text-gray-400">{{ $r['log']->created_at?->diffForHumans(short: true) }}</span>
                     </td>
                     <td class="px-3 py-2.5 align-top font-medium text-gray-800 whitespace-nowrap" rowspan="{{ $r['span'] }}">
                         {{ $r['log']->user_name ?? 'Système' }}
                     </td>
                     <td class="px-3 py-2.5 align-top" rowspan="{{ $r['span'] }}">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap {{ $badge }}">{{ $label }}</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium border whitespace-nowrap {{ $badge }}">{{ $label }}</span>
                     </td>
                     @endif
                     <td class="px-3 py-2.5">
@@ -197,8 +206,8 @@
                     </td>
                     @if($r['first'])
                     <td class="px-3 py-2.5 align-top text-gray-600 hidden lg:table-cell whitespace-nowrap" rowspan="{{ $r['span'] }}">{{ $moduleLabel }}</td>
-                    <td class="px-3 py-2.5 align-top font-mono text-xs text-emerald-800 hidden lg:table-cell whitespace-nowrap" rowspan="{{ $r['span'] }}">{{ $docRef }}</td>
-                    <td class="px-3 py-2.5 align-top text-xs text-gray-400 hidden xl:table-cell whitespace-nowrap" rowspan="{{ $r['span'] }}">{{ $r['log']->ip_address ?? '—' }}</td>
+                    <td class="px-3 py-2.5 align-top font-mono text-[12px] text-emerald-800 hidden lg:table-cell whitespace-nowrap" rowspan="{{ $r['span'] }}">{{ $docRef }}</td>
+                    <td class="px-3 py-2.5 align-top text-[12px] text-gray-400 hidden xl:table-cell whitespace-nowrap" rowspan="{{ $r['span'] }}">{{ $r['log']->ip_address ?? '—' }}</td>
                     @endif
                 </tr>
                 @endforeach

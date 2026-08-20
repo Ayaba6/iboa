@@ -199,6 +199,36 @@ class ProductionStockService
      * fabrication, lié à la nomenclature (scrap_product_id / defect_product_id).
      * Renseigné au suivi : la chute entre au poids (kg), l'avarié à la quantité.
      */
+    /**
+     * [PRO-08] PMP de la matiere reellement consommee par cet OF.
+     *
+     * On retient la matiere la PLUS consommee en poids : un OF melangeant deux
+     * bobines valorise sa chute au cout de celle qui domine, plutot qu'a une
+     * moyenne qui ne correspondrait a aucune matiere reelle.
+     *
+     * Repli sur le cout au kilo de la bobine quand l'article n'a pas encore de
+     * PMP (premiere reception non encore valorisee). Retourne 0 si rien n'est
+     * connu : mieux vaut une chute a zero, visible, qu'un cout invente.
+     */
+    private function materialAverageCost(ProductionOrder $order): float
+    {
+        $order->loadMissing('consumptions.coil');
+
+        $dominante = $order->consumptions
+            ->whereNull('reversed_at')
+            ->sortByDesc(fn ($c) => (float) $c->weight_consumed)
+            ->first();
+
+        if (! $dominante || ! $dominante->coil) {
+            return 0.0;
+        }
+
+        $pmp = (float) (\App\Models\Product::whereKey($dominante->coil->product_id)
+            ->value('weighted_avg_cost') ?? 0);
+
+        return $pmp > 0 ? $pmp : (float) ($dominante->coil->cost_per_kg ?? 0);
+    }
+
     public function enterByproduct(ProductionOrder $order, int $productId, float $qty, ?int $warehouseId = null, float $unitCost = 0): ?\App\Models\StockMovement
     {
         if ($qty <= 0) {
@@ -207,6 +237,18 @@ class ProductionStockService
         $warehouseId = $warehouseId ?? $this->defaultWarehouseId($order);
         if (! $warehouseId) {
             throw ValidationException::withMessages(['warehouse_id' => 'Dépôt d\'entrée requis pour le sous-produit.']);
+        }
+
+        // [PRO-08] Valorisation au PMP de la MATIÈRE CONSOMMÉE, convention déjà
+        // écrite dans CuttingRemnantService : « PMP courant de la matière, pas de
+        // profit fictif SYSCOHADA ».
+        //
+        // Sans cela le sous-produit entrait en stock à ZÉRO — aucun appelant ne
+        // passait de coût, le paramètre valant 0 par défaut. La chute récupérée
+        // n'avait donc aucune valeur en stock, et le produit fini supportait un
+        // coût matière dont une part était revenue en magasin.
+        if ($unitCost <= 0) {
+            $unitCost = $this->materialAverageCost($order);
         }
 
         // [Sync ERP] entrée sous-produit journalisée (non idempotente : plusieurs

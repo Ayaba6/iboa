@@ -29,8 +29,17 @@
                 </tbody>
             </table>
         </div>
+        {{-- Le filtre ci-dessus est LOCAL : il ne cherche que dans les lignes
+             chargées. Le dire évite qu'un article absent du panneau soit pris
+             pour un article inexistant, et renvoie là où la recherche est réelle. --}}
+        @php $chargees = ($selectorProducts ?? collect())->count(); @endphp
         <div class="px-3 py-1.5 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
-            {{ ($selectorProducts ?? collect())->count() }} Résultats
+            @if(isset($selectorProductsTotal) && $selectorProductsTotal > $chargees)
+                {{ $chargees }} article(s) sur {{ $selectorProductsTotal }} —
+                <a href="{{ route('products.index') }}" class="underline hover:text-gray-700">rechercher dans tous</a>
+            @else
+                {{ $chargees }} article(s)
+            @endif
         </div>
     </div>
 </aside>

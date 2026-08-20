@@ -91,10 +91,20 @@ class ProductController extends Controller
             'costCenters' => \App\Models\CostCenter::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']),
             'machines'    => \App\Modules\Production\Models\ProductionMachine::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'linkables'   => Product::where('is_active', true)->orderBy('name')->get(['id', 'code_article', 'name']),
-            // [SAGE parité] Panneau gauche « sélection » : derniers articles.
+            // [SAGE parité] Panneau gauche « sélection ».
+            //
+            // Le panneau reste PLAFONNÉ : le catalogue d'articles grandit, le
+            // charger entièrement à chaque ouverture de fiche ne tiendrait pas.
+            // Mais son champ « Filtrer » est un x-show Alpine, purement local :
+            // il ne cherche que dans les lignes chargées. Le pied du panneau le
+            // dit désormais et renvoie vers la liste, qui cherche côté serveur.
+            //
+            // Tri par CODE et non par id décroissant : « les vingt derniers créés »
+            // est un ordre que l'utilisateur ne peut ni prévoir ni parcourir.
             'selectorProducts' => Product::with('family:id,code,name')
-                ->orderByDesc('id')->limit(20)
+                ->orderBy('code_article')->limit(50)
                 ->get(['id', 'code_article', 'reference', 'name', 'family_id']),
+            'selectorProductsTotal' => Product::count(),
         ];
     }
 

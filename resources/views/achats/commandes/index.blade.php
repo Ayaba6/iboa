@@ -14,28 +14,28 @@
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total TTC filtré</p>
-            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[12px] text-gray-500">Total TTC filtré</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ $fmt($summary['total_ttc']) }} <span class="text-[12px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total HT filtré</p>
-            <p class="text-[16px] font-bold text-gray-700 tabular-nums">{{ $fmt($summary['total_ht']) }} <span class="text-xs font-normal text-gray-400">FCFA</span></p>
+            <p class="text-[12px] text-gray-500">Total HT filtré</p>
+            <p class="text-[15px] font-bold text-gray-700 tabular-nums">{{ $fmt($summary['total_ht']) }} <span class="text-[12px] font-normal text-gray-400">FCFA</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">En cours</p>
-            <p class="text-[16px] font-bold text-amber-600 tabular-nums">{{ $summary['count_confirmed'] }} <span class="text-xs font-normal text-gray-400">commande(s)</span></p>
+            <p class="text-[12px] text-gray-500">En cours</p>
+            <p class="text-[15px] font-bold text-amber-600 tabular-nums">{{ $summary['count_confirmed'] }} <span class="text-[12px] font-normal text-gray-400">commande(s)</span></p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Reçues</p>
-            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_received'] }} <span class="text-xs font-normal text-gray-400">commande(s)</span></p>
+            <p class="text-[12px] text-gray-500">Reçues</p>
+            <p class="text-[15px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_received'] }} <span class="text-[12px] font-normal text-gray-400">commande(s)</span></p>
         </div>
     </div>
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Commandes fournisseurs</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $purchaseOrders->total() }} commande(s)</p>
+            <h1 class="text-[15px] font-bold text-gray-900">Commandes fournisseurs</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $purchaseOrders->total() }} commande(s)</p>
         </div>
         <a href="{{ route('achats.commandes.create') }}"
            class="bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-semibold px-3 py-1.5 rounded-[4px] flex items-center gap-2 self-start transition-colors">
@@ -50,9 +50,9 @@
     <form method="GET" data-autosubmit class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, fournisseur..."
-                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
 
-            <select name="supplier_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+            <select name="supplier_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Tous les fournisseurs</option>
                 @foreach($suppliers as $supplier)
                     <option value="{{ $supplier->id }}" {{ ($filters['supplier_id'] ?? '') == $supplier->id ? 'selected' : '' }}>
@@ -61,7 +61,7 @@
                 @endforeach
             </select>
 
-            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon"            {{ ($filters['status'] ?? '') === 'brouillon'            ? 'selected' : '' }}>Brouillon</option>
                 <option value="envoye"               {{ ($filters['status'] ?? '') === 'envoye'               ? 'selected' : '' }}>Envoyé</option>
@@ -74,12 +74,12 @@
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
+                        class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search', 'supplier_id', 'status']))
                 <a href="{{ route('achats.commandes.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px] transition-colors">
                     ✕
                 </a>
                 @endif
@@ -90,7 +90,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono, montants HT/TTC --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="tbl-scroll">
-            <table class="w-full text-[12.5px] border-collapse">
+            <table class="w-full text-[12px] border-collapse">
                 <thead>
                     <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
                         <th class="text-left font-bold px-3 py-2 uppercase tracking-wide w-32">N° commande</th>
@@ -169,13 +169,13 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-16 text-center text-gray-400 text-sm">Aucun résultat.</td>
+                        <td colspan="8" class="px-4 py-16 text-center text-gray-400 text-[13px]">Aucun résultat.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
             <span>{{ $purchaseOrders->total() }} commande(s) · Total TTC filtré : <b class="text-emerald-700 tabular-nums">{{ $fmt($summary['total_ttc']) }} FCFA</b> · HT : <b class="text-gray-700 tabular-nums">{{ $fmt($summary['total_ht']) }} FCFA</b></span>
             @if($purchaseOrders->hasPages())<div>{{ $purchaseOrders->appends($filters)->links() }}</div>@endif
         </div>

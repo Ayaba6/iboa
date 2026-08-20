@@ -268,6 +268,17 @@ class CommercialWorkflowService
     public function validateInvoice(Invoice $invoice, ?string $motif = null): void
     {
         $this->assertPermission('sales.validate');
+
+        // [BUG-A3-SALES-ZERO-PRICE-026] Une facture DIRECTE ne descend d'aucun
+        // devis : elle n'a jamais rencontré la garde posée en amont. Sans ce
+        // contrôle, elle restait le chemin le plus court vers une vente à zéro.
+        //
+        // Garde 1 seule, volontairement : le prix plancher protège la marge à la
+        // NÉGOCIATION. L'appliquer ici refuserait de facturer une commande déjà
+        // confirmée — le client a traité, la vente est due, et l'écart de marge
+        // devait se discuter avant, pas au moment d'émettre la facture.
+        app(SalesFloorWaiverService::class)->assertNoFreeLine($invoice);
+
         $invoice->assertCanValidate();
 
         DB::transaction(function () use ($invoice, $motif) {
@@ -305,6 +316,13 @@ class CommercialWorkflowService
     public function validateCreditNote(CreditNote $cn, ?string $motif = null): void
     {
         $this->assertPermission('sales.validate');
+
+        // [BUG-A3-SALES-ZERO-PRICE-026] Pas de garde « ligne gratuite » ici, et
+        // c'est délibéré. Un avoir ne vend rien : il rend. Une ligne à zéro y
+        // est au pire inutile, jamais une perte — tandis qu'exiger un montant
+        // strictement positif refuserait un avoir de correction de quantité
+        // pure, cas légitime. La règle protège le chiffre d'affaires, pas sa
+        // contrepartie.
         $cn->assertCanValidate();
 
         DB::transaction(function () use ($cn, $motif) {

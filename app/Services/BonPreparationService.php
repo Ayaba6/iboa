@@ -119,6 +119,50 @@ class BonPreparationService
     /**
      * Magasinier démarre le chargement.
      */
+    /**
+     * [Ventes §17] Annulation motivée d'un bon de préparation.
+     *
+     * Le module n'offrait aucun chemin d'annulation : un bon créé par erreur
+     * restait affiché pour toujours et la seule issue était une écriture directe
+     * en base. On enregistre motif, auteur et date dans des colonnes dédiées —
+     * pas dans `notes`, qu'une saisie ultérieure pourrait écraser.
+     *
+     * Le document N'EST PAS supprimé : il reste consultable, avec son numéro de
+     * séquence, conformément à la règle « ne jamais supprimer silencieusement un
+     * document métier validé ».
+     */
+    public function cancel(BonPreparation $bp, string $motif): BonPreparation
+    {
+        if (trim($motif) === '') {
+            throw new \RuntimeException("Le motif d'annulation est obligatoire.");
+        }
+
+        return DB::transaction(function () use ($bp, $motif) {
+            // Verrou : sans lui, deux clics simultanés pourraient annuler un bon
+            // dont le chargement vient de démarrer entre la lecture et l'écriture.
+            $bp = BonPreparation::lockForUpdate()->findOrFail($bp->id);
+
+            if ($bp->status === 'annule') {
+                throw new \RuntimeException('Ce bon de préparation est déjà annulé.');
+            }
+            if (! $bp->isCancellable()) {
+                throw new \RuntimeException(
+                    'Ce bon de préparation ne peut plus être annulé (statut : '.$bp->status.'). '
+                    .'Le chargement étant terminé, la marchandise est sortie : passez par un retour client.'
+                );
+            }
+
+            $bp->update([
+                'status'              => 'annule',
+                'cancelled_at'        => now(),
+                'cancelled_by'        => Auth::id(),
+                'cancellation_reason' => $motif,
+            ]);
+
+            return $bp->fresh();
+        });
+    }
+
     public function startLoading(BonPreparation $bp, ?string $derogationQualite = null): BonPreparation
     {
         if ($bp->status !== 'en_attente') {

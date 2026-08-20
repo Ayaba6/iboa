@@ -27,7 +27,7 @@ $colorClass = match($color) {
     'cyan'    => 'bg-cyan-100 text-cyan-700',
     default   => 'badge-gray',
 };
-$sizeClass = $size === 'sm' ? 'text-[10px] px-2 py-0.5' : '';
+$sizeClass = $size === 'sm' ? 'text-[11px] px-2 py-0.5' : '';
 $plainClass = $dot ? '' : 'badge-plain';
 @endphp
 

@@ -121,6 +121,25 @@ class ProductionService
             // il ne doit pas atteindre l'affectation de masse.
             unset($data['derogation_motif']);
 
+            // [MTS §2] ORIGINE de l'OF — dérivée lorsqu'elle n'est pas fournie.
+            //
+            // Le listener de confirmation de commande n'en posait AUCUNE : l'OF
+            // héritait alors du défaut « manuel » de la colonne, alors qu'il
+            // naissait d'une commande client. Trois OF sur six l'affichaient à
+            // tort — le filtre par origine de la liste était donc faux, et toute
+            // analyse de la part du carnet dans la production avec lui.
+            //
+            // Une valeur EXPLICITE reste prioritaire : le formulaire en envoie
+            // toujours une, et pré-sélectionne déjà « commande client » quand une
+            // commande est rattachée. On ne corrige donc que le silence.
+            if (! isset($data['origin']) || $data['origin'] === '') {
+                $data['origin'] = match (true) {
+                    ! empty($data['order_id']) => ProductionOrder::ORIGIN_COMMANDE,
+                    $channel === 'mrp'         => ProductionOrder::ORIGIN_MRP,
+                    default                    => ProductionOrder::ORIGIN_MANUEL,
+                };
+            }
+
             $order = ProductionOrder::create($data);
             $this->syncLines($order, $lines);
             $this->recomputeQuantities($order);

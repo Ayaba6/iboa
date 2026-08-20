@@ -18,9 +18,9 @@
 
 <{{ $tag }} @if($href) href="{{ $href }}" @endif
     {{ $attributes->merge(['class' => 'p-3 text-center' . ($href ? ' hover:bg-band/40 transition-colors' : '')]) }}>
-    <p class="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">{{ $label }}</p>
-    <p class="text-[15px] font-bold font-mono tabular-nums {{ $valueColor }} mt-0.5">{{ $value }}@if($unit) <span class="text-[10px] font-normal text-gray-400">{{ $unit }}</span>@endif</p>
+    <p class="text-[11px] text-gray-500 uppercase font-semibold tracking-wide">{{ $label }}</p>
+    <p class="text-[15px] font-bold font-mono tabular-nums {{ $valueColor }} mt-0.5">{{ $value }}@if($unit) <span class="text-[11px] font-normal text-gray-400">{{ $unit }}</span>@endif</p>
     @if($sub)
-        <p class="text-[10px] text-gray-400">{{ $sub }}</p>
+        <p class="text-[11px] text-gray-400">{{ $sub }}</p>
     @endif
 </{{ $tag }}>

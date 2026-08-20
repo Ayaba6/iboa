@@ -187,8 +187,13 @@ class ItemCategoryController extends Controller
             'lines'      => \App\Modules\Production\Models\ProductionLine::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'accounts'   => \App\Models\Account::orderBy('code')->limit(500)->get(['id', 'code', 'name']),
             // [SAGE parité] Panneau gauche « sélection » des formulaires.
+            // Sans plafond : son champ « Filtrer » est un x-show Alpine, qui ne
+            // cherche que dans les lignes déjà chargées. Une catégorie hors des
+            // vingt premières serait introuvable, et l'utilisateur en conclurait
+            // qu'elle n'existe pas. Même correction que le panneau des familles.
+            // Onze catégories aujourd'hui : le défaut est dormant, pas absent.
             'selectorCategories' => ItemCategory::where('is_active', true)
-                ->orderBy('sort_order')->orderBy('code')->limit(20)
+                ->orderBy('sort_order')->orderBy('code')
                 ->get(['id', 'code', 'name', 'strategy']),
         ];
     }

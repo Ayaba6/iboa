@@ -15,12 +15,12 @@
     'href'    => null,
 ])
 <div {{ $attributes->merge(['class' => 'flex flex-col items-center justify-center py-14 px-6 text-center']) }}>
-    <div class="w-16 h-16 rounded-[4px] bg-gray-100 flex items-center justify-center text-3xl mb-4 shadow-inner">
+    <div class="w-16 h-16 rounded-[4px] bg-gray-100 flex items-center justify-center text-[20px] mb-4 shadow-inner">
         {{ $icon }}
     </div>
-    <p class="text-base font-semibold text-gray-700 mb-1">{{ $title }}</p>
+    <p class="text-[13px] font-semibold text-gray-700 mb-1">{{ $title }}</p>
     @if($message)
-    <p class="text-sm text-gray-400 max-w-xs leading-relaxed">{{ $message }}</p>
+    <p class="text-[13px] text-gray-400 max-w-xs leading-relaxed">{{ $message }}</p>
     @endif
     @if($slot->isNotEmpty())
     <div class="mt-4">{{ $slot }}</div>

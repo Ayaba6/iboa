@@ -60,7 +60,6 @@ class UpdateSupplierRequest extends FormRequest
             'payment_mode'         => 'nullable|string|max:20',
             'payment_days'         => 'nullable|integer|min:0|max:365',
             'credit_limit'         => 'nullable|numeric|min:0',
-            'encours_autorise'     => 'nullable|numeric|min:0',
             'compte_collectif'     => 'nullable|string|max:30',
             'depot_reception_id'   => 'nullable|exists:warehouses,id',
             'mode_livraison'       => 'nullable|string|max:60',

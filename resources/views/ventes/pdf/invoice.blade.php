@@ -426,6 +426,17 @@
                 @if($invoice->client?->tax_division)
                 <strong>Division fiscale :</strong> {{ $invoice->client->tax_division }}<br>
                 @endif
+                {{-- [Gestion] Référence légale de l'exonération.
+                     `is_tax_exempt` force la TVA à 0 sur cette facture : la pièce
+                     doit porter la référence de l'attestation, exigible en
+                     contrôle. Sans elle, une facture sans TVA n'est pas justifiée. --}}
+                @if($invoice->client?->is_tax_exempt)
+                <strong>Exonéré de TVA</strong>@if($invoice->client->tax_exemption_number) —
+                attestation n° {{ $invoice->client->tax_exemption_number }}@endif<br>
+                @if($invoice->client->tax_exemption_reason)
+                <span style="font-size:9px;">{{ $invoice->client->tax_exemption_reason }}</span><br>
+                @endif
+                @endif
                 @if(!$invoice->client?->ifu && !$invoice->client?->rccm && !$invoice->client?->tax_regime)
                 <span style="color:#9ca3af;">Client particulier</span>
                 @endif

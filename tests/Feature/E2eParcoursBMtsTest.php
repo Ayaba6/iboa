@@ -204,7 +204,7 @@ it('B-annulation avant sortie : la réservation est libérée intégralement', f
     app(\App\Modules\Production\Services\ReservationService::class)->reserveStockForOrder($order);
     expect((float) ProductStock::where('product_id', $p->id)->value('reserved_quantity'))->toBe(8.0);
 
-    app(\App\Services\OrderService::class)->cancel($order);
+    app(\App\Services\OrderService::class)->cancel($order, 'Annulation du parcours B — vérification de la libération des réservations.');
 
     expect($order->fresh()->status)->toBe('annule')
         ->and((float) ProductStock::where('product_id', $p->id)->value('reserved_quantity'))->toBe(0.0)

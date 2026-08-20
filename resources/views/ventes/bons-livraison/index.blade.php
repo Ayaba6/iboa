@@ -15,28 +15,28 @@
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total BL (filtré)</p>
-            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
+            <p class="text-[12px] text-gray-500">Total BL (filtré)</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Brouillons</p>
-            <p class="text-[16px] font-bold text-gray-500 tabular-nums">{{ $summary['count_draft'] }}</p>
+            <p class="text-[12px] text-gray-500">Brouillons</p>
+            <p class="text-[15px] font-bold text-gray-500 tabular-nums">{{ $summary['count_draft'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Validés</p>
-            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_validated'] }}</p>
+            <p class="text-[12px] text-gray-500">Validés</p>
+            <p class="text-[15px] font-bold text-emerald-600 tabular-nums">{{ $summary['count_validated'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Facturés</p>
-            <p class="text-[16px] font-bold text-emerald-700 tabular-nums">{{ $summary['count_invoiced'] }}</p>
+            <p class="text-[12px] text-gray-500">Facturés</p>
+            <p class="text-[15px] font-bold text-emerald-700 tabular-nums">{{ $summary['count_invoiced'] }}</p>
         </div>
     </div>
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Bons de livraison</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $deliveryNotes->total() }} bon(s)</p>
+            <h1 class="text-[20px] font-bold text-gray-900 leading-tight">Bons de livraison</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $deliveryNotes->total() }} bon(s)</p>
         </div>
     </div>
 
@@ -48,12 +48,12 @@
             <label class="{{ $lblX }}">Rechercher</label>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="Numéro, client…"
-                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+                   class="w-full h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
             </div>
 
             <div>
             <label class="{{ $lblX }}">Statut</label>
-            <select name="status" class="h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
+            <select name="status" class="h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon"             {{ ($filters['status'] ?? '') === 'brouillon'             ? 'selected' : '' }}>Brouillon</option>
                 <option value="en_attente_validation" {{ ($filters['status'] ?? '') === 'en_attente_validation' ? 'selected' : '' }}>⏳ En attente de validation</option>
@@ -65,12 +65,12 @@
 
             <div class="flex gap-2 sm:col-span-2 lg:col-span-2">
                 <button type="submit"
-                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
+                        class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search', 'status', 'client_id', 'order_id']))
                 <a href="{{ route('ventes.bons-livraison.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px] transition-colors">
                     ✕
                 </a>
                 @endif
@@ -81,7 +81,7 @@
     {{-- Table --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full divide-y divide-gray-200 text-sm">
+            <table class="w-full divide-y divide-gray-200 text-[13px]">
                 <thead class="bg-[#3b4248]">
                     <tr>
                         <th class="px-3 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Numéro</th>
@@ -108,7 +108,7 @@
                         <td class="px-3 py-1.5 hidden md:table-cell">
                             @if($dn->order)
                                 <a href="{{ route('ventes.commandes.show', $dn->order) }}"
-                                   class="font-mono text-blue-600 hover:text-blue-800 text-xs">
+                                   class="font-mono text-blue-600 hover:text-blue-800 text-[12px]">
                                     {{ $dn->order->number }}
                                 </a>
                             @else
@@ -156,7 +156,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-16 text-center text-gray-400 text-sm">
+                        <td colspan="7" class="px-4 py-16 text-center text-gray-400 text-[13px]">
                             Aucun bon de livraison trouvé.
                         </td>
                     </tr>

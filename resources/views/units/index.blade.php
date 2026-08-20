@@ -1,6 +1,14 @@
 @extends('layouts.erp')
 @section('title', 'Unités de mesure')
 
+{{-- [Perf] DataTables n'est chargé QUE par les vues portant un `data-dt`.
+     Auparavant bundlé dans app.js, il pesait sur chaque page de l'ERP — dont les
+     écrans de saisie qui n'ont aucun tableau. --}}
+@push('head_scripts')
+    @vite('resources/js/datatables.js')
+@endpush
+
+
 @section('breadcrumb')
     <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Accueil</a>
     <span class="mx-1">/</span>

@@ -79,11 +79,11 @@ window._orderFormData = {
                     </div>
                     <div>
                         <label class="{{ $lbl }}">Adresse de livraison</label>
-                        <textarea name="delivery_address" rows="2" class="{{ $txa }}" placeholder="Chantier – Kossodo&#10;Ouagadougou">{{ old('delivery_address', $o?->delivery_address) }}</textarea>
+                        <textarea name="delivery_address" rows="2" class="{{ $txa }}" placeholder="Ex. : Chantier – Kossodo&#10;Ouagadougou">{{ old('delivery_address', $o?->delivery_address) }}</textarea>
                     </div>
                     <div>
                         <label class="{{ $lbl }}">Adresse de facturation</label>
-                        <textarea name="billing_address" rows="2" class="{{ $txa }}" placeholder="01 BP 2359 Ouagadougou 01">{{ old('billing_address', $o?->billing_address) }}</textarea>
+                        <textarea name="billing_address" rows="2" class="{{ $txa }}" placeholder="Ex. : 01 BP 2359 Ouagadougou 01">{{ old('billing_address', $o?->billing_address) }}</textarea>
                     </div>
                     <div>
                         <label class="{{ $lbl }}">Commercial</label>
@@ -93,14 +93,15 @@ window._orderFormData = {
 
                 {{-- Colonne 2 : document --}}
                 <div class="sm:col-span-3 space-y-3">
+                    {{-- [UI — doublons retirés, aligné sur le devis] Deux champs en
+                         lecture seule supprimés : « Type de document » et « N° commande »
+                         répétaient le titre de la page, et le numéro figurait en outre
+                         dans la barre d'état basse. Leur astérisque rouge était de plus
+                         dépourvu de sens sur un champ non saisissable.
+                         Le statut, seule information non redondante, est conservé. --}}
                     <div>
-                        <label class="{{ $lbl }}">Type de document <span class="text-red-600">*</span></label>
-                        <input type="text" value="Commande client" class="{{ $inp }} bg-gray-50 text-gray-600" readonly>
-                    </div>
-                    <div>
-                        <label class="{{ $lbl }}">N° commande <span class="text-red-600">*</span></label>
-                        <input type="text" value="{{ $o?->number ?: 'Auto à la création' }}" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly>
-                        <span class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full {{ ($o?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600' }}">● {{ ucfirst($o?->status ?? 'Brouillon') }}</span>
+                        <label class="{{ $lbl }}">Statut</label>
+                        <span class="inline-flex items-center gap-1 h-8 text-[12px] font-semibold px-2.5 rounded-[3px] {{ ($o?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600 border border-gray-200' }}">● {{ ucfirst($o?->status ?? 'Brouillon') }}</span>
                     </div>
                     <div><label class="{{ $lbl }}">Date commande <span class="text-red-600">*</span></label><input type="date" name="issued_at" required value="{{ old('issued_at', isset($o) ? $o->issued_at?->format('Y-m-d') : now()->format('Y-m-d')) }}" class="{{ $inp }}"></div>
                     <div class="grid grid-cols-2 gap-2">
@@ -108,16 +109,16 @@ window._orderFormData = {
                         <div><label class="{{ $lbl }}">Livraison prévue</label><input type="date" name="delivery_date" value="{{ old('delivery_date', isset($o) ? $o->delivery_date?->format('Y-m-d') : '') }}" class="{{ $inp }}"></div>
                     </div>
                     <div><label class="{{ $lbl }}">Référence client</label><input type="text" name="reference" maxlength="50" value="{{ old('reference', $o->reference ?? '') }}" class="{{ $inp }}" placeholder="Réf. du client (facultatif)"></div>
-                    <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $o?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="PROJ-2026-0008 – Construction Hangar"></div>
+                    <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $o?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="Ex. : PROJ-2026-0008 – Construction Hangar"></div>
                 </div>
 
                 {{-- Colonne 3 : prix / paiement --}}
                 <div class="sm:col-span-3 space-y-3">
                     <div>
                         <label class="{{ $lbl }}">Entrepôt / Dépôt <span class="text-red-600">*</span></label>
-                        <div class="relative"><select name="delivery_warehouse_id" class="{{ $lk }}"><option value="">—</option>@foreach($warehouses as $w)<option value="{{ $w->id }}" @selected(old('delivery_warehouse_id', $o?->delivery_warehouse_id)==$w->id)>{{ $w->code }} – {{ $w->name }}</option>@endforeach</select>{!! $caret !!}</div>
+                        <div class="relative"><select name="delivery_warehouse_id" required class="{{ $lk }}"><option value="">—</option>@foreach($warehouses as $w)<option value="{{ $w->id }}" @selected(old('delivery_warehouse_id', $o?->delivery_warehouse_id)==$w->id)>{{ $w->code }} – {{ $w->name }}</option>@endforeach</select>{!! $caret !!}</div>
                     </div>
-                    <div><label class="{{ $lbl }}">Liste de prix <span class="text-red-600">*</span></label><input type="text" name="price_list" maxlength="60" value="{{ old('price_list', $o?->price_list ?? 'Tarif standard 2026') }}" class="{{ $inp }}"></div>
+                    <div><label class="{{ $lbl }}">Liste de prix <span class="text-red-600">*</span></label><input type="text" name="price_list" required maxlength="60" value="{{ old('price_list', $o?->price_list ?? 'Tarif standard 2026') }}" class="{{ $inp }}"></div>
                     {{-- [FIX BUG-001] TVA par défaut : appliquée aux lignes sans taux article ; « Appliquer » la pousse sur toutes les lignes. --}}
                     <div>
                         <label class="{{ $lbl }}">TVA par défaut</label>
@@ -148,7 +149,7 @@ window._orderFormData = {
                             <option value="mobile_money" @selected($pmm==='mobile_money')>Mobile money</option>
                         </select>{!! $caret !!}</div>
                     </div>
-                    <div><label class="{{ $lbl }}">Représentant fiscal</label><input type="text" name="fiscal_representative" maxlength="100" value="{{ old('fiscal_representative', $o?->fiscal_representative) }}" class="{{ $inp }}" placeholder="OA METAL INDUSTRIE"></div>
+                    <div><label class="{{ $lbl }}">Représentant fiscal</label><input type="text" name="fiscal_representative" maxlength="100" value="{{ old('fiscal_representative', $o?->fiscal_representative) }}" class="{{ $inp }}" placeholder="Ex. : OA METAL INDUSTRIE"></div>
                     <div>
                         <label class="{{ $lbl }}">Priorité</label>
                         @php $pr = old('priority', $o?->priority ?? 'normale'); @endphp
@@ -164,18 +165,23 @@ window._orderFormData = {
                 <div class="sm:col-span-3 space-y-3">
                     <div>
                         <label class="{{ $lbl }}">Devise <span class="text-red-600">*</span></label>
-                        <div class="relative"><select name="currency_code" class="{{ $lk }}">@php $cur = old('currency_code', $o->currency_code ?? 'XOF'); @endphp @foreach($currencies as $cu)<option value="{{ $cu }}" @selected($cur===$cu)>{{ $cu }}</option>@endforeach</select>{!! $caret !!}</div>
+                        <div class="relative"><select name="currency_code" x-model="currencyCode" @change="if (currencyCode === 'XOF') exchangeRate = 1" class="{{ $lk }}">@php $cur = old('currency_code', $o->currency_code ?? 'XOF'); @endphp @foreach($currencies as $cu)<option value="{{ $cu }}" @selected($cur===$cu)>{{ $cu }}</option>@endforeach</select>{!! $caret !!}</div>
                     </div>
-                    <div>
-                        <label class="{{ $lbl }}">Taux de change</label>
-                        <div class="flex gap-1">
-                            <input type="number" step="0.000001" min="0" name="exchange_rate" value="{{ old('exchange_rate', $o?->exchange_rate ?? 1) }}" class="{{ $inpR }}">
-                            <input type="text" value="XOF" class="{{ $inp }} w-16 font-mono bg-gray-50 text-gray-500" readonly>
-                        </div>
+                    {{-- [UI — doublon retiré] Le « XOF » en lecture seule accolé au taux
+                         répétait le champ « Devise » et restait figé sur XOF après
+                         changement de devise. Le taux n'a de sens qu'en devise
+                         étrangère : en XOF il vaut invariablement 1.
+                         UN SEUL champ `exchange_rate` : masqué par x-show, il reste
+                         soumis. Deux champs de même nom feraient gagner le dernier. --}}
+                    <div x-show="currencyCode !== 'XOF'" x-cloak>
+                        <label class="{{ $lbl }}">Taux de change <span class="font-normal text-gray-500" x-text="'(1 ' + currencyCode + ' = ? XOF)'"></span></label>
+                        <input type="number" step="0.000001" min="0" name="exchange_rate" x-model.number="exchangeRate" class="{{ $inpR }}">
                     </div>
                     <div class="grid grid-cols-2 gap-2 items-end">
                         <div>
-                            <label class="{{ $lbl }}">Prix / Devise</label>
+                            {{-- [UI] Renommé : ce sélecteur ne porte QUE le mode de prix.
+                                 « Devise » y était une troisième mention de la devise. --}}
+                            <label class="{{ $lbl }}">Mode de prix</label>
                             @php $pm = old('price_mode', $o?->price_mode ?? 'ttc'); @endphp
                             <div class="relative"><select name="price_mode" x-model="priceMode" @change="onPriceModeChange()" class="{{ $lk }}">
                                 <option value="ttc">TTC</option>
@@ -189,16 +195,14 @@ window._orderFormData = {
                             <span class="text-[11.5px] font-semibold text-gray-700">Prix nets</span>
                         </label>
                     </div>
-                    <div><label class="{{ $lbl }}">Régime fiscal</label><input type="text" name="fiscal_regime" maxlength="40" value="{{ old('fiscal_regime', $o?->fiscal_regime) }}" class="{{ $inp }}" placeholder="Régime réel normal"></div>
-                    <div>
-                        <label class="{{ $lbl }}">Taxes</label>
-                        @php $dtl = old('default_tax_label', $o?->default_tax_label ?? 'TVA 18%'); @endphp
-                        <div class="relative"><select name="default_tax_label" class="{{ $lk }}">
-                            <option value="TVA 18%" @selected($dtl==='TVA 18%')>TVA 18%</option>
-                            <option value="Exonéré" @selected($dtl==='Exonéré')>Exonéré</option>
-                        </select>{!! $caret !!}</div>
-                    </div>
-                    <div><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="2" class="{{ $txa }}" placeholder="Merci de votre confiance.">{{ old('notes', $o->notes ?? '') }}</textarea></div>
+                    <div><label class="{{ $lbl }}">Régime fiscal</label><input type="text" name="fiscal_regime" maxlength="40" value="{{ old('fiscal_regime', $o?->fiscal_regime) }}" class="{{ $inp }}" placeholder="Ex. : Régime réel normal"></div>
+                    {{-- [UI — doublon retiré] Champ « Taxes » (`default_tax_label`)
+                         supprimé : libellé stocké, validé, `fillable`, mais JAMAIS lu par
+                         aucune logique métier ni affiché sur aucune fiche ou PDF. Il
+                         doublonnait « TVA par défaut », seul champ qui pilote réellement
+                         la TVA des lignes, et pouvait le contredire.
+                         La valeur est désormais DÉRIVÉE de l'état réel dans OrderService. --}}
+                    <div><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="2" class="{{ $txa }}" placeholder="Ex. : Merci de votre confiance.">{{ old('notes', $o->notes ?? '') }}</textarea></div>
                 </div>
             </div>
         </section>
@@ -226,6 +230,7 @@ window._orderFormData = {
                                 <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Nombre de tôles — vide pour un article standard">Nb tôles</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Longueur unitaire (m)">Long. m</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16" title="Métrage total = nb × longueur (auto)">Qté / ml</th>
+                                <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-20" title="Unité de vente — héritée de l'article, modifiable">Unité</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">P.U. HT</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-14">Rem. %</th>
                                 <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Net HT</th>
@@ -245,7 +250,37 @@ window._orderFormData = {
                                     <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][nb_toles]'" x-model.number="item.nb_toles" @input="syncSheet(item)" min="0" step="1" inputmode="numeric" placeholder="—" class="{{ $tdIn }} min-w-[40px] text-right"></td>
                                     <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][metrage_par_tole]'" x-model.number="item.metrage_par_tole" @input="syncSheet(item)" min="0" step="0.01" placeholder="—" class="{{ $tdIn }} min-w-[40px] text-right"></td>
                                     <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" :readonly="isSheet(item)" :class="isSheet(item) ? 'bg-gray-100 text-gray-500' : ''" min="0.01" step="0.01" inputmode="decimal" class="{{ $tdIn }} min-w-[40px] text-right"></td>
-                                    <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right"></td>
+                                    {{-- [Ventes] Unité de la ligne : `unit_id` n'était jamais posté,
+                                         donc 100 % des lignes de commande étaient enregistrées sans
+                                         unité. Une tôle se vend à la pièce ou au mètre linéaire, un
+                                         fer à béton au kilo ou à la tonne. --}}
+                                    <td class="px-2 py-1">
+                                        <div class="relative">
+                                            <select :name="'items[' + index + '][unit_id]'" x-model.number="item.unit_id" class="{{ $lk }} !h-8 min-w-[64px] text-[12px]">
+                                                <option value="">—</option>
+                                                @foreach($units ?? [] as $unit)
+                                                    <option value="{{ $unit->id }}">{{ $unit->abbreviation ?: $unit->name }}</option>
+                                                @endforeach
+                                            </select>{!! $caret !!}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 py-1">
+                                        <input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right">
+                                        {{-- [CDC Tarifaire] Cet écran ne consultait PAS le service
+                                             tarifaire : ni prix conseillé, ni plancher, ni plafond —
+                                             alors que la commande est le document qui engage. Le
+                                             plancher exige une dérogation tracée
+                                             (`sales_below_floor.request`). --}}
+                                        {{-- [BUG-A3-SALES-ZERO-PRICE-026] « Prix à saisir » n'est pas « sous le
+                                             plancher » : sans tarif défini, l'écran affichait 0 sans rien dire.
+                                             Sous un prix qui n'existe pas encore, il n'y a rien à déroger. --}}
+                                        <span x-show="item._manual_price" x-cloak class="block text-[11px] text-orange-600 font-bold mt-0.5 whitespace-nowrap"
+                                              title="Aucun tarif n'est défini pour cet article : saisissez le prix. Une ligne à 0 sera refusée.">✎ prix à saisir</span>
+                                        <span x-show="item._below_floor && !item._manual_price" x-cloak class="block text-[11px] text-red-600 font-bold mt-0.5 whitespace-nowrap"
+                                              :title="'Prix plancher : ' + formatNum(item._floor) + ' F — une vente en dessous exige une dérogation motivée.'">⛔ &lt; plancher</span>
+                                        <span x-show="item._above_ceiling && !item._below_floor" x-cloak class="block text-[11px] text-amber-600 font-semibold mt-0.5 whitespace-nowrap"
+                                              :title="'Prix plafond conseillé : ' + formatNum(item._ceiling) + ' F'">⚠ &gt; plafond</span>
+                                    </td>
                                     <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
                                     <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
                                     <td class="px-2 py-1">
@@ -285,6 +320,38 @@ window._orderFormData = {
                         <p class="text-[12px] font-bold text-gray-700">Total TTC</p>
                         <p class="text-[17px] font-bold text-emerald-700 tabular-nums" x-text="formatNum(totalTtc) + ' XOF'"></p>
                     </div>
+                    {{-- [Ventes] MARGE — absente de cet écran, comme du devis avant
+                         correction. `unit_cost` n'existait que sur `invoice_items` : le
+                         coût n'apparaissait qu'à la facture, donc APRÈS l'engagement.
+                         Le coût est figé à la saisie (le CUMP bouge à chaque réception).
+                         Réservé à `sales.view_margin`, comme `production.cost.view`. --}}
+                    @can('sales.view_margin')
+                    <div class="border-t border-gray-200 pt-2.5 space-y-2">
+                        <div class="flex justify-between text-[13px] text-gray-600">
+                            <span>Coût total</span>
+                            <span class="tabular-nums font-medium" :class="totalCost !== null ? '' : 'text-gray-400'"
+                                  x-text="totalCost !== null ? formatNum(totalCost) + ' XOF' : '—'"></span>
+                        </div>
+                        <div class="flex justify-between text-[13px]">
+                            <span class="font-semibold text-gray-700">Marge brute</span>
+                            <span class="tabular-nums font-bold px-1.5 rounded-[3px]"
+                                  :class="totalMargin === null ? 'text-gray-400' : (totalMargin < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-900')"
+                                  x-text="totalMargin !== null ? formatNum(totalMargin) + ' XOF' : '—'"></span>
+                        </div>
+                        <div class="flex justify-between text-[13px]">
+                            <span class="font-semibold text-gray-700">Taux de marge</span>
+                            <span class="tabular-nums font-bold px-1.5 rounded-[3px]"
+                                  :class="marginRate === null ? 'text-gray-400' : (marginRate < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-900')"
+                                  x-text="marginRate !== null ? formatNum(marginRate) + ' %' : '—'"></span>
+                        </div>
+                        {{-- Un « — » sur la marge peut venir d'un coût manquant : on le dit,
+                             plutôt que de laisser croire à une marge nulle. --}}
+                        <div class="flex justify-between text-[12px]" x-show="linesWithoutCost > 0" x-cloak>
+                            <span class="text-amber-700">Lignes sans coût</span>
+                            <span class="tabular-nums font-semibold text-amber-700" x-text="linesWithoutCost + ' à vérifier'"></span>
+                        </div>
+                    </div>
+                    @endcan
                 </div>
             </div>
         </section>
@@ -296,9 +363,9 @@ window._orderFormData = {
         <section class="border border-gray-200 rounded-[4px] xl:col-span-5">
             <div class="{{ $secH }}">Informations complémentaires</div>
             <div class="p-4 grid grid-cols-1 sm:grid-cols-6 gap-x-3 gap-y-3">
-                <div class="sm:col-span-2"><label class="{{ $lbl }}">Transporteur</label><input type="text" name="carrier" maxlength="80" value="{{ old('carrier', $o?->carrier) }}" class="{{ $inp }}" placeholder="TRANSPORT PLUS"></div>
-                <div class="sm:col-span-2"><label class="{{ $lbl }}">N° de véhicule</label><input type="text" name="vehicle_number" maxlength="30" value="{{ old('vehicle_number', $o?->vehicle_number) }}" class="{{ $inp }} font-mono uppercase" placeholder="11 BF 2567"></div>
-                <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $o?->delivery_location) }}" class="{{ $inp }}" placeholder="Chantier – Kossodo"></div>
+                <div class="sm:col-span-2"><label class="{{ $lbl }}">Transporteur</label><input type="text" name="carrier" maxlength="80" value="{{ old('carrier', $o?->carrier) }}" class="{{ $inp }}" placeholder="Ex. : TRANSPORT PLUS"></div>
+                <div class="sm:col-span-2"><label class="{{ $lbl }}">N° de véhicule</label><input type="text" name="vehicle_number" maxlength="30" value="{{ old('vehicle_number', $o?->vehicle_number) }}" class="{{ $inp }} font-mono uppercase" placeholder="Ex. : 11 BF 2567"></div>
+                <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $o?->delivery_location) }}" class="{{ $inp }}" placeholder="Ex. : Chantier – Kossodo"></div>
                 <div class="sm:col-span-2">
                     <label class="{{ $lbl }}">Incoterm</label>
                     @php $it = old('incoterm', $o?->incoterm ?? 'EXW'); @endphp
@@ -309,7 +376,7 @@ window._orderFormData = {
                         <option value="DAP" @selected($it==='DAP')>DAP – Delivered At Place</option>
                     </select>{!! $caret !!}</div>
                 </div>
-                <div class="sm:col-span-2"><label class="{{ $lbl }}">Poids total (kg)</label><input type="number" step="0.01" min="0" name="total_weight_kg" value="{{ old('total_weight_kg', $o?->total_weight_kg) }}" class="{{ $inpR }}" placeholder="4 820,000"></div>
+                <div class="sm:col-span-2"><label class="{{ $lbl }}">Poids total (kg)</label><input type="number" step="0.01" min="0" name="total_weight_kg" value="{{ old('total_weight_kg', $o?->total_weight_kg) }}" class="{{ $inpR }}" placeholder="Ex. : 4 820,000"></div>
                 <div class="sm:col-span-2">
                     <label class="{{ $lbl }}">Pied de page (PDF)</label>
                     <input type="text" name="footer_note" maxlength="255" value="{{ old('footer_note', $o?->footer_note) }}" class="{{ $inp }}">
@@ -375,6 +442,24 @@ function orderFormVentes() {
     const { order, products, oldItems, oldGlobalDiscount, selectedClient, clientExemptions, quoteItemsUrl } = window._orderFormData;
     const dtr = parseFloat(window._orderFormData.defaultTaxRate) || 18;
 
+    /**
+     * [Ventes] Coût unitaire d'un article, MÊME ordre de priorité que
+     * SalesLineDefaultsService::resolveUnitCost() côté serveur : CUMP, coût standard,
+     * dernier prix d'achat, prix d'achat de référence.
+     *
+     * Un zéro n'est jamais retenu : il afficherait 100 % de marge et masquerait le cas
+     * à surveiller, un article sans coût renseigné. On renvoie null et l'écran affiche
+     * « — ». Renvoie null aussi sans `sales.view_margin`, le serveur ne sérialisant
+     * alors aucun coût.
+     */
+    function resolveCost(p) {
+        for (const attr of ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']) {
+            const v = parseFloat(p?.[attr] ?? 0);
+            if (v > 0) return Math.round(v * 100) / 100;
+        }
+        return null;
+    }
+
     let _nextKey = 1;
 
     function mapItem(i) {
@@ -382,6 +467,8 @@ function orderFormVentes() {
             _key:             _nextKey++,
             product_id:       i.product_id       ?? '',
             description:      i.description      ?? '',
+            unit_id:          i.unit_id          ?? '',
+            unit_cost:        i.unit_cost != null ? parseFloat(i.unit_cost) : null,
             quantity:         parseFloat(i.quantity) || 1,
             // [§5 TÔLE BAC] nombre de tôles × longueur unitaire → métrage
             nb_toles:         parseFloat(i.nb_toles) || 0,
@@ -412,6 +499,9 @@ function orderFormVentes() {
         clientExemptions:       clientExemptions || {},
         defaultTaxRate:         dtr,
         priceMode:              @js($pm),
+        // [UI] Devise réactive : le taux de change ne s'affiche qu'en devise étrangère.
+        currencyCode:           @js(old('currency_code', $o->currency_code ?? 'XOF')),
+        exchangeRate:           {{ (float) old('exchange_rate', $o?->exchange_rate ?? 1) }},
         submitting:             false,
         importing:              false,
         _nextKey,
@@ -432,6 +522,33 @@ function orderFormVentes() {
             this.items = this.items.map(item => ({ ...item, tax_rate_value: this.defaultTaxRate }));
         },
 
+        // ── [Ventes] Marge ─────────────────────────────────────────────────
+        // Coût FIGÉ sur la ligne, jamais relu à la volée : sinon la marge changerait
+        // à chaque réception déplaçant le CUMP. Une ligne sans coût est EXCLUE du
+        // calcul et signalée, jamais comptée comme un coût nul.
+        get costedItems() {
+            return this.items.filter(i => i.unit_cost != null && parseFloat(i.unit_cost) > 0);
+        },
+        get linesWithoutCost() {
+            return this.items.filter(i => (i.product_id || i.description?.trim()) && (i.unit_cost == null || parseFloat(i.unit_cost) <= 0)).length;
+        },
+        get totalCost() {
+            if (!this.costedItems.length) return null;
+            return this.costedItems.reduce((sum, i) => sum + parseFloat(i.unit_cost) * (parseFloat(i.quantity) || 0), 0);
+        },
+        get totalMargin() {
+            if (this.totalCost === null) return null;
+            // Chiffre d'affaires des SEULES lignes valorisées : comparer tout le HT à
+            // un coût partiel gonflerait artificiellement la marge.
+            const revenue = this.costedItems.reduce((sum, i) => sum + this.lineHt(i), 0);
+            return revenue - this.totalCost;
+        },
+        get marginRate() {
+            if (this.totalMargin === null) return null;
+            const revenue = this.costedItems.reduce((sum, i) => sum + this.lineHt(i), 0);
+            if (revenue <= 0) return null;
+            return Math.round((this.totalMargin / revenue) * 1000) / 10;
+        },
         get isClientTaxExempt() {
             if (!this.clientId) return false;
             return !!this.clientExemptions[this.clientId];
@@ -480,7 +597,7 @@ function orderFormVentes() {
             return (parseFloat(item.nb_toles) || 0) > 0 && (parseFloat(item.metrage_par_tole) || 0) > 0;
         },
         addItem() {
-            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, nb_toles: 0, metrage_par_tole: 0, unit_price: 0, discount_percent: 0, tax_rate_value: this.taxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
+            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, nb_toles: 0, metrage_par_tole: 0, unit_id: '', unit_cost: null, unit_price: 0, discount_percent: 0, tax_rate_value: this.taxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
         },
         removeItem(index) { this.items.splice(index, 1); },
         /** [Maquette] Charge les lignes du devis sélectionné. */
@@ -511,7 +628,43 @@ function orderFormVentes() {
                 this.items[index].unit_price = parseFloat(p.sale_price) || 0;
                 // [FIX BUG-001] Article sans taux TVA → taux par défaut société (pas 0%).
                 this.items[index].tax_rate_value = this.taxExempt ? 0 : (p.tax_rate?.rate != null ? parseFloat(p.tax_rate.rate) : this.defaultTaxRate);
+                // [Ventes] Unité héritée : unité de VENTE d'abord, unité de gestion
+                // ensuite. Un article géré au kilo peut se vendre à la barre.
+                this.items[index].unit_id = p.sale_unit_id ?? p.unit_id ?? '';
+                // [Ventes] Coût figé pour la marge. Nul si l'utilisateur n'a pas
+                // `sales.view_margin` : le serveur ne sérialise alors aucun coût.
+                this.items[index].unit_cost = resolveCost(p);
+                this.fetchAdvisedPrice(index);
             }
+        },
+        /**
+         * [CDC Tarifaire] Prix conseillé + plancher + plafond, résolus par
+         * SalesPricingService. Cet écran ne l'appelait PAS : la commande — document
+         * qui engage — n'offrait aucune garde tarifaire, là où le devis en avait une.
+         */
+        async fetchAdvisedPrice(index) {
+            const item = this.items[index];
+            if (!item.product_id) return;
+            try {
+                const params = new URLSearchParams({
+                    product_id: item.product_id,
+                    client_id: this.clientId || '',
+                    qty: item.quantity || 1,
+                });
+                if (item.unit_id) params.set('unit_id', item.unit_id);
+                const r = await fetch('{{ route('ventes.api.prix') }}?' + params, { headers: { 'Accept': 'application/json' } });
+                if (!r.ok) return;
+                const d = await r.json();
+                // La ligne a pu changer d'article pendant la requête.
+                if (this.items[index]?.product_id !== item.product_id) return;
+                this.items[index]._below_floor   = !!d.below_floor;
+                this.items[index]._manual_price  = !!d.requires_manual_price;
+                this.items[index]._floor         = d.floor || 0;
+                this.items[index]._above_ceiling = !!d.above_ceiling;
+                this.items[index]._ceiling       = d.ceiling || 0;
+                // L'unité tarifaire prime : un tarif défini à la barre impose la barre.
+                if (d.unit_id) this.items[index].unit_id = d.unit_id;
+            } catch (e) { /* réseau indisponible : le prix de base est conservé */ }
         },
         // XOF sans centimes : décimales affichées seulement si présentes (gain de place colonnes)
         formatNum(n) { return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Math.round((n || 0) * 100) / 100); },

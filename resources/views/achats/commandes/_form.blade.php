@@ -18,7 +18,7 @@
     $txa   = 'w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white resize-none focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $secH  = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
+    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-[13px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
 @endphp
 
 <div x-data="purchaseOrderForm()" x-cloak class="space-y-3">
@@ -59,7 +59,7 @@
                     </div>
                     <div>
                         <label class="{{ $lbl }}">Adresse de livraison</label>
-                        <textarea name="delivery_address" rows="2" class="{{ $txa }}" placeholder="Usine – Ouagadougou">{{ old('delivery_address', $po?->delivery_address) }}</textarea>
+                        <textarea name="delivery_address" rows="2" class="{{ $txa }}" placeholder="Ex. : Usine – Ouagadougou">{{ old('delivery_address', $po?->delivery_address) }}</textarea>
                     </div>
                     <div>
                         <label class="{{ $lbl }}">Devise <span class="text-red-600">*</span></label>
@@ -73,19 +73,21 @@
 
                 {{-- Colonne 2 : document --}}
                 <div class="sm:col-span-3 space-y-3">
+                    {{-- [UI — doublon retiré] « Type de document » en lecture seule répétait le
+                         titre de la page, sur un écran où il ne peut rien valoir d'autre. Son
+                         astérisque rouge était de plus dépourvu de sens sur un champ non
+                         saisissable. --}}
+                    {{-- [UI — doublon retiré] Le numéro interne répétait le titre de la page et
+                         la barre d'état basse. Le statut, seule information non redondante du
+                         bloc, est conservé. --}}
                     <div>
-                        <label class="{{ $lbl }}">Type de document <span class="text-red-600">*</span></label>
-                        <input type="text" value="Bon de commande" class="{{ $inp }} bg-gray-50 text-gray-600" readonly>
-                    </div>
-                    <div>
-                        <label class="{{ $lbl }}">N° BC <span class="text-red-600">*</span></label>
-                        <input type="text" value="{{ $po?->number ?: 'Auto à la création' }}" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly>
-                        <span class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full {{ ($po?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600' }}">● {{ ucfirst($po?->status ?? 'Brouillon') }}</span>
+                        <label class="{{ $lbl }}">Statut</label>
+                        <span class="inline-flex items-center gap-1 h-8 text-[12px] font-semibold px-2.5 rounded-[3px] {{ ($po?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600 border border-gray-200' }}">● {{ ucfirst($po?->status ?? 'Brouillon') }}</span>
                     </div>
                     <div><label class="{{ $lbl }}">Date de commande <span class="text-red-600">*</span></label><input type="date" name="issued_at" required value="{{ old('issued_at', $po?->ordered_at?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">Livraison prévue</label><input type="date" name="expected_at" value="{{ old('expected_at', $po?->expected_at?->format('Y-m-d')) }}" class="{{ $inp }}"></div>
-                    <div><label class="{{ $lbl }}">Référence interne</label><input type="text" name="reference" maxlength="50" value="{{ old('reference', $po->reference ?? '') }}" class="{{ $inp }} font-mono" placeholder="REF-2026-001"></div>
-                    <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $po?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="PROJ-2026-0008"></div>
+                    <div><label class="{{ $lbl }}">Référence interne</label><input type="text" name="reference" maxlength="50" value="{{ old('reference', $po->reference ?? '') }}" class="{{ $inp }} font-mono" placeholder="Ex. : REF-2026-001"></div>
+                    <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $po?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="Ex. : PROJ-2026-0008"></div>
                 </div>
 
                 {{-- Colonne 3 : réception / paiement --}}
@@ -132,12 +134,11 @@
                         <label class="{{ $lbl }}">Taux de change</label>
                         <div class="flex gap-1">
                             <input type="number" step="0.000001" min="0" name="exchange_rate" value="{{ old('exchange_rate', $po?->exchange_rate ?? 1) }}" class="{{ $inpR }}">
-                            <input type="text" value="XOF" class="{{ $inp }} w-16 font-mono bg-gray-50 text-gray-500" readonly>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2 items-end">
                         <div>
-                            <label class="{{ $lbl }}">Prix / Devise</label>
+                            <label class="{{ $lbl }}">Mode de prix</label>
                             @php $pm = old('price_mode', $po?->price_mode ?? 'ht'); @endphp
                             <div class="relative"><select name="price_mode" class="{{ $lk }}">
                                 <option value="ht" @selected($pm==='ht')>HT</option>
@@ -147,7 +148,7 @@
                         <label class="inline-flex items-center gap-1.5 cursor-pointer pb-1.5">
                             <input type="hidden" name="net_prices" value="0">
                             <input type="checkbox" name="net_prices" value="1" class="{{ $chk }}" {{ old('net_prices', $po?->net_prices) ? 'checked' : '' }}>
-                            <span class="text-[11.5px] font-semibold text-gray-700">Prix nets</span>
+                            <span class="text-[11px] font-semibold text-gray-700">Prix nets</span>
                         </label>
                     </div>
                     <div><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="4" class="{{ $txa }}" placeholder="Instructions au fournisseur…">{{ old('notes', $po?->notes) }}</textarea></div>
@@ -169,7 +170,7 @@
             </div>
             <div class="grid grid-cols-1 xl:grid-cols-12">
                 <div class="xl:col-span-9 overflow-x-auto border-r border-gray-200">
-                    <table class="w-full text-sm">
+                    <table class="w-full text-[13px]">
                         <thead class="bg-[#eef5f0] border-b border-gray-300">
                             <tr>
                                 <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-8">#</th>
@@ -188,7 +189,7 @@
                         <tbody class="divide-y divide-gray-100">
                             <template x-for="(item, index) in items" :key="index">
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-2 py-2 text-gray-400 text-xs" x-text="index + 1"></td>
+                                    <td class="px-2 py-2 text-gray-400 text-[12px]" x-text="index + 1"></td>
                                     <td class="px-2 py-2">
                                         <select :name="'items[' + index + '][product_id]'" x-model="item.product_id" @change="onProductChange(index)" class="{{ $tdIn }} min-w-[150px]">
                                             <option value="">— Produit —</option>
@@ -199,13 +200,13 @@
                                     <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
                                     <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} text-right"></td>
                                     <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} text-right"></td>
-                                    <td class="px-2 py-2 text-right tabular-nums text-gray-700 font-medium text-xs whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
+                                    <td class="px-2 py-2 text-right tabular-nums text-gray-700 font-medium text-[12px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
                                     {{-- [FIX affichage TVA] min-width : sans lui la colonne se comprimait à ~22px,
                                          le padding + spinner masquaient la valeur (« 18 » présent mais clippé,
                                          visible seulement au focus). --}}
                                     <td class="px-2 py-2"><input type="number" :name="'items[' + index + '][tax_rate_value]'" x-model.number="item.tax_rate_value" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} text-right" style="min-width:52px;padding-left:4px;padding-right:4px"></td>
-                                    <td class="px-2 py-2 text-right tabular-nums text-gray-600 text-xs whitespace-nowrap" x-text="formatNum(lineTax(item))"></td>
-                                    <td class="px-2 py-2 text-right tabular-nums text-gray-900 font-semibold text-xs whitespace-nowrap" x-text="formatNum(lineTtc(item))"></td>
+                                    <td class="px-2 py-2 text-right tabular-nums text-gray-600 text-[12px] whitespace-nowrap" x-text="formatNum(lineTax(item))"></td>
+                                    <td class="px-2 py-2 text-right tabular-nums text-gray-900 font-semibold text-[12px] whitespace-nowrap" x-text="formatNum(lineTtc(item))"></td>
                                     <td class="px-2 py-2 text-center">
                                         <button type="button" @click="removeItem(index)" x-show="items.length > 1" class="text-gray-300 hover:text-red-500 transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -228,7 +229,7 @@
                     <div class="flex justify-between text-[13px] text-gray-600"><span>Total TVA</span><span class="tabular-nums font-medium" x-text="formatNum(totalTax) + ' XOF'"></span></div>
                     <div class="border-t-2 border-emerald-200 pt-2.5">
                         <p class="text-[12px] font-bold text-gray-700">Total TTC</p>
-                        <p class="text-[17px] font-bold text-emerald-700 tabular-nums" x-text="formatNum(totalTtc) + ' XOF'"></p>
+                        <p class="text-[20px] font-bold text-emerald-700 tabular-nums" x-text="formatNum(totalTtc) + ' XOF'"></p>
                     </div>
                 </div>
             </div>
@@ -240,9 +241,9 @@
         <section class="border border-gray-200 rounded-[4px] xl:col-span-5">
             <div class="{{ $secH }}">Informations complémentaires</div>
             <div class="p-4 grid grid-cols-1 sm:grid-cols-6 gap-x-3 gap-y-3">
-                <div class="sm:col-span-2"><label class="{{ $lbl }}">Transporteur</label><input type="text" name="carrier" maxlength="80" value="{{ old('carrier', $po?->carrier) }}" class="{{ $inp }}" placeholder="TRANSPORT PLUS"></div>
-                <div class="sm:col-span-2"><label class="{{ $lbl }}">N° de véhicule</label><input type="text" name="vehicle_number" maxlength="30" value="{{ old('vehicle_number', $po?->vehicle_number) }}" class="{{ $inp }} font-mono uppercase" placeholder="11 BF 2567"></div>
-                <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $po?->delivery_location) }}" class="{{ $inp }}" placeholder="Usine – Ouagadougou"></div>
+                <div class="sm:col-span-2"><label class="{{ $lbl }}">Transporteur</label><input type="text" name="carrier" maxlength="80" value="{{ old('carrier', $po?->carrier) }}" class="{{ $inp }}" placeholder="Ex. : TRANSPORT PLUS"></div>
+                <div class="sm:col-span-2"><label class="{{ $lbl }}">N° de véhicule</label><input type="text" name="vehicle_number" maxlength="30" value="{{ old('vehicle_number', $po?->vehicle_number) }}" class="{{ $inp }} font-mono uppercase" placeholder="Ex. : 11 BF 2567"></div>
+                <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $po?->delivery_location) }}" class="{{ $inp }}" placeholder="Ex. : Usine – Ouagadougou"></div>
                 <div class="sm:col-span-2">
                     <label class="{{ $lbl }}">Incoterm</label>
                     @php $it = old('incoterm', $po?->incoterm ?? 'EXW'); @endphp
@@ -269,7 +270,7 @@
                 @if($po && $po->attachments->isNotEmpty())
                 <div class="space-y-1.5">
                     @foreach($po->attachments as $att)
-                    <div class="flex items-center justify-between border border-gray-200 rounded-[3px] px-2.5 py-1.5 text-[12.5px]">
+                    <div class="flex items-center justify-between border border-gray-200 rounded-[3px] px-2.5 py-1.5 text-[12px]">
                         <span class="flex items-center gap-2 text-gray-700 truncate"><span class="text-red-500">📄</span><span class="font-mono truncate">{{ $att->filename }}</span></span>
                         <span class="text-gray-400 tabular-nums whitespace-nowrap ml-2">{{ number_format($att->size / 1024, 0, ',', ' ') }} Ko</span>
                     </div>

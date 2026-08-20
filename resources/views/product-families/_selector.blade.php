@@ -30,7 +30,7 @@
             </table>
         </div>
         <div class="px-3 py-1.5 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
-            {{ ($selectorFamilies ?? collect())->count() }} Résultats
+            {{ ($selectorFamilies ?? collect())->count() }} famille(s) active(s)
         </div>
     </div>
 </aside>

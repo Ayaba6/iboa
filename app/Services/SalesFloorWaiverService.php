@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\SalesFloorWaiver;
+use App\Services\Sales\CommercialLinePriceRule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -114,14 +115,67 @@ class SalesFloorWaiverService
             ->update(['status' => 'expiree']);
     }
 
+    /**
+     * [BUG-A3-SALES-ZERO-PRICE-026] GARDE 1 — aucune ligne à titre gratuit.
+     *
+     * Séparée de `assertDocumentMayProceed()` parce que tous les documents ne
+     * méritent pas les deux gardes. Le prix plancher protège la MARGE : il n'a
+     * de sens que là où l'on vend. La gratuité, elle, doit être refusée partout
+     * où un document engage l'entreprise — y compris sur une facture directe,
+     * qui n'a jamais transité par un devis et n'a donc jamais été contrôlée.
+     *
+     * Le refus est inconditionnel : `sales_below_floor.approve` autorise à
+     * remiser, pas à offrir. Tant que [FEATURE-A3-SALES-FREE-LINE-027] n'existe
+     * pas, la gratuité n'a aucun chemin d'approbation.
+     */
+    public function assertNoFreeLine(Model $document): void
+    {
+        $devise = $document->currency_code ?? null;
+        $sousTotal = (float) ($document->subtotal_ht ?? 0);
+        $ratioGlobal = $sousTotal > 0
+            ? (float) ($document->global_discount_amount ?? 0) / $sousTotal
+            : 0.0;
+
+        foreach ($document->items()->with('product')->get() as $ligne) {
+            $net = CommercialLinePriceRule::montantNetLigne(
+                (float) $ligne->unit_price,
+                (float) $ligne->quantity,
+                (float) ($ligne->discount_percent ?? 0),
+                $ratioGlobal,
+                $devise,
+            );
+
+            if (CommercialLinePriceRule::estGratuit($net, $devise)) {
+                throw new \RuntimeException(
+                    CommercialLinePriceRule::messageGratuite($ligne->product?->name)
+                );
+            }
+        }
+    }
+
     public function assertDocumentMayProceed(Model $document): void
     {
         if (in_array($document->status, ['annule', 'annulee'], true)) {
             throw new \RuntimeException('Un document annulé ne peut utiliser aucune dérogation.');
         }
         $this->expireApproved();
+
+        // GARDE 1 — contrôlée AVANT le plancher, et indépendamment de lui : le
+        // plancher se déduit du coût, si bien qu'un article sans coût connu le
+        // ramène à zéro, et zéro n'est pas inférieur à zéro.
+        $this->assertNoFreeLine($document);
+
         foreach ($document->items()->with('product')->get() as $line) {
             $pricing = $this->pricing($document, $line);
+
+            // GARDE 2 — sous le plancher, dérogeable.
+            //
+            // [BUG-A3-SALES-MONEY-PRECISION-031] Le `0.005` ci-dessous est une
+            // tolérance en dur : elle suppose deux décimales, alors que le franc
+            // CFA n'en a aucune. Laissée en l'état À DESSEIN — la corriger
+            // change `pricing_signature`, donc invalide les dérogations déjà
+            // approuvées, ce qui appelle une décision métier. Voir
+            // docs/BUG-A3-SALES-MONEY-PRECISION-031.md.
             if ($pricing['minimum_price'] <= $pricing['net_price'] + 0.005) {
                 continue;
             }

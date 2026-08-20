@@ -36,9 +36,11 @@ pest()->extend(TestCase::class)
         // une course qui s'exécutait sur SQLite en mémoire, les surcharges
         // `force="true"` de phpunit n'étant pas encore appliquées. Une bannière
         // fausse est pire qu'une bannière absente.
-        static $annonce = false;
-        if (! $annonce) {
-            $annonce = true;
+        // Drapeau GLOBAL et non `static` de closure : Pest réinstancie la
+        // fermeture pour chaque test, si bien qu'un static local réannonçait le
+        // moteur à chaque ligne du rapport.
+        if (! defined('A3_MOTEUR_ANNONCE')) {
+            define('A3_MOTEUR_ANNONCE', true);
             $c = \Illuminate\Support\Facades\DB::connection();
             fwrite(STDOUT, sprintf(
                 "\n  Moteur réel : %s / %s\n\n",

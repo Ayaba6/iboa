@@ -41,14 +41,21 @@ class DashboardController extends Controller
         $month     = $now->month;
         $year      = $now->year;
         $prevMonth = $now->copy()->subMonth();
+        // [SEC] Isolation multi-tenant : ces requêtes passent par DB::table, qui
+        // contourne HasCompanyScope. `kpisJson()` filtrait déjà par société ; cette
+        // copie ne le faisait pas — la page affichait des totaux toutes sociétés
+        // confondues, que le rafraîchissement automatique corrigeait 60 s plus tard.
+        $companyId = currentCompany()->id;
 
         $invoiceStatuses = ['emise', 'envoyee', 'partiellement_payee', 'payee', 'en_retard'];
 
         // ── KPI block — was 14 separate queries, now 3 ────────────────────────
         // Cache for 5 minutes: KPIs don't need to be real-time to the second.
-        $cacheKey = "dashboard.kpis.{$year}.{$month}";
+        // La société entre dans la clé : sans elle, le bloc calculé pour l'une
+        // serait resservi à l'autre, filtres de requête ou non.
+        $cacheKey = "dashboard.kpis.{$companyId}.{$year}.{$month}";
         $kpis = Cache::remember($cacheKey, 300, function () use (
-            $invoiceStatuses, $now, $year, $month, $prevMonth
+            $invoiceStatuses, $now, $year, $month, $prevMonth, $companyId
         ) {
             // [PERF-01] All invoice KPIs in ONE query via CASE expressions.
             // [PORTABLE] Bornes de dates plutôt que YEAR()/MONTH() : fonctionne
@@ -60,6 +67,7 @@ class DashboardController extends Controller
             $nextYearStart  = $now->copy()->startOfYear()->addYear()->toDateTimeString();
 
             $ivKpi = DB::table('invoices')
+                ->where('company_id', $companyId)
                 ->whereIn('status', $invoiceStatuses)
                 ->selectRaw("
                     SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN total_ttc ELSE 0 END)   AS rev_jour,
@@ -80,6 +88,7 @@ class DashboardController extends Controller
 
             // [PERF-02] Overdue invoices — separate because different status set + due_at filter.
             $overdueKpi = DB::table('invoices')
+                ->where('company_id', $companyId)
                 ->whereIn('status', ['emise', 'envoyee', 'partiellement_payee', 'en_retard'])
                 ->where('due_at', '<', now())
                 ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(remaining_amount), 0) as montant')
@@ -87,6 +96,7 @@ class DashboardController extends Controller
 
             // [PERF-03] Both payment KPIs in ONE query.
             $encKpi = DB::table('client_payments')
+                ->where('company_id', $companyId)
                 ->where('status', 'confirme')
                 ->selectRaw("
                     SUM(CASE WHEN payment_date >= ? AND payment_date < ? THEN amount ELSE 0 END) AS enc_mois,
@@ -95,18 +105,32 @@ class DashboardController extends Controller
                 ->first();
 
             // [PERF-04] Four count KPIs in ONE subquery block.
+            // `clients` n'a pas de company_id et aucun chemin vers une société —
+            // ce compteur reste global faute de colonne, et non par choix.
             $miscKpi = DB::selectOne("
                 SELECT
-                    (SELECT COUNT(*)                    FROM product_stocks WHERE quantity <= 0)                                           AS rupture_stock,
-                    (SELECT COALESCE(SUM(current_balance),0) FROM cash_accounts WHERE is_active = 1)                                      AS solde_tresorerie,
+                    (SELECT COALESCE(SUM(current_balance),0) FROM cash_accounts WHERE company_id = ? AND is_active = 1)                    AS solde_tresorerie,
                     (SELECT COUNT(*)                    FROM clients          WHERE is_active = 1 AND deleted_at IS NULL)                  AS nb_clients,
-                    (SELECT COUNT(*)                    FROM orders           WHERE status IN ('confirme','en_preparation','partiellement_livre') AND deleted_at IS NULL) AS nb_commandes
-            ");
+                    (SELECT COUNT(*)                    FROM orders           WHERE company_id = ? AND status IN ('confirme','en_preparation','partiellement_livre') AND deleted_at IS NULL) AS nb_commandes
+            ", [$companyId, $companyId]);
 
-            return compact('ivKpi', 'overdueKpi', 'encKpi', 'miscKpi');
+            // [Cohérence stock] La rupture était définie ICI une troisième fois,
+            // après /stocks et /stocks/dashboard : elle comptait des LIGNES de
+            // stock, ignorait les quantités réservées, incluait la quarantaine
+            // et ne voyait pas les articles dépourvus de ligne. Trois écrans
+            // annonçaient trois chiffres. Source unique désormais.
+            //
+            // Ce compteur n'est pas filtré par société : `products` ne porte pas
+            // de company_id, et un article sans ligne de stock n'a aucun chemin
+            // vers un dépôt. C'est une limite du schéma, pas un oubli.
+            $ruptureStock = app(\App\Services\StockInsightsService::class)
+                ->compter(app(\App\Services\StockInsightsService::class)->ruptureQuery());
+
+            return compact('ivKpi', 'overdueKpi', 'encKpi', 'miscKpi', 'ruptureStock');
         });
 
-        ['ivKpi' => $ivKpi, 'overdueKpi' => $overdueKpi, 'encKpi' => $encKpi, 'miscKpi' => $miscKpi] = $kpis;
+        ['ivKpi' => $ivKpi, 'overdueKpi' => $overdueKpi, 'encKpi' => $encKpi, 'miscKpi' => $miscKpi,
+            'ruptureStock' => $ruptureStock] = $kpis;
 
         // Unpack KPIs into the variable names the view expects
         $revenueJour     = (int) $ivKpi->rev_jour;
@@ -122,7 +146,7 @@ class DashboardController extends Controller
         $encaissementsMois = (int) $encKpi->enc_mois;
         $prevEncaissements = (int) $encKpi->enc_prev_mois;
 
-        $ruptureStock       = (int) $miscKpi->rupture_stock;
+        $ruptureStock       = (int) $ruptureStock;
         $soldeTresorerie    = (int) $miscKpi->solde_tresorerie;
         $nbClients          = (int) $miscKpi->nb_clients;
         $nbCommandesEnCours = (int) $miscKpi->nb_commandes;
@@ -263,6 +287,7 @@ class DashboardController extends Controller
 
         // Décaissements du mois (+ tendance vs mois précédent)
         $decKpi = DB::table('supplier_payments')
+            ->where('company_id', $companyId)
             ->where('status', 'confirme')
             ->selectRaw("
                 SUM(CASE WHEN payment_date >= ? AND payment_date < ? THEN amount ELSE 0 END) AS dec_mois,
@@ -278,18 +303,20 @@ class DashboardController extends Controller
 
         // OF en cours / en retard (date fin prévue dépassée)
         $ofActifs   = ['lance', 'en_cours', 'termine_partiellement'];
-        $ofEnCours  = DB::table('production_orders')->whereIn('status', $ofActifs)->whereNull('deleted_at')->count();
-        $ofEnRetard = DB::table('production_orders')->whereIn('status', $ofActifs)->whereNull('deleted_at')
+        $ofEnCours  = DB::table('production_orders')->where('company_id', $companyId)->whereIn('status', $ofActifs)->whereNull('deleted_at')->count();
+        $ofEnRetard = DB::table('production_orders')->where('company_id', $companyId)->whereIn('status', $ofActifs)->whereNull('deleted_at')
             ->whereNotNull('date_fin_prevue')->where('date_fin_prevue', '<', $now->toDateString())->count();
 
         // Alertes qualité : contrôles non conformes des 30 derniers jours
         $alertesQualite = DB::table('production_quality_controls')
+            ->where('company_id', $companyId)
             ->where('status', 'non_conforme')
             ->where('created_at', '>=', $now->copy()->subDays(30))->count();
 
         // CA (HT) 12 mois — année en cours vs année précédente.
         // [PORTABLE] Bornes de dates + agrégation par mois en PHP (SQLite + index).
         $caHt2Years = DB::table('invoices')
+            ->where('company_id', $companyId)
             ->whereIn('status', $invoiceStatuses)
             ->where('issued_at', '>=', $now->copy()->subYear()->startOfYear()->toDateTimeString())
             ->where('issued_at', '<', $now->copy()->startOfYear()->addYear()->toDateTimeString())
@@ -329,6 +356,8 @@ class DashboardController extends Controller
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->leftJoin('products', 'invoice_items.product_id', '=', 'products.id')
             ->leftJoin('product_families', 'products.family_id', '=', 'product_families.id')
+            // invoice_items n'a pas de company_id : la société se lit sur la facture.
+            ->where('invoices.company_id', $companyId)
             ->whereIn('invoices.status', $invoiceStatuses)
             ->whereYear('invoices.issued_at', $year)
             ->selectRaw("COALESCE(product_families.name, 'Autres') as famille, SUM(invoice_items.line_total_ht) as total")
@@ -340,6 +369,7 @@ class DashboardController extends Controller
 
         // CA HT du mois (la maquette affiche le CA hors taxes) + tendance
         $caHtKpi = DB::table('invoices')
+            ->where('company_id', $companyId)
             ->whereIn('status', $invoiceStatuses)
             ->selectRaw("
                 SUM(CASE WHEN issued_at >= ? AND issued_at < ? THEN subtotal_ht ELSE 0 END) AS ht_mois,
@@ -355,6 +385,7 @@ class DashboardController extends Controller
 
         // Montant total des commandes en attente (sous-texte du compteur)
         $montantCommandesEnCours = (int) DB::table('orders')
+            ->where('company_id', $companyId)
             ->whereIn('status', ['confirme', 'en_preparation', 'partiellement_livre'])
             ->whereNull('deleted_at')->sum('total_ttc');
 
@@ -394,12 +425,17 @@ class DashboardController extends Controller
         if ($facturesEnRetard > 0) $alertesVigilance->push(['niveau' => 'alerte',  'message' => "Échéances clients dépassées : $facturesEnRetard facture(s) — " . number_format($montantEnRetard, 0, ',', ' ') . ' F', 'module' => 'Comptabilité', 'url' => route('ventes.factures.index', ['status' => 'en_retard'])]);
         if ($alertesQualite > 0)  $alertesVigilance->push(['niveau' => 'alerte',   'message' => "$alertesQualite contrôle(s) qualité non conforme(s) sur 30 jours", 'module' => 'Qualité', 'url' => route('production.orders.index')]);
         if ($pendingCount > 0)    $alertesVigilance->push(['niveau' => 'info',     'message' => "$pendingCount document(s) en attente de validation", 'module' => 'Workflow', 'url' => route('validations.index')]);
-        if ($ruptureStock > 0)    $alertesVigilance->push(['niveau' => 'info',     'message' => "$ruptureStock ligne(s) de stock à zéro ou négative(s)", 'module' => 'Stocks', 'url' => route('stocks.index')]);
+        // Des ARTICLES, pas des lignes : « 3 lignes à zéro » pouvait désigner un
+        // seul article présent sur trois dépôts. On alerte sur ce qui manque.
+        if ($ruptureStock > 0)    $alertesVigilance->push(['niveau' => 'info',     'message' => "$ruptureStock article(s) en rupture de stock", 'module' => 'Stocks', 'url' => route('stocks.dashboard.restock')]);
         $alertesVigilance = $alertesVigilance->take(6);
 
         $topProduits = InvoiceItem::query()
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->join('products', 'invoice_items.product_id', '=', 'products.id')
+            // invoice_items n'a pas de company_id : aucun scope global ne s'y
+            // applique, la société doit se lire sur la facture jointe.
+            ->where('invoices.company_id', $companyId)
             ->whereIn('invoices.status', $invoiceStatuses)
             ->whereYear('invoices.issued_at', $year)->whereMonth('invoices.issued_at', $month)
             ->whereNotNull('invoice_items.product_id')
@@ -485,11 +521,14 @@ class DashboardController extends Controller
 
             $miscKpi = DB::selectOne("
                 SELECT
-                    (SELECT COUNT(*) FROM product_stocks ps JOIN warehouses w ON w.id = ps.warehouse_id
-                        WHERE w.company_id = ? AND ps.quantity <= 0)                                            AS rupture_stock,
                     (SELECT COALESCE(SUM(current_balance),0) FROM cash_accounts WHERE company_id = ? AND is_active=1) AS solde_tresorerie,
                     (SELECT COUNT(*) FROM orders WHERE company_id = ? AND status IN ('confirme','en_preparation','partiellement_livre') AND deleted_at IS NULL) AS nb_commandes
-            ", [$companyId, $companyId, $companyId]);
+            ", [$companyId, $companyId]);
+
+            // Quatrième site où la rupture était recalculée. Le rafraîchissement
+            // automatique doit dire la même chose que la page qu'il rafraîchit.
+            $insights = app(\App\Services\StockInsightsService::class);
+            $ruptureStock = $insights->compter($insights->ruptureQuery());
 
             $revJour     = (int) $ivKpi->rev_jour;
             $prevJour    = (int) $ivKpi->rev_prev_jour;
@@ -502,7 +541,7 @@ class DashboardController extends Controller
                 'enc_mois'          => (int) $encKpi->enc_mois,
                 'factures_retard'   => (int) $overdueKpi->cnt,
                 'montant_retard'    => (int) $overdueKpi->montant,
-                'rupture_stock'     => (int) $miscKpi->rupture_stock,
+                'rupture_stock'     => (int) $ruptureStock,
                 'solde_tresorerie'  => (int) $miscKpi->solde_tresorerie,
                 'nb_commandes'      => (int) $miscKpi->nb_commandes,
                 'trend_jour'        => $this->trend($revJour, $prevJour),

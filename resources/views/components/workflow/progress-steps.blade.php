@@ -34,9 +34,9 @@
     }
 
     // Tailles
-    $circleSize  = $size === 'sm' ? 'w-7 h-7 text-xs'  : 'w-9 h-9 text-sm';
-    $labelSize   = $size === 'sm' ? 'text-xs'           : 'text-xs';
-    $iconSize    = $size === 'sm' ? 'text-sm'            : 'text-base';
+    $circleSize  = $size === 'sm' ? 'w-7 h-7 text-[12px]'  : 'w-9 h-9 text-[13px]';
+    $labelSize   = $size === 'sm' ? 'text-[12px]'           : 'text-[12px]';
+    $iconSize    = $size === 'sm' ? 'text-[13px]'            : 'text-[13px]';
     $lineHeight  = $size === 'sm' ? 'top-3.5'           : 'top-4.5';
 @endphp
 
@@ -78,7 +78,7 @@
                 @elseif(isset($step['icon']))
                     <span class="{{ $iconSize }} leading-none select-none">{{ $step['icon'] }}</span>
                 @else
-                    <span class="font-bold text-xs">{{ $i + 1 }}</span>
+                    <span class="font-bold text-[12px]">{{ $i + 1 }}</span>
                 @endif
             </div>
 

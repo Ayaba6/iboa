@@ -19,6 +19,22 @@ use Spatie\Permission\Models\Role;
 
 uses(\Tests\Concerns\RefreshDatabase::class);
 
+/**
+ * Marque un devis « envoyé » pour les besoins du test.
+ *
+ * `QuoteService::send()` a été retirée : elle permettait cette transition sans
+ * aucun contrôle commercial [BUG-A3-SALES-ZERO-PRICE-026]. Ces tests portent sur
+ * la RÉVISION, pas sur le workflow — l'état de départ est donc posé
+ * directement, comme un fixture, sans prétendre emprunter un chemin métier.
+ */
+function qrvMarquerEnvoye(\App\Models\Quote $devis): \App\Models\Quote
+{
+    \App\Models\Quote::whereKey($devis->id)->update(['status' => 'envoye']);
+
+    return $devis->refresh();
+}
+
+
 function qrvAdmin(): User
 {
     $fy = FiscalYear::firstOrCreate(['label' => '2026'], ['starts_at' => '2026-01-01', 'ends_at' => '2026-12-31', 'status' => 'ouvert', 'is_current' => true]);
@@ -50,7 +66,7 @@ it('révise un devis envoyé : version liée, original figé et non convertible'
     qrvAdmin();
     $svc = app(QuoteService::class);
     $quote = qrvQuote();
-    $svc->send($quote);
+    qrvMarquerEnvoye($quote);
 
     $rev = $svc->revise($quote->fresh());
 
@@ -91,7 +107,7 @@ it('refuse la conversion d\'un devis expiré', function () {
     }
     // acceptAndConvert refuse AVANT de changer le statut
     $q2 = qrvQuote(['expires_at' => now()->subDay()->toDateString()]);
-    $svc->send($q2);
+    qrvMarquerEnvoye($q2);
     try {
         $svc->acceptAndConvert($q2->fresh());
         $this->fail('La conversion aurait dû être refusée.');
@@ -105,7 +121,7 @@ it('libère l\'original quand la révision est annulée, et la révision se conv
     qrvAdmin();
     $svc = app(QuoteService::class);
     $quote = qrvQuote();
-    $svc->send($quote);
+    qrvMarquerEnvoye($quote);
     $rev = $svc->revise($quote->fresh());
 
     // Révision annulée → l'original redevient convertible
@@ -126,14 +142,14 @@ it('automation:daily expire les devis envoyés ET validés à échéance dépass
     $svc = app(QuoteService::class);
 
     $envoye = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
-    $svc->send($envoye);
+    qrvMarquerEnvoye($envoye);
     $valide = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
     $valide->update(['status' => 'valide']);
     $brouillon = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
     $accepte = qrvQuote(['expires_at' => now()->subDays(2)->toDateString()]);
     $accepte->update(['status' => 'accepte']);
     $enCours = qrvQuote(['expires_at' => now()->addDays(10)->toDateString()]);
-    $svc->send($enCours);
+    qrvMarquerEnvoye($enCours);
 
     $this->artisan('automation:daily')->assertExitCode(0);
 

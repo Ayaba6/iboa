@@ -99,6 +99,11 @@ class NetRequirementService
         $demande = DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
             ->whereNull('o.deleted_at')
+            // [BUG-A3-SALES-LINE-IMMUTABLE-012] Une ligne retiree de la commande
+            // reste en base pour la tracabilite, mais elle n'exprime plus aucun
+            // besoin : sans ce filtre, l'atelier produirait pour une demande
+            // annulee.
+            ->whereNull('oi.deleted_at')
             ->whereIn('o.status', self::SO_OPEN)
             ->whereIn('oi.product_id', $ids)
             ->whereColumn('oi.delivered_quantity', '<', 'oi.quantity')

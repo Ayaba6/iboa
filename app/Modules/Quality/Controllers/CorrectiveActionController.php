@@ -19,7 +19,10 @@ class CorrectiveActionController extends Controller
     public function __construct(private CorrectiveActionService $service)
     {
         $this->middleware('permission:production.view')->only(['index', 'forNc']);
-        $this->middleware('permission:production.update')->only(['store', 'changeStatus', 'verify']);
+        // Ouvrir, faire avancer et vérifier une CAPA est un acte QUALITÉ :
+        // `quality.manage` ouvre au même titre que `production.update`.
+        // Ajout par OU, rien n'est retiré.
+        $this->middleware('permission:production.update|quality.manage')->only(['store', 'changeStatus', 'verify']);
     }
 
     /** Registre global des CAPA. */

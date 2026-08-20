@@ -6,14 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Modules\Production\Models\ProductionLine;
 use App\Modules\Production\Models\ProductionOrder;
 use App\Modules\Production\Services\PlanningService;
+use App\Modules\Production\Services\ProductionSchedulingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ProductionPlanningController extends Controller
 {
-    public function __construct(private PlanningService $planning)
-    {
+    public function __construct(
+        private PlanningService $planning,
+        private ProductionSchedulingService $scheduling,
+    ) {
         $this->middleware('permission:production.view');
         $this->middleware('permission:production.create')->only(['replan']);
     }
@@ -59,7 +62,15 @@ class ProductionPlanningController extends Controller
             }
         }
 
-        $order->update(array_filter($data, fn ($v) => $v !== null && $v !== ''));
+        // Un seul chemin d'écriture : replanifier depuis le plan de charge et
+        // ordonnancer depuis l'écran dédié posent le même acte. Passer par le
+        // service donne ici la détection de chevauchement et le verrou de ligne
+        // qui manquaient à cette action, et évite deux règles divergentes.
+        $this->scheduling->schedule($order, [
+            'production_line_id' => $data['production_line_id'] ?? null,
+            'date_debut_prevue'  => $data['date_fabrication_prevue'] ?? null,
+            'date_fin_prevue'    => $data['date_fin_prevue'] ?? null,
+        ]);
 
         return back()->with('success', 'OF ' . $order->number . ' replanifié.');
     }

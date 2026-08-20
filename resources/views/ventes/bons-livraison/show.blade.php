@@ -25,16 +25,16 @@
     <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-[16px] font-bold text-gray-900 font-mono">{{ $deliveryNote->number }}</h1>
+                <h1 class="text-[15px] font-bold text-gray-900 font-mono">{{ $deliveryNote->number }}</h1>
                 <x-workflow.status-badge :status="$deliveryNote->status" :label="$deliveryNote->status_label" />
-                <span class="text-gray-500 text-sm">{{ $deliveryNote->client?->name }}</span>
+                <span class="text-gray-500 text-[13px]">{{ $deliveryNote->client?->name }}</span>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
 
                 {{-- PDF (toujours disponible) --}}
                 <a href="{{ route('ventes.bons-livraison.pdf', $deliveryNote) }}?preview=1" target="_blank"
-                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
+                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-[13px] font-medium hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -42,7 +42,7 @@
                     Aperçu
                 </a>
                 <a href="{{ route('ventes.bons-livraison.pdf', $deliveryNote) }}"
-                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors"
+                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-[13px] font-medium hover:bg-gray-50 transition-colors"
                    data-loading data-loading-text="Génération du bon de livraison…">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -51,10 +51,10 @@
                 </a>
 
                 @php
-                    $blBtnO  = 'inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors';
-                    $blBtnP  = 'inline-flex items-center gap-2 px-3 py-1.5 text-white rounded-[4px] text-sm font-semibold shadow-sm transition-colors';
-                    $blBtnWO = 'inline-flex items-center gap-2 px-3 py-2 border border-orange-200 text-orange-600 rounded-[4px] text-sm font-medium hover:bg-orange-50 transition-colors';
-                    $blBtnDO = 'inline-flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-[4px] text-sm font-medium hover:bg-red-50 transition-colors';
+                    $blBtnO  = 'inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-[13px] font-medium hover:bg-gray-50 transition-colors';
+                    $blBtnP  = 'inline-flex items-center gap-2 px-3 py-1.5 text-white rounded-[4px] text-[13px] font-semibold shadow-sm transition-colors';
+                    $blBtnWO = 'inline-flex items-center gap-2 px-3 py-2 border border-orange-200 text-orange-600 rounded-[4px] text-[13px] font-medium hover:bg-orange-50 transition-colors';
+                    $blBtnDO = 'inline-flex items-center gap-2 px-3 py-2 border border-red-200 text-red-600 rounded-[4px] text-[13px] font-medium hover:bg-red-50 transition-colors';
                 @endphp
 
                 {{-- ── BROUILLON : Modifier + Soumettre ───────────────────────────────── --}}
@@ -80,7 +80,7 @@
 
                 {{-- ── EN ATTENTE DE VALIDATION ────────────────────────────────────────── --}}
                 @if($deliveryNote->status === 'en_attente_validation')
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm text-yellow-700 bg-yellow-50 border border-yellow-200">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[13px] text-yellow-700 bg-yellow-50 border border-yellow-200">
                         <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -106,7 +106,7 @@
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
                             <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif de refus</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-[13px]" placeholder="Motif obligatoire…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $blBtnO }}">Annuler</button>
                                     <button type="submit" class="{{ $blBtnP }} bg-emerald-700 hover:bg-emerald-800">Confirmer le refus</button>
@@ -125,7 +125,7 @@
                         <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
                             <div class="bg-white rounded-[4px] p-6 shadow-2xl w-full max-w-md mx-4">
                                 <h3 class="font-semibold text-gray-900 mb-3">Motif d'annulation</h3>
-                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-sm" placeholder="Motif obligatoire…"></textarea>
+                                <textarea x-model="motif" rows="3" class="w-full border border-gray-300 rounded-[4px] px-3 py-2 text-[13px]" placeholder="Motif obligatoire…"></textarea>
                                 <div class="flex justify-end gap-2 mt-4">
                                     <button type="button" @click="open = false" class="{{ $blBtnO }}">Fermer</button>
                                     <button type="submit" class="{{ $blBtnP }} bg-red-600 hover:bg-red-700">Confirmer l'annulation</button>
@@ -142,7 +142,7 @@
                           data-confirm="Créer une facture depuis ce bon de livraison ?">
                         @csrf
                         <button type="submit"
-                                class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-sm font-medium hover:bg-emerald-800 transition-colors">
+                                class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-[4px] text-[13px] font-medium hover:bg-emerald-800 transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
@@ -152,7 +152,7 @@
                 @endif
 
                 <a href="{{ route('ventes.bons-livraison.index') }}"
-                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-sm font-medium hover:bg-gray-50 transition-colors">
+                   class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-[4px] text-[13px] font-medium hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
@@ -184,45 +184,45 @@
     {{-- Info card --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-300 p-5 space-y-4">
-            <h2 class="text-base font-semibold text-gray-900">Informations</h2>
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <h2 class="text-[13px] font-semibold text-gray-900">Informations</h2>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px]">
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Client</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Client</dt>
                     <dd class="mt-0.5 font-semibold text-gray-900">{{ $deliveryNote->client?->name ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numéro</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Numéro</dt>
                     <dd class="mt-0.5 font-mono font-semibold text-gray-900">{{ $deliveryNote->number }}</dd>
                 </div>
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Date</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Date</dt>
                     <dd class="mt-0.5 text-gray-700">{{ $deliveryNote->issued_at?->format('d/m/Y') ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Entrepôt</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Entrepôt</dt>
                     <dd class="mt-0.5 text-gray-700">{{ $deliveryNote->warehouse?->name ?? '—' }}</dd>
                 </div>
                 @if($deliveryNote->delivery_address)
                 <div class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Adresse livraison</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Adresse livraison</dt>
                     <dd class="mt-0.5 text-gray-700">{{ $deliveryNote->delivery_address }}</dd>
                 </div>
                 @endif
                 @if($deliveryNote->carrier)
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Transporteur</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Transporteur</dt>
                     <dd class="mt-0.5 text-gray-700">{{ $deliveryNote->carrier }}</dd>
                 </div>
                 @endif
                 @if($deliveryNote->tracking_number)
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">N° suivi</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">N° suivi</dt>
                     <dd class="mt-0.5 text-gray-700 font-mono">{{ $deliveryNote->tracking_number }}</dd>
                 </div>
                 @endif
                 @if($deliveryNote->notes)
                 <div class="sm:col-span-2">
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</dt>
+                    <dt class="text-[12px] font-medium text-gray-500 uppercase tracking-wider">Notes</dt>
                     <dd class="mt-0.5 text-gray-700 whitespace-pre-wrap">{{ $deliveryNote->notes }}</dd>
                 </div>
                 @endif
@@ -230,12 +230,12 @@
         </div>
 
         <div class="bg-white rounded-[4px] border border-gray-300 p-5 h-fit space-y-3">
-            <h2 class="text-base font-semibold text-gray-900">Quantités</h2>
-            <div class="flex justify-between text-sm text-gray-600">
+            <h2 class="text-[13px] font-semibold text-gray-900">Quantités</h2>
+            <div class="flex justify-between text-[13px] text-gray-600">
                 <span>Total articles</span>
                 <span class="font-semibold text-gray-900">{{ $deliveryNote->items->count() }} ligne(s)</span>
             </div>
-            <div class="flex justify-between text-sm text-gray-600">
+            <div class="flex justify-between text-[13px] text-gray-600">
                 <span>Total quantité</span>
                 <span class="font-semibold text-gray-900">{{ number_format($deliveryNote->total_quantity, 2, ',', ' ') }}</span>
             </div>
@@ -245,10 +245,10 @@
     {{-- Articles livrés --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-200">
-            <h2 class="text-base font-semibold text-gray-900">Articles livrés</h2>
+            <h2 class="text-[13px] font-semibold text-gray-900">Articles livrés</h2>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full divide-y divide-gray-200 text-sm">
+            <table class="w-full divide-y divide-gray-200 text-[13px]">
                 <thead class="bg-[#eef5f0] border-b border-gray-300">
                     <tr>
                         <th class="px-3 py-1.5 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide">#</th>
@@ -261,20 +261,20 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse($deliveryNote->items as $item)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-3 py-1.5 text-gray-400 text-xs">{{ $loop->iteration }}</td>
+                        <td class="px-3 py-1.5 text-gray-400 text-[12px]">{{ $loop->iteration }}</td>
                         <td class="px-3 py-1.5 text-gray-900">
                             {{ $item->description }}
                             @if($item->expiry_date)
-                                <p class="text-xs text-orange-500">Exp. : {{ $item->expiry_date->format('d/m/Y') }}</p>
+                                <p class="text-[12px] text-orange-500">Exp. : {{ $item->expiry_date->format('d/m/Y') }}</p>
                             @endif
                         </td>
-                        <td class="px-3 py-1.5 text-gray-500 text-xs font-mono hidden md:table-cell">{{ $item->product?->reference ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-gray-500 text-[12px] font-mono hidden md:table-cell">{{ $item->product?->reference ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-right font-semibold tabular-nums text-gray-900">{{ number_format($item->quantity, 2, ',', ' ') }}</td>
-                        <td class="px-3 py-1.5 text-gray-500 text-xs hidden lg:table-cell">{{ $item->lot_number ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-gray-500 text-[12px] hidden lg:table-cell">{{ $item->lot_number ?? '—' }}</td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-10 text-center text-gray-400 text-sm">Aucune ligne.</td>
+                        <td colspan="5" class="px-4 py-10 text-center text-gray-400 text-[13px]">Aucune ligne.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -285,14 +285,14 @@
     {{-- ── Workflow validation interne ─────────────────────────────────────── --}}
     <div class="bg-white rounded-[4px] border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <h2 class="text-[13px] font-semibold text-gray-700 flex items-center gap-2">
                 <svg class="size-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
                 Validation interne
             </h2>
             <x-workflow.status-badge :status="$deliveryNote->status" :label="$deliveryNote->status_label" />
         </div>
         @if($deliveryNote->rejection_reason)
-            <div class="mb-4 rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
+            <div class="mb-4 rounded-[4px] bg-orange-50 border border-orange-200 p-3 text-[13px] text-orange-800">
                 <strong>Motif de refus :</strong> {{ $deliveryNote->rejection_reason }}
             </div>
         @endif

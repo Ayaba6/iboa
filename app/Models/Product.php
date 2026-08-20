@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Traits\HasAttachments;
+use App\Services\CategoryDefaultsService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -151,6 +152,32 @@ class Product extends Model
         });
         static::updating(function (self $product) {
             $product->updated_by = auth()->id();
+        });
+
+        /**
+         * [Référentiel articles] Filet de sécurité sur `type_article`.
+         *
+         * L'héritage catégorie → article vit dans ProductService, qui appelle
+         * CategoryDefaultsService. Tout ce qui crée un article SANS passer par ce
+         * service — seeders, fabriques, imports, écriture directe — y échappait :
+         * l'article #28, celui que les six ordres de fabrication produisent,
+         * portait une catégorie valide et un `type_article` VIDE. Il s'affichait
+         * « — » dans la colonne Type de la liste des articles.
+         *
+         * On ne comble QUE le vide : un type explicitement choisi n'est jamais
+         * écrasé, même s'il diverge de la nature de sa catégorie. Une divergence
+         * volontaire reste possible — `a3:audit-article-classification` la
+         * signale plutôt que le modèle ne la corrige en douce.
+         */
+        static::saving(function (self $product) {
+            if (! empty($product->type_article) || empty($product->item_category_id)) {
+                return;
+            }
+
+            $nature = ItemCategory::whereKey($product->item_category_id)->value('nature');
+            if ($nature) {
+                $product->type_article = CategoryDefaultsService::natureToTypeArticle($nature);
+            }
         });
     }
 
@@ -438,6 +465,7 @@ class Product extends Model
 
         $pendingOut = \Illuminate\Support\Facades\DB::table('order_items as oi')
             ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->whereNull('oi.deleted_at')
             ->where('oi.product_id', $this->id)
             ->whereIn('o.status', ['confirme', 'partiellement_livre'])
             ->selectRaw('COALESCE(SUM(oi.quantity - oi.delivered_quantity), 0) as pending')

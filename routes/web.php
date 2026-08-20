@@ -405,6 +405,45 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('bons-preparation/{bonPreparation}/start-loading',  [\App\Http\Controllers\Sales\BonPreparationController::class, 'startLoading'])->name('bons-preparation.start-loading');
             Route::post('bons-preparation/{bonPreparation}/finish-loading', [\App\Http\Controllers\Sales\BonPreparationController::class, 'finishLoading'])->name('bons-preparation.finish-loading');
         });
+        // [Ventes §17] Annulation motivée — permission distincte de `update` :
+        // écarter un bon n'est pas la même responsabilité que faire avancer un
+        // chargement, et le magasinier qui démarre le chargement ne doit pas
+        // pouvoir annuler le document qui l'autorise.
+        Route::middleware('permission:bon_preparations.cancel')->group(function () {
+            Route::post('bons-preparation/{bonPreparation}/cancel', [\App\Http\Controllers\Sales\BonPreparationController::class, 'cancel'])->name('bons-preparation.cancel');
+        });
+
+        // [Ventes §18] Bons de préparation QUANTIFIÉS — sous-module distinct.
+        //
+        // Il COEXISTE avec `bons-preparation` ci-dessus, qui reste le bon de
+        // chargement historique (LEGACY_UNQUANTIFIED, sans lignes). Les deux ne
+        // sont pas fusionnés : les documents déjà émis n'ont pas de quantités et
+        // leur en fabriquer serait inventer de l'historique.
+        //
+        // Les gardes suivent la séparation des tâches : préparer, contrôler et
+        // valider sont trois permissions distinctes.
+        Route::prefix('preparations')->name('preparations.')->group(function () {
+            Route::middleware('permission:bon_preparations.view')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Sales\SalesPickingController::class, 'index'])->name('index');
+                Route::get('/{preparation}', [\App\Http\Controllers\Sales\SalesPickingController::class, 'show'])
+                    ->whereNumber('preparation')->name('show');
+            });
+            Route::middleware('permission:bon_preparations.update')->group(function () {
+                Route::get('/creer/nouveau', [\App\Http\Controllers\Sales\SalesPickingController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Sales\SalesPickingController::class, 'store'])->name('store');
+                Route::post('/{preparation}/lancer', [\App\Http\Controllers\Sales\SalesPickingController::class, 'start'])->name('start');
+                Route::post('/{preparation}/allouer', [\App\Http\Controllers\Sales\SalesPickingController::class, 'allocate'])->name('allocate');
+                Route::post('/{preparation}/prelever', [\App\Http\Controllers\Sales\SalesPickingController::class, 'pick'])->name('pick');
+                Route::post('/{preparation}/annuler', [\App\Http\Controllers\Sales\SalesPickingController::class, 'cancel'])->name('cancel');
+            });
+            Route::middleware('permission:bon_preparations.control')->group(function () {
+                Route::post('/{preparation}/controler', [\App\Http\Controllers\Sales\SalesPickingController::class, 'control'])->name('control');
+            });
+            Route::middleware('permission:bon_preparations.validate')->group(function () {
+                Route::post('/{preparation}/valider', [\App\Http\Controllers\Sales\SalesPickingController::class, 'validatePicking'])->name('validate');
+                Route::post('/{preparation}/bon-livraison', [\App\Http\Controllers\Sales\SalesPickingController::class, 'createDeliveryNote'])->name('delivery-note');
+            });
+        });
 
         Route::middleware('permission:deliveries.view')->group(function () {
             Route::resource('bons-livraison', \App\Http\Controllers\Sales\DeliveryNoteController::class)
@@ -1580,6 +1619,11 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
         Route::get('planning', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'index'])->name('planning');
         // [X3 §19] Déplacer OF / réaffecter ligne depuis le plan de charge
         Route::post('planning/replan/{order}', [\App\Modules\Production\Controllers\ProductionPlanningController::class, 'replan'])->name('planning.replan');
+        // [Ordonnancement] Positionne les OF dans le temps, ligne par ligne — distinct
+        // du plan de charge, qui mesure une capacité agrégée.
+        Route::get('ordonnancement', [\App\Modules\Production\Controllers\ProductionScheduleController::class, 'index'])->name('schedule');
+        Route::post('ordonnancement/{order}', [\App\Modules\Production\Controllers\ProductionScheduleController::class, 'schedule'])->name('schedule.assign');
+        Route::delete('ordonnancement/{order}', [\App\Modules\Production\Controllers\ProductionScheduleController::class, 'unschedule'])->name('schedule.clear');
         // [PRO Temps d'arrêt] Suivi + déclaration des arrêts de production
         Route::get('temps-arret', [\App\Modules\Production\Controllers\ProductionDowntimeController::class, 'index'])->name('downtimes');
         Route::post('temps-arret', [\App\Modules\Production\Controllers\ProductionDowntimeController::class, 'store'])->name('downtimes.store');
@@ -1617,6 +1661,9 @@ Route::middleware(['auth', 'verified', 'permission:production.view'])->prefix('p
         // [MRP] Propositions d'ordre de fabrication — articles fabriqués pour le stock.
         Route::get('mrp/ordres-fabrication', [\App\Modules\Production\Controllers\MrpController::class, 'ofProposals'])->name('mrp.of');
         Route::post('mrp/ordres-fabrication', [\App\Modules\Production\Controllers\MrpController::class, 'generateOrders'])->name('mrp.of.generate');
+        // [MRP] Propositions de transfert entre dépôts — lecture seule, l'exécution
+        // reste au module Stock.
+        Route::get('mrp/transferts', [\App\Modules\Production\Controllers\MrpController::class, 'transferProposals'])->name('mrp.transfers');
     });
 
     // Réception bobine ← Achats : génère des Coil depuis une réception validée

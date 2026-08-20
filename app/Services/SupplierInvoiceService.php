@@ -89,6 +89,15 @@ class SupplierInvoiceService
             );
 
             $data['company_id'] = $company->id;
+            // [UI — doublon retiré] `default_tax_label` était saisi dans un champ
+            // « Taxes » stocké, jamais lu, et pouvait contredire la TVA portée par les
+            // lignes. Le champ a disparu de l'écran ; la valeur est DÉRIVÉE par le
+            // service partagé avec devis, commande et facture de vente.
+            //
+            // Aucun `price_mode` ni exonération client ici : la règle retombe sur le
+            // taux le plus élevé réellement appliqué aux lignes, ce qui est exactement
+            // le comportement attendu pour un document fournisseur.
+            $data['default_tax_label'] = app(\App\Services\Sales\SalesTaxLabelService::class)->derive($data, $items);
             $data['number']     = $this->sequenceService->nextNumber($company, 'facture_fournisseur');
             $data['created_by'] = Auth::id();
             $data['status']     = $data['status'] ?? 'recue';

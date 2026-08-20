@@ -16,7 +16,9 @@ it('persiste les champs Sage X3 du client (mass assignment autorisé)', function
         'is_active'            => true,
         // juridique / fiscal
         'forme_juridique'      => 'SARL',
-        'regime_imposition'    => 'Régime normal',
+        // `regime_imposition` a été supprimé : il était écrit par le formulaire
+        // et lu par rien, tandis que les documents imprimaient `tax_regime`.
+        'tax_regime'           => 'Régime normal',
         'no_agrement'          => 'AGR-2026-01',
         // risque crédit
         'code_risque'          => 'Bon',
@@ -34,7 +36,7 @@ it('persiste les champs Sage X3 du client (mass assignment autorisé)', function
     $fresh = $client->fresh();
 
     expect($fresh->forme_juridique)->toBe('SARL')
-        ->and($fresh->regime_imposition)->toBe('Régime normal')
+        ->and($fresh->tax_regime)->toBe('Régime normal')
         ->and($fresh->no_agrement)->toBe('AGR-2026-01')
         ->and($fresh->code_risque)->toBe('Bon')
         ->and((float) $fresh->garantie_montant)->toBe(5000000.0)

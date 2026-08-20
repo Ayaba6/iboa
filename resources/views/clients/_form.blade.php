@@ -29,7 +29,8 @@
       method="POST" enctype="multipart/form-data"
       x-data="clientForm({ tab: 'general', contacts: {{ Js::from($contactsInit) }}, addresses: {{ Js::from($addressesInit) }},
           city: '{{ old('city', $c->city ?? '') }}', country: '{{ old('country', $c->country ?? 'BF') }}',
-          creditLimit: '{{ old('credit_limit', $c->credit_limit ?? 0) }}', encours: '{{ old('encours_autorise', $c->encours_autorise ?? '') }}',
+          creditLimit: '{{ old('credit_limit', $c->credit_limit ?? 0) }}',
+          taxExempt: {{ $bool('is_tax_exempt') ? 'true' : 'false' }},
           compteCollectif: '{{ old('compte_collectif', $c->compte_collectif ?? '') }}' })"
       class="space-y-3">
     @csrf
@@ -127,7 +128,14 @@
                             @endforeach
                         </select>{!! $caret !!}</div>
                     </div>
-                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Régime d'imposition</label><input type="text" name="regime_imposition" maxlength="80" value="{{ old('regime_imposition', $c->regime_imposition ?? '') }}" class="{{ $inp }}" placeholder="Régime normal"></div>
+                    {{-- [Gestion] Régime fiscal — CHAMP UNIQUE `tax_regime`.
+                         Le formulaire écrivait auparavant `regime_imposition`, que
+                         RIEN ne lisait, tandis que les documents imprimaient
+                         `tax_regime`, qui restait toujours vide : facture, devis,
+                         avoir et bon de livraison n'affichaient donc jamais le
+                         régime saisi. `regime_imposition` est supprimé. --}}
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Régime fiscal</label><input type="text" name="tax_regime" maxlength="100" value="{{ old('tax_regime', $c->tax_regime ?? '') }}" class="{{ $inp }}" placeholder="Régime normal"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Division fiscale</label><input type="text" name="tax_division" maxlength="100" value="{{ old('tax_division', $c->tax_division ?? '') }}" class="{{ $inp }}" placeholder="DGE / DME / DPI"></div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">N° agrément</label><input type="text" name="no_agrement" maxlength="60" value="{{ old('no_agrement', $c->no_agrement ?? '') }}" class="{{ $inp }} font-mono"></div>
 
                     <div class="sm:col-span-3"><label class="{{ $lbl }}">Groupe client</label><input type="text" name="groupe_client" maxlength="60" value="{{ old('groupe_client', $c->groupe_client ?? '') }}" class="{{ $inp }}" placeholder="GRAND-CPT"></div>
@@ -179,6 +187,10 @@
                 <div class="p-4 grid grid-cols-1 sm:grid-cols-5 gap-4">
                     <div><label class="{{ $lbl }}">Téléphone principal</label><input type="text" name="phone" maxlength="20" value="{{ old('phone', $c->phone ?? '') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">Téléphone secondaire</label><input type="text" name="phone2" maxlength="20" value="{{ old('phone2', $c->phone2 ?? '') }}" class="{{ $inp }}"></div>
+                    {{-- [Gestion] `mobile` était validé, exporté (ClientsExport) et
+                         utilisé en repli par le grand livre tiers, mais n'avait
+                         aucun champ de saisie : il restait donc toujours vide. --}}
+                    <div><label class="{{ $lbl }}">Mobile</label><input type="text" name="mobile" maxlength="20" value="{{ old('mobile', $c->mobile ?? '') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">Email</label><input type="email" name="email" maxlength="150" value="{{ old('email', $c->email ?? '') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">Site web</label><input type="text" name="website" maxlength="150" value="{{ old('website', $c->website ?? '') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">Boîte postale</label><input type="text" name="boite_postale" maxlength="60" value="{{ old('boite_postale', $c->boite_postale ?? '') }}" class="{{ $inp }}"></div>
@@ -260,8 +272,11 @@
                         </select>{!! $caret !!}</div>
                     </div>
                     <div><label class="{{ $lbl }}">Délai de règlement (jours)</label><input type="number" min="0" max="365" name="payment_days" value="{{ old('payment_days', $c->payment_days ?? 0) }}" class="{{ $inpR }}"></div>
+                    {{-- [Gestion] Plafond de crédit — CHAMP UNIQUE.
+                         « Encours autorisé » a été supprimé : il portait le nom
+                         métier le plus naturel mais AUCUN service ne le lisait.
+                         Un plafond saisi là n'était jamais appliqué. --}}
                     <div><label class="{{ $lbl }}">Plafond crédit</label><input type="number" min="0" step="1" name="credit_limit" x-model="creditLimit" class="{{ $inpR }}"></div>
-                    <div><label class="{{ $lbl }}">Encours autorisé</label><input type="number" min="0" step="1" name="encours_autorise" x-model="encours" class="{{ $inpR }}"></div>
                     {{-- [Parametrage Vente] blocage commercial : refuse devis/commande/facture --}}
                     <div class="flex items-end pb-1">
                         <label class="inline-flex items-center gap-2 cursor-pointer">
@@ -280,10 +295,35 @@
                     <div class="flex items-end pb-1">
                         <label class="inline-flex items-center gap-2 cursor-pointer">
                             <input type="hidden" name="is_tax_exempt" value="0">
-                            <input type="checkbox" name="is_tax_exempt" value="1" class="{{ $chk }}" {{ $bool('is_tax_exempt') ? 'checked' : '' }}>
+                            <input type="checkbox" name="is_tax_exempt" value="1" x-model="taxExempt" class="{{ $chk }}" {{ $bool('is_tax_exempt') ? 'checked' : '' }}>
                             <span class="{{ $chkLb }}">Client exonéré</span>
                         </label>
                     </div>
+
+                    {{-- [Gestion] Justification de l'exonération.
+                         `is_tax_exempt` force la TVA à 0 sur les devis, commandes
+                         et factures (défense serveur dans QuoteService, OrderService
+                         et InvoiceService). Les colonnes qui portent la référence
+                         légale existaient, étaient validées et remplissables, mais
+                         AUCUN champ ne permettait de les saisir : on pouvait donc
+                         exonérer un client sans conserver la moindre justification.
+                         L'attestation d'exonération est exigible en contrôle. --}}
+                    <template x-if="taxExempt">
+                        <div class="col-span-full grid grid-cols-1 sm:grid-cols-3 gap-4 bg-amber-50 border border-amber-200 rounded-[4px] p-3">
+                            <div>
+                                <label class="{{ $lbl }}">N° attestation d'exonération</label>
+                                <input type="text" name="tax_exemption_number" maxlength="100"
+                                       value="{{ old('tax_exemption_number', $c->tax_exemption_number ?? '') }}"
+                                       class="{{ $inp }} font-mono" placeholder="ATT-EXO-2026-000">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="{{ $lbl }}">Motif de l'exonération</label>
+                                <input type="text" name="tax_exemption_reason" maxlength="200"
+                                       value="{{ old('tax_exemption_reason', $c->tax_exemption_reason ?? '') }}"
+                                       class="{{ $inp }}" placeholder="Marché public exonéré — référence du texte">
+                            </div>
+                        </div>
+                    </template>
 
                     {{-- [Parité Sage X3] Bloc risque crédit --}}
                     <div class="col-span-full mt-1 pt-2 border-t border-gray-100">
@@ -307,7 +347,6 @@
                 <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {{-- [FIX doublons] miroirs de l'onglet Commercial — pas de name, sinon le doublon écrase --}}
                     <div><label class="{{ $lbl }}">Plafond crédit</label><input type="number" min="0" step="1" x-model="creditLimit" class="{{ $inpR }}"></div>
-                    <div><label class="{{ $lbl }}">Encours autorisé</label><input type="number" min="0" step="1" x-model="encours" class="{{ $inpR }}"></div>
                     <div><label class="{{ $lbl }}">Banque</label><input type="text" name="banque" maxlength="100" value="{{ old('banque', $c->banque ?? '') }}" class="{{ $inp }}" placeholder="Coris Bank"></div>
                     <div><label class="{{ $lbl }}">SWIFT</label><input type="text" name="swift" maxlength="20" value="{{ old('swift', $c->swift ?? '') }}" class="{{ $inp }} font-mono"></div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">RIB / IBAN</label><input type="text" name="rib_iban" maxlength="40" value="{{ old('rib_iban', $c->rib_iban ?? '') }}" class="{{ $inp }} font-mono"></div>
@@ -517,7 +556,7 @@ function clientForm(init) {
         city: init.city || '',
         country: init.country || '',
         creditLimit: init.creditLimit || 0,
-        encours: init.encours || '',
+        taxExempt: init.taxExempt || false,
         compteCollectif: init.compteCollectif || '',
         addContact()     { this.contacts.push({ last_name: '', first_name: '', job_title: '', phone: '', email: '', is_primary: false }); },
         removeContact(i) { this.contacts.splice(i, 1); },

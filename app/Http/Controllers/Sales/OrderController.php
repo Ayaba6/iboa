@@ -57,20 +57,42 @@ class OrderController extends Controller
     {
         $this->authorize('create', Order::class);
         $clients          = Client::active()->orderBy('name')->get(['id', 'name', 'trade_name', 'is_tax_exempt']);
-        $products         = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
+        // [Ventes] Aligne sur QuoteController : cout reserve a `sales.view_margin`,
+        // unites heritables, et surtout `select()` AVANT `withSum()`.
+        //
+        // `withSum()` pose `select(products.*)` quand aucune colonne n'est encore
+        // fixee ; les colonnes passees ensuite a `get()` sont AJOUTEES, pas
+        // substituees. Cet ecran serialisait donc l'INTEGRALITE des colonnes produit
+        // -- CUMP, cout standard, taux de marge cible, reference fournisseur -- dans
+        // la page, pour tout utilisateur habilite a saisir une commande.
+        $canViewMargin    = auth()->user()?->can('sales.view_margin') ?? false;
+        $productColumns   = ['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id', 'unit_id', 'sale_unit_id'];
+        if ($canViewMargin) {
+            $productColumns = array_merge($productColumns, ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']);
+        }
+
+        $products         = Product::active()->sellable()
+            ->select($productColumns)
+            ->with(['taxRate:id,rate', 'family:id,name'])
+            ->withSum('productStocks as stock_qty', 'quantity')
+            ->orderBy('name')
+            ->get();
         $selectedClient   = $request->query('client_id');
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
         $warehouses       = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_sale']);
         $currencies       = ['XOF', 'XAF', 'EUR', 'USD'];
 
-        return view('ventes.commandes.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente', 'warehouses', 'currencies') + $this->maquetteFormData());
+        return view('ventes.commandes.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente', 'warehouses', 'currencies', 'canViewMargin') + $this->maquetteFormData());
     }
 
     /** [Maquette Commande client] Données complémentaires du formulaire. */
     private function maquetteFormData(): array
     {
         return [
+            // [Ventes] Unites : la colonne Unite du tableau de lignes ne pouvait pas
+            // exister sans elles, et aucune ligne de commande ne portait d'unite.
+            'units'     => \App\Models\Unit::orderBy('name')->get(['id', 'name', 'abbreviation']),
             'contacts'  => \App\Models\ClientContact::orderBy('last_name')->get(['id', 'client_id', 'civility', 'first_name', 'last_name']),
             'salesReps' => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'quotes'    => \App\Models\Quote::orderByDesc('id')->limit(100)->get(['id', 'number', 'issued_at']),
@@ -123,14 +145,33 @@ class OrderController extends Controller
         $this->authorize('update', $commande);
         $order            = $this->service->repository->findWithDetails($commande->id);
         $clients          = Client::active()->orderBy('name')->get(['id', 'name', 'trade_name', 'is_tax_exempt']);
-        $products         = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
+        // [Ventes] Aligne sur QuoteController : cout reserve a `sales.view_margin`,
+        // unites heritables, et surtout `select()` AVANT `withSum()`.
+        //
+        // `withSum()` pose `select(products.*)` quand aucune colonne n'est encore
+        // fixee ; les colonnes passees ensuite a `get()` sont AJOUTEES, pas
+        // substituees. Cet ecran serialisait donc l'INTEGRALITE des colonnes produit
+        // -- CUMP, cout standard, taux de marge cible, reference fournisseur -- dans
+        // la page, pour tout utilisateur habilite a saisir une commande.
+        $canViewMargin    = auth()->user()?->can('sales.view_margin') ?? false;
+        $productColumns   = ['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id', 'unit_id', 'sale_unit_id'];
+        if ($canViewMargin) {
+            $productColumns = array_merge($productColumns, ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']);
+        }
+
+        $products         = Product::active()->sellable()
+            ->select($productColumns)
+            ->with(['taxRate:id,rate', 'family:id,name'])
+            ->withSum('productStocks as stock_qty', 'quantity')
+            ->orderBy('name')
+            ->get();
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
         $warehouses       = \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'can_sale']);
         $currencies       = ['XOF', 'XAF', 'EUR', 'USD'];
         $order->load('attachments');
 
-        return view('ventes.commandes.edit', compact('order', 'clients', 'products', 'clientExemptions', 'taxRatesVente', 'warehouses', 'currencies') + $this->maquetteFormData());
+        return view('ventes.commandes.edit', compact('order', 'clients', 'products', 'clientExemptions', 'taxRatesVente', 'warehouses', 'currencies', 'canViewMargin') + $this->maquetteFormData());
     }
 
     public function update(UpdateOrderRequest $request, Order $commande)
@@ -172,12 +213,30 @@ class OrderController extends Controller
         }
     }
 
-    /** POST ventes/commandes/{order}/cancel — cancel the order. */
-    public function cancel(Order $commande)
+    /**
+     * POST ventes/commandes/{order}/cancel — annulation motivée.
+     *
+     * [Ventes §17] Le motif est obligatoire. Cette action acceptait auparavant
+     * une requête vide et n'écrivait rien au journal : une commande confirmée
+     * était annulée sans auteur ni raison.
+     *
+     * La permission reste `orders.delete` (policy `delete`) et NON `sales.cancel` :
+     * le rôle responsable_commercial possède la première sans la seconde, et
+     * basculer lui retirerait le droit d'annuler ses propres commandes.
+     */
+    public function cancel(Request $request, Order $commande)
     {
         $this->authorize('delete', $commande);
+        $data = $request->validate(
+            ['motif' => ['required', 'string', 'min:5', 'max:500']],
+            [
+                'motif.required' => "Le motif d'annulation est obligatoire.",
+                'motif.min'      => "Le motif doit compter au moins 5 caractères.",
+            ]
+        );
+
         try {
-            $this->service->cancel($commande);
+            $this->service->cancel($commande, $data['motif']);
             return back()->with('success', 'Commande ' . $commande->number . ' annulée.');
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());

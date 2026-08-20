@@ -29,7 +29,10 @@ class StoreOrderRequest extends FormRequest
             'expires_at'                   => 'nullable|date',
             'currency_code'                => 'nullable|string|max:3',
             'delivery_date'                => 'nullable|date',
-            'delivery_warehouse_id'        => ['nullable', 'exists:warehouses,id', new \App\Rules\WarehouseAllows('can_sale')],
+            // [Ventes UI] Portait l'asterisque rouge a l'ecran mais restait `nullable` :
+            // ni le navigateur ni le serveur ne l'exigeaient. L'entrepot commande la
+            // reservation de stock — une commande sans lui n'est pas executable.
+            'delivery_warehouse_id'        => ['required', 'exists:warehouses,id', new \App\Rules\WarehouseAllows('can_sale')],
             'delivery_address'             => 'nullable|string',
             'billing_address'              => 'nullable|string',
             'reference'                    => 'nullable|string|max:50',
@@ -47,7 +50,7 @@ class StoreOrderRequest extends FormRequest
             'sales_rep_id'                 => 'nullable|exists:users,id',
             'price_mode'                   => 'nullable|in:ttc,ht,exonere',
             'net_prices'                   => 'nullable|boolean',
-            'price_list'                   => 'nullable|string|max:60',
+            'price_list'                   => 'required|string|max:60',
             'payment_terms'                => 'nullable|string|max:100',
             'payment_method'               => 'nullable|string|max:30',
             'fiscal_representative'        => 'nullable|string|max:100',
@@ -99,6 +102,8 @@ class StoreOrderRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'delivery_warehouse_id.required' => "Veuillez indiquer l'entrepôt de livraison : il commande la réservation de stock.",
+            'price_list.required'            => 'Veuillez indiquer la liste de prix appliquée.',
             'client_id.required'           => 'Veuillez sélectionner un client.',
             'client_id.exists'             => 'Le client sélectionné est invalide.',
             'issued_at.required'           => 'La date d\'émission est obligatoire.',

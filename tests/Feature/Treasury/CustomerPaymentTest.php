@@ -54,7 +54,12 @@ function cpayValidatedInvoice(Client $client): App\Models\Invoice
         ]],
     ]);
 
-    $invoice = app(InvoiceService::class)->createFromOrder($order);
+    // [Ventes §21.2] La facturation est limitée aux quantités LIVRÉES. Le sujet de
+    // ce test est l'encaissement, pas le circuit de livraison : on marque la ligne
+    // comme livrée intégralement pour obtenir la facture de 11 800 TTC attendue.
+    $order->items()->update(['delivered_quantity' => 10]);
+
+    $invoice = app(InvoiceService::class)->createFromOrder($order->fresh());
 
     return app(InvoiceService::class)->validate($invoice);
 }

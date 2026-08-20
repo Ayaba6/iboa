@@ -214,8 +214,12 @@
             <section class="border border-gray-200 rounded-[4px]">
                 <div class="{{ $secH }}">Finance</div>
                 <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {{-- [Gestion] Plafond fournisseur — CHAMP UNIQUE.
+                         « Encours autorisé » a été supprimé : il faisait doublon
+                         avec `credit_limit` et aucun des deux n'était appliqué par
+                         un contrôle. Deux champs concurrents pour un même plafond
+                         ne peuvent que diverger. --}}
                     <div><label class="{{ $lbl }}">Plafond crédit</label><input type="number" min="0" step="1" name="credit_limit" value="{{ old('credit_limit', $s->credit_limit ?? '') }}" class="{{ $inpR }}"></div>
-                    <div><label class="{{ $lbl }}">Encours autorisé</label><input type="number" min="0" step="1" name="encours_autorise" value="{{ old('encours_autorise', $s->encours_autorise ?? '') }}" class="{{ $inpR }}"></div>
                     <div><label class="{{ $lbl }}">Banque</label><input type="text" name="banque" maxlength="100" value="{{ old('banque', $s->banque ?? '') }}" class="{{ $inp }}"></div>
                     <div><label class="{{ $lbl }}">SWIFT</label><input type="text" name="swift" maxlength="20" value="{{ old('swift', $s->swift ?? '') }}" class="{{ $inp }} font-mono"></div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">RIB / IBAN</label><input type="text" name="rib_iban" maxlength="40" value="{{ old('rib_iban', $s->rib_iban ?? '') }}" class="{{ $inp }} font-mono"></div>

@@ -38,6 +38,7 @@ class OrderService
         return $this->sequenceService->nextNumber($company, 'commande');
     }
 
+
     public function create(array $data): Order
     {
         // [Parametrage Vente] client bloque = aucun document commercial
@@ -53,6 +54,13 @@ class OrderService
 
             $data['company_id'] = $company->id;
             $data['fiscal_year_id'] = $company->current_fiscal_year_id;
+
+            // [UI — doublon retiré] `default_tax_label` était saisi dans un champ
+            // « Taxes » distinct de « TVA par défaut », stocké, jamais lu, et pouvait
+            // contredire la TVA réellement appliquée aux lignes. Le champ a disparu de
+            // l'écran ; la valeur est DÉRIVÉE de l'état réel par un service UNIQUE,
+            // partagé par devis, commande et facture.
+            $data['default_tax_label'] = app(\App\Services\Sales\SalesTaxLabelService::class)->derive($data, $items);
             $data['number'] = $this->sequenceService->nextNumber($company, 'commande');
             $data['created_by'] = Auth::id();
             $data['status'] = $data['status'] ?? 'brouillon';
@@ -114,8 +122,15 @@ class OrderService
                     $this->releaseStockReservations($order);
                 }
 
-                $order->items()->delete();
-                $this->syncItems($order, $items);
+                // [BUG-A3-SALES-LINE-IMMUTABLE-012] Synchronisation PAR IDENTITE.
+                // La destruction/recreation renumerotait les lignes a chaque
+                // edition et rompait tout ce qui les reference : OF, affectation
+                // MTO, reservation, preparation, livraison, facture.
+                app(\App\Services\Sales\OrderItemSynchronizer::class)->sync(
+                    $order,
+                    $items,
+                    fn (array $ligne, int $position) => $this->buildItemValues($ligne, $position)
+                );
 
                 if ($needsResync) {
                     $this->reserveStock($order->fresh());
@@ -196,6 +211,16 @@ class OrderService
                 throw new \RuntimeException('Seule une commande en brouillon peut être confirmée.');
             }
 
+            // [BUG-A3-SALES-ZERO-PRICE-026] Circuit direct — mêmes gardes que le
+            // circuit de validation.
+            //
+            // `CommercialWorkflowService::validateOrder()` contrôlait prix nul et
+            // prix plancher ; cette méthode-ci, qui aboutit au MÊME statut
+            // `confirme` et déclenche le même `OrderConfirmed`, n'en contrôlait
+            // aucun. Confirmer directement au lieu de soumettre suffisait donc à
+            // sortir du dispositif — un contournement, pas un raccourci.
+            app(SalesFloorWaiverService::class)->assertDocumentMayProceed($order);
+
             $order->update([
                 'status' => 'confirme',
                 'validated_by' => Auth::id(),
@@ -214,9 +239,47 @@ class OrderService
     }
 
     /** any → annule */
-    public function cancel(Order $order): Order
+    /**
+     * [Ventes §17] Annulation d'une commande — motif OBLIGATOIRE et tracé.
+     *
+     * Cette méthode était la seule de tout l'ERP à annuler un document sans
+     * motif : tous les autres services (facture, avoir, encaissement, virement,
+     * OF, transfert de stock, préparation…) en exigent un. Une commande
+     * confirmée passait donc à « annulé » sans auteur, sans date d'action, sans
+     * raison — en contradiction avec la règle « ne jamais supprimer ni annuler
+     * silencieusement un document métier validé ».
+     *
+     * L'écriture au journal passe par `cancelDocument()` (trait
+     * HasCommercialWorkflow), qui enregistre ancien statut, nouveau statut,
+     * utilisateur, rôle, IP et motif dans `commercial_validations`. C'est
+     * l'implémentation UNIQUE : CommercialWorkflowService::cancel() délègue ici
+     * pour les commandes, afin que les deux chemins ne divergent pas.
+     */
+    public function cancel(Order $order, string $motif): Order
     {
-        return DB::transaction(function () use ($order) {
+        // Précondition vérifiée AVANT d'ouvrir la transaction : `cancelDocument()`
+        // rejette déjà un motif vide, mais il n'intervient qu'après la libération
+        // des réservations. La correction ne tiendrait alors que par le rollback —
+        // fonctionnel, mais coûteux et implicite. Message identique à celui du
+        // trait pour que l'utilisateur voie la même phrase quel que soit le chemin.
+        if (trim($motif) === '') {
+            throw new \RuntimeException("Le motif d'annulation est obligatoire.");
+        }
+
+        // L'écriture d'audit exige un auteur : `commercial_validations.user_id`
+        // est NOT NULL. Sans cette garde, un appel hors session — commande
+        // console, tâche planifiée, job en file — échouerait sur un accès à une
+        // propriété de null, message illisible et transaction à moitié jouée.
+        // Une annulation sans auteur identifiable n'est de toute façon pas
+        // traçable : la refuser est le comportement correct, pas une limitation.
+        if (! Auth::check()) {
+            throw new \RuntimeException(
+                "L'annulation d'une commande doit être imputable à un utilisateur identifié. "
+                .'Aucune session active : authentifiez-vous, ou utilisez Auth::login() pour un traitement automatisé.'
+            );
+        }
+
+        return DB::transaction(function () use ($order, $motif) {
             // [ARCH-S2-02] Lock the order row to prevent concurrent cancel+confirm
             // or double-cancel races.
             $order = Order::lockForUpdate()->findOrFail($order->id);
@@ -229,7 +292,11 @@ class OrderService
             // stock_reservations actives de la commande (ventes + production) et remet le
             // stock disponible. Idempotent — sans effet si rien n'est réservé.
             app(ReservationService::class)->releaseForOrder($order);
-            $order->update(['status' => 'annule']);
+
+            // Pose le statut ET écrit l'entrée d'audit (motif, auteur, rôle, IP).
+            // Refuse un motif vide : c'est la garde qui rend la traçabilité
+            // impossible à contourner, y compris pour les appels programmatiques.
+            $order->cancelDocument('annule', $motif);
 
             return $order->fresh();
         });
@@ -309,8 +376,27 @@ class OrderService
     private function syncItems(Order $order, array $items): void
     {
         foreach ($items as $i => $item) {
+            $valeurs = $this->buildItemValues($item, $i);
+            if ($valeurs !== null) {
+                $order->items()->create($valeurs);
+            }
+        }
+    }
+
+    /**
+     * [BUG-A3-SALES-LINE-IMMUTABLE-012] Valeurs d'une ligne, sans l'ecrire.
+     *
+     * Extrait pour que la CREATION et la SYNCHRONISATION differentielle
+     * partagent exactement le meme calcul : deux constructions paralleles de la
+     * meme ligne finiraient par diverger sur un arrondi ou une garde.
+     *
+     * Retourne null quand la ligne est vide et doit etre ignoree.
+     */
+    public function buildItemValues(array $item, int $i): ?array
+    {
+        {
             if (empty($item['description']) && empty($item['product_id'])) {
-                continue;
+                return null;
             }
 
             // [§5 TÔLE BAC] Quantité en mètres linéaires = nombre de tôles × métrage
@@ -344,10 +430,16 @@ class OrderService
             $lineTax = (int) round($ht * ($tax / 100));
             $ttc = $ht + $lineTax;
 
-            $order->items()->create([
+            // [Ventes] Même dérivation que sur le devis, via le service partagé :
+            // unité depuis l'article, coût figé à la saisie. La règle ne doit pas
+            // exister en deux exemplaires susceptibles de diverger.
+            $item = app(\App\Services\Sales\SalesLineDefaultsService::class)->apply($item);
+
+            return [
                 'product_id' => $item['product_id'] ?? null,
                 'description' => $item['description'] ?? '',
                 'unit_id' => $item['unit_id'] ?? null,
+                'unit_cost' => $item['unit_cost'] ?? null,
                 'quantity' => $qty,
                 'nb_toles' => $nbToles,
                 'metrage_par_tole' => $metrage,
@@ -359,7 +451,7 @@ class OrderService
                 'line_tax' => $lineTax,
                 'line_total_ttc' => $ttc,
                 'sort_order' => $i,
-            ]);
+            ];
         }
     }
 

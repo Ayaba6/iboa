@@ -42,11 +42,22 @@ class ProductFamilyController extends Controller
                 ->withQueryString();
         }
 
-        // Compteurs GLOBAUX (les sommes sur $families ne couvriraient que la page courante)
+        // Compteurs GLOBAUX (les sommes sur $families ne couvriraient que la page
+        // courante) — mais sur la MÊME population que la liste. Ils comptaient
+        // toutes les familles, archivées comprises, pendant que la liste n'en
+        // montrait que les actives : le bandeau annonçait 12 au-dessus de 3 lignes.
+        $actives = fn ($q) => $toutes ? $q : $q->where('is_active', true);
+
         $stats = [
-            'racines'  => ProductFamily::whereNull('parent_id')->count(),
-            'sous'     => ProductFamily::whereNotNull('parent_id')->count(),
-            'articles' => \App\Models\Product::whereNotNull('family_id')->count(),
+            'racines'  => $actives(ProductFamily::whereNull('parent_id'))->count(),
+            'sous'     => $actives(ProductFamily::whereNotNull('parent_id'))->count(),
+            // Un article se rattache par sa famille OU par sa sous-famille :
+            // ne compter que family_id laisserait de côté ceux classés au seul
+            // second niveau. La recherche d'articles couvre déjà les deux axes.
+            'articles' => \App\Models\Product::where(fn ($q) => $q
+                ->whereNotNull('family_id')->orWhereNotNull('sub_family_id'))->count(),
+            // Ce qui est masqué doit être dit, pas seulement soustrait.
+            'archivees' => $toutes ? 0 : ProductFamily::where('is_active', false)->count(),
         ];
 
         return view('product-families.index', compact('families', 'niveau', 'stats'));
@@ -76,7 +87,10 @@ class ProductFamilyController extends Controller
         // (Général éditable + Sous-familles / Articles / Statistiques en lecture).
         return view('product-families.edit', array_merge(
             $this->ficheData($family),
-            $this->formData($family->id)
+            // L'exclusion de la famille elle-même comme parent se fait dans
+            // `_form.blade.php` (`where('id','!=',$f->id)`) : l'argument était
+            // reçu ici sans jamais servir.
+            $this->formData()
         ));
     }
 
@@ -109,11 +123,20 @@ class ProductFamilyController extends Controller
      * le form (classement pur) calcule lui-même ses parentes ; seul le panneau
      * de sélection gauche a besoin de données.
      */
-    private function formData(?int $excludeId = null): array
+    private function formData(): array
     {
         return [
+            // Le panneau de navigation était plafonné aux 20 dernières créées,
+            // triées par id décroissant. Son champ « Filtrer » ne cherche QUE
+            // dans les lignes chargées : une famille hors des vingt devenait
+            // introuvable — « Tôles bac », racine du métier, en faisait partie.
+            //
+            // Les familles sont un référentiel de classement, donc peu nombreux
+            // par nature. On les charge toutes, dans l'ordre où l'œil les
+            // cherche : les racines d'abord, puis alphabétiquement.
             'selectorFamilies' => ProductFamily::where('is_active', true)
-                                    ->orderByDesc('id')->limit(20)
+                                    ->orderByRaw('parent_id IS NOT NULL')
+                                    ->orderBy('name')
                                     ->get(['id', 'code', 'name', 'parent_id']),
         ];
     }

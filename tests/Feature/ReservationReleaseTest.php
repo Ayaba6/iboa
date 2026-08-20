@@ -29,7 +29,7 @@ it('releases reservations when order cancelled', function(){
     $this->actingAs(relAdmin());
     [$order,$p]=relOrderWithReservation();
     expect((float)ProductStock::where('product_id',$p->id)->first()->reserved_quantity)->toEqual(10.0);
-    app(OrderService::class)->cancel($order);
+    app(OrderService::class)->cancel($order, 'Annulation de test — libération des réservations.');
     expect((float)ProductStock::where('product_id',$p->id)->first()->reserved_quantity)->toEqual(0.0);
     expect(StockReservation::where('order_id',$order->id)->where('status','reserved')->count())->toBe(0);
 });

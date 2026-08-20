@@ -20,8 +20,8 @@
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Tableau de bord Achats</h1>
-            <p class="text-sm text-gray-500 mt-0.5">Vue d'ensemble · commandes, réceptions, factures, échéances, fournisseurs</p>
+            <h1 class="text-[15px] font-bold text-gray-900">Tableau de bord Achats</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">Vue d'ensemble · commandes, réceptions, factures, échéances, fournisseurs</p>
         </div>
         <div class="flex flex-wrap items-center gap-1.5">
             <a href="{{ route('achats.commandes.index') }}" class="h-8 inline-flex items-center border border-gray-300 text-gray-700 hover:bg-gray-50 text-[12px] font-medium px-2.5 rounded-[4px] transition-colors">Commandes</a>
@@ -43,44 +43,44 @@
     @endphp
     <div class="grid grid-cols-2 md:grid-cols-4 gap-1.5">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
-            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">PO en cours</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums text-gray-900 leading-none">{{ $kpis['open_po_count'] }}</p>
+            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">PO en cours</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums text-gray-900 leading-none">{{ $kpis['open_po_count'] }}</p>
             <p class="mt-0.5 text-[11px] text-gray-400">{{ $fmt($kpis['open_po_value']) }} F</p>
         </div>
 
         <a href="{{ route('achats.commandes.index') }}" class="bg-white rounded-[4px] border border-blue-200 hover:bg-blue-50/40 px-3 py-2 transition-colors block">
-            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-wide">À réceptionner</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums text-blue-700 leading-none">{{ $kpis['awaiting_receipt'] }}</p>
+            <p class="text-[11px] font-bold text-blue-600 uppercase tracking-wide">À réceptionner</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums text-blue-700 leading-none">{{ $kpis['awaiting_receipt'] }}</p>
             <p class="mt-0.5 text-[11px] text-blue-400">commandes confirmées</p>
         </a>
 
         <a href="{{ route('achats.factures-fournisseurs.index') }}" class="bg-white rounded-[4px] border border-orange-200 hover:bg-orange-50/40 px-3 py-2 transition-colors block">
-            <p class="text-[10px] font-bold text-orange-600 uppercase tracking-wide">FF à payer</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums text-orange-700 leading-none">{{ $kpis['invoices_to_pay_count'] }}</p>
+            <p class="text-[11px] font-bold text-orange-600 uppercase tracking-wide">FF à payer</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums text-orange-700 leading-none">{{ $kpis['invoices_to_pay_count'] }}</p>
             <p class="mt-0.5 text-[11px] text-orange-400">{{ $fmt($kpis['invoices_to_pay_amount']) }} F</p>
         </a>
 
         <div class="bg-white rounded-[4px] border {{ $kpis['overdue']>0 ? 'border-red-300' : 'border-gray-300' }} px-3 py-2">
-            <p class="text-[10px] font-bold {{ $kpis['overdue']>0 ? 'text-red-600' : 'text-gray-500' }} uppercase tracking-wide">En retard</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums {{ $kpis['overdue']>0 ? 'text-red-700' : 'text-gray-900' }} leading-none">{{ $kpis['overdue'] }}</p>
+            <p class="text-[11px] font-bold {{ $kpis['overdue']>0 ? 'text-red-600' : 'text-gray-500' }} uppercase tracking-wide">En retard</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums {{ $kpis['overdue']>0 ? 'text-red-700' : 'text-gray-900' }} leading-none">{{ $kpis['overdue'] }}</p>
             <p class="mt-0.5 text-[11px] {{ $kpis['overdue']>0 ? 'text-red-400' : 'text-gray-400' }}">{{ $fmt($kpis['overdue_amount']) }} F</p>
         </div>
 
         <div class="bg-white rounded-[4px] border border-amber-200 px-3 py-2">
-            <p class="text-[10px] font-bold text-amber-600 uppercase tracking-wide">Échéances 7j</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums text-amber-700 leading-none">{{ $kpis['due_soon'] }}</p>
+            <p class="text-[11px] font-bold text-amber-600 uppercase tracking-wide">Échéances 7j</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums text-amber-700 leading-none">{{ $kpis['due_soon'] }}</p>
             <p class="mt-0.5 text-[11px] text-amber-400">factures à payer</p>
         </div>
 
         <a href="{{ route('achats.demandes-achat.index') }}" class="bg-white rounded-[4px] border border-gray-300 hover:bg-gray-50 px-3 py-2 transition-colors block">
-            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">DA en attente</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums text-gray-900 leading-none">{{ $kpis['pending_requests'] }}</p>
+            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">DA en attente</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums text-gray-900 leading-none">{{ $kpis['pending_requests'] }}</p>
             <p class="mt-0.5 text-[11px] text-gray-400">demandes d'achat</p>
         </a>
 
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
-            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Volume mois</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums text-gray-900 leading-none">{{ $fmt($kpis['month_volume']) }}</p>
+            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Volume mois</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums text-gray-900 leading-none">{{ $fmt($kpis['month_volume']) }}</p>
             @if($kpis['volume_variation_pct'] !== null)
                 @php $up = $kpis['volume_variation_pct'] >= 0; @endphp
                 <p class="mt-0.5 text-[11px] {{ $up ? 'text-amber-600' : 'text-emerald-600' }}">
@@ -92,14 +92,14 @@
         </div>
 
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-2">
-            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wide">DPO</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums text-gray-900 leading-none">{{ $kpis['dpo_days'] }} j</p>
+            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">DPO</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums text-gray-900 leading-none">{{ $kpis['dpo_days'] }} j</p>
             <p class="mt-0.5 text-[11px] text-gray-400">délai moyen paiement FF</p>
         </div>
 
         <a href="{{ route('achats.dashboard.matching') }}" class="bg-white rounded-[4px] border {{ $ecartsMatching > 0 ? 'border-amber-300 hover:bg-amber-50/40' : 'border-emerald-300 hover:bg-emerald-50/40' }} px-3 py-2 transition-colors block">
-            <p class="text-[10px] font-bold {{ $ecartsMatching > 0 ? 'text-amber-600' : 'text-emerald-600' }} uppercase tracking-wide">3-way matching</p>
-            <p class="mt-0.5 text-[17px] font-bold tabular-nums {{ $ecartsMatching > 0 ? 'text-amber-700' : 'text-emerald-700' }} leading-none">{{ $ecartsMatching }}</p>
+            <p class="text-[11px] font-bold {{ $ecartsMatching > 0 ? 'text-amber-600' : 'text-emerald-600' }} uppercase tracking-wide">3-way matching</p>
+            <p class="mt-0.5 text-[20px] font-bold tabular-nums {{ $ecartsMatching > 0 ? 'text-amber-700' : 'text-emerald-700' }} leading-none">{{ $ecartsMatching }}</p>
             <p class="mt-0.5 text-[11px] {{ $ecartsMatching > 0 ? 'text-amber-400' : 'text-emerald-400' }}">écart(s) détecté(s)</p>
         </a>
     </div>
@@ -110,12 +110,12 @@
         <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="{{ $band }}">
                 <h2 class="{{ $bandH }}">Échéances 30 prochains jours</h2>
-                <a href="{{ route('achats.factures-fournisseurs.index') }}" class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">Voir tout →</a>
+                <a href="{{ route('achats.factures-fournisseurs.index') }}" class="text-[12px] text-emerald-700 hover:text-emerald-900 font-medium">Voir tout →</a>
             </div>
             @if($dueSoon->isEmpty())
                 <p class="px-4 py-8 text-center text-emerald-700 text-[13px]">✓ Aucune échéance proche.</p>
             @else
-            <table class="w-full text-[14px] border-collapse">
+            <table class="w-full text-[13px] border-collapse">
                 <thead class="{{ $th }}">
                     <tr>
                         <th class="px-3 py-1.5 text-left">Facture</th>
@@ -159,12 +159,12 @@
         <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
             <div class="{{ $band }}">
                 <h2 class="{{ $bandH }}">Scorecards fournisseurs (12 mois)</h2>
-                <a href="{{ route('achats.dashboard.suppliers') }}" class="text-xs text-emerald-700 hover:text-emerald-900 font-medium">Évaluation complète →</a>
+                <a href="{{ route('achats.dashboard.suppliers') }}" class="text-[12px] text-emerald-700 hover:text-emerald-900 font-medium">Évaluation complète →</a>
             </div>
             @if($topScorecards->isEmpty())
                 <p class="px-4 py-8 text-center text-gray-400 text-[13px]">Aucun fournisseur actif.</p>
             @else
-            <table class="w-full text-[14px] border-collapse">
+            <table class="w-full text-[13px] border-collapse">
                 <thead class="{{ $th }}">
                     <tr>
                         <th class="px-3 py-1.5 text-left">Fournisseur</th>
@@ -212,8 +212,8 @@
             @foreach($pipeline as $key => $stage)
                 @php [$box, $val, $sub] = explode('|', $stageStyles[$key] ?? $stageStyles['brouillon']); @endphp
                 <div class="text-center px-3 py-2 rounded-[4px] border {{ $box }}">
-                    <p class="text-[10px] font-bold uppercase tracking-wide">{{ $stage['label'] }}</p>
-                    <p class="text-[17px] font-bold tabular-nums {{ $val }} mt-0.5 leading-none">{{ $stage['count'] }}</p>
+                    <p class="text-[11px] font-bold uppercase tracking-wide">{{ $stage['label'] }}</p>
+                    <p class="text-[20px] font-bold tabular-nums {{ $val }} mt-0.5 leading-none">{{ $stage['count'] }}</p>
                     <p class="text-[11px] {{ $sub }} mt-0.5">{{ $fmt($stage['total']) }}</p>
                 </div>
             @endforeach
@@ -228,7 +228,7 @@
             @if($topSuppliers->isEmpty())
                 <p class="px-4 py-8 text-center text-gray-400 text-[13px]">Aucun achat sur 12 mois.</p>
             @else
-            <table class="w-full text-[14px] border-collapse">
+            <table class="w-full text-[13px] border-collapse">
                 <thead class="{{ $th }}">
                     <tr><th class="px-3 py-1.5 text-left">Fournisseur</th><th class="px-3 py-1.5 text-right">CA TTC</th><th class="px-3 py-1.5 text-right">Reste à payer</th></tr>
                 </thead>
@@ -253,7 +253,7 @@
             @if($topProducts->isEmpty())
                 <p class="px-4 py-8 text-center text-gray-400 text-[13px]">Aucun achat.</p>
             @else
-            <table class="w-full text-[14px] border-collapse">
+            <table class="w-full text-[13px] border-collapse">
                 <thead class="{{ $th }}">
                     <tr><th class="px-3 py-1.5 text-left">Article</th><th class="px-3 py-1.5 text-right">Quantité</th><th class="px-3 py-1.5 text-right">CA HT</th></tr>
                 </thead>
@@ -280,7 +280,7 @@
         @if($monthly->isEmpty())
             <p class="px-4 py-8 text-center text-gray-400 text-[13px]">Pas de données.</p>
         @else
-        <table class="w-full text-[14px] border-collapse">
+        <table class="w-full text-[13px] border-collapse">
             <thead class="{{ $th }}">
                 <tr><th class="px-3 py-1.5 text-left">Mois</th><th class="px-3 py-1.5 text-right">CA TTC</th><th class="px-3 py-1.5 text-right"># factures</th></tr>
             </thead>
@@ -316,7 +316,7 @@
     <div class="bg-white rounded-[4px] border border-amber-300 overflow-hidden">
         <div class="px-4 py-2 border-b border-amber-200 bg-amber-50 flex items-center justify-between">
             <h2 class="text-[12px] font-bold text-amber-800 uppercase tracking-wide">Écarts 3-way matching ({{ $ecartsMatching }})</h2>
-            <a href="{{ route('achats.dashboard.matching') }}" class="text-xs text-amber-700 hover:text-amber-900 font-medium">Détail complet →</a>
+            <a href="{{ route('achats.dashboard.matching') }}" class="text-[12px] text-amber-700 hover:text-amber-900 font-medium">Détail complet →</a>
         </div>
         <div class="px-4 py-2.5 text-[13px] text-amber-700">
             @if($matchingPreview['qty_count'] > 0)

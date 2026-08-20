@@ -10,6 +10,7 @@ use App\Services\BonPreparationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class BonPreparationController extends Controller
@@ -35,11 +36,20 @@ class BonPreparationController extends Controller
             ->orderByDesc('id')
             ->paginate(25);
 
+        // [Perf] Un COUNT GROUPÉ, pas un COUNT par statut. La version précédente
+        // lançait quatre requêtes là où une suffit, dont trois strictement
+        // identiques à un paramètre près.
+        $counts = BonPreparation::query()
+            ->groupBy('status')
+            ->pluck(DB::raw('COUNT(*)'), 'status')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+
         $summary = [
-            'total'      => BonPreparation::count(),
-            'en_attente' => BonPreparation::where('status', 'en_attente')->count(),
-            'en_cours'   => BonPreparation::where('status', 'en_cours')->count(),
-            'charge'     => BonPreparation::where('status', 'charge')->count(),
+            'total'      => array_sum($counts),
+            'en_attente' => $counts['en_attente'] ?? 0,
+            'en_cours'   => $counts['en_cours'] ?? 0,
+            'charge'     => $counts['charge'] ?? 0,
         ];
 
         return view('ventes.bons-preparation.index', compact('bps', 'filters', 'summary'));
@@ -88,5 +98,30 @@ class BonPreparationController extends Controller
         return redirect()
             ->route('ventes.commandes.show', $bonPreparation->order_id)
             ->with('success', 'Chargement terminé — bon de livraison à créer.');
+    }
+
+    /**
+     * POST ventes/bons-preparation/{bonPreparation}/cancel — annulation motivée.
+     *
+     * [Ventes §17] Le module n'exposait aucune action d'annulation : un bon créé
+     * par erreur restait à l'écran indéfiniment.
+     */
+    public function cancel(Request $request, BonPreparation $bonPreparation): RedirectResponse
+    {
+        $data = $request->validate(
+            ['motif' => ['required', 'string', 'min:5', 'max:500']],
+            [
+                'motif.required' => "Le motif d'annulation est obligatoire.",
+                'motif.min'      => 'Le motif doit compter au moins 5 caractères.',
+            ]
+        );
+
+        try {
+            $this->service->cancel($bonPreparation, $data['motif']);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Bon de préparation ' . $bonPreparation->number . ' annulé.');
     }
 }

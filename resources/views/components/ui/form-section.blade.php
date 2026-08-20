@@ -27,12 +27,12 @@
          @if($collapsible) @click="open = !open" role="button" @endif>
         <div class="flex items-center gap-2.5">
             @if($icon)
-            <span class="text-lg">{{ $icon }}</span>
+            <span class="text-[15px]">{{ $icon }}</span>
             @endif
             <div>
-                <h3 class="text-sm font-semibold text-gray-800">{{ $title }}</h3>
+                <h3 class="text-[13px] font-semibold text-gray-800">{{ $title }}</h3>
                 @if($description)
-                <p class="text-xs text-gray-500 mt-0.5">{{ $description }}</p>
+                <p class="text-[12px] text-gray-500 mt-0.5">{{ $description }}</p>
                 @endif
             </div>
         </div>

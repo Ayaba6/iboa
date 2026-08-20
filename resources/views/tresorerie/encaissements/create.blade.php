@@ -127,7 +127,6 @@
                     <div class="col-span-2"><label class="{{ $lbl }}">Référence paiement</label><input type="text" name="reference" maxlength="100" value="{{ old('reference') }}" class="{{ $inp }}"></div>
                     <div class="col-span-2">
                         <label class="{{ $lbl }}">Devise <span class="text-red-500">*</span></label>
-                        <input type="text" value="XOF" class="{{ $inpRo }} font-mono" readonly>
                         <p class="text-[12px] text-gray-500 mt-0.5">Franc CFA BCEAO</p>
                     </div>
                     <div class="col-span-2">

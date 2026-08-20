@@ -71,6 +71,35 @@ class ProductionCostService
                 ->sum('total_cost');
         }
 
+        // [PRO-08] SOUS-PRODUITS RÉCUPÉRÉS — portés au CRÉDIT de la matière.
+        //
+        // La matière ci-dessus est comptée en totalité, y compris la part partie
+        // en chute. Quand cette chute revient en stock (article « chute » ou
+        // « avarié » de la nomenclature), elle cesse d'être à la charge du produit
+        // fini : la laisser au débit surévalue son coût unitaire.
+        //
+        // ATTENTION au filtre — les entrées de PRODUIT FINI portent EXACTEMENT la
+        // même référence (`reference_type = ProductionOrder`, `reference_id` = OF).
+        // Déduire toutes les entrées de l'OF reviendrait à soustraire la production
+        // elle-même et ferait tomber le coût à zéro, voire en négatif. Seuls les
+        // ARTICLES de sous-produit déclarés par la nomenclature sont retenus.
+        $byproductIds = array_values(array_filter([
+            $readBom('scrap_product_id'),
+            $readBom('defect_product_id'),
+        ]));
+
+        if ($byproductIds !== []) {
+            $recupere = (int) \App\Models\StockMovement::where('type', 'entree')
+                ->where('reference_type', ProductionOrder::class)
+                ->where('reference_id', $order->id)
+                ->whereIn('product_id', $byproductIds)
+                ->sum('total_cost');
+
+            // Jamais sous zéro : une récupération ne peut pas rendre la matière
+            // négative, quelle que soit sa valorisation.
+            $material = max(0, $material - $recupere);
+        }
+
         // 2. Main-d'œuvre — priorité au pointage RÉEL (production_time_logs),
         //    sinon override manuel, sinon estimation nomenclature (BOM),
         //    sinon temps standard de la GAMME (opérations × coût horaire poste).

@@ -16,7 +16,11 @@ class QualityInspectionController extends Controller
     public function __construct()
     {
         $this->middleware('permission:production.view')->only(['index', 'show']);
-        $this->middleware('permission:production.update')->except(['index', 'show']);
+        // Enregistrer un contrôle est un acte QUALITÉ. Le garder derrière la seule
+        // `production.update` verrouillait `responsable_qualite` — qui porte
+        // `quality.manage` mais pas `production.update` — hors de son propre module.
+        // Ajout par OU : aucun droit existant n'est retiré.
+        $this->middleware('permission:production.update|quality.manage')->except(['index', 'show']);
     }
 
     public function index(Request $request): View

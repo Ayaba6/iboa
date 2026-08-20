@@ -18,7 +18,7 @@
     $txa   = 'w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white resize-none focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $secH  = 'px-4 py-1.5 border-b border-gray-200 bg-[#eef5f0] text-[13px] font-bold text-emerald-900';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
-    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
+    $tdIn  = 'w-full border border-gray-300 rounded px-2 py-1.5 text-[13px] focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500';
 @endphp
 <div class="max-w-7xl"
      x-data="supplierReturnForm()">
@@ -76,17 +76,16 @@
 
                         {{-- Colonne 2 : document --}}
                         <div class="sm:col-span-3 space-y-3">
+                            {{-- [UI — doublon retiré] « Type de document » en lecture seule répétait le
+                                 titre de la page, sur un écran où il ne peut rien valoir d'autre. --}}
+                            {{-- [UI — doublon retiré] Le numéro auto répétait le titre de la page.
+                                 Le statut, seule information non redondante, est conservé. --}}
                             <div>
-                                <label class="{{ $lbl }}">Type de document <span class="text-red-600">*</span></label>
-                                <input type="text" value="Retour fournisseur" class="{{ $inp }} bg-gray-50 text-gray-600" readonly>
-                            </div>
-                            <div>
-                                <label class="{{ $lbl }}">N° retour <span class="text-red-600">*</span></label>
-                                <input type="text" value="Auto à la création" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly>
-                                <span class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">● Brouillon</span>
+                                <label class="{{ $lbl }}">Statut</label>
+                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">● Brouillon</span>
                             </div>
                             <div><label class="{{ $lbl }}">Date de retour <span class="text-red-600">*</span></label><input type="date" name="returned_at" value="{{ old('returned_at', date('Y-m-d')) }}" required class="{{ $inp }} @error('returned_at') border-red-500 @enderror">@error('returned_at')<p class="text-red-500 text-[11px] mt-1">{{ $message }}</p>@enderror</div>
-                            <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference') }}" class="{{ $inp }} font-mono" placeholder="PROJ-2026-0008"></div>
+                            <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference') }}" class="{{ $inp }} font-mono" placeholder="Ex. : PROJ-2026-0008"></div>
                         </div>
 
                         {{-- Colonne 3 : rattachements --}}
@@ -138,7 +137,7 @@
                     </div>
                     <div class="grid grid-cols-1 xl:grid-cols-12">
                         <div class="xl:col-span-9 overflow-x-auto border-r border-gray-200 p-4 pb-2">
-                            <table class="w-full text-sm">
+                            <table class="w-full text-[13px]">
                                 <thead class="bg-[#eef5f0] border-b border-gray-300">
                                     <tr>
                                         <th class="px-2 py-2 text-left text-[11px] font-bold text-emerald-900 uppercase tracking-wide w-8">#</th>
@@ -153,7 +152,7 @@
                                 <tbody class="divide-y divide-gray-100">
                                     <template x-for="(line, index) in lines" :key="line.id">
                                         <tr class="hover:bg-gray-50">
-                                            <td class="px-2 py-2 text-gray-400 text-xs" x-text="index + 1"></td>
+                                            <td class="px-2 py-2 text-gray-400 text-[12px]" x-text="index + 1"></td>
                                             <td class="px-2 py-2">
                                                 <select :name="`items[${index}][product_id]`"
                                                         data-product-select
@@ -174,7 +173,7 @@
                                                 <input type="number" :name="`items[${index}][discount_percent]`" x-model="line.discount" @input="calcLine(index)" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} text-right">
                                                 <input type="hidden" :name="`items[${index}][tax_rate_value]`" value="0">
                                             </td>
-                                            <td class="px-2 py-2 text-right font-medium tabular-nums text-xs whitespace-nowrap" x-text="formatAmount(line.total_ht)"></td>
+                                            <td class="px-2 py-2 text-right font-medium tabular-nums text-[12px] whitespace-nowrap" x-text="formatAmount(line.total_ht)"></td>
                                             <td class="px-2 py-2 text-center">
                                                 <button type="button" @click="removeLine(index)" class="text-gray-300 hover:text-red-500 transition-colors">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -192,7 +191,7 @@
                             <div class="flex justify-between text-[13px] text-gray-600"><span>Sous-total HT</span><span class="tabular-nums font-medium" x-text="formatAmount(subtotalHt)"></span></div>
                             <div class="border-t-2 border-emerald-200 pt-2.5">
                                 <p class="text-[12px] font-bold text-gray-700">Total avoir attendu</p>
-                                <p class="text-[17px] font-bold text-emerald-700 tabular-nums" x-text="formatAmount(totalTtc)"></p>
+                                <p class="text-[20px] font-bold text-emerald-700 tabular-nums" x-text="formatAmount(totalTtc)"></p>
                             </div>
                         </div>
                     </div>

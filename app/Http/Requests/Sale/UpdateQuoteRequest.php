@@ -26,7 +26,10 @@ class UpdateQuoteRequest extends FormRequest
         return [
             'client_id'                    => 'required|exists:clients,id',
             'issued_at'                    => 'required|date',
-            'expires_at'                   => 'nullable|date|after:issued_at',
+            // [Ventes §UI] Aligné sur StoreQuoteRequest : ces trois champs portent
+            // l'astérisque rouge à l'écran. Les laisser `nullable` ici permettrait de
+            // vider à la modification ce que la création exige.
+            'expires_at'                   => 'required|date|after:issued_at',
             'reference'                    => 'nullable|string|max:50',
             'global_discount_amount'       => 'nullable|numeric|min:0',
             'global_discount_percent'      => 'nullable|numeric|min:0|max:100',
@@ -36,12 +39,12 @@ class UpdateQuoteRequest extends FormRequest
 
             // [Maquette Nouveau devis]
             'contact_id'                   => 'nullable|exists:client_contacts,id',
-            'warehouse_id'                 => 'nullable|exists:warehouses,id',
+            'warehouse_id'                 => 'required|exists:warehouses,id',
             'sales_rep_id'                 => 'nullable|exists:users,id',
             'delivery_address'             => 'nullable|string',
             'validity_duration'            => 'nullable|string|max:15',
             'project_reference'            => 'nullable|string|max:60',
-            'price_list'                   => 'nullable|string|max:60',
+            'price_list'                   => 'required|string|max:60',
             'price_mode'                   => 'nullable|in:ttc,ht,exonere',
             'net_prices'                   => 'nullable|boolean',
             'payment_terms'                => 'nullable|string|max:100',
@@ -64,7 +67,14 @@ class UpdateQuoteRequest extends FormRequest
             'items'                        => 'nullable|array|min:1',
             'items.*.product_id'           => ['nullable', 'exists:products,id', new \App\Rules\ProductFlux('vendu')],
             'items.*.description'          => 'required_with:items|string|max:255',
+            // [Ventes] Reste `nullable` : 28 fichiers de test et les integrations
+            // existantes postent des lignes sans unite. SalesLineDefaultsService la
+            // derive de l'article cote serveur, donc plus aucune ligne n'est
+            // enregistree sans unite — sans casser un seul appelant.
             'items.*.unit_id'              => 'nullable|exists:units,id',
+            // Cout figé a la saisie. Accepte en entree pour les imports, mais
+            // derive de l'article quand il n'est pas fourni.
+            'items.*.unit_cost'            => 'nullable|numeric|min:0',
             'items.*.quantity'             => 'required_with:items|numeric|min:0.0001',
             'items.*.nb_toles'             => 'nullable|numeric|min:0',
             'items.*.metrage_par_tole'     => 'nullable|numeric|min:0',

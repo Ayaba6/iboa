@@ -358,7 +358,7 @@ class ProductionOrderController extends Controller
 
     public function update(Request $request, ProductionOrder $order): RedirectResponse
     {
-        [$data, $lines] = $this->validateData($request);
+        [$data, $lines] = $this->validateData($request, $order);
         $this->service->update($order, $data, $lines);
         $this->uploadDocuments($order, $request);
 
@@ -686,7 +686,23 @@ class ProductionOrderController extends Controller
             'lines'     => ProductionLine::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'units'     => Unit::where('is_active', true)->orderBy('name')->get(['id', 'name', 'abbreviation']),
             'users'     => User::orderBy('name')->get(['id', 'name']),
-            'salesOrders' => Order::orderByDesc('id')->limit(200)->get(['id', 'number']),
+            // [FIX-OF-ORDER] Seules les commandes auxquelles un ordre PEUT être
+            // rattaché : encore ouvertes, portant un article fabriqué à la
+            // commande, et sans ordre actif. Auparavant toutes les commandes
+            // étaient proposées — y compris annulées, facturées ou déjà pourvues
+            // d'un ordre.
+            //
+            // La règle est celle du rattachement, pas celle du lancement :
+            // l'approbation production et la couverture financière conditionnent
+            // le LANCEMENT, et un ordre se prépare en brouillon avant elles.
+            //
+            // La commande déjà rattachée à l'OF en édition est réintégrée : le
+            // scope l'exclut précisément PARCE QUE cet OF existe, et l'omettre
+            // ferait perdre le lien au premier enregistrement. Même précaution
+            // que pour l'article ci-dessus.
+            'salesOrders' => Order::attachableToProduction()
+                ->when($order->order_id, fn ($q) => $q->orWhere('id', $order->order_id))
+                ->orderByDesc('id')->limit(200)->get(['id', 'number']),
             'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'machines'  => \App\Modules\Production\Models\ProductionMachine::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'bomData'   => $this->bomData(),
@@ -756,12 +772,59 @@ class ProductionOrderController extends Controller
         ]])->all();
     }
 
-    /** @return array{0: array, 1: array} */
-    private function validateData(Request $request): array
+    /**
+     * Refuse une commande qui n'est pas lançable en production.
+     *
+     * La règle est celle de `Order::attachableToProduction()` — une seule
+     * définition pour la liste du formulaire et pour cette garde. Deux
+     * définitions finiraient par diverger, et c'est la plus permissive qui
+     * ferait foi.
+     *
+     * Ce n'est PAS `eligibleForProduction()`, qui répond à une autre question :
+     * « laquelle puis-je lancer maintenant ». Exiger ici l'approbation
+     * interdirait de préparer un ordre en brouillon pendant qu'elle est en
+     * cours — ce que la suite existante attend, à juste titre.
+     *
+     * La commande déjà rattachée à l'OF en cours de modification est acceptée :
+     * le scope l'exclut justement parce que cet OF existe, et la refuser
+     * rendrait tout enregistrement impossible.
+     */
+    private function regleCommandeLancable(?ProductionOrder $enEdition): \Closure
+    {
+        return function (string $attribut, $valeur, \Closure $refuser) use ($enEdition) {
+            if (! $valeur) {
+                return;
+            }
+
+            if ($enEdition && (int) $valeur === (int) $enEdition->order_id) {
+                return;
+            }
+
+            if (! Order::attachableToProduction()->whereKey($valeur)->exists()) {
+                $numero = Order::whereKey($valeur)->value('number') ?? $valeur;
+
+                $refuser("La commande {$numero} ne peut pas recevoir d'ordre de fabrication : "
+                    .'elle est close ou annulée, ne porte aucun article fabriqué à la commande, '
+                    .'ou porte déjà un ordre de fabrication actif.');
+            }
+        };
+    }
+
+    /**
+     * @param  ProductionOrder|null  $enEdition  OF modifié, s'il y en a un.
+     * @return array{0: array, 1: array}
+     */
+    private function validateData(Request $request, ?ProductionOrder $enEdition = null): array
     {
         $validated = $request->validate([
             'client_id'          => ['nullable', 'integer', 'exists:clients,id'],
-            'order_id'           => ['nullable', 'integer', 'exists:orders,id'],
+            // [FIX-OF-ORDER] `exists:orders,id` ne disait que « cette commande
+            // existe » — n'importe laquelle passait, annulée, facturée ou déjà
+            // pourvue d'un OF. Le formulaire, lui, ne propose désormais que les
+            // commandes lançables ; sans garde serveur cela resterait cosmétique,
+            // puisqu'une requête forgée ignore le contenu d'un `<select>`.
+            'order_id'           => ['nullable', 'integer', 'exists:orders,id',
+                $this->regleCommandeLancable($enEdition)],
             // [MTO §1] Motif de dérogation « OF MTO sans commande ». Nullable ici :
             // c'est MtoOrderRequirementGuard qui décide s'il est exigible, car lui
             // seul connaît le mode de production de l'article.

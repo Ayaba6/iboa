@@ -76,11 +76,11 @@ window._invoiceFormData = {
                         </div>
                         <div>
                             <label class="{{ $lbl }}">Adresse de facturation</label>
-                            <textarea name="billing_address" rows="2" class="w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400 resize-none" placeholder="01 BP 2359 Ouagadougou 01&#10;Burkina Faso">{{ old('billing_address', $inv->billing_address ?? '') }}</textarea>
+                            <textarea name="billing_address" rows="2" class="w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400 resize-none" placeholder="Ex. : 01 BP 2359 Ouagadougou 01&#10;Burkina Faso">{{ old('billing_address', $inv->billing_address ?? '') }}</textarea>
                         </div>
                         <div>
                             <label class="{{ $lbl }}">Devise <span class="text-red-600">*</span></label>
-                            <div class="relative"><select name="currency_code" class="{{ $lk }}">
+                            <div class="relative"><select name="currency_code" x-model="currencyCode" @change="if (currencyCode === 'XOF') exchangeRate = 1" class="{{ $lk }}">
                                 @foreach(['XOF'=>'XOF – Franc CFA','EUR'=>'Euro (EUR)','USD'=>'Dollar (USD)'] as $cc=>$cl)<option value="{{ $cc }}" {{ old('currency_code', $inv?->currency_code ?? 'XOF') === $cc ? 'selected' : '' }}>{{ $cl }}</option>@endforeach
                             </select>{!! $caret !!}</div>
                         </div>
@@ -99,10 +99,17 @@ window._invoiceFormData = {
                             </select>{!! $caret !!}</div>
                         </div>
                         <div><label class="{{ $lbl }}">Date de facture <span class="text-red-600">*</span></label><input type="date" name="issued_at" required value="{{ old('issued_at', isset($inv) ? $inv->issued_at?->format('Y-m-d') : now()->format('Y-m-d')) }}" class="{{ $inp }}"></div>
+                        {{-- [UI — doublon retiré] Le champ « N° facture » en lecture seule
+                             répétait le titre de la page (qui porte le numéro en
+                             modification) et la barre d'état basse. Son astérisque rouge
+                             était de plus dépourvu de sens sur un champ non saisissable.
+                             À NOTER : « Type de document » ci-dessus est CONSERVÉ — ce
+                             n'est pas un doublon mais un vrai choix à cinq valeurs
+                             (standard, proforma, acompte, partielle, récurrente).
+                             Le statut, seule information non redondante, subsiste. --}}
                         <div>
-                            <label class="{{ $lbl }}">N° facture <span class="text-red-600">*</span></label>
-                            <input type="text" value="{{ $inv?->number ?: 'Auto à la création' }}" class="{{ $inp }} font-mono bg-gray-50 text-gray-500" readonly>
-                            <span class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full {{ ($inv?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600' }}">● {{ ucfirst($inv?->status ?? 'Brouillon') }}</span>
+                            <label class="{{ $lbl }}">Statut</label>
+                            <span class="inline-flex items-center gap-1 h-8 text-[12px] font-semibold px-2.5 rounded-[3px] {{ ($inv?->status ?? 'brouillon') === 'brouillon' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600 border border-gray-200' }}">● {{ ucfirst($inv?->status ?? 'Brouillon') }}</span>
                         </div>
                         <div>
                             <label class="{{ $lbl }}">Référence commande</label>
@@ -144,7 +151,9 @@ window._invoiceFormData = {
                         </div>
                         <div class="grid grid-cols-2 gap-2 items-end">
                             <div>
-                                <label class="{{ $lbl }}">Prix / Devise</label>
+                                {{-- [UI] Renommé : ce sélecteur ne porte QUE le mode de prix.
+                                     « Devise » y était une mention concurrente du champ Devise. --}}
+                                <label class="{{ $lbl }}">Mode de prix</label>
                                 @php $pm = old('price_mode', $inv?->price_mode ?? 'ttc'); @endphp
                                 <div class="relative"><select name="price_mode" x-model="priceMode" @change="onPriceModeChange()" class="{{ $lk }}">
                                     <option value="ttc">TTC</option>
@@ -176,30 +185,32 @@ window._invoiceFormData = {
                                 @foreach(['immediate' => 'Paiement immédiat', '30' => '30 jours', '60' => '60 jours', '90' => '90 jours', 'end_of_month' => 'Fin de mois'] as $val => $label)<option value="{{ $val }}" {{ (string) old('payment_terms', $inv?->payment_terms ?? '30') === (string) $val ? 'selected' : '' }}>{{ $label }}</option>@endforeach
                             </select>{!! $caret !!}</div>
                         </div>
-                        <div><label class="{{ $lbl }}">Banque bénéficiaire</label><input type="text" name="beneficiary_bank" maxlength="100" value="{{ old('beneficiary_bank', $inv?->beneficiary_bank) }}" class="{{ $inp }}" placeholder="Coris Bank International"></div>
+                        <div><label class="{{ $lbl }}">Banque bénéficiaire</label><input type="text" name="beneficiary_bank" maxlength="100" value="{{ old('beneficiary_bank', $inv?->beneficiary_bank) }}" class="{{ $inp }}" placeholder="Ex. : Coris Bank International"></div>
                     </div>
 
                     {{-- Colonne 4 : fiscal / divers --}}
                     <div class="sm:col-span-3 space-y-3">
-                        <div>
-                            <label class="{{ $lbl }}">Taux de change</label>
-                            <div class="flex gap-1">
-                                <input type="number" step="0.000001" min="0" name="exchange_rate" value="{{ old('exchange_rate', $inv?->exchange_rate ?? 1) }}" class="{{ $inpR }}">
-                                <input type="text" value="XOF" class="{{ $inp }} w-16 font-mono bg-gray-50 text-gray-500" readonly>
-                            </div>
+                        {{-- [UI — doublon retiré] Le « XOF » en lecture seule accolé au taux
+                             répétait le champ « Devise » et restait figé sur XOF même après
+                             changement de devise. Le taux n'a de sens qu'en devise
+                             étrangère : en XOF il vaut invariablement 1.
+                             UN SEUL champ `exchange_rate` : masqué par x-show, il reste
+                             soumis. Deux champs de même nom feraient gagner le dernier. --}}
+                        <div x-show="currencyCode !== 'XOF'" x-cloak>
+                            <label class="{{ $lbl }}">Taux de change <span class="font-normal text-gray-500" x-text="'(1 ' + currencyCode + ' = ? XOF)'"></span></label>
+                            <input type="number" step="0.000001" min="0" name="exchange_rate" x-model.number="exchangeRate" class="{{ $inpR }}">
                         </div>
-                        <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $inv?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="PROJ-2026-0008 – Construction Hangar"></div>
-                        <div><label class="{{ $lbl }}">Représentant fiscal</label><input type="text" name="fiscal_representative" maxlength="100" value="{{ old('fiscal_representative', $inv?->fiscal_representative) }}" class="{{ $inp }}" placeholder="OA METAL INDUSTRIE"></div>
-                        <div><label class="{{ $lbl }}">Régime fiscal</label><input type="text" name="fiscal_regime" maxlength="40" value="{{ old('fiscal_regime', $inv?->fiscal_regime) }}" class="{{ $inp }}" placeholder="Régime réel normal"></div>
-                        <div>
-                            <label class="{{ $lbl }}">Taxes</label>
-                            @php $dtl = old('default_tax_label', $inv?->default_tax_label ?? 'TVA 18%'); @endphp
-                            <div class="relative"><select name="default_tax_label" class="{{ $lk }}">
-                                <option value="TVA 18%" @selected($dtl==='TVA 18%')>TVA 18%</option>
-                                <option value="Exonéré" @selected($dtl==='Exonéré')>Exonéré</option>
-                            </select>{!! $caret !!}</div>
-                        </div>
-                        <div><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="2" class="w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400 resize-none" placeholder="Merci de votre confiance.">{{ old('notes', $inv?->notes ?? '') }}</textarea></div>
+                        <div><label class="{{ $lbl }}">Projet</label><input type="text" name="project_reference" maxlength="60" value="{{ old('project_reference', $inv?->project_reference) }}" class="{{ $inp }} font-mono" placeholder="Ex. : PROJ-2026-0008 – Construction Hangar"></div>
+                        <div><label class="{{ $lbl }}">Représentant fiscal</label><input type="text" name="fiscal_representative" maxlength="100" value="{{ old('fiscal_representative', $inv?->fiscal_representative) }}" class="{{ $inp }}" placeholder="Ex. : OA METAL INDUSTRIE"></div>
+                        <div><label class="{{ $lbl }}">Régime fiscal</label><input type="text" name="fiscal_regime" maxlength="40" value="{{ old('fiscal_regime', $inv?->fiscal_regime) }}" class="{{ $inp }}" placeholder="Ex. : Régime réel normal"></div>
+                        {{-- [UI — doublon retiré] Champ « Taxes » (`default_tax_label`)
+                             supprimé : libellé stocké, validé, `fillable`, mais JAMAIS lu
+                             par aucune logique métier ni affiché sur aucune fiche ou PDF. Il
+                             doublonnait « TVA par défaut », seul champ pilotant réellement
+                             la TVA des lignes, et pouvait le contredire — « Exonéré » avec
+                             des lignes à 18 %.
+                             La valeur est DÉRIVÉE de l'état réel dans InvoiceService. --}}
+                        <div><label class="{{ $lbl }}">Observations</label><textarea name="notes" rows="2" class="w-full px-2 py-1.5 border border-[#c3d3c9] rounded-[3px] text-[13px] focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400 resize-none" placeholder="Ex. : Merci de votre confiance.">{{ old('notes', $inv?->notes ?? '') }}</textarea></div>
                     </div>
 
                     {{-- Récurrence (si type = recurrente) --}}
@@ -247,6 +258,10 @@ window._invoiceFormData = {
                                     <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-32">Article</th>
                                     <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap">Désignation</th>
                                     <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-16">Qté</th>
+                                    {{-- [Ventes] Colonne « Unité » : `unit_id` n'était jamais posté, donc
+                                         aucune ligne de facture ne portait d'unité. Une tôle se vend à la
+                                         pièce ou au mètre linéaire, un fer à béton au kilo ou à la tonne. --}}
+                                    <th class="px-2 py-1.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-20" title="Unité de vente — héritée de l'article, modifiable">Unité</th>
                                     <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">P.U. HT</th>
                                     <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-14">Rem. %</th>
                                     <th class="px-2 py-1.5 text-right text-[11px] font-semibold text-white uppercase tracking-wide whitespace-nowrap w-24">Net HT</th>
@@ -263,7 +278,30 @@ window._invoiceFormData = {
                                         @include('ventes.partials._product_combobox', ['accentColor' => 'indigo', 'formName' => 'invoice'])
                                         <td class="px-2 py-1"><input type="text" :name="'items[' + index + '][description]'" x-model="item.description" placeholder="Désignation…" class="{{ $tdIn }} min-w-[88px]"></td>
                                         <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][quantity]'" x-model.number="item.quantity" min="1" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[40px] text-right"></td>
-                                        <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right"></td>
+                                        {{-- [Ventes] Unité de la ligne, héritée de l'article et modifiable. --}}
+                                        <td class="px-2 py-1">
+                                            <div class="relative">
+                                                <select :name="'items[' + index + '][unit_id]'" x-model.number="item.unit_id" class="{{ $lk }} !h-8 min-w-[64px] text-[12px]">
+                                                    <option value="">—</option>
+                                                    @foreach($units ?? [] as $unit)<option value="{{ $unit->id }}">{{ $unit->abbreviation ?: $unit->name }}</option>@endforeach
+                                                </select>{!! $caret !!}
+                                            </div>
+                                        </td>
+                                        <td class="px-2 py-1">
+                                            <input type="number" :name="'items[' + index + '][unit_price]'" x-model.number="item.unit_price" min="0" step="1" class="{{ $tdIn }} min-w-[64px] text-right">
+                                            {{-- [CDC Tarifaire] Cet écran ne consultait PAS le service tarifaire :
+                                                 ni plancher, ni plafond — sur le document qui FACTURE. Le plancher
+                                                 exige une dérogation tracée (`sales_below_floor.request`). --}}
+                                            {{-- [BUG-A3-SALES-ZERO-PRICE-026] « Prix à saisir » n'est pas « sous le
+                                                 plancher » : sans tarif défini, l'écran affichait 0 sans rien dire.
+                                                 Sous un prix qui n'existe pas encore, il n'y a rien à déroger. --}}
+                                            <span x-show="item._manual_price" x-cloak class="block text-[11px] text-orange-600 font-bold mt-0.5 whitespace-nowrap"
+                                                  title="Aucun tarif n'est défini pour cet article : saisissez le prix. Une ligne à 0 sera refusée.">✎ prix à saisir</span>
+                                            <span x-show="item._below_floor && !item._manual_price" x-cloak class="block text-[11px] text-red-600 font-bold mt-0.5 whitespace-nowrap"
+                                                  :title="'Prix plancher : ' + formatNum(item._floor) + ' F — une vente en dessous exige une dérogation motivée.'">⛔ &lt; plancher</span>
+                                            <span x-show="item._above_ceiling && !item._below_floor" x-cloak class="block text-[11px] text-amber-600 font-semibold mt-0.5 whitespace-nowrap"
+                                                  :title="'Prix plafond conseillé : ' + formatNum(item._ceiling) + ' F'">⚠ &gt; plafond</span>
+                                        </td>
                                         <td class="px-2 py-1"><input type="number" :name="'items[' + index + '][discount_percent]'" x-model.number="item.discount_percent" min="0" max="100" step="1" inputmode="numeric" class="{{ $tdIn }} min-w-[44px] text-right"></td>
                                         <td class="px-2 py-1 text-right tabular-nums text-gray-700 font-medium text-[12.5px] whitespace-nowrap" x-text="formatNum(lineHt(item))"></td>
                                         <td class="px-2 py-1">
@@ -304,6 +342,37 @@ window._invoiceFormData = {
                             <p class="text-[12px] font-bold text-gray-700">Total TTC</p>
                             <p class="text-[17px] font-bold text-emerald-700 tabular-nums" x-text="formatNum(totalTtc) + ' XOF'"></p>
                         </div>
+                        {{-- [Ventes] MARGE. `unit_cost` existait deja sur `invoice_items`
+                             mais n'etait affiche nulle part : le commercial facturait sans
+                             voir sa marge. Cout FIGE a la saisie -- le CUMP bouge a chaque
+                             reception. Reserve a `sales.view_margin`. --}}
+                        @can('sales.view_margin')
+                        <div class="border-t border-gray-200 pt-2.5 space-y-2">
+                            <div class="flex justify-between text-[13px] text-gray-600">
+                                <span>Cout total</span>
+                                <span class="tabular-nums font-medium" :class="totalCost !== null ? '' : 'text-gray-400'"
+                                      x-text="totalCost !== null ? formatNum(totalCost) + ' XOF' : '—'"></span>
+                            </div>
+                            <div class="flex justify-between text-[13px]">
+                                <span class="font-semibold text-gray-700">Marge brute</span>
+                                <span class="tabular-nums font-bold px-1.5 rounded-[3px]"
+                                      :class="totalMargin === null ? 'text-gray-400' : (totalMargin < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-900')"
+                                      x-text="totalMargin !== null ? formatNum(totalMargin) + ' XOF' : '—'"></span>
+                            </div>
+                            <div class="flex justify-between text-[13px]">
+                                <span class="font-semibold text-gray-700">Taux de marge</span>
+                                <span class="tabular-nums font-bold px-1.5 rounded-[3px]"
+                                      :class="marginRate === null ? 'text-gray-400' : (marginRate < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-900')"
+                                      x-text="marginRate !== null ? formatNum(marginRate) + ' %' : '—'"></span>
+                            </div>
+                            {{-- Un « — » peut venir d'un cout manquant : on le dit plutot que
+                                 de laisser croire a une marge nulle. --}}
+                            <div class="flex justify-between text-[12px]" x-show="linesWithoutCost > 0" x-cloak>
+                                <span class="text-amber-700">Lignes sans cout</span>
+                                <span class="tabular-nums font-semibold text-amber-700" x-text="linesWithoutCost + ' a verifier'"></span>
+                            </div>
+                        </div>
+                        @endcan
                         <template x-if="withholdings.length > 0">
                             <div class="space-y-1 pt-1">
                                 <template x-for="w in withholdings" :key="w.short_name">
@@ -328,10 +397,10 @@ window._invoiceFormData = {
                         <div class="relative"><select name="delivery_note_id" x-ref="dnSelect" class="{{ $lk }}"><option value="">—</option>@foreach($deliveryNotes ?? [] as $dn)<option value="{{ $dn->id }}" @selected(old('delivery_note_id', $inv?->delivery_note_id)==$dn->id)>{{ $dn->number }}</option>@endforeach</select>{!! $caret !!}</div>
                     </div>
                     <div class="sm:col-span-2"><label class="{{ $lbl }}">Date de livraison</label><input type="date" name="delivery_date" value="{{ old('delivery_date', optional($inv?->delivery_date)->format('Y-m-d')) }}" class="{{ $inp }}"></div>
-                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Transporteur</label><input type="text" name="carrier" maxlength="80" value="{{ old('carrier', $inv?->carrier) }}" class="{{ $inp }}" placeholder="TRANSPORT PLUS"></div>
-                    <div class="sm:col-span-2"><label class="{{ $lbl }}">N° de véhicule</label><input type="text" name="vehicle_number" maxlength="30" value="{{ old('vehicle_number', $inv?->vehicle_number) }}" class="{{ $inp }} font-mono uppercase" placeholder="11 BF 2567"></div>
-                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $inv?->delivery_location) }}" class="{{ $inp }}" placeholder="Chantier – Kossodo"></div>
-                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Poids total (kg)</label><input type="number" step="0.01" min="0" name="total_weight_kg" value="{{ old('total_weight_kg', $inv?->total_weight_kg) }}" class="{{ $inpR }}" placeholder="4 820,000"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Transporteur</label><input type="text" name="carrier" maxlength="80" value="{{ old('carrier', $inv?->carrier) }}" class="{{ $inp }}" placeholder="Ex. : TRANSPORT PLUS"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">N° de véhicule</label><input type="text" name="vehicle_number" maxlength="30" value="{{ old('vehicle_number', $inv?->vehicle_number) }}" class="{{ $inp }} font-mono uppercase" placeholder="Ex. : 11 BF 2567"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Lieu de livraison</label><input type="text" name="delivery_location" maxlength="100" value="{{ old('delivery_location', $inv?->delivery_location) }}" class="{{ $inp }}" placeholder="Ex. : Chantier – Kossodo"></div>
+                    <div class="sm:col-span-2"><label class="{{ $lbl }}">Poids total (kg)</label><input type="number" step="0.01" min="0" name="total_weight_kg" value="{{ old('total_weight_kg', $inv?->total_weight_kg) }}" class="{{ $inpR }}" placeholder="Ex. : 4 820,000"></div>
                 </div>
             </section>
 
@@ -394,6 +463,23 @@ function invoiceFormVentes() {
     } = window._invoiceFormData;
     const dtr = parseFloat(window._invoiceFormData.defaultTaxRate) || 18;
 
+    /**
+     * [Ventes] Cout unitaire d'un article, MEME ordre de priorite que
+     * SalesLineDefaultsService::resolveUnitCost() cote serveur : CUMP, cout standard,
+     * dernier prix d'achat, prix d'achat de reference.
+     *
+     * Un zero n'est jamais retenu : il afficherait 100 % de marge et masquerait le cas
+     * a surveiller, un article sans cout renseigne. Renvoie null aussi sans
+     * `sales.view_margin`, le serveur ne serialisant alors aucun cout.
+     */
+    function resolveCost(p) {
+        for (const attr of ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']) {
+            const v = parseFloat(p?.[attr] ?? 0);
+            if (v > 0) return Math.round(v * 100) / 100;
+        }
+        return null;
+    }
+
     let _nextKey = 1;
 
     function mapItem(i) {
@@ -401,6 +487,8 @@ function invoiceFormVentes() {
             _key:             _nextKey++,
             product_id:       i.product_id       ?? '',
             description:      i.description      ?? '',
+            unit_id:          i.unit_id          ?? '',
+            unit_cost:        i.unit_cost != null ? parseFloat(i.unit_cost) : null,
             quantity:         parseInt(i.quantity, 10) || 1,
             unit_price:       parseFloat(i.unit_price)       || 0,
             discount_percent: parseFloat(i.discount_percent) || 0,
@@ -433,6 +521,9 @@ function invoiceFormVentes() {
         clientExemptions:       clientExemptions   || {},
         defaultTaxRate:         dtr,
         priceMode:              @js($pm),
+        // [UI] Devise réactive : le taux de change ne s'affiche qu'en devise étrangère.
+        currencyCode:           @js(old('currency_code', $inv->currency_code ?? 'XOF')),
+        exchangeRate:           {{ (float) old('exchange_rate', $inv?->exchange_rate ?? 1) }},
         // [CDC] Exonération TVA : client exonéré OU mode de vente « exonéré ».
         get taxExempt() { return this.isClientTaxExempt || this.priceMode === 'exonere'; },
         onPriceModeChange() {
@@ -447,6 +538,32 @@ function invoiceFormVentes() {
         importing:              false,
         _nextKey,
 
+        // ── [Ventes] Marge ─────────────────────────────────────────────────
+        // Cout FIGE sur la ligne, jamais relu a la volee. Une ligne sans cout est
+        // EXCLUE du calcul et signalee, jamais comptee comme un cout nul.
+        get costedItems() {
+            return this.items.filter(i => i.unit_cost != null && parseFloat(i.unit_cost) > 0);
+        },
+        get linesWithoutCost() {
+            return this.items.filter(i => (i.product_id || i.description?.trim()) && (i.unit_cost == null || parseFloat(i.unit_cost) <= 0)).length;
+        },
+        get totalCost() {
+            if (!this.costedItems.length) return null;
+            return this.costedItems.reduce((sum, i) => sum + parseFloat(i.unit_cost) * (parseFloat(i.quantity) || 0), 0);
+        },
+        get totalMargin() {
+            if (this.totalCost === null) return null;
+            // CA des SEULES lignes valorisees : comparer tout le HT a un cout partiel
+            // gonflerait artificiellement la marge.
+            const revenue = this.costedItems.reduce((sum, i) => sum + this.lineHt(i), 0);
+            return revenue - this.totalCost;
+        },
+        get marginRate() {
+            if (this.totalMargin === null) return null;
+            const revenue = this.costedItems.reduce((sum, i) => sum + this.lineHt(i), 0);
+            if (revenue <= 0) return null;
+            return Math.round((this.totalMargin / revenue) * 1000) / 10;
+        },
         get isClientTaxExempt() {
             if (!this.clientId) return false;
             return !!this.clientExemptions[this.clientId];
@@ -504,7 +621,7 @@ function invoiceFormVentes() {
             return this.lineHt(item) + this.lineTax(item);
         },
         addItem() {
-            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, unit_price: 0, discount_percent: 0, tax_rate_value: this.taxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
+            this.items.push({ _key: this._nextKey++, product_id: '', description: '', quantity: 1, unit_id: '', unit_cost: null, unit_price: 0, discount_percent: 0, tax_rate_value: this.taxExempt ? 0 : this.defaultTaxRate, _ps_open: false, _ps_search: '', _ps_rect: null });
         },
         removeItem(index) { this.items.splice(index, 1); },
         /** [Maquette] Charge les lignes de la commande sélectionnée. */
@@ -543,7 +660,41 @@ function invoiceFormVentes() {
                 if (!this.items[index].description.trim()) this.items[index].description = p.name;
                 this.items[index].unit_price = parseFloat(p.sale_price) || 0;
                 this.items[index].tax_rate_value = this.taxExempt ? 0 : (p.tax_rate?.rate != null ? parseFloat(p.tax_rate.rate) : (this.defaultTaxRate ?? dtr));
+                // [Ventes] Unite heritee : unite de VENTE d'abord, unite de gestion
+                // ensuite. Un article gere au kilo peut se vendre a la barre.
+                this.items[index].unit_id = p.sale_unit_id ?? p.unit_id ?? '';
+                // [Ventes] Cout fige pour la marge.
+                this.items[index].unit_cost = resolveCost(p);
+                this.fetchAdvisedPrice(index);
             }
+        },
+        /**
+         * [CDC Tarifaire] Plancher et plafond resolus par SalesPricingService. Cet
+         * ecran ne l'appelait pas : la facture -- document qui engage comptablement --
+         * n'offrait aucune garde de prix.
+         */
+        async fetchAdvisedPrice(index) {
+            const item = this.items[index];
+            if (!item.product_id) return;
+            try {
+                const params = new URLSearchParams({
+                    product_id: item.product_id,
+                    client_id: this.clientId || '',
+                    qty: item.quantity || 1,
+                });
+                if (item.unit_id) params.set('unit_id', item.unit_id);
+                const r = await fetch('{{ route('ventes.api.prix') }}?' + params, { headers: { 'Accept': 'application/json' } });
+                if (!r.ok) return;
+                const d = await r.json();
+                // La ligne a pu changer d'article pendant la requete.
+                if (this.items[index]?.product_id !== item.product_id) return;
+                this.items[index]._below_floor   = !!d.below_floor;
+                this.items[index]._manual_price  = !!d.requires_manual_price;
+                this.items[index]._floor         = d.floor || 0;
+                this.items[index]._above_ceiling = !!d.above_ceiling;
+                this.items[index]._ceiling       = d.ceiling || 0;
+                if (d.unit_id) this.items[index].unit_id = d.unit_id;
+            } catch (e) { /* reseau indisponible : prix de base conserve */ }
         },
         // XOF sans centimes : décimales affichées seulement si présentes (gain de place colonnes)
         formatNum(n) { return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Math.round((n || 0) * 100) / 100); },

@@ -41,8 +41,15 @@ class ItemCategorySeeder extends Seeder
              'strategy' => 'service', 'is_purchasable' => true, 'is_stockable' => false, 'sort_order' => 70],
             ['code' => 'SERVICE_VENTE', 'name' => 'Prestations vendues', 'nature' => 'service',
              'strategy' => 'service', 'is_sellable' => true, 'is_stockable' => false, 'sort_order' => 80],
+            // Hors du catalogue de vente standard, comme les rebuts : un sous-produit
+            // se déclare en production, se pèse et se valorise, il ne se vend pas au
+            // fil des commandes. La cession de déchets et ferrailles reste possible,
+            // mais comme décision explicite sur l'article — pas comme défaut hérité.
+            // `is_sellable` est recopié sur chaque article créé sous la catégorie
+            // (CategoryDefaultsService) : le laisser à `true` ici faisait naître
+            // vendable chaque nouveau sous-produit.
             ['code' => 'SOUS_PRODUIT', 'name' => 'Sous-produits et chutes réutilisables', 'nature' => 'sous_produit',
-             'strategy' => 'mts', 'is_sellable' => true, 'is_stockable' => true, 'sort_order' => 90],
+             'strategy' => 'mts', 'is_sellable' => false, 'is_stockable' => true, 'sort_order' => 90],
             ['code' => 'REBUT', 'name' => 'Rebuts industriels', 'nature' => 'rebut',
              'is_sellable' => false, 'is_stockable' => true, 'sort_order' => 100],
         ];

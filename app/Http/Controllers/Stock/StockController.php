@@ -27,7 +27,7 @@ class StockController extends Controller
     /**
      * Display the stock levels (niveaux de stock).
      */
-    public function index(Request $request): View
+    public function index(Request $request, \App\Services\StockInsightsService $insights): View
     {
         $this->authorize('viewAny', StockMovement::class);
         $filters = $request->only(['search', 'warehouse_id', 'low_stock']);
@@ -35,16 +35,13 @@ class StockController extends Controller
         $stocks     = $this->stockService->getStockSummary($filters);
         $warehouses = Warehouse::active()->orderBy('name')->get();
 
-        // Count of products with available qty <= stock_min (proactive alert)
-        $lowStockCount = ProductStock::whereHas('product', function ($q) {
-            $q->where('is_active', true)->whereRaw('products.stock_min > 0');
-        })->whereRaw('(product_stocks.quantity - product_stocks.reserved_quantity) <= (SELECT stock_min FROM products WHERE id = product_stocks.product_id)')
-          ->count();
-
-        // Count products completely out of stock
-        $ruptureCount = ProductStock::whereHas('product', fn($q) => $q->where('is_active', true))
-            ->whereRaw('(product_stocks.quantity - product_stocks.reserved_quantity) <= 0')
-            ->count();
+        // [Cohérence stock] Ces deux compteurs étaient calculés ici avec leurs
+        // propres formules : `<=` au lieu de `<`, et des LIGNES de stock au lieu
+        // d'ARTICLES. Le tableau de bord répondait donc autrement à la même
+        // question, et un article à zéro se comptait deux fois. Source unique
+        // désormais : StockInsightsService.
+        $lowStockCount = $insights->compter($insights->sousMinimumQuery());
+        $ruptureCount  = $insights->compter($insights->ruptureQuery());
 
         return view('stocks.index', compact('stocks', 'warehouses', 'filters', 'lowStockCount', 'ruptureCount'));
     }

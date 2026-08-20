@@ -51,7 +51,15 @@ function siaInvoice(): App\Models\Invoice
         ]],
     ]);
 
-    return app(InvoiceService::class)->createFromOrder($order);
+    // [Ventes §21.2] La facturation est limitée aux quantités LIVRÉES : facturer
+    // une commande dont rien n'est sorti constaterait un produit (compte 70) et une
+    // TVA collectée exigible avant tout transfert de propriété. Le sujet de ce test
+    // est l'écriture comptable, pas le circuit de livraison — on marque donc la
+    // ligne comme livrée intégralement pour placer la commande dans l'état où une
+    // facture est légitime.
+    $order->items()->update(['delivered_quantity' => 10]);
+
+    return app(InvoiceService::class)->createFromOrder($order->fresh());
 }
 
 it('validation facture → écriture comptable équilibrée avec TVA collectée', function () {

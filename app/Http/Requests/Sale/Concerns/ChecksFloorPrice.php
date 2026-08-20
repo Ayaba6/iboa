@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Sale\Concerns;
 
 use App\Models\Product;
+use App\Services\Sales\CommercialLinePriceRule;
 use App\Services\SalesPriceGuardService;
 use Illuminate\Validation\Validator;
 
@@ -31,6 +32,38 @@ trait ChecksFloorPrice
                 ])
                 ->filter(fn ($floor) => $floor > 0);
 
+            // [BUG-A3-SALES-ZERO-PRICE-026] GARDE 1 — prix net nul, contrôlée
+            // sur TOUTES les lignes, y compris celles dont l'article n'a aucun
+            // plancher connu. C'est précisément ce cas qui laissait passer une
+            // vente gratuite : `$floors` est filtré sur `floor > 0`, donc un
+            // article sans coût en était absent et échappait à tout contrôle.
+            //
+            // Le calcul porte sur le prix NET : une remise de 100 % produit une
+            // gratuité que `unit_price` seul ne révèle pas.
+            foreach ($items as $i => $item) {
+                if (! ($item['product_id'] ?? null)) {
+                    continue;
+                }
+
+                $devise = $this->input('currency_code');
+
+                $net = CommercialLinePriceRule::montantNetLigne(
+                    (float) ($item['unit_price'] ?? 0),
+                    (float) ($item['quantity'] ?? 1),
+                    (float) ($item['discount_percent'] ?? 0),
+                    0,
+                    $devise,
+                );
+
+                if (CommercialLinePriceRule::estGratuit($net, $devise)) {
+                    $v->errors()->add("items.$i.unit_price", sprintf(
+                        'Ligne %d : %s', $i + 1,
+                        CommercialLinePriceRule::messageGratuite(),
+                    ));
+                }
+            }
+
+            // GARDE 2 — sous le plancher, dérogeable.
             foreach ($items as $i => $item) {
                 $pid = $item['product_id'] ?? null;
                 if (! $pid || ! isset($floors[$pid])) {

@@ -14,9 +14,9 @@
 
 <div {{ $attributes->merge(['class' => 'flex flex-col sm:flex-row sm:items-center justify-between gap-2']) }}>
     <div>
-        <h1 class="text-[17px] font-bold text-gray-900">{{ $title }}</h1>
+        <h1 class="text-[20px] font-bold text-gray-900">{{ $title }}</h1>
         @if($subtitle)
-            <p class="text-xs text-gray-400 mt-0.5">{{ $subtitle }}</p>
+            <p class="text-[12px] text-gray-400 mt-0.5">{{ $subtitle }}</p>
         @endif
     </div>
     @if(trim($slot))

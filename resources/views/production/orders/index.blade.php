@@ -14,7 +14,7 @@
     $lk  = 'appearance-none w-full h-8 py-0 pl-2 pr-7 border border-[#c3d3c9] rounded-[3px] text-[13px] bg-white focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-400';
     $caret = '<span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[11px]">&#9662;</span>';
     $th  = 'px-2 py-1.5 text-[11px] font-semibold uppercase whitespace-nowrap';
-    $originLabels = ['manuel' => 'Manuel', 'commande_client' => 'Cde client', 'stock_minimum' => 'Stock mini', 'mrp' => 'MRP'];
+    $originLabels = \App\Modules\Production\Models\ProductionOrder::ORIGIN_LABELS_SHORT;
 @endphp
 <div class="space-y-4">
 

@@ -4,6 +4,7 @@ namespace App\Modules\Production\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Production\Services\MrpService;
+use App\Modules\Production\Services\TransferProposalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,7 +16,7 @@ class MrpController extends Controller
 {
     public function __construct(private MrpService $mrp)
     {
-        $this->middleware('permission:production.view')->only(['index', 'ofProposals']);
+        $this->middleware('permission:production.view')->only(['index', 'ofProposals', 'transferProposals']);
         $this->middleware('permission:production.update')->only('generate');
         // Generer des OF, c'est creer des documents de production : le droit de
         // consulter le MRP ne suffit pas.
@@ -96,5 +97,24 @@ class MrpController extends Controller
         }
 
         return redirect()->route('production.orders.index')->with('success', $message);
+    }
+
+    /**
+     * [MRP] Propositions de transfert entre depots.
+     *
+     * Ecran de LECTURE : il propose, il ne transfere pas. L'execution reste au
+     * module Stock, qui porte deja ses controles et sa tracabilite.
+     */
+    public function transferProposals(TransferProposalService $transfers): View
+    {
+        $proposals = $transfers->proposals();
+
+        return view('production.mrp.transfers', [
+            'proposals' => $proposals,
+            'stats'     => [
+                'count'    => $proposals->count(),
+                'quantite' => (float) $proposals->sum('quantite'),
+            ],
+        ]);
     }
 }

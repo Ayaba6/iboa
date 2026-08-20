@@ -13,8 +13,8 @@
     {{-- Header --}}
     @if($showTitle)
     <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900">Pièces jointes</h3>
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+        <h3 class="text-[15px] font-semibold text-gray-900">Pièces jointes</h3>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-medium bg-gray-100 text-gray-700"
               x-text="attachments.length === 0 ? 'Aucun fichier' : attachments.length + ' fichier' + (attachments.length !== 1 ? 's' : '')">Aucun fichier</span>
     </div>
     @endif
@@ -33,8 +33,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <div>
-                <p class="text-sm font-medium text-gray-700">Cliquez pour ajouter ou glissez-déposez</p>
-                <p class="text-xs text-gray-500">Formats : images, PDF, Excel, Word, CSV (max 10 MB)</p>
+                <p class="text-[13px] font-medium text-gray-700">Cliquez pour ajouter ou glissez-déposez</p>
+                <p class="text-[12px] text-gray-500">Formats : images, PDF, Excel, Word, CSV (max 10 MB)</p>
             </div>
         </button>
 
@@ -43,7 +43,7 @@
                 <div class="w-full bg-gray-200 rounded-full h-1.5">
                     <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" :style="'width: ' + uploadProgress + '%'"></div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2"><span x-text="uploadProgress"></span>%</p>
+                <p class="text-[12px] text-gray-500 mt-2"><span x-text="uploadProgress"></span>%</p>
             </div>
         </template>
     </div>
@@ -54,7 +54,7 @@
             <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
             </svg>
-            <p class="text-sm text-red-700" x-text="error"></p>
+            <p class="text-[13px] text-red-700" x-text="error"></p>
         </div>
     </template>
 
@@ -90,13 +90,13 @@
 
                         {{-- File Info --}}
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate" :title="attachment.filename" x-text="attachment.filename"></p>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-[13px] font-medium text-gray-900 truncate" :title="attachment.filename" x-text="attachment.filename"></p>
+                            <p class="text-[12px] text-gray-500">
                                 <span x-text="attachment.size"></span> •
                                 <span x-text="attachment.created_at"></span>
                             </p>
                             <template x-if="attachment.label">
-                                <p class="text-xs text-gray-600 mt-1 italic">"<span x-text="attachment.label"></span>"</p>
+                                <p class="text-[12px] text-gray-600 mt-1 italic">"<span x-text="attachment.label"></span>"</p>
                             </template>
                         </div>
                     </div>
@@ -129,7 +129,7 @@
             <svg class="w-12 h-12 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            <p class="text-sm">Aucune pièce jointe</p>
+            <p class="text-[13px]">Aucune pièce jointe</p>
         </div>
     </template>
 </div>

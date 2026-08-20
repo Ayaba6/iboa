@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use App\Models\PurchaseOrder;
 
 /**
  * [ACHATS-PRO] Indicateurs avancés du module Achats :
@@ -22,19 +23,19 @@ class PurchaseInsightsService
         // POs en cours = brouillon + envoyé + confirmé (non terminés)
         $openPoCount = DB::table('purchase_orders')
             ->whereNull('deleted_at')
-            ->whereIn('status', ['brouillon', 'envoyee', 'confirmee', 'partiellement_recue'])
+            ->whereIn('status', PurchaseOrder::STATUSES_OPEN)
             ->count();
 
         $openPoValue = (int) DB::table('purchase_orders')
             ->whereNull('deleted_at')
-            ->whereIn('status', ['brouillon', 'envoyee', 'confirmee', 'partiellement_recue'])
+            ->whereIn('status', PurchaseOrder::STATUSES_OPEN)
             ->sum('total_ttc');
 
         // À recevoir = PO confirmées avec qté commandée > qté reçue
         $awaitingReceipt = (int) DB::table('purchase_orders as po')
             ->join('purchase_order_items as poi', 'poi.purchase_order_id', '=', 'po.id')
             ->whereNull('po.deleted_at')
-            ->whereIn('po.status', ['confirmee', 'partiellement_recue', 'envoyee'])
+            ->whereIn('po.status', PurchaseOrder::STATUSES_AWAITING_RECEIPT)
             ->whereColumn('poi.received_quantity', '<', 'poi.quantity')
             ->distinct('po.id')
             ->count('po.id');
@@ -138,14 +139,9 @@ class PurchaseInsightsService
             ->groupBy('status')
             ->get();
 
-        $labels = [
-            'brouillon'           => 'Brouillon',
-            'confirmee'           => 'Confirmée',
-            'partiellement_recue' => 'Partiellement reçue',
-            'recue'               => 'Reçue',
-            'facture'             => 'Facturée',
-            'annulee'             => 'Annulée',
-        ];
+        // Aucune de ces cles ne correspondait a l'enumeration reelle : le
+        // regroupement par statut rendait donc des libelles vides.
+        $labels = PurchaseOrder::STATUS_LABELS;
 
         $result = [];
         foreach ($labels as $k => $label) {
@@ -273,7 +269,7 @@ class PurchaseInsightsService
             ->leftJoin(DB::raw('(SELECT purchase_order_item_id, SUM(received_quantity) AS recv FROM reception_items GROUP BY purchase_order_item_id) AS r'),
                 'r.purchase_order_item_id', '=', 'poi.id')
             ->whereNull('po.deleted_at')
-            ->whereIn('po.status', ['confirmee', 'partiellement_recue', 'recue', 'envoyee'])
+            ->whereIn('po.status', PurchaseOrder::STATUSES_RECEIVED)
             ->whereRaw('(ABS(COALESCE(r.recv, 0) - poi.quantity) > 0.0001 OR ABS(poi.invoiced_quantity - COALESCE(r.recv, 0)) > 0.0001)')
             ->select(
                 'po.id as po_id', 'po.number as po_number', 'po.ordered_at',
@@ -367,7 +363,7 @@ class PurchaseInsightsService
                 FROM purchase_order_items poi
                 JOIN purchase_orders po ON po.id = poi.purchase_order_id
                 WHERE po.deleted_at IS NULL
-                  AND po.status IN ('confirmee','partiellement_recue','recue')
+                  AND po.status IN ('confirme','partiellement_recu','recu')
                   AND po.ordered_at >= '{$from->toDateString()}'
                 GROUP BY po.supplier_id
             ) as sv"), 'sv.supplier_id', '=', 's.id')

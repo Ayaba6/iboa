@@ -87,6 +87,16 @@
         </div>
     </div>
 
+    {{-- Les compteurs ci-dessus portent sur la même population que la liste.
+         Ce qui en est retiré doit rester visible, sinon le total paraît faux. --}}
+    @if(($stats['archivees'] ?? 0) > 0)
+        <div class="bg-amber-50 border border-amber-200 rounded-[4px] px-4 py-2 text-[12.5px] text-amber-900 flex items-center gap-2">
+            <span>{{ $stats['archivees'] }} famille(s) archivée(s) ne sont pas comptées ci-dessus.</span>
+            <a href="{{ request()->fullUrlWithQuery(['statut' => 'toutes']) }}"
+               class="font-semibold underline hover:text-amber-950">Les afficher</a>
+        </div>
+    @endif
+
     {{-- Table --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-x-auto">
         @if($isFam)

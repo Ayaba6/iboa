@@ -13,8 +13,8 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Retours fournisseurs</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $returns->total() }} retour(s)</p>
+            <h1 class="text-[15px] font-bold text-gray-900">Retours fournisseurs</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $returns->total() }} retour(s)</p>
         </div>
         @can('supplier_returns.create')
         <a href="{{ route('achats.retours-fournisseurs.create') }}"
@@ -31,9 +31,9 @@
     <form method="GET" class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, fournisseur..."
-                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
 
-            <select name="supplier_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+            <select name="supplier_id" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Tous les fournisseurs</option>
                 @foreach($suppliers as $supplier)
                     <option value="{{ $supplier->id }}" {{ ($filters['supplier_id'] ?? '') == $supplier->id ? 'selected' : '' }}>
@@ -42,7 +42,7 @@
                 @endforeach
             </select>
 
-            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon"        {{ ($filters['status'] ?? '') === 'brouillon'        ? 'selected' : '' }}>Brouillon</option>
                 <option value="valide"           {{ ($filters['status'] ?? '') === 'valide'           ? 'selected' : '' }}>Validé</option>
@@ -53,12 +53,12 @@
 
             <div class="flex gap-2">
                 <button type="submit"
-                        class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
+                        class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search', 'supplier_id', 'status']))
                 <a href="{{ route('achats.retours-fournisseurs.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px] transition-colors">
                     ✕
                 </a>
                 @endif
@@ -69,7 +69,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-[12.5px] border-collapse">
+            <table class="w-full text-[12px] border-collapse">
                 <thead>
                     <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
                         <th class="text-left font-bold px-3 py-2 uppercase tracking-wide w-32">N° retour</th>
@@ -158,13 +158,13 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-16 text-center text-gray-400 text-sm">Aucun retour trouvé.</td>
+                        <td colspan="7" class="px-4 py-16 text-center text-gray-400 text-[13px]">Aucun retour trouvé.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
             <span>{{ $returns->total() }} retour(s) fournisseur</span>
             @if($returns->hasPages())<div>{{ $returns->appends($filters)->links() }}</div>@endif
         </div>

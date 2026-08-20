@@ -68,7 +68,21 @@ it('parcourt Devis → Commande → Validation → OF → Réservation → Produ
     $company = chainCompany();
     $this->actingAs($user);
 
-    $client  = Client::factory()->create(['is_active' => true]);
+    // [Stabilité] Plafond de crédit FIXÉ, jamais tiré au sort.
+    //
+    // `ClientFactory` choisit `credit_limit` au hasard parmi
+    // [500 000, 1 000 000, 2 000 000, 5 000 000]. La commande de ce parcours vaut
+    // 50 × 10 000 = 500 000 HT, soit 590 000 TTC : au tirage « 500 000 », la garde
+    // d'encours bloquait la soumission et le test échouait. Une fois sur quatre,
+    // sur n'importe quel moteur — instabilité qui ressemblait à un écart
+    // SQLite/MySQL sans en être un.
+    //
+    // Le sujet de ce test est la CHAÎNE devis → encaissement, pas le contrôle de
+    // crédit, qui a ses propres tests. Le plafond est donc mis hors de portée.
+    $client  = Client::factory()->create([
+        'is_active'    => true,
+        'credit_limit' => 50_000_000,
+    ]);
     $unit    = Unit::firstOrCreate(['name' => 'Pièce CH'], ['abbreviation' => 'pcch']);
     $taxRate = TaxRate::firstOrCreate(['name' => 'TVA 18% CH'], ['short_name' => 'TVA18CH', 'rate' => 18, 'is_active' => true]);
 

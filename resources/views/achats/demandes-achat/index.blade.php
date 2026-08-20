@@ -13,28 +13,28 @@
     {{-- KPI summary bar --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Total demandes</p>
-            <p class="text-[16px] font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
+            <p class="text-[12px] text-gray-500">Total demandes</p>
+            <p class="text-[15px] font-bold text-gray-900 tabular-nums">{{ $summary['total'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Soumises</p>
-            <p class="text-[16px] font-bold text-blue-600 tabular-nums">{{ $summary['pending'] }}</p>
+            <p class="text-[12px] text-gray-500">Soumises</p>
+            <p class="text-[15px] font-bold text-blue-600 tabular-nums">{{ $summary['pending'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Approuvées</p>
-            <p class="text-[16px] font-bold text-emerald-600 tabular-nums">{{ $summary['approved'] }}</p>
+            <p class="text-[12px] text-gray-500">Approuvées</p>
+            <p class="text-[15px] font-bold text-emerald-600 tabular-nums">{{ $summary['approved'] }}</p>
         </div>
         <div class="bg-white rounded-[4px] border border-gray-300 px-3 py-1.5">
-            <p class="text-xs text-gray-500">Brouillons</p>
-            <p class="text-[16px] font-bold text-gray-500 tabular-nums">{{ $summary['draft'] }}</p>
+            <p class="text-[12px] text-gray-500">Brouillons</p>
+            <p class="text-[15px] font-bold text-gray-500 tabular-nums">{{ $summary['draft'] }}</p>
         </div>
     </div>
 
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-[16px] font-bold text-gray-900">Demandes d'achat</h1>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $requests->total() }} demande(s)</p>
+            <h1 class="text-[15px] font-bold text-gray-900">Demandes d'achat</h1>
+            <p class="text-[13px] text-gray-500 mt-0.5">{{ $requests->total() }} demande(s)</p>
         </div>
         @can('purchase_requests.create')
         <a href="{{ route('achats.demandes-achat.create') }}"
@@ -51,9 +51,9 @@
     <form method="GET" data-autosubmit class="bg-white rounded-[4px] border border-gray-300 p-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Numéro, demandeur..."
-                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
 
-            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+            <select name="status" class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Tous les statuts</option>
                 <option value="brouillon" {{ ($filters['status'] ?? '') === 'brouillon' ? 'selected' : '' }}>Brouillon</option>
                 <option value="soumis"    {{ ($filters['status'] ?? '') === 'soumis'    ? 'selected' : '' }}>Soumis</option>
@@ -63,15 +63,15 @@
             </select>
 
             <input type="text" name="department" value="{{ $filters['department'] ?? '' }}" placeholder="Département..."
-                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
+                   class="border border-gray-300 rounded-[4px] px-3 py-2 text-[13px] focus:ring-1 focus:ring-amber-500 focus:border-amber-500">
 
             <div class="flex gap-2">
-                <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-3 py-1.5 rounded-[4px] transition-colors">
+                <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px] transition-colors">
                     Filtrer
                 </button>
                 @if(request()->hasAny(['search', 'status', 'department']))
                 <a href="{{ route('achats.demandes-achat.index') }}"
-                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm px-2.5 py-1.5 rounded-[4px] transition-colors">✕</a>
+                   class="border border-gray-300 text-gray-600 hover:bg-gray-50 text-[13px] px-2.5 py-1.5 rounded-[4px] transition-colors">✕</a>
                 @endif
             </div>
         </div>
@@ -80,7 +80,7 @@
     {{-- Liste style SAGE X3 : grille dense, codes mono, workflow soumission/approbation --}}
     <div class="bg-white border border-gray-300 rounded-[4px] overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-[12.5px] border-collapse">
+            <table class="w-full text-[12px] border-collapse">
                 <thead>
                     <tr class="bg-[#eef5f0] text-emerald-900 border-b border-gray-300">
                         <th class="text-left font-bold px-3 py-2 uppercase tracking-wide w-36">N° demande</th>
@@ -107,7 +107,7 @@
                             @if($req->needed_at)
                                 @php $urgent = $req->needed_at->isPast() && !in_array($req->status, ['approuve','converti','annule']); @endphp
                                 <span class="{{ $urgent ? 'text-red-600 font-medium' : '' }}">{{ $req->needed_at->format('d/m/Y') }}</span>
-                                @if($urgent)<span class="ml-1 inline-flex px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold bg-red-100 text-red-700">URGENT</span>@endif
+                                @if($urgent)<span class="ml-1 inline-flex px-1.5 py-0.5 rounded-[3px] text-[11px] font-bold bg-red-100 text-red-700">URGENT</span>@endif
                             @else
                                 <span class="text-gray-300">—</span>
                             @endif
@@ -180,13 +180,13 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-16 text-center text-gray-400 text-sm">Aucune demande d'achat trouvée.</td>
+                        <td colspan="7" class="px-4 py-16 text-center text-gray-400 text-[13px]">Aucune demande d'achat trouvée.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11.5px] text-gray-500">
+        <div class="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-[#f7faf8] text-[11px] text-gray-500">
             <span>{{ $requests->total() }} demande(s) d'achat</span>
             @if($requests->hasPages())<div>{{ $requests->appends($filters)->links() }}</div>@endif
         </div>

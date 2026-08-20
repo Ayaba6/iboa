@@ -76,18 +76,49 @@ class QuoteController extends Controller
 
         $clients        = Client::active()->orderBy('name')
             ->get(['id', 'name', 'trade_name', 'phone', 'mobile', 'email', 'address', 'city', 'default_discount', 'payment_terms', 'payment_days', 'is_tax_exempt']);
-        $products       = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->withSum('productStocks as reserved_qty', 'reserved_quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
+
+        // [Ventes] Le COÛT n'est exposé qu'aux porteurs de `sales.view_margin`.
+        // Convention déjà en place ailleurs dans l'ERP (`production.cost.view`,
+        // `coils.split.view_cost`) : un prix de revient ne se diffuse pas à tout
+        // utilisateur autorisé à saisir un devis. Sans le droit, les colonnes de
+        // coût ne sont même pas sérialisées dans la page.
+        $canViewMargin  = auth()->user()?->can('sales.view_margin') ?? false;
+
+        // `unit_id` / `sale_unit_id` : indispensables pour que la ligne hérite d'une
+        // unité. Auparavant absents de la sélection, donc `unit_id` restait NULL sur
+        // 100 % des lignes enregistrées.
+        $productColumns = ['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id', 'unit_id', 'sale_unit_id'];
+        if ($canViewMargin) {
+            $productColumns = array_merge($productColumns, ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']);
+        }
+
+        // ATTENTION à l'ORDRE : `select()` DOIT précéder `withSum()`.
+        // `withSum()` pose `select(products.*)` quand aucune colonne n'est encore
+        // fixée ; les colonnes passées ensuite à `get()` sont alors AJOUTÉES, pas
+        // substituées. C'est ainsi que cette page sérialisait jusqu'ici l'INTÉGRALITÉ
+        // des colonnes produit — coûts, CUMP, taux de marge cible, référence
+        // fournisseur — à tout utilisateur habilité à saisir un devis.
+        $products       = Product::active()->sellable()
+            ->select($productColumns)
+            ->with(['taxRate:id,rate', 'family:id,name'])
+            ->withSum('productStocks as stock_qty', 'quantity')
+            ->withSum('productStocks as reserved_qty', 'reserved_quantity')
+            ->orderBy('name')
+            ->get();
         $selectedClient = $request->query('client_id');
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
-        return view('ventes.devis.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
+        return view('ventes.devis.create', compact('clients', 'products', 'selectedClient', 'clientExemptions', 'taxRatesVente', 'canViewMargin') + $this->maquetteFormData());
     }
 
     /** [Maquette Nouveau devis] Données complémentaires du formulaire. */
     private function maquetteFormData(): array
     {
         return [
+            // [Ventes] Les unités manquaient : la colonne « Unité » du tableau de
+            // lignes ne pouvait pas exister, et aucune ligne ne portait d'unité.
+            'units'      => \App\Models\Unit::orderBy('name')->get(['id', 'name', 'abbreviation']),
             'contacts'   => \App\Models\ClientContact::orderBy('last_name')->get(['id', 'client_id', 'civility', 'first_name', 'last_name']),
             'warehouses' => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'salesReps'  => \App\Models\User::orderBy('name')->get(['id', 'name']),
@@ -139,11 +170,31 @@ class QuoteController extends Controller
         $quote->load('attachments');
         $clients  = Client::active()->orderBy('name')
             ->get(['id', 'name', 'trade_name', 'phone', 'mobile', 'email', 'address', 'city', 'default_discount', 'payment_terms', 'payment_days', 'is_tax_exempt']);
-        $products = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
+        // Aligné sur create() : unités héritables et coût soumis à permission.
+        $canViewMargin = auth()->user()?->can('sales.view_margin') ?? false;
+        $productColumns = ['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id', 'unit_id', 'sale_unit_id'];
+        if ($canViewMargin) {
+            $productColumns = array_merge($productColumns, ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']);
+        }
+
+        // Même ordre impératif que dans create() : select() avant withSum().
+        //
+        // `reserved_qty` est indispensable ici autant qu'à la création : le
+        // formulaire partagé calcule « Stock à terme » = réel − réservé et le
+        // passe en rouge quand il devient négatif. Sans ce champ, JavaScript lit
+        // `undefined`, le ramène à 0, et l'alerte ne se déclenche jamais —
+        // silencieusement, puisqu'une propriété absente ne lève rien.
+        $products = Product::active()->sellable()
+            ->select($productColumns)
+            ->with(['taxRate:id,rate', 'family:id,name'])
+            ->withSum('productStocks as stock_qty', 'quantity')
+            ->withSum('productStocks as reserved_qty', 'reserved_quantity')
+            ->orderBy('name')
+            ->get();
         $clientExemptions = $clients->pluck('is_tax_exempt', 'id');
         $taxRatesVente    = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
-        return view('ventes.devis.edit', compact('quote', 'clients', 'products', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
+        return view('ventes.devis.edit', compact('quote', 'clients', 'products', 'clientExemptions', 'taxRatesVente', 'canViewMargin') + $this->maquetteFormData());
     }
 
     public function update(UpdateQuoteRequest $request, Quote $devis)

@@ -27,6 +27,8 @@ use Carbon\Carbon;
  */
 class SalesPricingService
 {
+    public function __construct(private SalesPriceFloorService $floor) {}
+
     /**
      * @return array{price: float, base_price: float, source: string, discount_percent: float,
      *               discount_name: ?string, floor: float, below_floor: bool,
@@ -43,7 +45,15 @@ class SalesPricingService
             $this->resolveDiscount($client, $product, $quantity, $date);
 
         $price = round($basePrice * (1 - $discountPercent / 100), 2);
-        $floor = (float) ($product->min_sale_price ?? 0);
+
+        // [BUG-A3-SALES-PRICE-API-028] Le plancher vient du service central, et
+        // non plus de `min_sale_price` lu en direct. L'ancienne lecture ignorait
+        // le plancher ÉCONOMIQUE dérivé du coût : sur un article coûtant 6 000 F
+        // sans plancher configuré, l'API annonçait « 0 F, aucune validation
+        // requise » alors que la soumission refusait. Deux définitions du même
+        // seuil, dont la plus permissive s'affichait à l'écran.
+        $plancher = $this->floor->explain($product);
+        $floor = (float) $plancher['minimum_price'];
         $belowFloor = $floor > 0 && $price < $floor;
 
         // [CDC Tarifaire] Prix plafond indicatif : dépassement signalé (alerte), non bloquant.
@@ -52,11 +62,22 @@ class SalesPricingService
 
         // Prix plancher strict : la remise est écrêtée au plancher, la vente
         // sous plancher exige une validation DG/DAF (flag remonté au caller).
-        $requiresValidation = $discountValidation
+        // Aucun prix exploitable : ni tarif applicable, ni prix de base.
+        $requiresManualPrice = CommercialLinePriceRule::estGratuit($price);
+
+        // [§10] Une dérogation de plancher n'autorise JAMAIS une gratuité. À
+        // prix nul, proposer « demander une dérogation » enverrait le commercial
+        // vers un circuit qui ne peut pas aboutir : ce qu'il faut, c'est saisir
+        // un prix. `requires_validation` reste donc faux, et
+        // `requires_manual_price` prend le relais.
+        $requiresValidation = ! $requiresManualPrice && (
+            $discountValidation
             || ($belowFloor && $settings->enforce_price_floor)
-            || $discountPercent > (float) $settings->discount_validation_threshold;
+            || $discountPercent > (float) $settings->discount_validation_threshold
+        );
 
         return [
+            // ── Contrat historique, inchangé pour le JavaScript en place ──
             'price'               => $price,
             'base_price'          => $basePrice,
             'source'              => $source,
@@ -68,6 +89,15 @@ class SalesPricingService
             'above_ceiling'       => $aboveCeiling,
             'requires_validation' => $requiresValidation,
             'unit_id'             => $tierUnit ?? $unitId,
+
+            // ── Détail du plancher, pour expliquer le refus AVANT qu'il tombe ──
+            'configured_floor'      => (float) $plancher['configured_floor'],
+            'economic_floor'        => (float) $plancher['economic_floor'],
+            'minimum_price'         => $floor,
+            'cost_base'             => (float) $plancher['cost_base'],
+            'cost_source'           => $plancher['cost_source'],
+            'price_configured'      => ! CommercialLinePriceRule::estGratuit($basePrice),
+            'requires_manual_price' => $requiresManualPrice,
         ];
     }
 

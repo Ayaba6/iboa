@@ -63,7 +63,7 @@
 
     $colors     = $colorMap[$status]    ?? 'bg-gray-100 text-gray-600 ring-gray-200';
     $text       = $label                ?? $defaultLabels[$status] ?? ucfirst($status);
-    $sizeClass  = $size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs font-medium';
+    $sizeClass  = $size === 'sm' ? 'px-2 py-0.5 text-[12px]' : 'px-2.5 py-1 text-[12px] font-medium';
 @endphp
 
 <span class="inline-flex items-center rounded-full ring-1 ring-inset {{ $colors }} {{ $sizeClass }} gap-1">

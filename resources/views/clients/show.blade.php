@@ -174,7 +174,6 @@
         <div x-show="tab === 'finance'" x-cloak>
             <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
                 {!! $row('Limite de crédit', $client->credit_limit ? $f($client->credit_limit).' FCFA' : null) !!}
-                {!! $row('Encours autorisé', $client->encours_autorise ? $f($client->encours_autorise).' FCFA' : null) !!}
                 {!! $row('Compte collectif', $client->compte_collectif) !!}
                 {!! $row('Mode de règlement', $client->payment_mode) !!}
                 {!! $row('Délai paiement (j)', $client->payment_days) !!}

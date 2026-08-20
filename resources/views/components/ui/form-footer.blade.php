@@ -42,7 +42,7 @@ $submitAttrs = $formId ? "form=\"{$formId}\"" : '';
 
     @if($cancelUrl)
     <a href="{{ $cancelUrl }}"
-       class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+       class="px-5 py-2.5 border border-gray-300 text-gray-700 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors">
         {{ $cancelLabel }}
     </a>
     @endif
@@ -52,7 +52,7 @@ $submitAttrs = $formId ? "form=\"{$formId}\"" : '';
             @if($loadingVar) @click="{{ $loadingVar }} = true" :disabled="{{ $loadingVar }}"
             :class="{{ $loadingVar }} ? 'opacity-60 cursor-not-allowed' : ''"
             x-text="{{ $loadingVar }} ? '{{ $loadingText }}' : '{{ $submitLabel }}'" @endif
-            class="{{ $btnColor }} text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm disabled:opacity-60">
+            class="{{ $btnColor }} text-white text-[13px] font-semibold px-6 py-2.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm disabled:opacity-60">
         {{ $submitLabel }}
     </button>
 </div>
@@ -67,7 +67,7 @@ $submitAttrs = $formId ? "form=\"{$formId}\"" : '';
 
         @if($cancelUrl)
         <a href="{{ $cancelUrl }}"
-           class="flex-shrink-0 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+           class="flex-shrink-0 px-4 py-2.5 border border-gray-300 text-gray-700 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors">
             {{ $cancelLabel }}
         </a>
         @endif
@@ -79,7 +79,7 @@ $submitAttrs = $formId ? "form=\"{$formId}\"" : '';
                 @if($loadingVar) @click="{{ $loadingVar }} = true" :disabled="{{ $loadingVar }}"
                 :class="{{ $loadingVar }} ? 'opacity-60 cursor-not-allowed' : ''"
                 x-text="{{ $loadingVar }} ? '{{ $loadingText }}' : '{{ $submitLabel }}'" @endif
-                class="flex-1 {{ $btnColor }} text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm disabled:opacity-60 text-center">
+                class="flex-1 {{ $btnColor }} text-white text-[13px] font-semibold px-4 py-2.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm disabled:opacity-60 text-center">
             {{ $submitLabel }}
         </button>
     </div>

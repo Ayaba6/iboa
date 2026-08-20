@@ -4,6 +4,7 @@ namespace App\Repositories;
 use App\Models\Product;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ProductRepository extends BaseRepository
 {
@@ -15,7 +16,13 @@ class ProductRepository extends BaseRepository
     public function search(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         $query = Product::with(['family', 'subFamily:id,name', 'itemCategory:id,code', 'brand', 'unit', 'taxRate', 'createdBy:id,name', 'productStocks'])
-            ->when(isset($filters['search']), fn($q) => $q->where(function($q2) use ($filters) {
+            // `isset()` est vrai pour une chaîne VIDE : choisir « Toutes les
+            // familles » soumettait `family_id=` et produisait `WHERE family_id = ''`,
+            // qui ne rapporte rien. La liste se vidait au moment précis où
+            // l'utilisateur retirait son filtre. Même piège sur marque, catégorie
+            // et recherche. Les filtres plus récents (famille1_id…) utilisaient
+            // déjà `!empty()` : c'est cette forme qui est correcte.
+            ->when(!empty($filters['search']), fn($q) => $q->where(function($q2) use ($filters) {
                 $q2->where('name', 'like', "%{$filters['search']}%")
                    ->orWhere('reference', 'like', "%{$filters['search']}%")
                    ->orWhere('code_article', 'like', "%{$filters['search']}%")
@@ -23,22 +30,29 @@ class ProductRepository extends BaseRepository
             }))
             // [X3 §5] L'id peut désigner une famille (family_id) ou une sous-famille
             // (sub_family_id des articles) : couvrir les deux axes.
-            ->when(isset($filters['family_id']), fn($q) => $q->where(fn($qq) => $qq
+            ->when(!empty($filters['family_id']), fn($q) => $q->where(fn($qq) => $qq
                 ->where('family_id', $filters['family_id'])
                 ->orWhere('sub_family_id', $filters['family_id'])))
-            ->when(isset($filters['item_category_id']), fn($q) => $q->where('item_category_id', $filters['item_category_id']))
+            ->when(!empty($filters['item_category_id']), fn($q) => $q->where('item_category_id', $filters['item_category_id']))
             // [PHASE E] Recherche avancée : code article, familles 3 niveaux, statut
             ->when(!empty($filters['code_article']), fn($q) => $q->where('code_article', 'like', "%{$filters['code_article']}%"))
             ->when(!empty($filters['famille1_id']), fn($q) => $q->where('famille1_id', $filters['famille1_id']))
             ->when(!empty($filters['famille2_id']), fn($q) => $q->where('famille2_id', $filters['famille2_id']))
             ->when(!empty($filters['famille3_id']), fn($q) => $q->where('famille3_id', $filters['famille3_id']))
             ->when(!empty($filters['statut']), fn($q) => $q->where('statut', $filters['statut']))
-            ->when(isset($filters['brand_id']), fn($q) => $q->where('brand_id', $filters['brand_id']))
+            ->when(!empty($filters['brand_id']), fn($q) => $q->where('brand_id', $filters['brand_id']))
             ->when(!empty($filters['type']), fn($q) => $q->where('type', $filters['type']))
             ->when(isset($filters['is_active']) && $filters['is_active'] !== '', fn($q) => $q->where('is_active', (bool) $filters['is_active']))
-            ->when(isset($filters['low_stock']), fn($q) => $q->whereHas('productStocks', function($q2) {
-                $q2->whereRaw('quantity <= products.stock_min');
-            }))
+            // Drapeau, pas valeur : `low_stock=` vide appliquait quand même le
+            // filtre. Et `whereHas('productStocks')` ne pouvait pas voir les
+            // articles DÉPOURVUS de ligne de stock — donc ceux à zéro absolu,
+            // les plus en tension. Source unique : StockInsightsService, la même
+            // qui alimente /stocks et les deux tableaux de bord.
+            ->when(!empty($filters['low_stock']), function ($q) {
+                $tension = app(\App\Services\StockInsightsService::class)->enTensionQuery();
+
+                $q->whereIn('id', DB::query()->fromSub($tension, 't')->select('t.id'));
+            })
             ->orderBy('name');
 
         return $query->paginate($perPage)->withQueryString();

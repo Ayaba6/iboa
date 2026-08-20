@@ -324,7 +324,7 @@
                             <td class="py-1 pr-3 tabular-nums">{{ $ps->stock_securite ?? '—' }}</td>
                             <td class="py-1 text-right">
                                 @can('products.edit')
-                                <form method="POST" action="{{ route('products.sites.destroy', [$product, $ps]) }}" onsubmit="return confirm('Supprimer cette déclinaison site ?')">
+                                <form method="POST" action="{{ route('products.sites.destroy', [$product, $ps]) }}" data-confirm="Supprimer la déclinaison site {{ addslashes($ps->warehouse->code ?? '') }} ?">
                                     @csrf @method('DELETE')
                                     <button class="text-red-600 hover:underline text-[12px]">Retirer</button>
                                 </form>

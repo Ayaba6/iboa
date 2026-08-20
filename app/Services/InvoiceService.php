@@ -10,6 +10,7 @@ use App\Models\CreditNote;
 use App\Models\DeliveryNote;
 use App\Models\FiscalTransmission;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\JournalEntry;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -57,6 +58,12 @@ class InvoiceService
 
             $data['company_id'] = $company->id;
             $data['fiscal_year_id'] = $company->current_fiscal_year_id;
+            // [UI — doublon retiré] `default_tax_label` était saisi dans un champ
+            // « Taxes » distinct de « TVA par défaut », stocké, jamais lu, et pouvait
+            // contredire la TVA réellement appliquée aux lignes. Le champ a disparu de
+            // l'écran ; la valeur est DÉRIVÉE de l'état réel par un service UNIQUE,
+            // partagé par devis, commande et facture.
+            $data['default_tax_label'] = app(\App\Services\Sales\SalesTaxLabelService::class)->derive($data, $items);
             $data['number'] = $this->sequenceService->nextNumber($company, 'facture');
             $data['created_by'] = Auth::id();
             $data['status'] = $data['status'] ?? 'brouillon';
@@ -143,29 +150,94 @@ class InvoiceService
                 'created_by' => Auth::id(),
             ]);
 
+            // [Ventes §21.2] FACTURATION LIMITÉE AU LIVRÉ.
+            //
+            // Cette méthode facturait `quantity` — la quantité COMMANDÉE — sans
+            // jamais lire `delivered_quantity`. Sur une commande partiellement
+            // livrée (bouton visible aux statuts `en_preparation` et
+            // `partiellement_livre`), le client était facturé de biens qu'il
+            // n'avait pas reçus.
+            //
+            // Ce n'est pas un défaut d'ergonomie : en SYSCOHADA le produit se
+            // constate au transfert de propriété, donc à la livraison. Facturer
+            // du non-livré produit un compte 70 anticipé, une TVA collectée
+            // exigible sur des biens non livrés, et une créance surévaluée.
+            //
+            // Un acompte n'est PAS une facture de vente : il se comptabilise en
+            // 419 (clients créditeurs, avances reçues) et passe par le circuit
+            // `client_payments.is_acompte`, qui existe déjà. Aucune dérogation
+            // n'est prévue : on n'autorise pas une irrégularité fiscale, on
+            // l'empêche.
+            $billable = [];
             foreach ($order->items as $item) {
+                $delivered = (float) ($item->delivered_quantity ?? 0);
+                $alreadyInvoiced = (float) ($item->invoiced_quantity ?? 0);
+                $qty = round($delivered - $alreadyInvoiced, 4);
+
+                if ($qty > 0.0001) {
+                    $billable[] = ['item' => $item, 'qty' => $qty];
+                }
+            }
+
+            if ($billable === []) {
+                throw new \RuntimeException(sprintf(
+                    'Commande %s : rien à facturer. La facturation est limitée aux quantités '
+                    .'LIVRÉES et non encore facturées. Livrez d\'abord, ou enregistrez un acompte '
+                    .'client si le règlement précède la livraison.',
+                    $order->number
+                ));
+            }
+
+            foreach ($billable as $i => $line) {
+                /** @var OrderItem $item */
+                $item = $line['item'];
+                $qty = $line['qty'];
+
+                // Les montants sont RECALCULÉS sur la quantité facturable : copier
+                // ceux de la commande facturerait le montant de la quantité commandée.
+                $price = (float) $item->unit_price;
+                $disc = (float) $item->discount_percent;
+                $tax = (float) $item->tax_rate_value;
+                $ht = (int) round($qty * $price * (1 - $disc / 100));
+                $lineTax = (int) round($ht * $tax / 100);
+
+                // [Ventes §21.3] Lien de ligne à ligne. Il rend l'annulation exacte
+                // même quand deux lignes de la commande portent le même article.
                 $invoice->items()->create([
+                    'order_item_id' => $item->id,
                     'product_id' => $item->product_id,
                     'description' => $item->description,
                     'unit_id' => $item->unit_id,
-                    'quantity' => $item->quantity,
+                    'quantity' => $qty,
                     'nb_toles' => $item->nb_toles,
                     'metrage_par_tole' => $item->metrage_par_tole,
-                    'unit_price' => $item->unit_price,
-                    'discount_percent' => $item->discount_percent,
+                    'unit_price' => (int) $price,
+                    'discount_percent' => $disc,
                     'tax_rate_id' => $item->tax_rate_id,
-                    'tax_rate_value' => $item->tax_rate_value,
-                    'line_total_ht' => $item->line_total_ht,
-                    'line_tax' => $item->line_tax,
-                    'line_total_ttc' => $item->line_total_ttc,
-                    'sort_order' => $item->sort_order,
+                    'tax_rate_value' => $tax,
+                    'line_total_ht' => $ht,
+                    'line_tax' => $lineTax,
+                    'line_total_ttc' => $ht + $lineTax,
+                    'sort_order' => $item->sort_order ?? $i,
                 ]);
-                // Track invoiced quantity for partial invoicing
-                $item->increment('invoiced_quantity', (float) $item->quantity);
+
+                // Incrémenté de la quantité RÉELLEMENT facturée, pas de la commandée :
+                // sinon le reliquat à facturer deviendrait négatif.
+                $item->increment('invoiced_quantity', $qty);
             }
 
-            // Mark the order as invoiced
-            $order->update(['status' => 'facture']);
+            // La commande ne passe à « facturé » que si TOUT le livré est facturé
+            // ET que tout le commandé est livré. Une facture partielle laisse la
+            // commande dans son statut de livraison : marquer « facturé » une
+            // commande dont il reste 60 unités à livrer masquerait le reliquat.
+            $order->load('items');
+            $fullyInvoiced = $order->items->every(
+                fn (OrderItem $i) => (float) $i->invoiced_quantity + 0.0001 >= (float) $i->quantity
+            );
+
+            if ($fullyInvoiced) {
+                $order->update(['status' => 'facture']);
+            }
 
             // [COMPTA-RETENUE] Calcul automatique de la retenue à la source
             $this->recalculate($invoice);
@@ -263,6 +335,10 @@ class InvoiceService
 
                 $itemsData[] = [
                     'delivery_note_item_id' => $item->id,
+                    // [Ventes §21.3] Le BL portait déjà le lien de ligne à ligne ;
+                    // il est désormais recopié sur la facture pour que l'annulation
+                    // vise la bonne ligne de commande, quel que soit le chemin suivi.
+                    'order_item_id' => $item->order_item_id,
                     'product_id' => $item->product_id,
                     'description' => $item->description,
                     'unit_id' => $item->unit_id,
@@ -626,6 +702,68 @@ class InvoiceService
     }
 
     /**
+     * [Ventes §21.3] Rend à la commande la quantité qu'une ligne de facture avait
+     * consommée. Implémentation unique, partagée par `cancel()` et `delete()`.
+     *
+     * Trois cas, du plus sûr au moins sûr :
+     *
+     *  1. `order_item_id` renseigné — cas de toute facture émise depuis ce lot :
+     *     la décrémentation vise UNE ligne, celle qui a réellement été facturée.
+     *
+     *  2. Historique sans lien, article présent une seule fois dans la commande :
+     *     l'identification par produit est alors exacte, on l'accepte.
+     *
+     *  3. Historique sans lien, article présent plusieurs fois : le rattachement
+     *     est indécidable. L'ancien code décrémentait ALORS TOUTES les lignes de
+     *     la quantité entière — annuler une facture de 40 retirait 40 à chacune
+     *     des deux lignes, dont une n'avait rien à rendre, et `invoiced_quantity`
+     *     passait sous zéro. On impute désormais sur la ligne la plus anciennement
+     *     facturée, dans la limite de ce qu'elle porte, et on répartit le reste
+     *     sur les suivantes. Aucune ligne ne descend sous zéro.
+     */
+    private function releaseInvoicedQuantity(int $orderId, InvoiceItem $invItem): void
+    {
+        $qty = (float) $invItem->quantity;
+        if ($qty <= 0) {
+            return;
+        }
+
+        if ($invItem->order_item_id) {
+            $line = OrderItem::where('order_id', $orderId)->find($invItem->order_item_id);
+            if ($line) {
+                // `max(0, …)` : garde-fou contre un historique déjà incohérent.
+                $line->update([
+                    'invoiced_quantity' => max(0.0, (float) $line->invoiced_quantity - $qty),
+                ]);
+
+                return;
+            }
+        }
+
+        if (! $invItem->product_id) {
+            return;
+        }
+
+        $candidates = OrderItem::where('order_id', $orderId)
+            ->where('product_id', $invItem->product_id)
+            ->orderBy('id')
+            ->get();
+
+        $remaining = $qty;
+        foreach ($candidates as $line) {
+            if ($remaining <= 0) {
+                break;
+            }
+            $take = min($remaining, (float) $line->invoiced_quantity);
+            if ($take <= 0) {
+                continue;
+            }
+            $line->update(['invoiced_quantity' => (float) $line->invoiced_quantity - $take]);
+            $remaining -= $take;
+        }
+    }
+
+    /**
      * [FIX-CRITIQUE] Cancel a validated invoice: reverse the GL entry (contrepassation),
      * restore remaining_amount to full total, reset paid_amount to 0.
      * Only invoices with no payments can be cancelled.
@@ -680,16 +818,12 @@ class InvoiceService
             // [SEC-PHASE2] Journal d'audit : annulation de facture tracée
             app(AuditService::class)->log('facture.annulation', $invoice, [], ['motif' => $reason, 'montant' => $invoice->total_ttc]);
 
-            // [FIX-VENTES-03] Decrement invoiced_quantity on each linked order item so
-            // the order can be re-invoiced after this cancellation.
+            // [FIX-VENTES-03] Rendre le facturé à la commande pour qu'elle
+            // redevienne facturable après annulation.
             if ($invoice->order_id) {
                 $invoice->load('items');
                 foreach ($invoice->items as $invItem) {
-                    if ($invItem->product_id) {
-                        OrderItem::where('order_id', $invoice->order_id)
-                            ->where('product_id', $invItem->product_id)
-                            ->decrement('invoiced_quantity', (float) $invItem->quantity);
-                    }
+                    $this->releaseInvoicedQuantity($invoice->order_id, $invItem);
                 }
             }
 
@@ -735,14 +869,10 @@ class InvoiceService
             if ($invoice->status === 'brouillon' && $invoice->order_id) {
                 $order = $invoice->order()->with('items', 'deliveryNotes')->first();
                 if ($order && $order->status === 'facture') {
-                    // Undo invoiced_quantity for each matched order item
+                    // Rendre le facturé, ligne par ligne
                     $invoice->load('items');
                     foreach ($invoice->items as $invItem) {
-                        if ($invItem->product_id) {
-                            OrderItem::where('order_id', $order->id)
-                                ->where('product_id', $invItem->product_id)
-                                ->decrement('invoiced_quantity', (float) $invItem->quantity);
-                        }
+                        $this->releaseInvoicedQuantity($order->id, $invItem);
                     }
 
                     // Restore order to its pre-invoicing status
@@ -818,10 +948,16 @@ class InvoiceService
             $lineTax = (int) round($ht * ($tax / 100));
             $ttc = $ht + $lineTax;
 
+            // [Ventes] Unité et coût dérivés de l'article quand ils ne sont pas
+            // fournis — même service partagé que devis et commande, pour que la règle
+            // n'existe pas en trois exemplaires susceptibles de diverger.
+            $item = app(\App\Services\Sales\SalesLineDefaultsService::class)->apply($item);
+
             $invoice->items()->create([
                 'product_id' => $item['product_id'] ?? null,
                 'description' => $item['description'] ?? '',
                 'unit_id' => $item['unit_id'] ?? null,
+                'unit_cost' => $item['unit_cost'] ?? null,
                 'quantity' => $qty,
                 'unit_price' => (int) $price,
                 'discount_percent' => $disc,

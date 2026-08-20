@@ -61,13 +61,28 @@ class InvoiceController extends Controller
                     ->orWhereHas('client', fn($c) => $c->where('name', 'like', '%'.$filters['search'].'%'))
             ));
 
+        // [Perf] Une seule requête d'agrégats au lieu de cinq. Les trois sommes
+        // et les deux comptages portent tous sur le MÊME jeu filtré : les
+        // recalculer par cinq passes sur la table ne change rien au résultat et
+        // multiplie le coût. Les compteurs conditionnels passent par CASE WHEN.
+        $today = now()->toDateString();
+        $agg = (clone $totalsQuery)
+            ->selectRaw(
+                'COALESCE(SUM(total_ttc), 0) AS total_ttc, '
+                .'COALESCE(SUM(subtotal_ht), 0) AS total_ht, '
+                .'COALESCE(SUM(remaining_amount), 0) AS total_remaining, '
+                .'SUM(CASE WHEN due_at < ? AND status NOT IN (?, ?) THEN 1 ELSE 0 END) AS count_overdue, '
+                .'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS count_paid',
+                [$today, 'payee', 'annulee', 'payee']
+            )
+            ->first();
+
         $summary = [
-            'total_ttc'       => (int) $totalsQuery->sum('total_ttc'),
-            'total_ht'        => (int) (clone $totalsQuery)->sum('subtotal_ht'),
-            'total_remaining' => (int) (clone $totalsQuery)->sum('remaining_amount'),
-            'count_overdue'   => (int) (clone $totalsQuery)->where('due_at', '<', now()->toDateString())
-                                    ->whereNotIn('status', ['payee', 'annulee'])->count(),
-            'count_paid'      => (int) (clone $totalsQuery)->where('status', 'payee')->count(),
+            'total_ttc'       => (int) ($agg->total_ttc ?? 0),
+            'total_ht'        => (int) ($agg->total_ht ?? 0),
+            'total_remaining' => (int) ($agg->total_remaining ?? 0),
+            'count_overdue'   => (int) ($agg->count_overdue ?? 0),
+            'count_paid'      => (int) ($agg->count_paid ?? 0),
         ];
 
         return view('ventes.factures.index', compact('invoices', 'filters', 'clients', 'summary'));
@@ -81,7 +96,28 @@ class InvoiceController extends Controller
             ->with(['taxRates' => fn($q) => $q->where('type', 'retenue')])
             ->orderBy('name')
             ->get(['id', 'name', 'trade_name', 'is_tax_exempt']);
-        $products       = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
+        // [Ventes] Aligne sur QuoteController / OrderController : cout reserve a
+        // `sales.view_margin`, unites heritables, et surtout `select()` AVANT
+        // `withSum()`.
+        //
+        // `withSum()` pose `select(products.*)` quand aucune colonne n'est encore
+        // fixee ; les colonnes passees ensuite a `get()` sont AJOUTEES, pas
+        // substituees. Cet ecran serialisait donc l'INTEGRALITE des colonnes produit
+        // -- CUMP, cout standard, dernier prix d'achat, taux de marge cible,
+        // reference fournisseur -- dans la page, pour tout utilisateur habilite a
+        // saisir une facture. C'etaient les deux dernieres occurrences du motif.
+        $canViewMargin  = auth()->user()?->can('sales.view_margin') ?? false;
+        $productColumns = ['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id', 'unit_id', 'sale_unit_id'];
+        if ($canViewMargin) {
+            $productColumns = array_merge($productColumns, ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']);
+        }
+
+        $products       = Product::active()->sellable()
+            ->select($productColumns)
+            ->with(['taxRate:id,rate', 'family:id,name'])
+            ->withSum('productStocks as stock_qty', 'quantity')
+            ->orderBy('name')
+            ->get();
         $selectedClient = $request->query('client_id');
 
         // Map { clientId: [{name, short_name, rate}, ...] } pour le calcul JS des retenues
@@ -99,7 +135,7 @@ class InvoiceController extends Controller
         // Taux TVA de type 'tva' pour le sélecteur (exclut les retenues)
         $taxRatesVente = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
-        return view('ventes.factures.create', compact('clients', 'products', 'selectedClient', 'clientWithholding', 'clientExemptions', 'taxRatesVente') + $this->maquetteFormData());
+        return view('ventes.factures.create', compact('clients', 'products', 'selectedClient', 'clientWithholding', 'clientExemptions', 'taxRatesVente', 'canViewMargin') + $this->maquetteFormData());
     }
 
     public function store(StoreInvoiceRequest $request)
@@ -150,6 +186,9 @@ class InvoiceController extends Controller
     private function maquetteFormData(): array
     {
         return [
+            // [Ventes] Unités : la colonne « Unité » du tableau de lignes ne pouvait
+            // pas exister sans elles, et aucune ligne de facture ne portait d'unité.
+            'units'         => \App\Models\Unit::orderBy('name')->get(['id', 'name', 'abbreviation']),
             'contacts'      => \App\Models\ClientContact::orderBy('last_name')->get(['id', 'client_id', 'civility', 'first_name', 'last_name']),
             'warehouses'    => \App\Models\Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'code', 'name']),
             'salesReps'     => \App\Models\User::orderBy('name')->get(['id', 'name']),
@@ -164,14 +203,13 @@ class InvoiceController extends Controller
 
         $invoice = $this->service->repository->findWithDetails($facture->id);
 
-        // [UX-4] Audit log de cette facture — 20 dernières opérations
-        $audits = \App\Models\AuditLog::where('model_type', \App\Models\Invoice::class)
-            ->where('model_id', $invoice->id)
-            ->latest('created_at')
-            ->limit(20)
-            ->get();
+        // [UI — doublon retiré] La requête sur `audit_logs` a été supprimée d'ici.
+        // Elle alimentait une section « 7. Historique » qui affichait le MÊME journal
+        // que le composant <x-audit.timeline> appelé par la vue, lequel fait sa propre
+        // requête : deux panneaux identiques à l'écran, et deux fois le même SELECT.
+        // Le composant est la source unique — il sert onze fiches et montre davantage.
 
-        return view('ventes.factures.show', compact('invoice', 'audits'));
+        return view('ventes.factures.show', compact('invoice'));
     }
 
     public function edit(Invoice $facture)
@@ -192,7 +230,28 @@ class InvoiceController extends Controller
             ->with(['taxRates' => fn($q) => $q->where('type', 'retenue')])
             ->orderBy('name')
             ->get(['id', 'name', 'trade_name', 'is_tax_exempt']);
-        $products = Product::active()->sellable()->with(['taxRate:id,rate', 'family:id,name'])->withSum('productStocks as stock_qty', 'quantity')->orderBy('name')->get(['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id']);
+        // [Ventes] Aligne sur QuoteController / OrderController : cout reserve a
+        // `sales.view_margin`, unites heritables, et surtout `select()` AVANT
+        // `withSum()`.
+        //
+        // `withSum()` pose `select(products.*)` quand aucune colonne n'est encore
+        // fixee ; les colonnes passees ensuite a `get()` sont AJOUTEES, pas
+        // substituees. Cet ecran serialisait donc l'INTEGRALITE des colonnes produit
+        // -- CUMP, cout standard, dernier prix d'achat, taux de marge cible,
+        // reference fournisseur -- dans la page, pour tout utilisateur habilite a
+        // saisir une facture. C'etaient les deux dernieres occurrences du motif.
+        $canViewMargin  = auth()->user()?->can('sales.view_margin') ?? false;
+        $productColumns = ['id', 'name', 'reference', 'barcode', 'sale_price', 'tax_rate_id', 'is_stockable', 'family_id', 'unit_id', 'sale_unit_id'];
+        if ($canViewMargin) {
+            $productColumns = array_merge($productColumns, ['weighted_avg_cost', 'cout_standard', 'last_purchase_price', 'purchase_price']);
+        }
+
+        $products = Product::active()->sellable()
+            ->select($productColumns)
+            ->with(['taxRate:id,rate', 'family:id,name'])
+            ->withSum('productStocks as stock_qty', 'quantity')
+            ->orderBy('name')
+            ->get();
 
         $clientWithholding = $clients->mapWithKeys(fn($c) => [
             $c->id => $c->taxRates->map(fn($t) => [
@@ -205,7 +264,7 @@ class InvoiceController extends Controller
         $taxRatesVente     = TaxRate::where('type', 'tva')->where('is_active', true)->orderBy('rate')->get(['id', 'name', 'rate', 'is_default']);
 
         $editLock = $lock; // déjà le verrou actif pour ce user
-        return view('ventes.factures.edit', compact('invoice', 'clients', 'products', 'clientWithholding', 'clientExemptions', 'taxRatesVente', 'editLock') + $this->maquetteFormData());
+        return view('ventes.factures.edit', compact('invoice', 'clients', 'products', 'clientWithholding', 'clientExemptions', 'taxRatesVente', 'editLock', 'canViewMargin') + $this->maquetteFormData());
     }
 
     public function update(UpdateInvoiceRequest $request, Invoice $facture)

@@ -1,6 +1,14 @@
 @extends('layouts.erp')
 @section('title', 'Clients')
 
+{{-- [Perf] DataTables n'est chargé QUE par les vues portant un `data-dt`.
+     Auparavant bundlé dans app.js, il pesait sur chaque page de l'ERP — dont les
+     écrans de saisie qui n'ont aucun tableau. --}}
+@push('head_scripts')
+    @vite('resources/js/datatables.js')
+@endpush
+
+
 @section('breadcrumb')
     <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Accueil</a>
     <span class="mx-1">/</span>
@@ -12,7 +20,10 @@
     $kpi = 'bg-white rounded-[4px] border border-gray-300 px-3 py-1.5';
     $kpL = 'text-[10px] font-bold text-gray-400 uppercase tracking-wide';
     $kpV = 'text-[15px] font-bold tabular-nums';
-    $inp = 'h-8 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500';
+    // [UI] `py-0` est OBLIGATOIRE avec `h-8` : @tailwindcss/forms impose un
+    // padding vertical par défaut aux <select>, qui écrase la hauteur fixe et
+    // désaligne le filtre par rapport aux champs voisins.
+    $inp = 'h-8 py-0 border border-gray-300 rounded-[4px] px-2.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-500';
     $btn = 'inline-flex items-center gap-1.5 px-3 py-1 text-[12px] font-semibold rounded-[4px] transition-colors';
 @endphp
 <div class="space-y-3">
@@ -143,7 +154,7 @@
                                     </svg>
                                 </a>
                                 <form action="{{ route('clients.destroy', $client) }}" method="POST"
-                                      onsubmit="return confirm('Archiver {{ addslashes($client->displayName()) }} ?')">
+                                      data-confirm="Archiver {{ addslashes($client->displayName()) }} ?">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

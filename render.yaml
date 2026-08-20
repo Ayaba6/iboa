@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: a3-erp
+    env: php
+    plan: free
+    buildCommand: "composer install --optimize-autoloader --no-dev && npm install && npm run build"
+    startCommand: "php artisan config:cache && php artisan route:cache && php artisan serve --host=0.0.0.0 --port=$PORT"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_CHANNEL
+        value: stderr

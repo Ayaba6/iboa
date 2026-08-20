@@ -14,7 +14,7 @@
 @section('content')
 @if($errors->any())
 <div class="mb-4 bg-red-50 border border-red-200 rounded-[4px] p-4">
-    <ul class="text-sm text-red-700 space-y-1 list-disc list-inside">
+    <ul class="text-[13px] text-red-700 space-y-1 list-disc list-inside">
         @foreach($errors->all() as $error)
             <li>{{ $error }}</li>
         @endforeach

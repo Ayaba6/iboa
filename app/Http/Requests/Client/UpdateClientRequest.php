@@ -72,7 +72,6 @@ class UpdateClientRequest extends FormRequest
             'canal'                => 'nullable|string|max:60',
             'zone_commerciale'     => 'nullable|string|max:60',
             'famille_tarifaire'    => 'nullable|string|max:60',
-            'encours_autorise'     => 'nullable|numeric|min:0',
             'compte_collectif'     => 'nullable|string|max:30',
             'tax_rate_id'          => 'nullable|exists:tax_rates,id',
             'depot_livraison_id'   => 'nullable|exists:warehouses,id',
@@ -89,7 +88,6 @@ class UpdateClientRequest extends FormRequest
             'swift'                => 'nullable|string|max:20',
             // [Parité Sage X3] Juridique / fiscal
             'forme_juridique'      => 'nullable|string|max:60',
-            'regime_imposition'    => 'nullable|string|max:80',
             'no_agrement'          => 'nullable|string|max:60',
             // [Parité Sage X3] Risque crédit
             'code_risque'          => 'nullable|string|max:30',
@@ -99,12 +97,16 @@ class UpdateClientRequest extends FormRequest
             'rrr_montant'          => 'nullable|numeric|min:0',
             'rrr_taux'             => 'nullable|numeric|min:0|max:100',
             'reference_cadastrale' => 'nullable|string|max:80',
-            // [Parité Sage X3] Tiers comptables (un client ne peut pas se référencer lui-même)
-            'client_facture_id'    => 'nullable|integer|exists:clients,id|different:id',
-            'client_payeur_id'     => 'nullable|integer|exists:clients,id|different:id',
-            'client_groupe_id'     => 'nullable|integer|exists:clients,id|different:id',
-            'client_risque_id'     => 'nullable|integer|exists:clients,id|different:id',
-            'factor_id'            => 'nullable|integer|exists:clients,id|different:id',
+            // [Parité Sage X3] Tiers comptables — un client ne peut pas se référencer
+            // lui-même. `different:id` visait un CHAMP de la requête nommé `id` : le
+            // formulaire n'en poste aucun, l'identifiant venant de l'URL. La règle
+            // passait donc toujours, et l'interdiction n'existait que dans le
+            // commentaire. `not_in` compare à la valeur réelle.
+            'client_facture_id'    => 'nullable|integer|exists:clients,id|not_in:' . $clientId,
+            'client_payeur_id'     => 'nullable|integer|exists:clients,id|not_in:' . $clientId,
+            'client_groupe_id'     => 'nullable|integer|exists:clients,id|not_in:' . $clientId,
+            'client_risque_id'     => 'nullable|integer|exists:clients,id|not_in:' . $clientId,
+            'factor_id'            => 'nullable|integer|exists:clients,id|not_in:' . $clientId,
             'documents'            => 'nullable|array',
             'documents.*'          => 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:5120',
             // contacts

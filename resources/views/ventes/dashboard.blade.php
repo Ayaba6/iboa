@@ -25,52 +25,74 @@
     $pctCmd       = $hasTarget ? min(100, round($ordersValue / max($objCmd, 1) * 100, 1)) : null;
 @endphp
 
-<div class="space-y-3">
+<div class="space-y-4">
 
     <x-sales.module-nav />
 
     {{-- ── Entête + onglets ─────────────────────────────────────────────────── --}}
     <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-            <h1 class="text-[22px] font-bold text-gray-900 leading-tight">Tableau de bord ventes</h1>
-            <div class="flex flex-wrap gap-4 mt-2 text-[13px] font-medium border-b border-gray-200 -mb-px">
-                <span class="pb-1.5 border-b-2 border-emerald-600 text-emerald-700">Synthèse</span>
-                <a href="{{ route('ventes.commandes.index') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Activité</a>
-                <a href="{{ route('reports.ca') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Performance</a>
-                <a href="{{ route('ventes.devis.index') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Pipeline</a>
-                <a href="{{ route('reports.margins') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Analyse</a>
-                <a href="{{ route('ventes.commandes.index') }}" class="pb-1.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700">Prévisions</a>
+            <h1 class="text-[20px] font-bold text-gray-900 leading-tight">Tableau de bord ventes</h1>
+            {{-- [UI] Barre de liens, plus de faux onglets.
+                 « Prévisions » et « Activité » pointaient vers la MÊME page :
+                 deux libellés, une destination. L'entrée en double est retirée,
+                 et l'apparence d'onglets d'un même écran est abandonnée — cinq
+                 de ces entrées sur six quittent la page. --}}
+            <p class="text-[12px] text-gray-500 mt-0.5 tabular-nums">
+                Exercice en cours · du {{ now()->startOfYear()->format('d/m/Y') }} au {{ now()->format('d/m/Y') }}
+            </p>
+            <div class="flex flex-wrap gap-3 mt-2 text-[12px] font-medium">
+                <a href="{{ route('ventes.commandes.index') }}" class="text-gray-500 hover:text-emerald-700 hover:underline">Activité</a>
+                <a href="{{ route('reports.ca') }}" class="text-gray-500 hover:text-emerald-700 hover:underline">Performance</a>
+                <a href="{{ route('ventes.devis.index') }}" class="text-gray-500 hover:text-emerald-700 hover:underline">Pipeline</a>
+                <a href="{{ route('reports.margins') }}" class="text-gray-500 hover:text-emerald-700 hover:underline">Analyse des marges</a>
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('ventes.devis.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-[4px]">Devis</a>
-            <a href="{{ route('ventes.commandes.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-[4px]">Commandes</a>
+            <a href="{{ route('ventes.devis.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Devis</a>
+            <a href="{{ route('ventes.commandes.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-[13px] font-medium px-3 py-1.5 rounded-[4px]">Commandes</a>
             @can('quotes.create')
-            <a href="{{ route('ventes.devis.create') }}" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-3 py-1.5 rounded-[4px]">+ Devis</a>
+            <a href="{{ route('ventes.devis.create') }}" class="bg-emerald-700 hover:bg-emerald-800 text-white text-[13px] font-medium px-3 py-1.5 rounded-[4px]">+ Devis</a>
             @endcan
         </div>
     </div>
 
-    {{-- ── Barre de filtres (visuelle) ──────────────────────────────────────── --}}
-    <div class="bg-white border border-gray-200 rounded-[4px] p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Période</label>
-            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50">Cette année</div></div>
-        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Du</label>
-            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50 tabular-nums">{{ now()->startOfYear()->format('d/m/Y') }}</div></div>
-        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Au</label>
-            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50 tabular-nums">{{ now()->format('d/m/Y') }}</div></div>
-        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Site</label>
-            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50">Tous</div></div>
-        <div><label class="block text-[11px] font-semibold text-gray-500 mb-1">Équipe commerciale</label>
-            <div class="h-8 px-2 flex items-center border border-gray-300 rounded-[3px] text-[13px] text-gray-700 bg-gray-50">Tous</div></div>
-    </div>
+    {{-- [UI] La barre de « filtres » a été SUPPRIMÉE.
+         Ses cinq contrôles étaient des <div> en lecture seule : ils avaient
+         l'apparence de champs, occupaient une bande horizontale complète et ne
+         filtraient rien. Une fausse affordance coûte plus cher qu'une fonction
+         absente — l'utilisateur essaie, échoue, et doute du reste de l'écran.
+         La période couverte est indiquée dans l'en-tête. --}}
 
-    {{-- ── 6 KPI cards ──────────────────────────────────────────────────────── --}}
-    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    {{-- [UI] GRILLE UNIQUE pour tout le tableau de bord.
+         ────────────────────────────────────────────────────────────────────
+         Auparavant quatre grilles distinctes se succédaient :
+             grid-cols-2 lg:grid-cols-3 xl:grid-cols-6   (KPI)
+             lg:grid-cols-12 avec spans 5 + 4 + 3        (rangée 1)
+             lg:grid-cols-12 avec spans 3 + 3 + 3 + 3    (rangée 2)
+             lg:grid-cols-2                              (rangée 3)
+         Aucune colonne ne s'alignait d'une rangée à l'autre : la rangée 1
+         coupait à 5|9, la rangée 2 à 3|6|9, les KPI à 2|4. L'œil ne trouvait
+         aucune ligne de fuite verticale — c'était la cause principale du
+         désordre, avant même la typographie.
+
+         Désormais UNE grille de 12 colonnes contient toutes les cartes, et
+         toutes les largeurs retombent sur les mêmes frontières :
+             KPI      col-span-2   → frontières 2 · 4 · 6 · 8 · 10
+             demi     col-span-6   → frontière  6
+             tiers    col-span-4   → frontières 4 · 8
+         Les frontières {4, 6, 8} des contenus sont incluses dans celles des
+         KPI : chaque bord de carte tombe sur un bord de carte du dessus.
+
+         Un SEUL point de rupture (`lg`) et un SEUL espacement (`gap-4`),
+         horizontal comme vertical — l'ancien `space-y-3` serrait les rangées
+         (12 px) plus que les colonnes (16 px), ce qui cassait la lecture en
+         grille. --}}
+    <div class="grid grid-cols-2 lg:grid-cols-12 gap-4">
         {{-- CA HT + objectif --}}
-        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Chiffre d'affaires HT</p>
-            <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-700">{{ $fmt($kpis['ca_year']) }} <span class="text-xs text-gray-400">FCFA</span></p>
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-200 p-4">
+            <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Chiffre d'affaires HT</p>
+            <p class="mt-1 text-[18px] font-bold leading-none tabular-nums text-emerald-700">{{ $fmt($kpis['ca_year']) }} <span class="text-[11px] text-gray-400">FCFA</span></p>
             @if($hasTarget)
             <p class="text-[11px] text-gray-400 mt-1">Objectif (N-1 +10%) : {{ $fmt($objCa) }} FCFA</p>
             <div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded bg-emerald-500" style="width: {{ $pctCa }}%"></div></div>
@@ -80,9 +102,9 @@
             @endif
         </div>
         {{-- Commandes HT + objectif --}}
-        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Commandes HT</p>
-            <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $fmt($ordersValue) }} <span class="text-xs text-gray-400">FCFA</span></p>
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-200 p-4">
+            <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Commandes HT</p>
+            <p class="mt-1 text-[18px] font-bold leading-none tabular-nums text-gray-900">{{ $fmt($ordersValue) }} <span class="text-[11px] text-gray-400">FCFA</span></p>
             @if($hasTarget)
             <p class="text-[11px] text-gray-400 mt-1">Objectif (N-1 +10%) : {{ $fmt($objCmd) }} FCFA</p>
             <div class="w-full bg-gray-100 rounded h-1.5 mt-1"><div class="h-1.5 rounded bg-sky-500" style="width: {{ $pctCmd }}%"></div></div>
@@ -92,18 +114,18 @@
             @endif
         </div>
         {{-- Marge brute + sparkline --}}
-        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Marge brute</p>
-            <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $fmt($margin['marge']) }} <span class="text-xs text-gray-400">FCFA</span></p>
+        <div class="lg:col-span-2 bg-white rounded-[4px] border border-gray-200 p-4">
+            <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Marge brute</p>
+            <p class="mt-1 text-[18px] font-bold leading-none tabular-nums text-gray-900">{{ $fmt($margin['marge']) }} <span class="text-[11px] text-gray-400">FCFA</span></p>
             <p class="text-[11px] text-gray-400 mt-1">Taux : <span class="font-semibold {{ $margin['taux'] >= 25 ? 'text-emerald-600' : 'text-amber-600' }}">{{ number_format($margin['taux'], 2, ',', ' ') }} %</span></p>
             <div id="spark-marge" class="mt-1 h-8"></div>
             <a href="{{ route('ventes.marges') }}" class="mt-1 inline-block text-[11px] font-medium text-emerald-700 hover:underline">Par commercial / site →</a>
         </div>
         {{-- Devis en cours --}}
-        <a href="{{ route('ventes.devis.index') }}" class="bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-4 flex items-start justify-between gap-2 transition-colors">
+        <a href="{{ route('ventes.devis.index') }}" class="lg:col-span-2 bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-4 flex items-start justify-between gap-2 transition-colors">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Devis en cours</p>
-                <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $devisEnCours }}</p>
+                <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Devis en cours</p>
+                <p class="mt-1 text-[18px] font-bold leading-none tabular-nums text-gray-900">{{ $devisEnCours }}</p>
                 <p class="text-[11px] text-gray-400 mt-1">Montant : {{ $fmt($devisMontant) }} FCFA</p>
             </div>
             <span class="w-9 h-9 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center flex-shrink-0">
@@ -111,10 +133,10 @@
             </span>
         </a>
         {{-- Commandes à livrer --}}
-        <a href="{{ route('ventes.commandes.index') }}" class="bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-4 flex items-start justify-between gap-2 transition-colors">
+        <a href="{{ route('ventes.commandes.index') }}" class="lg:col-span-2 bg-white rounded-[4px] border border-gray-200 hover:border-gray-300 p-4 flex items-start justify-between gap-2 transition-colors">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Commandes à livrer</p>
-                <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $cmdALivrer }}</p>
+                <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Commandes à livrer</p>
+                <p class="mt-1 text-[18px] font-bold leading-none tabular-nums text-gray-900">{{ $cmdALivrer }}</p>
                 <p class="text-[11px] text-gray-400 mt-1">Dont {{ $deliveries['en_retard'] }} en retard</p>
             </div>
             <span class="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
@@ -122,44 +144,62 @@
             </span>
         </a>
         {{-- Factures impayées --}}
-        <a href="{{ route('ventes.factures.index') }}" class="bg-white rounded-[4px] border {{ $alerts['invoices_unpaid'] > 0 ? 'border-orange-200' : 'border-gray-200' }} hover:border-orange-300 p-4 flex items-start justify-between gap-2 transition-colors">
+        <a href="{{ route('ventes.factures.index') }}" class="lg:col-span-2 bg-white rounded-[4px] border {{ $alerts['invoices_unpaid'] > 0 ? 'border-orange-200' : 'border-gray-200' }} hover:border-orange-300 p-4 flex items-start justify-between gap-2 transition-colors">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Factures impayées</p>
-                <p class="mt-1 text-2xl font-bold leading-none tabular-nums text-gray-900">{{ $alerts['invoices_unpaid'] }}</p>
+                <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Factures impayées</p>
+                <p class="mt-1 text-[18px] font-bold leading-none tabular-nums text-gray-900">{{ $alerts['invoices_unpaid'] }}</p>
                 <p class="text-[11px] text-gray-400 mt-1">Montant : {{ $fmt($kpis['outstanding']) }} FCFA</p>
             </div>
             <span class="w-9 h-9 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center flex-shrink-0">
                 <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </span>
         </a>
-    </div>
 
     {{-- ── Validation interne (si en attente) ───────────────────────────────── --}}
     @if($workflowKpis['total_pending'] > 0)
-    <div class="rounded-[4px] border border-yellow-300 bg-yellow-50 px-4 py-2 flex items-center gap-3 text-[13px]">
+        <div class="col-span-2 lg:col-span-12 rounded-[4px] border border-yellow-300 bg-yellow-50 px-4 py-2 flex items-center gap-3 text-[13px]">
         <span class="font-semibold text-yellow-800">Validation interne :</span>
         <span class="text-yellow-700">{{ $workflowKpis['total_pending'] }} document(s) en attente</span>
         <a href="{{ route('ventes.bons-livraison.index', ['status' => 'en_attente_validation']) }}" class="ml-auto text-yellow-800 font-semibold hover:underline">Traiter →</a>
     </div>
     @endif
 
-    {{-- ── Rangée 1 : Évolution CA · Répartition famille · Top clients ───────── --}}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div class="lg:col-span-5 bg-white rounded-[4px] border border-gray-200 p-4">
+    {{-- Analyse : évolution et répartition du CA --}}
+        <div class="col-span-2 lg:col-span-6 bg-white rounded-[4px] border border-gray-200 p-4">
             <h2 class="text-[13px] font-bold text-gray-800 mb-2">Évolution du chiffre d'affaires (HT)</h2>
             <div id="chart-ca-evolution" class="h-[260px]"></div>
         </div>
-        <div class="lg:col-span-4 bg-white rounded-[4px] border border-gray-200 p-4">
+        <div class="col-span-2 lg:col-span-6 bg-white rounded-[4px] border border-gray-200 p-4">
             <h2 class="text-[13px] font-bold text-gray-800 mb-2">Répartition du CA par famille d'articles</h2>
             @if($caByFamily->isEmpty())
-                <div class="h-[240px] flex items-center justify-center text-gray-400 text-sm">Aucune vente.</div>
+                <div class="h-[260px] flex items-center justify-center text-gray-400 text-[13px]">Aucune vente.</div>
             @else
-                <div id="chart-famille" class="min-h-[240px]"></div>
+                <div id="chart-famille" class="min-h-[260px]"></div>
             @endif
         </div>
-        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
+
+    {{-- Répartitions : statuts, échéances, pipeline --}}
+        {{-- [UI pro] Donuts : légende SOUS le graphique (position right dans une
+             colonne de 3/12 écrasait le donut à ~60px et tronquait la légende). --}}
+        <div class="col-span-2 lg:col-span-4 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes par statut</h2>
+            @if($ordersStatus->isEmpty())
+                <div class="h-[260px] flex items-center justify-center text-gray-400 text-[13px]">Aucune commande.</div>
+            @else
+                <div id="chart-statut" class="min-h-[260px]"></div>
+            @endif
+        </div>
+        <div class="col-span-2 lg:col-span-4 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes à livrer par échéance</h2>
+            <div id="chart-echeance" class="min-h-[260px]"></div>
+        </div>
+        <div class="col-span-2 lg:col-span-4 bg-white rounded-[4px] border border-gray-200 p-4">
+            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Devis par statut (pipeline)</h2>
+            <div id="chart-pipeline" class="min-h-[260px]"></div>
+        </div>
+        <div class="col-span-2 lg:col-span-6 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
             <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Top 5 clients (CA HT)</h2></div>
-            <table class="w-full text-sm">
+            <table class="w-full text-[13px]">
                 <tbody class="divide-y divide-gray-50">
                     @forelse($topClients as $i => $c)
                     <tr>
@@ -168,7 +208,7 @@
                         <td class="px-3 py-2 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">{{ $fmt($c->total_ht) }}</td>
                     </tr>
                     @empty
-                    <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
+                    <tr><td class="px-3 py-6 text-center text-gray-400 text-[13px]">Aucune vente.</td></tr>
                     @endforelse
                 </tbody>
                 @if($topClients->isNotEmpty())
@@ -179,31 +219,9 @@
                 @endif
             </table>
         </div>
-    </div>
-
-    {{-- ── Rangée 2 : Statut · Échéance · Pipeline · Top articles ────────────── --}}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {{-- [UI pro] Donuts : légende SOUS le graphique (position right dans une
-             colonne de 3/12 écrasait le donut à ~60px et tronquait la légende). --}}
-        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
-            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes par statut</h2>
-            @if($ordersStatus->isEmpty())
-                <div class="h-[290px] flex items-center justify-center text-gray-400 text-sm">Aucune commande.</div>
-            @else
-                <div id="chart-statut" class="min-h-[290px]"></div>
-            @endif
-        </div>
-        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
-            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Commandes à livrer par échéance</h2>
-            <div id="chart-echeance" class="min-h-[290px]"></div>
-        </div>
-        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 p-4">
-            <h2 class="text-[13px] font-bold text-gray-800 mb-2">Devis par statut (pipeline)</h2>
-            <div id="chart-pipeline" class="min-h-[290px]"></div>
-        </div>
-        <div class="lg:col-span-3 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
+        <div class="col-span-2 lg:col-span-6 bg-white rounded-[4px] border border-gray-200 overflow-hidden">
             <div class="px-3 py-1.5 border-b border-gray-200 bg-[#eef5f0]"><h2 class="text-[12px] font-bold text-emerald-900 uppercase tracking-wide">Top 5 articles (CA HT)</h2></div>
-            <table class="w-full text-sm">
+            <table class="w-full text-[13px]">
                 <tbody class="divide-y divide-gray-50">
                     @forelse($topProducts as $i => $p)
                     <tr>
@@ -212,7 +230,7 @@
                         <td class="px-3 py-2 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">{{ $fmt($p->total_ht) }}</td>
                     </tr>
                     @empty
-                    <tr><td class="px-3 py-6 text-center text-gray-400 text-sm">Aucune vente.</td></tr>
+                    <tr><td class="px-3 py-6 text-center text-gray-400 text-[13px]">Aucune vente.</td></tr>
                     @endforelse
                 </tbody>
                 @if($topProducts->isNotEmpty())
@@ -223,11 +241,9 @@
                 @endif
             </table>
         </div>
-    </div>
 
-    {{-- ── Rangée 3 : Activités · Alertes ───────────────────────────────────── --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
+    {{-- À traiter : activités et alertes --}}
+        <div class="col-span-2 lg:col-span-6 bg-white rounded-[4px] border border-gray-200 p-4">
             <h2 class="text-[13px] font-bold text-gray-800 mb-3">Activités commerciales <span class="text-[11px] font-normal text-gray-400">— 30 jours</span></h2>
             @php
                 // Classes complètes (pas d'interpolation : Tailwind JIT purgerait)
@@ -249,13 +265,13 @@
                     </span>
                     <div>
                         <div class="text-[11px] text-gray-500 leading-tight">{{ $lab }}</div>
-                        <div class="text-lg font-bold tabular-nums text-gray-800 leading-tight">{{ $val }}</div>
+                        <div class="text-[15px] font-bold tabular-nums text-gray-800 leading-tight">{{ $val }}</div>
                     </div>
                 </div>
                 @endforeach
             </div>
         </div>
-        <div class="bg-white rounded-[4px] border border-gray-200 p-4">
+        <div class="col-span-2 lg:col-span-6 bg-white rounded-[4px] border border-gray-200 p-4">
             <h2 class="text-[13px] font-bold text-gray-800 mb-3">Alertes</h2>
             <ul class="space-y-2 text-[13px]">
                 <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500"></span>{{ $alerts['orders_late'] }} commande(s) en retard de livraison</li>

@@ -194,7 +194,7 @@
                         </div>
                         <div class="sm:col-span-3">
                             <label class="{{ $lbl }}">Article à lancer (produit fini) <span class="text-red-500">*</span></label>
-                            <div class="relative"><select name="product_id" x-model="pid" @change="bomId = ''" class="{{ $lk }}"><option value="">—</option>@foreach($products as $p)<option value="{{ $p->id }}" @selected(old('product_id',$o->product_id)==$p->id)>{{ $p->name }}</option>@endforeach</select>{!! $caret !!}</div>
+                            <div class="relative"><select name="product_id" x-model="pid" @change="bomId = ''" required class="{{ $lk }}"><option value="">—</option>@foreach($products as $p)<option value="{{ $p->id }}" @selected(old('product_id',$o->product_id)==$p->id)>{{ $p->name }}</option>@endforeach</select>{!! $caret !!}</div>
                         </div>
                         <div class="sm:col-span-3">
                             <label class="{{ $lbl }}">Responsable production</label>
@@ -214,12 +214,12 @@
                             <label class="{{ $lbl }}">Origine OF</label>
                             <div class="relative"><select name="origin" class="{{ $lk }}">
                                 @php $og = old('origin', $o->origin ?? ($o->order_id ? 'commande_client' : 'manuel')); @endphp
-                                @foreach(['manuel' => 'Manuel', 'commande_client' => 'Commande client', 'stock_minimum' => 'Stock minimum', 'mrp' => 'Planification MRP'] as $v => $l)
+                                @foreach(\App\Modules\Production\Models\ProductionOrder::ORIGIN_LABELS as $v => $l)
                                 <option value="{{ $v }}" @selected($og === $v)>{{ $l }}</option>
                                 @endforeach
                             </select>{!! $caret !!}</div>
                         </div>
-                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Atelier</label><input type="text" name="atelier" maxlength="60" value="{{ old('atelier', $o->atelier) }}" class="{{ $inp }}" placeholder="Atelier de production"></div>
+                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Atelier</label><input type="text" name="atelier" maxlength="60" value="{{ old('atelier', $o->atelier) }}" class="{{ $inp }}" placeholder="Ex. : Atelier de production"></div>
                         <div class="sm:col-span-3">
                             <label class="{{ $lbl }}">Responsable atelier</label>
                             <div class="relative"><select name="responsable_atelier_id" class="{{ $lk }}"><option value="">—</option>@foreach($users as $u)<option value="{{ $u->id }}" @selected(old('responsable_atelier_id',$o->responsable_atelier_id)==$u->id)>{{ $u->name }}</option>@endforeach</select>{!! $caret !!}</div>
@@ -246,7 +246,7 @@
                         </div>
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Version nomenclature</label><input type="text" name="bom_version" maxlength="20" value="{{ old('bom_version', $o->bom_version ?? 'V1') }}" class="{{ $inp }} font-mono"></div>
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Version gamme</label><input type="text" name="routing_version" maxlength="20" value="{{ old('routing_version', $o->routing_version ?? 'V1') }}" class="{{ $inp }} font-mono"></div>
-                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Équipe prévue</label><input type="text" name="equipe_prevue" maxlength="60" value="{{ old('equipe_prevue', $o->equipe_prevue) }}" class="{{ $inp }}" placeholder="Équipe A"></div>
+                        <div class="sm:col-span-2"><label class="{{ $lbl }}">Équipe prévue</label><input type="text" name="equipe_prevue" maxlength="60" value="{{ old('equipe_prevue', $o->equipe_prevue) }}" class="{{ $inp }}" placeholder="Ex. : Équipe A"></div>
                         <div class="sm:col-span-2"><label class="{{ $lbl }}">Nb opérateurs</label><input type="number" name="nb_operateurs" min="0" max="500" value="{{ old('nb_operateurs', $o->nb_operateurs) }}" class="{{ $inpR }}"></div>
                     </div>
                 </section>
@@ -341,8 +341,8 @@
                         <div><label class="{{ $lbl }}">Longueur standard (m)</label><input type="number" step="0.01" min="0" name="longueur_standard" value="{{ old('longueur_standard', $o->longueur_standard) }}" class="{{ $inpR }}"></div>
 
                         <div><label class="{{ $lbl }}">Couleur</label><input type="text" name="color" maxlength="60" value="{{ old('color', $o->color) }}" class="{{ $inp }}"></div>
-                        <div><label class="{{ $lbl }}">Couleur RAL</label><input type="text" name="couleur_ral" maxlength="20" value="{{ old('couleur_ral', $o->couleur_ral) }}" class="{{ $inp }} font-mono" placeholder="RAL 3000"></div>
-                        <div><label class="{{ $lbl }}">Revêtement</label><input type="text" name="revetement" maxlength="60" value="{{ old('revetement', $o->revetement) }}" class="{{ $inp }}" placeholder="Prélaqué 25 µm"></div>
+                        <div><label class="{{ $lbl }}">Couleur RAL</label><input type="text" name="couleur_ral" maxlength="20" value="{{ old('couleur_ral', $o->couleur_ral) }}" class="{{ $inp }} font-mono" placeholder="Ex. : RAL 3000"></div>
+                        <div><label class="{{ $lbl }}">Revêtement</label><input type="text" name="revetement" maxlength="60" value="{{ old('revetement', $o->revetement) }}" class="{{ $inp }}" placeholder="Ex. : Prélaqué 25 µm"></div>
                         <div>
                             <label class="{{ $lbl }}">Unité de production</label>
                             <div class="relative"><select name="unite_production" class="{{ $lk }}">
@@ -385,7 +385,10 @@
                         <div><label class="{{ $lbl }}">Taux de perte (%)</label><input type="number" step="0.0001" min="0" max="9.9999" name="taux_perte" value="{{ old('taux_perte', $o->taux_perte) }}" class="{{ $inpR }}" placeholder="0,0350"></div>
                         <div>
                             <label class="{{ $lbl }}">Contrôle qualité obligatoire</label>
-                            <input type="hidden" name="controle_qualite_obligatoire" value="0">
+                            {{-- [UI] Le <input hidden> de repli a ete retire : il sert a une case a
+                                 cocher decochee, jamais a un <select>, qui soumet TOUJOURS une valeur.
+                                 Il precedait le select, donc PHP retenait bien le choix de
+                                 l'utilisateur -- ce n'etait pas un bug, seulement du balisage mort. --}}
                             <div class="relative"><select name="controle_qualite_obligatoire" class="{{ $lk }}">
                                 <option value="1" @selected(old('controle_qualite_obligatoire', $o->controle_qualite_obligatoire ?? true))>Oui</option>
                                 <option value="0" @selected(! old('controle_qualite_obligatoire', $o->controle_qualite_obligatoire ?? true))>Non</option>
@@ -404,7 +407,10 @@
                         <div><label class="{{ $lbl }}">Temps de réglage (min)</label><input type="number" step="1" min="0" name="temps_reglage" value="{{ old('temps_reglage', $o->temps_reglage) }}" class="{{ $inpR }}"></div>
                         <div>
                             <label class="{{ $lbl }}">Autoriser clôture partielle</label>
-                            <input type="hidden" name="autoriser_cloture_partielle" value="0">
+                            {{-- [UI] Le <input hidden> de repli a ete retire : il sert a une case a
+                                 cocher decochee, jamais a un <select>, qui soumet TOUJOURS une valeur.
+                                 Il precedait le select, donc PHP retenait bien le choix de
+                                 l'utilisateur -- ce n'etait pas un bug, seulement du balisage mort. --}}
                             <div class="relative"><select name="autoriser_cloture_partielle" class="{{ $lk }}">
                                 <option value="1" @selected(old('autoriser_cloture_partielle', $o->autoriser_cloture_partielle ?? true))>Oui</option>
                                 <option value="0" @selected(! old('autoriser_cloture_partielle', $o->autoriser_cloture_partielle ?? true))>Non</option>
@@ -412,7 +418,10 @@
                         </div>
                         <div>
                             <label class="{{ $lbl }}">Autoriser dépassement qté</label>
-                            <input type="hidden" name="autoriser_depassement_qte" value="0">
+                            {{-- [UI] Le <input hidden> de repli a ete retire : il sert a une case a
+                                 cocher decochee, jamais a un <select>, qui soumet TOUJOURS une valeur.
+                                 Il precedait le select, donc PHP retenait bien le choix de
+                                 l'utilisateur -- ce n'etait pas un bug, seulement du balisage mort. --}}
                             <div class="relative"><select name="autoriser_depassement_qte" class="{{ $lk }}">
                                 <option value="0" @selected(! old('autoriser_depassement_qte', $o->autoriser_depassement_qte ?? false))>Non</option>
                                 <option value="1" @selected(old('autoriser_depassement_qte', $o->autoriser_depassement_qte ?? false))>Oui</option>
@@ -425,18 +434,31 @@
                     </div>
                 </section>
 
-                {{-- Prévisionnel LIVE (calculs automatiques) --}}
-                <section class="border border-emerald-200 rounded-[4px]" x-show="totalQty > 0" x-cloak>
-                    <div class="px-4 py-1.5 border-b border-emerald-200 bg-emerald-50 text-[13px] font-bold text-emerald-900">Prévisionnel (calcul automatique)</div>
+                {{-- Prévisionnel LIVE (calculs automatiques)
+
+                     [UI] La section était masquée par `x-show="totalQty > 0"` : sur un
+                     formulaire vierge, RIEN de la main d'œuvre chiffrée n'apparaissait
+                     — ni « MO estimée », ni « Temps gamme », ni coût prévisionnel. Le
+                     sujet semblait absent de l'ERP alors qu'il est traité.
+
+                     Elle est désormais toujours visible. Tant que la quantité n'est pas
+                     saisie, chaque indicateur affiche « — » plutôt que « 0 » : un zéro
+                     se lit comme un résultat calculé, un tiret dit qu'il manque une
+                     donnée d'entrée. --}}
+                <section class="border border-emerald-200 rounded-[4px]">
+                    <div class="px-4 py-1.5 border-b border-emerald-200 bg-emerald-50 text-[13px] font-bold text-emerald-900 flex items-center justify-between">
+                        <span>Prévisionnel (calcul automatique)</span>
+                        <span x-show="!(totalQty > 0)" x-cloak class="text-[11px] font-normal text-emerald-700">Saisissez une quantité pour obtenir les estimations</span>
+                    </div>
                     <div class="p-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-[12px]">
-                        <div><p class="{{ $lbl }}">Qté totale</p><p class="font-mono font-bold text-gray-900" x-text="fmt(totalQty, 2)"></p></div>
-                        <div><p class="{{ $lbl }}">Métrage total</p><p class="font-mono font-bold text-gray-900"><span x-text="fmt(totalMeters, 2)"></span> m</p></div>
-                        <div><p class="{{ $lbl }}">Poids théorique</p><p class="font-mono font-bold text-gray-900"><span x-text="fmt(theoWeight, 2)"></span> kg</p></div>
-                        <div><p class="{{ $lbl }}">Coût matière est.</p><p class="font-mono font-bold text-gray-900"><span x-text="fmt(matCost)"></span> F</p></div>
-                        <div><p class="{{ $lbl }}">Temps machine</p><p class="font-mono font-bold text-gray-900"><span x-text="fmt(machineMin)"></span> min</p></div>
-                        <div><p class="{{ $lbl }}">Temps gamme</p><p class="font-mono font-bold text-gray-900"><span x-text="fmt(opsMin)"></span> min</p></div>
-                        <div><p class="{{ $lbl }}">MO estimée</p><p class="font-mono font-bold text-gray-900"><span x-text="fmt(laborCost)"></span> F</p></div>
-                        <div><p class="{{ $lbl }}">Coût prévisionnel</p><p class="font-mono font-bold text-emerald-700"><span x-text="fmt(matCost + laborCost)"></span> F</p></div>
+                        <div><p class="{{ $lbl }}">Qté totale</p><p class="font-mono font-bold text-gray-900" :class="totalQty > 0 ? '' : 'text-gray-300'" x-text="totalQty > 0 ? fmt(totalQty, 2) : '—'"></p></div>
+                        <div><p class="{{ $lbl }}">Métrage total</p><p class="font-mono font-bold text-gray-900" :class="totalQty > 0 ? '' : 'text-gray-300'"><span x-text="totalQty > 0 ? fmt(totalMeters, 2) + ' m' : '—'"></span></p></div>
+                        <div><p class="{{ $lbl }}">Poids théorique</p><p class="font-mono font-bold text-gray-900" :class="totalQty > 0 ? '' : 'text-gray-300'"><span x-text="totalQty > 0 ? fmt(theoWeight, 2) + ' kg' : '—'"></span></p></div>
+                        <div><p class="{{ $lbl }}">Coût matière est.</p><p class="font-mono font-bold text-gray-900" :class="totalQty > 0 ? '' : 'text-gray-300'"><span x-text="totalQty > 0 ? fmt(matCost) + ' F' : '—'"></span></p></div>
+                        <div><p class="{{ $lbl }}">Temps machine</p><p class="font-mono font-bold text-gray-900" :class="totalQty > 0 ? '' : 'text-gray-300'"><span x-text="totalQty > 0 ? fmt(machineMin) + ' min' : '—'"></span></p></div>
+                        <div><p class="{{ $lbl }}">Temps gamme</p><p class="font-mono font-bold text-gray-900" :class="totalQty > 0 ? '' : 'text-gray-300'"><span x-text="totalQty > 0 ? fmt(opsMin) + ' min' : '—'"></span></p></div>
+                        <div><p class="{{ $lbl }}">MO estimée</p><p class="font-mono font-bold text-gray-900" :class="totalQty > 0 ? '' : 'text-gray-300'"><span x-text="totalQty > 0 ? fmt(laborCost) + ' F' : '—'"></span></p></div>
+                        <div><p class="{{ $lbl }}">Coût prévisionnel</p><p class="font-mono font-bold text-emerald-700" :class="totalQty > 0 ? '' : 'text-gray-300'"><span x-text="totalQty > 0 ? fmt(matCost + laborCost) + ' F' : '—'"></span></p></div>
                     </div>
                     <p class="px-4 pb-3 text-[11px] text-gray-400">Basé sur la nomenclature sélectionnée (coefficients × quantité, CMP courant) et la gamme. Le coût réel est calculé à la clôture de l'OF.</p>
                 </section>
@@ -460,7 +482,7 @@
                             <tbody>
                                 <template x-for="(line, i) in lines" :key="i">
                                     <tr class="border-b border-gray-100 last:border-0">
-                                        <td class="px-2 py-1"><input type="text" :name="`lines[${i}][label]`" x-model="line.label" class="{{ $inp }} h-7" placeholder="Bac 6m"></td>
+                                        <td class="px-2 py-1"><input type="text" :name="`lines[${i}][label]`" x-model="line.label" class="{{ $inp }} h-7" placeholder="Ex. : Bac 6m"></td>
                                         <td class="px-2 py-1"><input type="number" step="0.01" min="0" :name="`lines[${i}][length]`" x-model="line.length" class="{{ $inpR }} h-7"></td>
                                         <td class="px-2 py-1"><input type="number" step="0.01" min="0" :name="`lines[${i}][quantity]`" x-model="line.quantity" class="{{ $inpR }} h-7"></td>
                                         <td class="px-2 py-1 text-right font-mono tabular-nums text-gray-700" x-text="((parseFloat(line.length)||0)*(parseFloat(line.quantity)||0)).toFixed(2)"></td>

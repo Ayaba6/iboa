@@ -22,6 +22,56 @@ class ProductionOrder extends Model
 {
     use HasFactory, SoftDeletes, HasCreator, HasCompanyScope, HasAttachments;
 
+    /**
+     * [MTS §2] ORIGINES de l'ordre de fabrication — source UNIQUE.
+     *
+     * Le référentiel était recopié à TROIS endroits, chacun avec sa graphie :
+     * la règle de validation du contrôleur, le sélecteur du formulaire et celui
+     * de la liste. Ajouter une origine obligeait à penser aux trois — et c'est
+     * précisément la dérive d'une liste recopiée de mémoire qui a laissé les
+     * statuts fournisseurs au féminin mettre deux indicateurs à zéro.
+     *
+     * `prevision` et `besoin_interne` complètent les cinq origines exigées par le
+     * cahier des charges MTS : elles manquaient au référentiel, alors que le
+     * cahier les cite explicitement comme déclencheurs de production pour stock.
+     */
+    public const ORIGIN_MANUEL         = 'manuel';
+    public const ORIGIN_COMMANDE       = 'commande_client';
+    public const ORIGIN_STOCK_MINIMUM  = 'stock_minimum';
+    public const ORIGIN_MRP            = 'mrp';
+    public const ORIGIN_PREVISION      = 'prevision';
+    public const ORIGIN_BESOIN_INTERNE = 'besoin_interne';
+
+    /** Libellés complets — formulaire de création, fiche OF. */
+    public const ORIGIN_LABELS = [
+        self::ORIGIN_MANUEL         => 'Manuel',
+        self::ORIGIN_COMMANDE       => 'Commande client',
+        self::ORIGIN_STOCK_MINIMUM  => 'Stock minimum',
+        self::ORIGIN_MRP            => 'Planification MRP',
+        self::ORIGIN_PREVISION      => 'Prévision de vente',
+        self::ORIGIN_BESOIN_INTERNE => 'Besoin interne',
+    ];
+
+    /**
+     * Libellés abrégés — colonne étroite de la liste. Volontairement distincts
+     * des complets : « Cde client » tient dans la colonne, « Commande client »
+     * non. Ce sont les CLÉS qui doivent rester uniques, pas les mots affichés.
+     */
+    public const ORIGIN_LABELS_SHORT = [
+        self::ORIGIN_MANUEL         => 'Manuel',
+        self::ORIGIN_COMMANDE       => 'Cde client',
+        self::ORIGIN_STOCK_MINIMUM  => 'Stock mini',
+        self::ORIGIN_MRP            => 'MRP',
+        self::ORIGIN_PREVISION      => 'Prévision',
+        self::ORIGIN_BESOIN_INTERNE => 'Besoin int.',
+    ];
+
+    /** @return list<string> */
+    public static function origins(): array
+    {
+        return array_keys(self::ORIGIN_LABELS);
+    }
+
     protected $fillable = [
         'company_id','fiscal_year_id','number','client_id','order_id','product_id','bill_of_material_id',
         'production_line_id','sheet_type','thickness','color','length','usable_width',
@@ -36,7 +86,7 @@ class ProductionOrder extends Model
         'depot_matiere_id','depot_qualite_id','responsable_atelier_id','operateur_prevu_id',
         'date_debut_prevue','date_fin_prevue','heure_debut_prevue','heure_fin_prevue',
         'temps_reglage','equipe_prevue','nb_operateurs','autoriser_cloture_partielle','autoriser_depassement_qte',
-        'profil','largeur_totale','longueur_standard','unite_production','poids_par_metre','poids_theorique',
+        'order_item_id','nb_ondes','profil','largeur_totale','longueur_standard','unite_production','poids_par_metre','poids_theorique',
         'couleur_ral','revetement','tolerance_longueur','tolerance_epaisseur',
         // §13.2 CDC — Validation financière avant lancement OF
         'financial_authorization','financial_authorized_at','financial_authorized_by','financial_notes','payment_mode','payment_rate',
@@ -71,6 +121,47 @@ class ProductionOrder extends Model
         'suspended_at'=>'datetime',
         'bom_snapshot'=>'array','routing_snapshot'=>'array','snapshotted_at'=>'datetime',
     ];
+
+    /**
+     * Début planifié EFFECTIF, replis compris.
+     *
+     * Deux colonnes de début coexistent : `date_debut_prevue`, la notion fine
+     * (seule accompagnée d'heures), et `date_fabrication_prevue`, l'héritée. La
+     * fiche OF arbitre déjà en affichant « début ?? fabrication » ; on applique
+     * la même règle partout, pour qu'un OF ancien apparaisse au planning.
+     *
+     * ACCESSEUR et non attribut posé de l'extérieur : le tableau d'ordonnancement
+     * calculait ces deux valeurs puis les ÉCRIVAIT sur le modèle. Eloquent les
+     * rangeait alors dans le sac d'attributs, marquant l'objet indéfiniment
+     * modifié sur deux colonnes qui n'existent pas — tout `save()` ultérieur
+     * échouait. Un accesseur ne salit rien.
+     */
+    public function getDebutEffectifAttribute(): ?\Carbon\Carbon
+    {
+        $date = $this->date_debut_prevue ?: $this->date_fabrication_prevue;
+
+        return $date ? $this->instantDe($date, $this->heure_debut_prevue, '00:00') : null;
+    }
+
+    /** Fin planifiée effective. Sans fin déclarée, l'OF occupe la journée de son début. */
+    public function getFinEffectifAttribute(): ?\Carbon\Carbon
+    {
+        if (! $this->date_fin_prevue) {
+            // Mieux vaut une occupation d'un jour, franche, qu'un créneau ouvert
+            // que rien ne pourrait jamais chevaucher.
+            return $this->debut_effectif?->copy()->endOfDay();
+        }
+
+        return $this->instantDe($this->date_fin_prevue, $this->heure_fin_prevue, '23:59');
+    }
+
+    /** Assemble une date et une heure « HH:MM » en un instant. */
+    private function instantDe(mixed $date, ?string $heure, string $defaut): \Carbon\Carbon
+    {
+        $h = $heure && preg_match('/^\d{1,2}:\d{2}/', $heure) ? substr($heure, 0, 5) : $defaut;
+
+        return \Carbon\Carbon::parse(\Carbon\Carbon::parse($date)->toDateString().' '.$h);
+    }
 
     public function depotProduitFini(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_produit_fini_id'); }
     public function depotRebut(): BelongsTo { return $this->belongsTo(Warehouse::class, 'depot_rebut_id'); }

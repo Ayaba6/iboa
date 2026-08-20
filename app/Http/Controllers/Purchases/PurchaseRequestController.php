@@ -12,6 +12,7 @@ use App\Models\Unit;
 use App\Services\PurchaseRequestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PurchaseRequestController extends Controller
@@ -25,11 +26,19 @@ class PurchaseRequestController extends Controller
         $filters  = $request->only(['status', 'department', 'search']);
         $requests = $this->service->search($filters, 15);
 
+        // [Perf] Un COUNT groupé au lieu de quatre requêtes : le total est la
+        // somme des statuts, il n'a pas à être recompté séparément.
+        $counts = PurchaseRequest::query()
+            ->groupBy('status')
+            ->pluck(DB::raw('COUNT(*)'), 'status')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+
         $summary = [
-            'total'    => PurchaseRequest::count(),
-            'pending'  => PurchaseRequest::where('status', 'soumis')->count(),
-            'approved' => PurchaseRequest::where('status', 'approuve')->count(),
-            'draft'    => PurchaseRequest::where('status', 'brouillon')->count(),
+            'total'    => array_sum($counts),
+            'pending'  => $counts['soumis'] ?? 0,
+            'approved' => $counts['approuve'] ?? 0,
+            'draft'    => $counts['brouillon'] ?? 0,
         ];
 
         return view('achats.demandes-achat.index', compact('requests', 'filters', 'summary'));

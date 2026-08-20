@@ -27,12 +27,12 @@
     {{-- Bandeau SAGE --}}
     <div class="bg-gradient-to-b from-[#eef5f0] to-white border border-gray-300 rounded-[4px] px-3 py-2.5 flex items-center justify-between">
         <div>
-            <h1 class="text-[17px] font-bold text-emerald-900 flex items-center gap-2">
+            <h1 class="text-[20px] font-bold text-emerald-900 flex items-center gap-2">
                 {{ $c->number }}
                 <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold {{ $badges[$c->status] ?? 'bg-gray-100 text-gray-600' }}">{{ ucfirst($c->status) }}</span>
                 @if($c->is_framework)<span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700">Contrat cadre</span>@endif
             </h1>
-            <p class="text-[11.5px] text-gray-500">{{ $c->description }}</p>
+            <p class="text-[11px] text-gray-500">{{ $c->description }}</p>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('ventes.contrats.pdf', $c) }}?preview=1" target="_blank" class="text-[13px] font-semibold text-emerald-700 border border-emerald-300 bg-white hover:bg-emerald-50 px-4 py-1.5 rounded-full transition-colors">📄 PDF</a>
@@ -65,7 +65,7 @@
     {{-- Éléments contractuels --}}
     <div class="bg-white rounded-[4px] border border-gray-300 overflow-hidden">
         <div class="{{ $secH }}">Éléments contractuels ({{ $c->items->count() }} ligne(s))</div>
-        <table class="w-full text-[12.5px]">
+        <table class="w-full text-[12px]">
             <thead><tr class="bg-[#eef5f0] border-b border-gray-300">
                 <th class="{{ $th }} text-center w-10">#</th>
                 <th class="{{ $th }} text-left">Article / Désignation</th>
@@ -119,7 +119,7 @@
             <div class="{{ $secH }}">Pièces jointes</div>
             <div class="p-4">
                 @if($c->attachments->isNotEmpty())
-                <ul class="divide-y divide-gray-100 text-[12.5px]">
+                <ul class="divide-y divide-gray-100 text-[12px]">
                     @foreach($c->attachments as $att)
                     <li class="flex items-center justify-between py-1.5">
                         <span class="truncate text-gray-700">📄 {{ $att->filename }}</span>

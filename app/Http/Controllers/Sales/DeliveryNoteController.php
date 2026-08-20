@@ -9,6 +9,7 @@ use App\Services\CommercialWorkflowService;
 use App\Services\DeliveryNoteService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DeliveryNoteController extends Controller
 {
@@ -31,11 +32,19 @@ class DeliveryNoteController extends Controller
             ->when(!empty($filters['status']),    fn($q) => $q->where('status', $filters['status']))
             ->when(!empty($filters['search']),    fn($q) => $q->where('number', 'like', '%'.$filters['search'].'%'));
 
+        // [Perf] Un COUNT groupé au lieu de quatre requêtes : le total est la
+        // somme des statuts, il n'a pas à être recompté séparément.
+        $counts = (clone $totalsQuery)
+            ->groupBy('status')
+            ->pluck(DB::raw('COUNT(*)'), 'status')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+
         $summary = [
-            'total'           => (int) $totalsQuery->count(),
-            'count_draft'     => (int) (clone $totalsQuery)->where('status', 'brouillon')->count(),
-            'count_validated' => (int) (clone $totalsQuery)->where('status', 'valide')->count(),
-            'count_invoiced'  => (int) (clone $totalsQuery)->where('status', 'facture')->count(),
+            'total'           => array_sum($counts),
+            'count_draft'     => $counts['brouillon'] ?? 0,
+            'count_validated' => $counts['valide'] ?? 0,
+            'count_invoiced'  => $counts['facture'] ?? 0,
         ];
 
         return view('ventes.bons-livraison.index', compact('deliveryNotes', 'filters', 'summary'));

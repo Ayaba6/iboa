@@ -41,7 +41,7 @@
                 Modifier
             </a>
             <form action="{{ route('representants.destroy', $representant) }}" method="POST"
-                  onsubmit="return confirm('Supprimer ce représentant ?')">
+                  data-confirm="Supprimer le représentant {{ addslashes($representant->name ?? $representant->code ?? '') }} ?">
                 @csrf @method('DELETE')
                 <button type="submit" class="inline-flex items-center gap-2 px-3 py-2.5 border border-red-300 text-red-600 hover:bg-red-50 text-sm font-medium rounded-[4px] transition-colors">
                     Supprimer
