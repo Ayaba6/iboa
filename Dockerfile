@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
     nginx \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# Installer Node.js 18
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+# Installer Node.js 20 (requis par les versions récentes de Vite)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
 
 # Nettoyer
