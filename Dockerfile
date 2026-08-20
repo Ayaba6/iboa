@@ -28,7 +28,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# Définir un timeout plus large pour Composer (évite les erreurs 504 sur Render)
+# Définir un timeout plus large pour Composer
 ENV COMPOSER_PROCESS_TIMEOUT=600
 
 # Installer les dépendances PHP
@@ -40,11 +40,12 @@ RUN npm install --legacy-peer-deps && npm run build
 # Configurer les permissions pour Laravel
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+# Copier et rendre exécutable le script de démarrage
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
 # Exposer le port pour Render
 EXPOSE 80
 
-# Commande de démarrage : Migre la base de données puis lance le serveur
-CMD php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan migrate --force && \
-    php artisan serve --host=0.0.0.0 --port=$PORT
+# Utiliser le script de démarrage au lieu des commandes directes
+CMD ["/usr/local/bin/start.sh"]
