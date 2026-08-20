@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     libzip-dev \
-    nginx
+    nginx \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 # Installer Node.js et NPM (pour builder les assets Vite)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
@@ -29,7 +30,7 @@ WORKDIR /var/www/html
 COPY . .
 
 # Installer les dépendances PHP et Node
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 RUN npm install && npm run build
 
 # Configurer les permissions pour Laravel
