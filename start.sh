@@ -1,20 +1,15 @@
 #!/bin/bash
 
-echo "Préparation de la base de données SQLite..."
-
-# Création du dossier et du fichier SQLite si besoin
+echo "Création de la base SQLite si besoin..."
 mkdir -p database
-if [ ! -f database/database.sqlite ]; then
-    touch database/database.sqlite
-    echo "Fichier database.sqlite créé avec succès."
-fi
+touch database/database.sqlite
 
-echo "Exécution des migrations..."
+echo "Nettoyage des caches..."
+php artisan config:clear
+php artisan cache:clear
+
+echo "Migrations..."
 php artisan migrate --force
-
-echo "Configuration et routage..."
-php artisan config:cache
-php artisan route:cache
 
 echo "Lancement du serveur..."
 php artisan serve --host=0.0.0.0 --port=$PORT
