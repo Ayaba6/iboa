@@ -1,30 +1,15 @@
 #!/bin/bash
 
-echo "Tentative de connexion à la base de données..."
+echo "Préparation de la base de données SQLite..."
 
-# Boucle propre avec affichage de l'erreur exacte
-until php -r "
-try {
-    \$host = getenv('DB_HOST');
-    \$port = getenv('DB_PORT');
-    \$db   = getenv('DB_DATABASE');
-    \$user = getenv('DB_USERNAME');
-    \$pass = getenv('DB_PASSWORD');
+# Création du dossier et du fichier SQLite si besoin
+mkdir -p database
+if [ ! -f database/database.sqlite ]; then
+    touch database/database.sqlite
+    echo "Fichier database.sqlite créé avec succès."
+fi
 
-    \$dsn = \"pgsql:host=\$host;port=\$port;dbname=\$db\";
-    \$pdo = new PDO(\$dsn, \$user, \$pass);
-    echo 'Connexion PDO réussie !';
-    exit(0);
-} catch (Exception \$e) {
-    echo 'Erreur : ' . \$e->getMessage();
-    exit(1);
-}
-"; do
-  echo " - En attente de la base de données... nouvel essai dans 3 secondes."
-  sleep 3
-done
-
-echo "Base de données connectée avec succès !"
+echo "Exécution des migrations..."
 php artisan migrate --force
 
 echo "Configuration et routage..."
